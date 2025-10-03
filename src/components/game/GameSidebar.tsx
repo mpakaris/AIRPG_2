@@ -104,3 +104,5 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState }) => {
     </Sidebar>
   );
 };
+
+    
