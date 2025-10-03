@@ -2,12 +2,11 @@
 
 import { useEffect, useRef, useState, type FC } from 'react';
 import Image from 'next/image';
-import { Send, LoaderCircle } from 'lucide-react';
+import { Send, LoaderCircle, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
-import { SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
+import { SidebarTrigger } from '@/components/ui/sidebar';
 import type { Game, Message, PlayerState } from '@/lib/game/types';
 import { cn } from '@/lib/utils';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
@@ -35,21 +34,26 @@ const CommandInput: FC<Pick<GameScreenProps, 'onCommandSubmit' | 'isLoading'>> =
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex w-full items-center gap-4">
+    <form onSubmit={handleSubmit} className="relative flex w-full items-center">
       <Input
         type="text"
         placeholder="Type your command..."
         value={command}
         onChange={(e) => setCommand(e.target.value)}
         disabled={isLoading}
-        className="text-base"
+        className="h-12 flex-1 rounded-full bg-muted pl-4 pr-14 text-base"
         autoFocus
       />
-      <Button type="submit" size="icon" disabled={isLoading}>
+      <Button
+        type="submit"
+        size="icon"
+        disabled={isLoading}
+        className="absolute right-2 h-9 w-9 rounded-full"
+      >
         {isLoading ? (
           <LoaderCircle className="animate-spin" />
         ) : (
-          <Send />
+          <Send className="h-5 w-5" />
         )}
         <span className="sr-only">Send Command</span>
       </Button>
@@ -71,30 +75,47 @@ const MessageLog: FC<Pick<GameScreenProps, 'messages'>> = ({ messages }) => {
 
   return (
     <ScrollArea className="h-full flex-grow" viewportRef={scrollViewportRef}>
-      <div className="space-y-6 pr-4">
-        {messages.map((message) => (
-          <div key={message.id} className="flex flex-col">
+      <div className="mx-auto max-w-4xl space-y-6 px-4 py-6">
+        {messages.map((message) => {
+          const isPlayer = message.sender === 'player';
+          return (
             <div
+              key={message.id}
               className={cn(
-                'font-bold font-headline',
-                message.sender === 'player' ? 'text-accent' : 'text-primary'
+                'flex items-end gap-2',
+                isPlayer ? 'flex-row-reverse' : 'flex-row'
               )}
             >
-              {message.senderName}
+              <div
+                className={cn(
+                  'max-w-[75%] rounded-2xl px-4 py-2',
+                  isPlayer
+                    ? 'rounded-br-none bg-primary text-primary-foreground'
+                    : 'rounded-bl-none bg-muted'
+                )}
+              >
+                {!isPlayer && (
+                  <div
+                    className='text-xs font-bold text-primary mb-1'
+                  >
+                    {message.senderName}
+                  </div>
+                )}
+                <p className="whitespace-pre-wrap">{message.content}</p>
+                 {message.type === 'image' && message.image && (
+                    <Image
+                        src={message.image.imageUrl}
+                        alt={message.image.description}
+                        width={200}
+                        height={200}
+                        className="mt-2 rounded-lg border-2 border-border"
+                        data-ai-hint={message.image.imageHint}
+                    />
+                )}
+              </div>
             </div>
-            <p className="whitespace-pre-wrap">{message.content}</p>
-            {message.type === 'image' && message.image && (
-                <Image
-                    src={message.image.imageUrl}
-                    alt={message.image.description}
-                    width={200}
-                    height={200}
-                    className="mt-2 rounded-lg border-2 border-border"
-                    data-ai-hint={message.image.imageHint}
-                />
-            )}
-          </div>
-        ))}
+          );
+        })}
       </div>
     </ScrollArea>
   );
@@ -104,22 +125,28 @@ const MessageLog: FC<Pick<GameScreenProps, 'messages'>> = ({ messages }) => {
 export const GameScreen: FC<GameScreenProps> = ({ messages, onCommandSubmit, isLoading, game, playerState }) => {
     const chapter = game.chapters[playerState.currentChapterId];
   return (
-    <SidebarInset className="flex h-screen flex-col">
-        <header className="flex h-14 items-center justify-between border-b bg-card px-4">
+    <div className="flex h-screen flex-col bg-background">
+        <header className="flex h-16 items-center justify-between border-b bg-card px-4 shadow-sm">
             <div className="flex items-center gap-4">
-                <SidebarTrigger />
-                <h1 className="font-headline text-xl font-bold text-foreground">
-                    {chapter.title}
-                </h1>
+                <SidebarTrigger>
+                  <Menu/>
+                </SidebarTrigger>
+                <div className="flex flex-col">
+                  <h1 className="text-lg font-bold text-foreground">
+                      {game.title}
+                  </h1>
+                  <p className="text-sm text-muted-foreground">{chapter.title}</p>
+                </div>
             </div>
         </header>
-        <main className="flex flex-1 flex-col gap-4 overflow-hidden p-4 md:p-6">
+        <main className="flex flex-1 flex-col overflow-hidden">
             <MessageLog messages={messages} />
-            <Separator />
-            <div className="px-2 pb-2">
-                <CommandInput onCommandSubmit={onCommandSubmit} isLoading={isLoading} />
-            </div>
         </main>
-    </SidebarInset>
+         <footer className="border-t bg-card p-4">
+            <div className="mx-auto max-w-4xl">
+              <CommandInput onCommandSubmit={onCommandSubmit} isLoading={isLoading} />
+            </div>
+        </footer>
+    </div>
   );
 };

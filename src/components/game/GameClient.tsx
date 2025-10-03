@@ -64,15 +64,19 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState }) => {
   };
 
   return (
-    <SidebarProvider>
-      <GameSidebar game={game} playerState={playerState} />
-      <GameScreen
-        messages={messages}
-        onCommandSubmit={handleCommandSubmit}
-        isLoading={isPending}
-        game={game}
-        playerState={playerState}
-      />
+    <SidebarProvider defaultOpen={false}>
+      <div className='relative min-h-screen'>
+        <GameSidebar game={game} playerState={playerState} />
+        <main className="transition-all duration-300 ease-in-out">
+            <GameScreen
+            messages={messages}
+            onCommandSubmit={handleCommandSubmit}
+            isLoading={isPending}
+            game={game}
+            playerState={playerState}
+            />
+        </main>
+      </div>
     </SidebarProvider>
   );
 };
