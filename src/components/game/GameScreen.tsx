@@ -58,19 +58,19 @@ const CommandInput: FC<Pick<GameScreenProps, 'onCommandSubmit' | 'isLoading'>> =
 };
 
 const MessageLog: FC<Pick<GameScreenProps, 'messages'>> = ({ messages }) => {
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const scrollViewportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (scrollAreaRef.current) {
-      scrollAreaRef.current.scrollTo({
-        top: scrollAreaRef.current.scrollHeight,
+    if (scrollViewportRef.current) {
+        scrollViewportRef.current.scrollTo({
+        top: scrollViewportRef.current.scrollHeight,
         behavior: 'smooth',
       });
     }
   }, [messages]);
 
   return (
-    <ScrollArea className="h-full flex-grow" viewportRef={scrollAreaRef}>
+    <ScrollArea className="h-full flex-grow" viewportRef={scrollViewportRef}>
       <div className="space-y-6 pr-4">
         {messages.map((message) => (
           <div key={message.id} className="flex flex-col">
