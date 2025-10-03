@@ -1,3 +1,16 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "old-key",
+      "description": "An old, ornate brass key.",
+      "imageUrl": "https://images.unsplash.com/photo-1562701447-8ec5d514a2a1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxvbGQlMjBrZXl8ZW58MHx8fHwxNzU5NDk0MTUyfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "old key"
+    },
+    {
+      "id": "notebook",
+      "description": "A leather-bound notebook.",
+      "imageUrl": "https://images.unsplash.com/photo-1581431886211-6b932f8367f2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxub3RlYm9va3xlbnwwfHx8fDE3NTk0Mjk1MTR8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "notebook"
+    }
+  ]
 }

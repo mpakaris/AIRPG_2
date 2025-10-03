@@ -1,0 +1,76 @@
+'use server';
+
+/**
+ * @fileOverview A flow for interpreting player commands using AI and routing to appropriate game functions.
+ *
+ * - interpretPlayerCommand - A function that interprets player commands and calls the correct game functions.
+ * - InterpretPlayerCommandInput - The input type for the interpretPlayerCommand function.
+ * - InterpretPlayerCommandOutput - The return type for the interpretPlayerCommand function.
+ */
+
+import {ai} from '@/ai/genkit';
+import {z} from 'genkit';
+
+// Define the input schema for the interpretPlayerCommand function
+const InterpretPlayerCommandInputSchema = z.object({
+  gameDescription: z.string().describe('A description of the game including story, goals, and rules.'),
+  gameState: z.string().describe('The current state of the game, including player location, inventory, and flags.'),
+  playerCommand: z.string().describe('The command entered by the player.'),
+  availableCommands: z.array(z.string()).describe('A list of available game commands.'),
+});
+export type InterpretPlayerCommandInput = z.infer<typeof InterpretPlayerCommandInputSchema>;
+
+// Define the output schema for the interpretPlayerCommand function
+const InterpretPlayerCommandOutputSchema = z.object({
+  responseToPlayer: z.string().describe('A drafted response to the player.'),
+  commandToExecute: z.string().describe('The command to execute based on the player input.'),
+});
+export type InterpretPlayerCommandOutput = z.infer<typeof InterpretPlayerCommandOutputSchema>;
+
+// Define the exported function that calls the flow
+export async function interpretPlayerCommand(input: InterpretPlayerCommandInput): Promise<InterpretPlayerCommandOutput> {
+  return interpretPlayerCommandFlow(input);
+}
+
+// Define the prompt to interpret the player command and determine the action to take
+const interpretPlayerCommandPrompt = ai.definePrompt({
+  name: 'interpretPlayerCommandPrompt',
+  input: {schema: InterpretPlayerCommandInputSchema},
+  output: {schema: InterpretPlayerCommandOutputSchema},
+  prompt: `You are the game master of a text-based RPG. Your task is to interpret the player's commands and determine the appropriate action to take in the game.
+
+  Here are the game specifications:
+  {{gameDescription}}
+
+  Here is the current game state:
+  {{gameState}}
+
+  The player's command is:
+  {{playerCommand}}
+
+  Available commands are:
+  {{#each availableCommands}}
+  - {{this}}
+  {{/each}}
+
+  Based on the player's command, draft a response to the player and determine which command to execute.
+  Ensure the command is from the list of available commands.
+  Output should be formatted as valid JSON.
+  `, safetySettings: [{
+    category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+    threshold: 'BLOCK_NONE',
+  }],
+});
+
+// Define the Genkit flow for interpreting player commands
+const interpretPlayerCommandFlow = ai.defineFlow(
+  {
+    name: 'interpretPlayerCommandFlow',
+    inputSchema: InterpretPlayerCommandInputSchema,
+    outputSchema: InterpretPlayerCommandOutputSchema,
+  },
+  async input => {
+    const {output} = await interpretPlayerCommandPrompt(input);
+    return output!;
+  }
+);
