@@ -46,7 +46,7 @@ type CommandResult = {
 // --- Generic Action Processor ---
 
 function processActions(initialState: PlayerState, actions: Action[], game: Game): CommandResult {
-    let newState = { ...initialState };
+    let newState = { ...initialState, objectStates: {...initialState.objectStates} };
     const messages: Message[] = [];
     const chapter = game.chapters[newState.currentChapterId];
 
@@ -96,7 +96,7 @@ function processActions(initialState: PlayerState, actions: Action[], game: Game
                 }
                 break;
             case 'SET_INTERACTION_STATE':
-                if(newState.interactingWithObject) {
+                 if(newState.interactingWithObject) {
                     newState.objectStates[newState.interactingWithObject] = {
                         ...newState.objectStates[newState.interactingWithObject],
                         currentInteractionStateId: action.state
@@ -249,7 +249,10 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
         if (targetObject.isOpenable && !targetObject.isLocked) {
             const actions: Action[] = [{ type: 'START_INTERACTION', objectId: targetObject.id as GameObjectId, interactionStateId: targetObject.defaultInteractionStateId || 'start' }];
             const result = processActions(newState, actions, game);
-            result.messages.push(createMessage('narrator', narratorName, targetObject.unlockedDescription || `You open the ${targetObject.name}.`));
+             const liveObject = getLiveGameObject(targetObject.id as GameObjectId, result.newState, game);
+             const interactionState = liveObject.interactionStates?.[liveObject.currentInteractionStateId || 'start'];
+
+            result.messages.push(createMessage('narrator', narratorName, interactionState?.description || targetObject.unlockedDescription || `You open the ${targetObject.name}.`));
             return result;
         }
          return {
@@ -444,8 +447,11 @@ function handlePassword(state: PlayerState, command: string, game: Game): Comman
         const actions: Action[] = targetObject.onUnlockActions || [];
         const result = processActions(newState, actions, game);
         
+        const liveObject = getLiveGameObject(targetObject.id, result.newState, game);
+        const interactionState = liveObject.interactionStates?.[liveObject.currentInteractionStateId || 'start'];
+        
         result.messages.unshift(createMessage('narrator', narratorName, `You speak the words, and the ${targetObject.name} unlocks with a soft click.`));
-        result.messages.push(createMessage('narrator', narratorName, targetObject.unlockedDescription || `You open the ${targetObject.name}.`));
+        result.messages.push(createMessage('narrator', narratorName, interactionState?.description || liveObject.unlockedDescription || `You open the ${liveObject.name}.`));
         
         return result;
     }

@@ -65,6 +65,7 @@ export const game: Game = {
                                 { type: 'SHOW_MESSAGE', sender: 'narrator', senderName: 'Narrator', content: "It seems that there is also a newspaper article where the video was." },
                                 { type: 'SET_INTERACTION_STATE', state: 'video_watched' },
                                 { type: 'SET_FLAG', flag: 'notebook_video_watched' as Flag },
+                                { type: 'END_INTERACTION' }
                             ],
                             'exit': [{ type: 'END_INTERACTION' }],
                             'close': [{ type: 'END_INTERACTION' }],
@@ -80,6 +81,7 @@ export const game: Game = {
                                 { type: 'SET_INTERACTION_STATE', state: 'complete' },
                                 { type: 'SET_FLAG', flag: 'notebook_article_read' as Flag },
                                 { type: 'SET_FLAG', flag: 'notebook_interaction_complete' as Flag },
+                                { type: 'END_INTERACTION' }
                             ],
                              'exit': [{ type: 'END_INTERACTION' }],
                              'close': [{ type: 'END_INTERACTION' }],
