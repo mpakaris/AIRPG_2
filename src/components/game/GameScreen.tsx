@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useRef, useState, type FC, Fragment } from 'react';
@@ -65,7 +66,8 @@ const urlRegex = /(https?:\/\/[^\s]+)/g;
 
 const MessageContent: FC<{ message: Message }> = ({ message }) => {
     const isAgent = message.sender === 'agent';
-    const parts = message.content.split(urlRegex);
+    const content = message.content.replace(/<i>/g, '').replace(/<\/i>/g, '');
+    const parts = content.split(urlRegex);
 
     return (
         <p className={cn("whitespace-pre-wrap", isAgent && "italic")}>

@@ -50,14 +50,15 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
     .find(obj => obj.name.toLowerCase() === targetName);
   if (objectInLocation && location.objects.includes(objectInLocation.id)) {
     let description = objectInLocation.description;
-    // Check for items inside if object is openable but not locked
-    if (objectInLocation.isOpenable && !objectInLocation.isLocked && objectInLocation.items.length > 0) {
+    
+     if (objectInLocation.isLocked && objectInLocation.unlocksWithUrl) {
+      description += ` A lock prevents it from being opened. On the cover, a URL is inscribed: ${objectInLocation.unlocksWithUrl}`;
+    } else if (objectInLocation.isOpenable && !objectInLocation.isLocked && objectInLocation.items.length > 0) {
+      // Check for items inside if object is openable but not locked
       const itemNames = objectInLocation.items.map(id => chapter.items[id].name).join(', ');
       description += ` You see a ${itemNames} inside.`;
     }
-     if (objectInLocation.isLocked && objectInLocation.unlocksWithUrl) {
-      description += ` A lock prevents it from being opened. On the cover, a URL is inscribed: ${objectInLocation.unlocksWithUrl}`;
-    }
+
     return {
       newState: state,
       messages: [createMessage('narrator', 'Narrator', description)],
@@ -182,7 +183,6 @@ function handleUse(state: PlayerState, itemName: string, objectName: string, gam
   
   if (targetObject.unlocksWithPhrase && targetObject.unlocksWithPhrase.toLowerCase() === itemName.toLowerCase() && targetObject.isLocked) {
      const newState = JSON.parse(JSON.stringify(state));
-     // This is a bit of a hack, we should be properly updating the state
      const gameObjInState: GameObject = game.chapters[state.currentChapterId].gameObjects[targetObject.id];
      if (gameObjInState) {
        gameObjInState.isLocked = false;
@@ -223,13 +223,7 @@ function handleLook(state: PlayerState, game: Game): CommandResult {
     const objectNames = location.objects.map(id => chapter.gameObjects[id]?.name).join(', ');
     const npcNames = location.npcs.map(id => chapter.npcs[id]?.name).join(', ');
 
-    let description = location.description;
-    if (objectNames) {
-      description += `\n\nYou can see: ${objectNames}.`;
-    }
-    if (npcNames) {
-        description += `\n${npcNames} are here.`;
-    }
+    const description = `${location.description}\n\nYou can see: ${objectNames}.\n${npcNames} are here.`;
 
     return { newState: state, messages: [createMessage('narrator', 'Narrator', description)] };
 }
@@ -307,6 +301,7 @@ export async function processCommand(
     
     const agentMessage = createMessage('agent', 'Agent Sharma', `${aiResponse.agentResponse}`);
     
+    // Ensure Narrator message comes first, then Agent Sharma's message.
     return {
       newState: result.newState,
       messages: [...result.messages, agentMessage],
