@@ -15,17 +15,23 @@ function createMessage(
   senderName: string,
   content: string,
   type: Message['type'] = 'text',
-  imageOwnerId?: ItemId | NpcId
+  imageId?: ItemId | NpcId | GameObjectId
 ): Message {
     let image;
-    if (imageOwnerId) {
+    if (imageId) {
         const chapter = gameCartridge.chapters[gameCartridge.startChapterId];
-        const item = chapter.items[imageOwnerId as ItemId];
-        const npc = chapter.npcs[imageOwnerId as NpcId];
+        const item = chapter.items[imageId as ItemId];
+        const npc = chapter.npcs[imageId as NpcId];
+        const gameObject = chapter.gameObjects[imageId as GameObjectId];
+
         if (item?.image) {
             image = item.image;
         } else if (npc?.image) {
             image = npc.image;
+        } else if (gameObject?.image) {
+            image = gameObject.image;
+        } else if (gameObject?.unlockedImage) {
+            image = gameObject.unlockedImage;
         }
     }
 
@@ -254,7 +260,7 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
             const actions = targetObject.onExamineLockedActions || [];
             const result = processActions(newState, actions, game);
             const message = `${targetObject.description} A mini-game opens on your device: ${targetObject.unlocksWithUrl}`;
-            result.messages.unshift(createMessage('narrator', narratorName, message));
+            result.messages.unshift(createMessage('narrator', narratorName, message, 'image', targetObject.id));
             return result;
         }
 
@@ -462,7 +468,12 @@ function handlePassword(state: PlayerState, command: string, game: Game): Comman
         const liveObject = getLiveGameObject(targetObject.id, result.newState, game);
         const interactionState = liveObject.interactionStates?.[liveObject.currentInteractionStateId || 'start'];
         
-        result.messages.unshift(createMessage('narrator', narratorName, `You speak the words, and the ${targetObject.name} unlocks with a soft click.`));
+        const unlockMessage = createMessage('narrator', narratorName, `You speak the words, and the ${targetObject.name} unlocks with a soft click.`, 'image');
+        if (liveObject.unlockedImage) {
+            unlockMessage.image = liveObject.unlockedImage;
+        }
+        result.messages.unshift(unlockMessage);
+
         result.messages.push(createMessage('narrator', narratorName, interactionState?.description || liveObject.unlockedDescription || `You open the ${liveObject.name}.`));
         
         return result;

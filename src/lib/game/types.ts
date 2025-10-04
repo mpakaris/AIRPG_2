@@ -30,7 +30,7 @@ export type Message = {
 export type Action =
   | { type: 'ADD_ITEM'; itemId: ItemId }
   | { type: 'SET_FLAG'; flag: Flag }
-  | { type: 'SHOW_MESSAGE'; sender: Message['sender']; senderName: string; content: string; messageType?: Message['type']; imageId?: ItemId | NpcId } // item or npc ID
+  | { type: 'SHOW_MESSAGE'; sender: Message['sender']; senderName: string; content: string; messageType?: Message['type']; imageId?: ItemId | NpcId | GameObjectId } // item, npc, or game object ID
   | { type: 'END_CONVERSATION' }
   | { type: 'START_INTERACTION'; objectId: GameObjectId, interactionStateId?: string }
   | { type: 'END_INTERACTION' }
@@ -89,6 +89,8 @@ export type GameObject = {
   unlocksWithUrl?: string;
   interactionStates?: Record<string, ObjectInteractionState>;
   defaultInteractionStateId?: string;
+  image?: ImageDetails;
+  unlockedImage?: ImageDetails;
 };
 
 export type CannedResponse = {

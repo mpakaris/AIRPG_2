@@ -55,6 +55,16 @@ export const game: Game = {
                     { type: 'SET_FLAG', flag: 'has_seen_notebook_url' as Flag }
                 ],
                 unlocksWithUrl: 'https://6000-firebase-studio-1759162726172.cluster-4cmpbiopffe5oqk7tloeb2ltrk.cloudworkstations.dev/games/the-notebook',
+                image: {
+                    url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759242347/Notebook_locked_ngfes0.png',
+                    description: 'A locked notebook.',
+                    hint: 'locked notebook'
+                },
+                unlockedImage: {
+                    url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759242346/Notebook_unlocked_fpxqgl.jpg',
+                    description: 'An unlocked notebook.',
+                    hint: 'unlocked notebook'
+                },
                 defaultInteractionStateId: 'start',
                 interactionStates: {
                     'start': {
