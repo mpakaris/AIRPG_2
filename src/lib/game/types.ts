@@ -79,6 +79,7 @@ export type GameObject = {
   unlocksWith?: ItemId;
   unlocksWithPhrase?: string;
   onUnlockActions?: Action[];
+  onExamineLockedActions?: Action[];
   unlocksWithUrl?: string;
   interactionStates?: Record<string, ObjectInteractionState>;
   defaultInteractionStateId?: string;

@@ -49,6 +49,7 @@ function processActions(initialState: PlayerState, actions: Action[], game: Game
     let newState = { ...initialState, objectStates: {...initialState.objectStates} };
     const messages: Message[] = [];
     const chapter = game.chapters[newState.currentChapterId];
+    const narratorName = game.narratorName || 'Narrator';
 
     for (const action of actions) {
         switch (action.type) {
@@ -238,14 +239,15 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
     const isGameObject = targetId in chapter.gameObjects;
     if (isGameObject) {
         const targetObject = getLiveGameObject(targetId as GameObjectId, state, game);
+
         if (targetObject.isOpenable && targetObject.isLocked && targetObject.unlocksWithUrl) {
-          newState.flags = [...newState.flags, 'has_seen_notebook_url' as Flag]; // This is still a bit specific, could be an action.
-          const message = `${targetObject.description} A mini-game opens on your device: ${targetObject.unlocksWithUrl}`;
-          return {
-              newState,
-              messages: [createMessage('narrator', narratorName, message)],
-          };
+            const actions = targetObject.onExamineLockedActions || [];
+            const result = processActions(newState, actions, game);
+            const message = `${targetObject.description} A mini-game opens on your device: ${targetObject.unlocksWithUrl}`;
+            result.messages.unshift(createMessage('narrator', narratorName, message));
+            return result;
         }
+
         if (targetObject.isOpenable && !targetObject.isLocked) {
             const actions: Action[] = [{ type: 'START_INTERACTION', objectId: targetObject.id as GameObjectId, interactionStateId: targetObject.defaultInteractionStateId || 'start' }];
             const result = processActions(newState, actions, game);

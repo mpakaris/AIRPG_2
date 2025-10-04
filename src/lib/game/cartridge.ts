@@ -1,4 +1,3 @@
-
 import type { Game, ChapterId, LocationId, ItemId, GameObjectId, NpcId, GameId, Flag } from './types';
 
 export const game: Game = {
@@ -51,6 +50,9 @@ export const game: Game = {
                 onUnlockActions: [
                     { type: 'SET_FLAG', flag: 'has_unlocked_notebook' as Flag },
                     { type: 'START_INTERACTION', objectId: 'obj_brown_notebook' as GameObjectId, interactionStateId: 'start' }
+                ],
+                onExamineLockedActions: [
+                    { type: 'SET_FLAG', flag: 'has_seen_notebook_url' as Flag }
                 ],
                 unlocksWithUrl: 'https://6000-firebase-studio-1759162726172.cluster-4cmpbiopffe5oqk7tloeb2ltrk.cloudworkstations.dev/games/the-notebook',
                 defaultInteractionStateId: 'start',
@@ -170,5 +172,3 @@ export const game: Game = {
     }
   }
 };
-
-    
