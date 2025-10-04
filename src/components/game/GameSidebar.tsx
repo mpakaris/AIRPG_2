@@ -1,6 +1,6 @@
 'use client';
 
-import { BookOpen, Box, Compass, ScrollText, Target, User, CheckCircle } from 'lucide-react';
+import { BookOpen, Box, Compass, ScrollText, Target, User, CheckCircle, Code } from 'lucide-react';
 import type { FC } from 'react';
 import type { Game, PlayerState } from '@/lib/game/types';
 import {
@@ -16,13 +16,15 @@ import {
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 interface GameSidebarProps {
   game: Game;
   playerState: PlayerState;
+  onCommandSubmit: (command: string) => void;
 }
 
-export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState }) => {
+export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommandSubmit }) => {
   const chapter = game.chapters[playerState.currentChapterId];
   const location = chapter.locations[playerState.currentLocationId];
   const inventoryItems = playerState.inventory.map(id => chapter.items[id]).filter(Boolean);
@@ -127,6 +129,19 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState }) => {
                 You are alone here.
             </p>
            )}
+        </SidebarGroup>
+        <SidebarGroup>
+            <SidebarGroupLabel className='flex items-center gap-2'>
+                <Code />
+                Dev Controls
+            </SidebarGroupLabel>
+            <div className='flex flex-col gap-2 px-2'>
+                <Button variant="outline" size="sm" onClick={() => onCommandSubmit('CH I complete')}>Complete Chapter I</Button>
+                <Button variant="outline" size="sm" disabled>Complete Chapter II</Button>
+                <Button variant="outline" size="sm" disabled>Complete Chapter III</Button>
+                <Button variant="outline" size="sm" disabled>Complete Chapter IV</Button>
+                <Button variant="outline" size="sm" disabled>Complete Chapter V</Button>
+            </div>
         </SidebarGroup>
       </SidebarContent>
     </Sidebar>
