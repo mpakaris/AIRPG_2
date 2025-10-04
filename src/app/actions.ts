@@ -125,26 +125,22 @@ function handleObjectInteraction(state: PlayerState, playerInput: string, game: 
     const object = chapter.gameObjects[state.interactingWithObject];
     let newState = { ...state };
     let messages: Message[] = [];
+    const lowerInput = playerInput.toLowerCase().trim();
 
-    if (isEndingInteraction(playerInput)) {
+    if (isEndingInteraction(lowerInput)) {
         newState.interactingWithObject = null;
         messages.push(createMessage('system', 'System', `You stop examining the ${object.name}.`));
         return { newState, messages };
     }
     
-    const [verb, ...args] = playerInput.toLowerCase().split(' ');
-    const targetName = args.join(' ');
-
-    const content = object.content?.find(c => c.type === verb || c.name.toLowerCase() === targetName);
-
-    if ((verb === 'read' && content?.type === 'article') || playerInput.toLowerCase() === 'read article' ) {
+    if (lowerInput === 'read article') {
          const articleContent = object.content?.find(c => c.type === 'article');
          if (articleContent) {
             messages.push(createMessage('narrator', 'Narrator', `You read the ${articleContent.name}:\n${articleContent.url}`, 'text'));
          } else {
             messages.push(createMessage('system', 'System', `There is no article to read in the ${object.name}.`));
          }
-    } else if ((verb === 'watch' && content?.type === 'video') || playerInput.toLowerCase() === 'watch video') {
+    } else if (lowerInput === 'watch video') {
         const videoContent = object.content?.find(c => c.type === 'video');
         if (videoContent) {
             messages.push(createMessage('narrator', 'Narrator', `${videoContent.url}`, 'video'));
