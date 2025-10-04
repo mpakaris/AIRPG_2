@@ -36,12 +36,20 @@ export type Item = {
   image?: ImagePlaceholder['id'];
 };
 
+export type GameObjectContent = {
+    id: string;
+    name: string;
+    type: 'video' | 'article';
+    url: string;
+};
+
 export type GameObject = {
   id: GameObjectId;
   name: string;
   description: string;
   unlockedDescription?: string;
   items: ItemId[];
+  content?: GameObjectContent[];
   isOpenable?: boolean;
   isLocked?: boolean;
   unlocksWith?: ItemId;

@@ -26,8 +26,22 @@ export const game: Game = {
                 id: 'obj_brown_notebook' as GameObjectId,
                 name: 'Brown Notebook',
                 description: 'A worn, leather-bound notebook. It feels heavy with secrets. A lock prevents it from being opened without the right password.',
-                unlockedDescription: 'The notebook is now unlocked. Upon first glance, you find an old Audio/Video Message and a Newspaper Article from the past.\n\n- Read Article: https://1drv.ms/i/c/e7d3aeb87385d8a2/EYUcIv6_9MNHuqnzyMXYrpMBodwu6VeeaJ7-2RZ854N5Qw?e=g3lbfF\n- Watch Video: https://1drv.ms/v/c/e7d3aeb87385d8a2/EcgZlhJvCjhFlfCqCo7hVyQBeLOu4BrqNEhYgbZmEuNY2w?e=KDZkSd',
+                unlockedDescription: "The notebook is open. Inside, you see a folded newspaper article and a small data chip, likely a video or audio recording. You could try to 'read article' or 'watch video'.",
                 items: [],
+                content: [
+                    {
+                        id: 'content_article',
+                        name: 'article',
+                        type: 'article',
+                        url: 'https://1drv.ms/i/c/e7d3aeb87385d8a2/EYUcIv6_9MNHuqnzyMXYrpMBodwu6VeeaJ7-2RZ854N5Qw?e=g3lbfF'
+                    },
+                    {
+                        id: 'content_video',
+                        name: 'video',
+                        type: 'video',
+                        url: 'https://1drv.ms/v/c/e7d3aeb87385d8a2/EcgZlhJvCjhFlfCqCo7hVyQBeLOu4BrqNEhYgbZmEuNY2w?e=KDZkSd'
+                    }
+                ],
                 isOpenable: true,
                 isLocked: true,
                 unlocksWithPhrase: 'JUSTICE FOR SILAS BLOOM',

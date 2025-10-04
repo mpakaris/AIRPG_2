@@ -5,7 +5,7 @@ import { guidePlayerWithNarrator } from '@/ai/flows/guide-player-with-narrator';
 import { generateNpcResponse } from '@/ai/flows/generate-npc-responses';
 import { game as gameCartridge } from '@/lib/game/cartridge';
 import { AVAILABLE_COMMANDS } from '@/lib/game/commands';
-import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC } from '@/lib/game/types';
+import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectContent } from '@/lib/game/types';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 type CommandResult = {
@@ -322,6 +322,40 @@ function handlePassword(state: PlayerState, command: string, game: Game): Comman
 }
 
 
+function handleContentInteraction(state: PlayerState, contentType: 'read' | 'watch', contentName: string, game: Game): CommandResult {
+    const chapter = game.chapters[state.currentChapterId];
+    const location = chapter.locations[state.currentLocationId];
+
+    // Find an unlocked object in the current location that contains the content.
+    const sourceObject = location.objects
+        .map(objId => gameCartridge.chapters[chapter.id].gameObjects[objId])
+        .find(obj => obj && !obj.isLocked && obj.content?.some(c => c.name.toLowerCase() === contentName));
+
+    if (!sourceObject || !sourceObject.content) {
+        return { newState: state, messages: [createMessage('system', 'System', `You can't seem to ${contentType} that right now.`)] };
+    }
+
+    const content = sourceObject.content.find(c => c.name.toLowerCase() === contentName);
+
+    if (content) {
+        const message = contentType === 'read' 
+            ? `You read the ${contentName}:\n${content.url}`
+            : `You watch the ${contentName}:\n${content.url}`;
+        return { newState: state, messages: [createMessage('narrator', 'Narrator', message)] };
+    }
+
+    return { newState: state, messages: [createMessage('system', 'System', `You can't find a "${contentName}" to ${contentType}.`)] };
+}
+
+function handleRead(state: PlayerState, contentName: string, game: Game): CommandResult {
+    return handleContentInteraction(state, 'read', contentName, game);
+}
+
+function handleWatch(state: PlayerState, contentName: string, game: Game): CommandResult {
+    return handleContentInteraction(state, 'watch', contentName, game);
+}
+
+
 // --- Main Action ---
 
 export async function processCommand(
@@ -401,6 +435,12 @@ export async function processCommand(
             break;
         case 'password':
             result = handlePassword(currentState, commandToExecute, game);
+            break;
+        case 'read':
+            result = handleRead(currentState, restOfCommand, game);
+            break;
+        case 'watch':
+            result = handleWatch(currentState, restOfCommand, game);
             break;
         default:
             result = { newState: currentState, messages: [createMessage('system', 'System', "I don't understand that command.")] };
