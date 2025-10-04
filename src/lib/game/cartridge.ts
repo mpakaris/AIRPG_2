@@ -64,8 +64,7 @@ export const game: Game = {
                                 { type: 'SHOW_MESSAGE', sender: 'agent', senderName: 'Agent Sharma', content: "Silas Bloom? I've never heard of him. But it seems he was a great musician. He wrote an amazing Song for this Rose. They really must have been crazy in love." },
                                 { type: 'SHOW_MESSAGE', sender: 'narrator', senderName: 'Narrator', content: "It seems that there is also a newspaper article where the video was." },
                                 { type: 'SET_INTERACTION_STATE', state: 'video_watched' },
-                                { type: 'SET_FLAG', flag: 'notebook_video_watched' as Flag },
-                                { type: 'END_INTERACTION' }
+                                { type: 'SET_FLAG', flag: 'notebook_video_watched' as Flag }
                             ],
                             'exit': [{ type: 'END_INTERACTION' }],
                             'close': [{ type: 'END_INTERACTION' }],
@@ -78,10 +77,9 @@ export const game: Game = {
                             'read article': [
                                 { type: 'SHOW_MESSAGE', sender: 'narrator', senderName: 'Narrator', content: 'A newspaper article about Silas Bloom.', messageType: 'article', imageId: 'newspaper_article' },
                                 { type: 'SHOW_MESSAGE', sender: 'agent', senderName: 'Agent Sharma', content: "Burt, the article talks about Agent Mackling. Is that coincidence? It cant be. That must be what? Your grandfather? You are in law enforcement for 4 generations. Oh my god, this is huge, Burt!" },
-                                { type: 'SET_INTERACTION_STATE', state: 'complete' },
+                                { type: 'SET_INTERACTION_STATE', state: 'article_read' },
                                 { type: 'SET_FLAG', flag: 'notebook_article_read' as Flag },
-                                { type: 'SET_FLAG', flag: 'notebook_interaction_complete' as Flag },
-                                { type: 'END_INTERACTION' }
+                                { type: 'SET_FLAG', flag: 'notebook_interaction_complete' as Flag }
                             ],
                              'exit': [{ type: 'END_INTERACTION' }],
                              'close': [{ type: 'END_INTERACTION' }],
@@ -89,14 +87,12 @@ export const game: Game = {
                     },
                     'article_read': {
                         id: 'article_read',
-                        description: "You've read the article. The video is still here. You could try to 'watch video' or 'exit'.",
+                        description: "You've read the article. The video is still here. You could try to 'watch video' again or 'exit'.",
                         commands: {
                             'watch video': [
                                 { type: 'SHOW_MESSAGE', sender: 'narrator', senderName: 'Narrator', content: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759241547/0930_eit8he.mov', messageType: 'video' },
                                 { type: 'SHOW_MESSAGE', sender: 'agent', senderName: 'Agent Sharma', content: "Silas Bloom? I've never heard of him. But it seems he was a great musician. He wrote an amazing Song for this Rose. They really must have been crazy in love." },
-                                { type: 'SET_INTERACTION_STATE', state: 'complete' },
-                                { type: 'SET_FLAG', flag: 'notebook_video_watched' as Flag },
-                                { type: 'SET_FLAG', flag: 'notebook_interaction_complete' as Flag },
+                                { type: 'SET_INTERACTION_STATE', state: 'complete' }
                             ],
                              'exit': [{ type: 'END_INTERACTION' }],
                              'close': [{ type: 'END_INTERACTION' }],
