@@ -74,6 +74,18 @@ const MessageContent: FC<{ message: Message }> = ({ message }) => {
         )
     }
 
+    if (message.type === 'article') {
+        return (
+            <Image
+                src={message.content}
+                alt="Newspaper Article"
+                width={600}
+                height={800}
+                className="rounded-lg border-2 border-border"
+            />
+        )
+    }
+
     const content = message.content.replace(/_|\*/g, '');
     const parts = content.split(urlRegex);
 

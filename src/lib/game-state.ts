@@ -10,5 +10,6 @@ export function getInitialState(game: Game): PlayerState {
     activeConversationWith: null,
     interactingWithObject: null,
     hasStartedFirstConversation: false,
+    notebookInteractionState: 'start',
   };
 }

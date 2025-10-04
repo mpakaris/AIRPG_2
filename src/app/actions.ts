@@ -128,28 +128,39 @@ function handleObjectInteraction(state: PlayerState, playerInput: string, game: 
 
     if (isEndingInteraction(lowerInput)) {
         newState.interactingWithObject = null;
+        newState.notebookInteractionState = 'start';
         messages.push(createMessage('system', 'System', `You stop examining the ${object.name}.`));
         return { newState, messages };
     }
     
-    if (lowerInput.includes('read') && lowerInput.includes('article')) {
+    const wantsToReadArticle = lowerInput.includes('read') && lowerInput.includes('article');
+    const wantsToWatchVideo = lowerInput.includes('watch') && lowerInput.includes('video');
+
+    if (wantsToReadArticle) {
          const articleContent = object.content?.find(c => c.type === 'article');
          if (articleContent) {
-            messages.push(createMessage('narrator', 'Narrator', `You read the ${articleContent.name}:\n${articleContent.url}`, 'text'));
+            newState.notebookInteractionState = 'article_read';
+            messages.push(createMessage('narrator', 'Narrator', `You read the article:`, 'article', articleContent.url));
          } else {
             messages.push(createMessage('system', 'System', `There is no article to read in the ${object.name}.`));
          }
-    } else if (lowerInput.includes('watch') && lowerInput.includes('video')) {
+    } else if (wantsToWatchVideo) {
         const videoContent = object.content?.find(c => c.type === 'video');
         if (videoContent) {
+            newState.notebookInteractionState = 'video_watched';
             messages.push(createMessage('narrator', 'Narrator', `${videoContent.url}`, 'video'));
+            messages.push(createMessage('agent', 'Agent Sharma', "Silas Bloom? I've never heard of him. But it seems he was a great musician. He wrote an amazing Song for this Rose. They really must have been crazy in love."));
+            messages.push(createMessage('agent', 'Agent Sharma', "Burt, wait! It seems there is also a newspaper article. Maybe you should have a look at it."));
+
         } else {
             messages.push(createMessage('system', 'System', `There is no video to watch in the ${object.name}.`));
         }
     } else {
-        const description = (object as GameObject).unlockedDescription || (object as GameObject).description;
-        messages.push(createMessage('narrator', 'Narrator', description));
-        messages.push(createMessage('system', 'System', "You can 'read article' or 'watch video'. Type 'exit' to stop."));
+        if (newState.notebookInteractionState === 'start') {
+             messages.push(createMessage('narrator', 'Narrator', "The notebook is open. Inside, you see what appears to be a small data chip, likely a video or audio recording."));
+        } else {
+            messages.push(createMessage('narrator', 'Narrator', (object as GameObject).unlockedDescription || (object as GameObject).description));
+        }
     }
     
     return { newState, messages };
@@ -174,13 +185,7 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
   if (target) {
     if ('isOpenable' in target && target.isOpenable && !target.isLocked) {
         newState.interactingWithObject = target.id as GameObjectId;
-        const description = (target as GameObject).unlockedDescription || (target as GameObject).description;
-        return { 
-            newState, 
-            messages: [
-                createMessage('system', 'System', `You are now examining the ${target.name}. You can 'read article' or 'watch video'. Type 'exit' to stop.`),
-            ]
-        };
+        return handleObjectInteraction(newState, '', game);
     }
     return {
         newState: state,
@@ -349,7 +354,7 @@ function handleInventory(state: PlayerState, game: Game): CommandResult {
 function handlePassword(state: PlayerState, command: string, game: Game): CommandResult {
     const passwordMatch = command.toLowerCase().match(/password for (.*?) "(.*)"/);
     if (!passwordMatch) {
-        return { newState: state, messages: [createMessage('system', 'System', 'Invalid password format. Please use: password for &lt;object&gt; "&lt;phrase&gt;"')] };
+        return { newState: state, messages: [createMessage('system', 'System', 'Invalid password format. Please use: password for <object> "<phrase>"')] };
     }
 
     const [, objectName, phrase] = passwordMatch;
@@ -375,9 +380,13 @@ function handlePassword(state: PlayerState, command: string, game: Game): Comman
         }
         
         newState.interactingWithObject = targetObject.id;
-        const unlockedMessage = `You speak the words, and the ${targetObject.name} unlocks with a soft click. You are now examining it. You can 'read article' or 'watch video'. Type 'exit' to stop.`;
+        const unlockedMessage = `You speak the words, and the ${targetObject.name} unlocks with a soft click. You are now examining it.`;
 
-        return { newState, messages: [createMessage('narrator', 'Narrator', unlockedMessage)] };
+        return { newState, messages: [
+                createMessage('narrator', 'Narrator', unlockedMessage),
+                ...handleObjectInteraction(newState, '', game).messages
+            ]
+        };
     }
 
     return { newState: state, messages: [createMessage('system', 'System', 'That password doesn\'t work.')] };
@@ -391,7 +400,7 @@ export async function processCommand(
 ): Promise<CommandResult> {
   const game = gameCartridge;
 
-  // Handle special interaction states first, bypassing AI for clarity.
+  // Handle special interaction states first.
   if (currentState.activeConversationWith) {
       return await handleConversation(currentState, playerInput, game);
   }
@@ -470,10 +479,6 @@ export async function processCommand(
         case 'inventory':
             result = handleInventory(currentState, game);
             break;
-        case 'password':
-             // This is now handled before the AI, but we keep it here as a fallback.
-             result = handlePassword(currentState, commandToExecute, game);
-             break;
         default:
              result = { newState: currentState, messages: [createMessage('system', 'System', "I don't understand that command.")] };
              break;

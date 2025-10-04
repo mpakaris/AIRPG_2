@@ -13,7 +13,7 @@ export type Message = {
   id: string;
   sender: 'narrator' | 'player' | 'system' | 'agent' | NpcId;
   senderName: string;
-  type: 'text' | 'image' | 'video';
+  type: 'text' | 'image' | 'video' | 'article';
   content: string;
   image?: ImagePlaceholder;
   timestamp: number;
@@ -28,6 +28,7 @@ export type PlayerState = {
   activeConversationWith: NpcId | null;
   interactingWithObject: GameObjectId | null;
   hasStartedFirstConversation: boolean;
+  notebookInteractionState: 'start' | 'video_watched' | 'article_read';
 };
 
 export type Item = {
