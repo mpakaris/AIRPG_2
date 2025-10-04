@@ -6,7 +6,6 @@ import { selectNpcResponse } from '@/ai/flows/select-npc-response';
 import { game as gameCartridge } from '@/lib/game/cartridge';
 import { AVAILABLE_COMMANDS } from '@/lib/game/commands';
 import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectId, GameObjectState, ItemId, Flag, Action, Chapter, ChapterId } from '@/lib/game/types';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 
 // --- Utility Functions ---
@@ -16,9 +15,20 @@ function createMessage(
   senderName: string,
   content: string,
   type: Message['type'] = 'text',
-  image_id?: string
+  imageOwnerId?: ItemId | NpcId
 ): Message {
-  const image = image_id ? PlaceHolderImages.find(p => p.id === image_id) : undefined;
+    let image;
+    if (imageOwnerId) {
+        const chapter = gameCartridge.chapters[gameCartridge.startChapterId];
+        const item = chapter.items[imageOwnerId as ItemId];
+        const npc = chapter.npcs[imageOwnerId as NpcId];
+        if (item?.image) {
+            image = item.image;
+        } else if (npc?.image) {
+            image = npc.image;
+        }
+    }
+
   return {
     id: crypto.randomUUID(),
     sender,
@@ -392,7 +402,7 @@ async function handleTalk(state: PlayerState, npcName: string, game: Game): Prom
         messages.unshift(createMessage('system', 'System', `You are now talking to ${npc.name}. Type your message to continue the conversation. To end the conversation, type 'goodbye'.`));
         
         const welcomeMessage = (npc as NPC).welcomeMessage || "Hello.";
-        messages.push(createMessage(npc.id as NpcId, npc.name, `"${welcomeMessage}"`, 'image', npc.image));
+        messages.push(createMessage(npc.id as NpcId, npc.name, `"${welcomeMessage}"`, 'image', npc.id));
 
         return { newState, messages };
     }

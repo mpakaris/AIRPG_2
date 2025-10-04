@@ -128,7 +128,21 @@ export const game: Game = {
                 id: 'item_business_card' as ItemId,
                 name: 'Business Card',
                 description: 'A simple business card for a musician. It reads: "S A X O - The World\'s Best Sax Player". A phone number is listed, along with a handwritten number "1943" and the name "ROSE".',
-                image: 'business_card'
+                image: {
+                    url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759241477/Screenshot_2025-09-30_at_15.46.02_fuk4tb.png',
+                    description: 'A business card for a saxophone player.',
+                    hint: 'business card'
+                }
+            },
+             'newspaper_article': {
+                id: 'newspaper_article' as ItemId,
+                name: 'Newspaper Article',
+                description: 'A newspaper article about Silas Bloom.',
+                image: {
+                    url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759241463/Screenshot_2025-09-30_at_15.51.35_gyj3d5.png',
+                    description: 'A newspaper article about Silas Bloom.',
+                    hint: 'newspaper article'
+                }
             }
         },
         npcs: {
@@ -138,7 +152,11 @@ export const game: Game = {
                 description: 'A tired-looking male barista. He seems to have seen a lot in this cafe and is not easily impressed.',
                 welcomeMessage: 'Good Morning Sir, how can I help you? Would you like to try our Specialty Coffee today?',
                 goodbyeMessage: "I'm sorry, mister. But I do have to return to my work. I wish you all the best.",
-                image: 'barista',
+                image: {
+                    url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759241505/Cafe_barrista_hpwona.png',
+                    description: 'A portrait of the cafe barista.',
+                    hint: 'male barista'
+                },
                 startConversationActions: [
                     { type: 'SET_FLAG', flag: 'has_talked_to_barista' as Flag }
                 ],
@@ -146,13 +164,13 @@ export const game: Game = {
                     { topic: 'greeting', response: 'Just coffee today, or can I help with something else?' },
                     { topic: 'mystery', response: "The man who just left? Ah, him. He's a regular. Comes in, gets his coffee, doesn't say much." },
                     { topic: 'saxophonist', response: "He's a musician. Plays the saxophone out on the corner most days. Pretty good, too." },
-                    { 
-                        topic: 'clue', 
+                    {
+                        topic: 'clue',
                         response: "You know, he left his business card here once. Said I could have it. If you're that interested, you can take it.",
                         actions: [
                             { type: 'ADD_ITEM', itemId: 'item_business_card' as ItemId },
                             { type: 'SET_FLAG', flag: 'has_received_business_card' as Flag },
-                            { type: 'SHOW_MESSAGE', sender: 'narrator', senderName: 'Narrator', content: "The barista hands you a business card. It's been added to your inventory.", messageType: 'image', imageId: 'business_card' },
+                            { type: 'SHOW_MESSAGE', sender: 'narrator', senderName: 'Narrator', content: "The barista hands you a business card. It's been added to your inventory.", messageType: 'image', imageId: 'item_business_card' },
                             { type: 'SHOW_MESSAGE', sender: 'agent', senderName: 'Agent Sharma', content: "Oh Burt you genious! Your instincts won, one more time! Maybe that is the key to open that Notebook!" },
                             { type: 'END_CONVERSATION' }
                         ]

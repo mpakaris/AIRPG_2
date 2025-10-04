@@ -1,3 +1,4 @@
+
 'use client';
 
 import { BookOpen, Box, Compass, ScrollText, Target, User, CheckCircle, Code } from 'lucide-react';
@@ -13,7 +14,6 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from '@/components/ui/sidebar';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -87,18 +87,17 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
           <SidebarMenu>
             {inventoryItems.length > 0 ? (
               inventoryItems.map((item) => {
-                const itemImage = PlaceHolderImages.find(p => p.id === item.image);
                 return (
                     <SidebarMenuItem key={item.id}>
                         <SidebarMenuButton tooltip={item.description} size="lg" className="h-auto">
-                            {itemImage && (
-                                <Image 
-                                    src={itemImage.imageUrl} 
-                                    alt={itemImage.description} 
-                                    width={24} 
+                            {item.image && (
+                                <Image
+                                    src={item.image.url}
+                                    alt={item.image.description}
+                                    width={24}
                                     height={24}
                                     className="rounded-sm"
-                                    data-ai-hint={itemImage.imageHint}
+                                    data-ai-hint={item.image.hint}
                                 />
                             )}
                             <div className="flex flex-col items-start">

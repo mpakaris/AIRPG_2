@@ -10,7 +10,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import type { Game, Message, PlayerState } from '@/lib/game/types';
 import { cn } from '@/lib/utils';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 interface GameScreenProps {
@@ -80,19 +79,19 @@ const MessageContent: FC<{ message: Message }> = ({ message }) => {
                 <DialogTrigger asChild>
                 <button className="mt-2 block w-full cursor-pointer">
                     <Image
-                        src={message.image.imageUrl}
+                        src={message.image.url}
                         alt={message.image.description}
                         width={200}
                         height={200}
                         className="rounded-lg border-2 border-border"
-                        data-ai-hint={message.image.imageHint}
+                        data-ai-hint={message.image.hint}
                     />
                 </button>
                 </DialogTrigger>
                 <DialogContent className="max-w-3xl">
                     <DialogTitle className="sr-only">{message.image.description}</DialogTitle>
                     <Image
-                        src={message.image.imageUrl}
+                        src={message.image.url}
                         alt={message.image.description}
                         width={800}
                         height={600}
@@ -180,19 +179,19 @@ const MessageLog: FC<Pick<GameScreenProps, 'messages'>> = ({ messages }) => {
                       <DialogTrigger asChild>
                         <button className="mt-2 block w-full cursor-pointer">
                           <Image
-                            src={message.image.imageUrl}
+                            src={message.image.url}
                             alt={message.image.description}
                             width={200}
                             height={200}
                             className="rounded-lg border-2 border-border"
-                            data-ai-hint={message.image.imageHint}
+                            data-ai-hint={message.image.hint}
                           />
                         </button>
                       </DialogTrigger>
                       <DialogContent className="max-w-3xl">
                         <DialogTitle className="sr-only">{message.image.description}</DialogTitle>
                         <Image
-                          src={message.image.imageUrl}
+                          src={message.image.url}
                           alt={message.image.description}
                           width={800}
                           height={600}

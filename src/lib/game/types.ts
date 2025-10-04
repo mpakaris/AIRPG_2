@@ -1,4 +1,4 @@
-import type { ImagePlaceholder } from '@/lib/placeholder-images';
+
 
 // Branded types for stronger type safety
 export type GameId = string & { readonly __brand: 'GameId' };
@@ -10,13 +10,19 @@ export type NpcId = string & { readonly __brand: 'NpcId' };
 export type Flag = string & { readonly __brand: 'Flag' };
 export type GameType = 'Escape Game' | 'Limited Open World' | 'Open World' | 'Multi Player';
 
+export type ImageDetails = {
+    url: string;
+    description: string;
+    hint: string;
+};
+
 export type Message = {
   id: string;
   sender: 'narrator' | 'player' | 'system' | 'agent' | NpcId;
   senderName: string;
   type: 'text' | 'image' | 'video' | 'article';
   content: string;
-  image?: ImagePlaceholder;
+  image?: ImageDetails;
   timestamp: number;
 };
 
@@ -24,7 +30,7 @@ export type Message = {
 export type Action =
   | { type: 'ADD_ITEM'; itemId: ItemId }
   | { type: 'SET_FLAG'; flag: Flag }
-  | { type: 'SHOW_MESSAGE'; sender: Message['sender']; senderName: string; content: string; messageType?: Message['type']; imageId?: string }
+  | { type: 'SHOW_MESSAGE'; sender: Message['sender']; senderName: string; content: string; messageType?: Message['type']; imageId?: ItemId | NpcId } // item or npc ID
   | { type: 'END_CONVERSATION' }
   | { type: 'START_INTERACTION'; objectId: GameObjectId, interactionStateId?: string }
   | { type: 'END_INTERACTION' }
@@ -52,7 +58,7 @@ export type Item = {
   id: ItemId;
   name: string;
   description: string;
-  image?: ImagePlaceholder['id'];
+  image?: ImageDetails;
 };
 
 export type GameObjectContent = {
@@ -97,7 +103,7 @@ export type NPC = {
   description: string;
   welcomeMessage: string;
   goodbyeMessage: string;
-  image?: ImagePlaceholder['id'];
+  image?: ImageDetails;
   cannedResponses?: CannedResponse[];
   startConversationActions?: Action[];
 };
