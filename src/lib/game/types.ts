@@ -40,6 +40,7 @@ export type GameObject = {
   id: GameObjectId;
   name: string;
   description: string;
+  unlockedDescription?: string;
   items: ItemId[];
   isOpenable?: boolean;
   isLocked?: boolean;

@@ -52,14 +52,11 @@ Respond to Burt with a helpful and engaging message in character as Agent Sharma
 - If his command is 'look around' or 'examine' something, encourage him to survey the scene.
 - If his command seems reasonable, encourage it. Help him figure out the next step.
 - If his command is to talk to someone (e.g., 'approach the barista'), encourage the interaction. It could be a valuable lead.
-- If his command is to 'read article' or 'watch video', and the context supports it (e.g., he has an unlocked notebook), confirm this is a good idea.
 
 Example of a good response: "Good thinking, Burt. That notebook is our primary lead. Let's start by giving it a thorough examination."
 
 Based on the player's intent and the game state, determine the most logical command for the game engine to execute. It must be a valid command from the available list.
 - If the player's intent is to interact with a person, the command should be 'talk to <npc name>'.
-- If the player's intent is to read the article from the notebook, the command is 'read article'.
-- If the player's intent is to watch the video from the notebook, the command is 'watch video'.
 - If the player is just making conversation or the command is unclear, 'look around' is a safe default.
 
 Your response should include:
@@ -82,5 +79,3 @@ const guidePlayerWithNarratorFlow = ai.defineFlow(
     return output!;
   }
 );
-
-    

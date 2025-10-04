@@ -10,8 +10,4 @@ export const AVAILABLE_COMMANDS = [
   'look around',
   'password for <object> "<phrase>"',
   'goodbye',
-  'read article',
-  'watch video',
 ];
-
-    

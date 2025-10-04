@@ -131,6 +131,10 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
     const gameObject = gameCartridge.chapters[state.currentChapterId].gameObjects[objectInLocation.id];
     let description = gameObject.description;
 
+    if (!gameObject.isLocked && gameObject.unlockedDescription) {
+        description = gameObject.unlockedDescription;
+    }
+
     return {
       newState: state,
       messages: [createMessage('narrator', 'Narrator', description)],
@@ -285,7 +289,7 @@ function handleInventory(state: PlayerState, game: Game): CommandResult {
 }
 
 function handlePassword(state: PlayerState, command: string, game: Game): CommandResult {
-    const passwordMatch = command.match(/for (.*?) "(.*)"/i);
+    const passwordMatch = command.match(/password for (.*?) "(.*)"/i);
     if (!passwordMatch) {
         return { newState: state, messages: [createMessage('system', 'System', 'Invalid password format. Please use: password for <object> "<phrase>"')] };
     }
@@ -309,31 +313,12 @@ function handlePassword(state: PlayerState, command: string, game: Game): Comman
         const gameObjInCartridge = gameCartridge.chapters[state.currentChapterId].gameObjects[targetObject.id];
         if (gameObjInCartridge) {
             gameObjInCartridge.isLocked = false;
-            gameObjInCartridge.description = 'The notebook is now unlocked. Upon first glance, you find an old Audio/Video Message and a Newspaper Article from the past. You can now examine it to read the contents.';
         }
 
         return { newState: state, messages: [createMessage('narrator', 'Narrator', `You speak the words, and the ${targetObject.name} unlocks with a soft click. It can now be examined.`)] };
     }
 
     return { newState: state, messages: [createMessage('system', 'System', 'That password doesn\'t work.')] };
-}
-
-function handleReadArticle(state: PlayerState, game: Game): CommandResult {
-    const notebook = gameCartridge.chapters[state.currentChapterId].gameObjects['obj_brown_notebook'];
-    if (notebook && !notebook.isLocked) {
-        const articleUrl = "https://1drv.ms/i/c/e7d3aeb87385d8a2/EYUcIv6_9MNHuqnzyMXYrpMBodwu6VeeaJ7-2RZ854N5Qw?e=g3lbfF";
-        return { newState: state, messages: [createMessage('narrator', 'Narrator', `You open the notebook to an old, yellowed newspaper clipping:\n${articleUrl}`)] };
-    }
-    return { newState: state, messages: [createMessage('system', 'System', "You can't do that right now.")] };
-}
-
-function handleWatchVideo(state: PlayerState, game: Game): CommandResult {
-    const notebook = gameCartridge.chapters[state.currentChapterId].gameObjects['obj_brown_notebook'];
-    if (notebook && !notebook.isLocked) {
-        const videoUrl = "https://1drv.ms/v/c/e7d3aeb87385d8a2/EcgZlhJvCjhFlfCqCo7hVyQBeLOu4BrqNEhYgbZmEuNY2w?e=KDZkSd";
-        return { newState: state, messages: [createMessage('narrator', 'Narrator', `You find a section in the notebook with instructions to view a recording. It provides a URL:\n${videoUrl}`)] };
-    }
-    return { newState: state, messages: [createMessage('system', 'System', "You can't do that right now.")] };
 }
 
 
@@ -417,16 +402,6 @@ export async function processCommand(
         case 'password':
             result = handlePassword(currentState, commandToExecute, game);
             break;
-        case 'read':
-            if (restOfCommand.includes('article')) {
-                result = handleReadArticle(currentState, game);
-            }
-            break;
-        case 'watch':
-            if (restOfCommand.includes('video')) {
-                result = handleWatchVideo(currentState, game);
-            }
-            break;
         default:
             result = { newState: currentState, messages: [createMessage('system', 'System', "I don't understand that command.")] };
     }
@@ -454,5 +429,3 @@ export async function processCommand(
     };
   }
 }
-
-    
