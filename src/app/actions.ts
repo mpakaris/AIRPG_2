@@ -134,7 +134,7 @@ function handleObjectInteraction(state: PlayerState, playerInput: string, game: 
     }
     
     const wantsToReadArticle = lowerInput.includes('read') && lowerInput.includes('article');
-    const wantsToWatchVideo = lowerInput.includes('watch') && (lowerInput.includes('video') || lowerInput.includes('recording'));
+    const wantsToWatchVideo = (lowerInput.includes('watch') || lowerInput.includes('play') || lowerInput.includes('what is')) && (lowerInput.includes('video') || lowerInput.includes('recording'));
 
     if (wantsToReadArticle) {
          const articleContent = object.content?.find(c => c.type === 'article');
@@ -370,10 +370,11 @@ function handlePassword(state: PlayerState, command: string, game: Game): Comman
     if (!targetObject) {
         return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${objectName}" here.`)] };
     }
-
+    
     if (!targetObject.isLocked) {
         return { newState: state, messages: [createMessage('system', 'System', `The ${targetObject.name} is already unlocked.`)] };
     }
+
 
     if (targetObject.unlocksWithPhrase?.toLowerCase() === phrase.toLowerCase()) {
         const gameObjInCartridge = gameCartridge.chapters[state.currentChapterId].gameObjects[targetObject.id];
@@ -406,7 +407,7 @@ export async function processCommand(
 ): Promise<CommandResult> {
   const game = gameCartridge;
 
-  // Handle special interaction states first.
+  // Handle special interaction states first. These bypass the main AI.
   if (currentState.activeConversationWith) {
       return await handleConversation(currentState, playerInput, game);
   }
