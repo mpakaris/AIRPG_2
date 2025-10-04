@@ -595,15 +595,15 @@ export async function processCommand(
     const location = chapter.locations[currentState.currentLocationId];
     const objectsInLocation = location.objects.map(id => getLiveGameObject(id, currentState, game));
     const objectStates = objectsInLocation.map(obj => `${obj.name} is ${obj.isLocked ? 'locked' : 'unlocked'}`).join('. ');
-    const objectNames = objectsInLocation.map(obj => obj.name).join(', ');
-    const npcNames = location.npcs.map(id => chapter.npcs[id]?.name).join(', ');
+    const objectNames = objectsInLocation.map(obj => obj.name);
+    const npcNames = location.npcs.map(id => chapter.npcs[id]?.name).filter(Boolean) as string[];
     
     let lookAroundSummary = `${location.description}\n\n`;
-    if(objectNames) {
-      lookAroundSummary += `You can see the following objects:\n${objectNames}\n`;
+    if(objectNames.length > 0) {
+      lookAroundSummary += `You can see the following objects:\n${objectNames.map(name => `• ${name}`).join('\n')}\n`;
     }
-    if(npcNames) {
-      lookAroundSummary += `\nYou see the following people here:\n${npcNames}`;
+    if(npcNames.length > 0) {
+      lookAroundSummary += `\nYou see the following people here:\n${npcNames.map(name => `• ${name}`).join('\n')}`;
     }
     
     let gameStateSummaryForAI = `
