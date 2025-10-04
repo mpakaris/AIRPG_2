@@ -106,7 +106,7 @@ async function handleConversation(state: PlayerState, playerInput: string, game:
 }
 
 // --- Object Interaction Helper ---
-const INTERACTION_END_KEYWORDS = ['exit', 'close', 'stop', 'leave'];
+const INTERACTION_END_KEYWORDS = ['exit', 'close', 'stop', 'leave', 'close notebook'];
 
 function isEndingInteraction(input: string): boolean {
     const lowerInput = input.toLowerCase().trim();
@@ -350,7 +350,7 @@ function handleInventory(state: PlayerState, game: Game): CommandResult {
 }
 
 function handlePassword(state: PlayerState, command: string, game: Game): CommandResult {
-    const passwordMatch = command.match(/password for (.*?) "(.*)"/i);
+    const passwordMatch = command.toLowerCase().match(/password for (.*?) "(.*)"/);
     if (!passwordMatch) {
         return { newState: state, messages: [createMessage('system', 'System', 'Invalid password format. Please use: password for <object> "<phrase>"')] };
     }
@@ -394,12 +394,17 @@ export async function processCommand(
 ): Promise<CommandResult> {
   const game = gameCartridge;
 
-  // If in a special interaction state, handle that first and bypass AI.
+  // Handle special interaction states first, bypassing AI for clarity.
   if (currentState.activeConversationWith) {
       return await handleConversation(currentState, playerInput, game);
   }
   if (currentState.interactingWithObject) {
       return handleObjectInteraction(currentState, playerInput, game);
+  }
+
+  // Handle structured commands that the AI struggles with.
+  if (playerInput.toLowerCase().startsWith('password for')) {
+      return handlePassword(currentState, playerInput, game);
   }
 
   // AI processing for general commands
@@ -469,17 +474,17 @@ export async function processCommand(
             result = handleInventory(currentState, game);
             break;
         case 'password':
-            result = handlePassword(currentState, commandToExecute, game);
-            break;
+             // This is now handled before the AI, but we keep it here as a fallback.
+             result = handlePassword(currentState, commandToExecute, game);
+             break;
         default:
              result = { newState: currentState, messages: [createMessage('system', 'System', "I don't understand that command.")] };
              break;
     }
 
-    // Agent Sharma comments on the *result* of the action.
-    // We only add her message if the command was successful (i.e., not a system error).
+    // Add Agent Sharma's message only if the command was successful (not a system error).
     const finalMessages = [...result.messages];
-    if (result.messages.length > 0 && result.messages.every(m => m.sender !== 'system')) {
+    if (result.messages.every(m => m.sender !== 'system')) {
         const agentMessage = createMessage('agent', 'Agent Sharma', `${aiResponse.agentResponse}`);
         finalMessages.unshift(agentMessage);
     }
@@ -497,5 +502,3 @@ export async function processCommand(
     };
   }
 }
-
-    
