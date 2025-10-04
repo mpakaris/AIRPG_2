@@ -268,7 +268,6 @@ export async function processCommand(
       availableCommands: AVAILABLE_COMMANDS.join(', '),
     });
 
-    const agentMessage = createMessage('agent', 'Agent Sharma', `${aiResponse.agentResponse}`);
     const commandToExecute = aiResponse.commandToExecute.toLowerCase();
     const [verb, ...args] = commandToExecute.split(' ');
     const restOfCommand = args.join(' ');
@@ -306,9 +305,11 @@ export async function processCommand(
         result = { newState: currentState, messages: [createMessage('system', 'System', "I don't understand that command.")] };
     }
     
+    const agentMessage = createMessage('agent', 'Agent Sharma', `${aiResponse.agentResponse}`);
+    
     return {
       newState: result.newState,
-      messages: [ ...result.messages, agentMessage],
+      messages: [...result.messages, agentMessage],
     };
 
   } catch (error) {
