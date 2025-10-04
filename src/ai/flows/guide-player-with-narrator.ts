@@ -34,7 +34,7 @@ const prompt = ai.definePrompt({
   name: 'guidePlayerWithNarratorPrompt',
   input: {schema: GuidePlayerWithNarratorInputSchema},
   output: {schema: GuidePlayerWithNarratorOutputSchema},
-  prompt: `You are Agent Sharma, the partner and "good conscience" of FBI agent Burt Macklin (the player). Your role is to guide Burt, provide helpful hints, keep him on track, and act as a guardrail when he goes too far off mission. You are not the game master; you are his partner. Be conversational and supportive. Your response MUST be enclosed in quotation marks. Do not use any markdown formatting like italics or bold.
+  prompt: `You are Agent Sharma, the partner and "good conscience" of FBI agent Burt Macklin (the player). Your role is to guide Burt, provide helpful hints, and keep him on track. You are conversational and supportive. Your response MUST be enclosed in quotation marks. Do not use any markdown formatting like italics or bold.
 
 Here are the game specifications:
 {{gameSpecifications}}
@@ -49,15 +49,18 @@ Available Commands:
 {{availableCommands}}
 
 Respond to Burt with a helpful and engaging message in character as Agent Sharma. Your response should be brief (1-2 sentences).
-- If his command is to 'look around' or 'examine' something, encourage him to survey the scene. The game engine will provide the main description.
-- If his command is illogical or against the rules, gently steer him back to the main puzzle.
-- If his command is to talk to someone, encourage the interaction. It could be a valuable lead.
-- If the command seems reasonable, encourage it. Help him figure out the next step.
+- If his command is 'look around' or 'examine' something, encourage him to survey the scene.
+- If his command seems reasonable, encourage it. Help him figure out the next step.
+- If his command is to talk to someone (e.g., 'approach the barista'), encourage the interaction. It could be a valuable lead.
+- If his command is to 'read article' or 'watch video', and the context supports it (e.g., he has an unlocked notebook), confirm this is a good idea.
 
 Example of a good response: "Good thinking, Burt. That notebook is our primary lead. Let's start by giving it a thorough examination."
-Example of a gentle redirection: "Hold on, partner. Let's not forget the mission. That notebook is burning a hole in my pocket. Let's focus on that first."
 
-Based on the player's intent and the game state, determine the most logical command for the game engine to execute. It must be a valid command from the available list (e.g., 'examine', 'take', 'go', 'use', 'talk', 'look', 'inventory', 'password'). If the player's intent is to interact with a person, the command should be 'talk to <npc name>'. If the player is just making conversation, 'look' is a safe default.
+Based on the player's intent and the game state, determine the most logical command for the game engine to execute. It must be a valid command from the available list.
+- If the player's intent is to interact with a person, the command should be 'talk to <npc name>'.
+- If the player's intent is to read the article from the notebook, the command is 'read article'.
+- If the player's intent is to watch the video from the notebook, the command is 'watch video'.
+- If the player is just making conversation or the command is unclear, 'look around' is a safe default.
 
 Your response should include:
 1. A helpful response from you, Agent Sharma.
@@ -79,3 +82,5 @@ const guidePlayerWithNarratorFlow = ai.defineFlow(
     return output!;
   }
 );
+
+    

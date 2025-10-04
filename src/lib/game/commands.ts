@@ -1,3 +1,4 @@
+
 export const AVAILABLE_COMMANDS = [
   'go <direction or location name>',
   'examine <object or item>',
@@ -9,4 +10,8 @@ export const AVAILABLE_COMMANDS = [
   'look around',
   'password for <object> "<phrase>"',
   'goodbye',
+  'read article',
+  'watch video',
 ];
+
+    
