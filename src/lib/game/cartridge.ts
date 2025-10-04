@@ -5,13 +5,19 @@ export const game: Game = {
   title: 'The Crimson Case',
   description: "You are Burt Macklin, FBI. A mysterious stranger hands you a worn notebook from the 1940s—the secret case file of a forgotten murder. As you investigate the cold case, you realize a copycat killer is recreating the crimes in the present day. You must solve the past to stop a killer in the present.",
   gameType: 'Escape Game',
+  narratorName: 'Agent Sharma',
   startChapterId: 'ch1-the-cafe' as ChapterId,
   chapters: {
     'ch1-the-cafe': {
         id: 'ch1-the-cafe' as ChapterId,
         title: 'A Blast from the Past',
         goal: "Unlock the contents of the notebook.",
+        completionVideo: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759591583/Pr%C3%A4sentation1_ke0qg7.mp4',
         postChapterMessage: "Burt, it seems we got all the information here. Maybe we should continue elsewhere.",
+        nextChapter: {
+            title: 'The Midnight Lounge',
+            transitionCommand: 'go to jazz club'
+        },
         objectives: [
             { flag: 'has_talked_to_barista' as Flag, label: 'Talk to the Barista' },
             { flag: 'has_received_business_card' as Flag, label: 'Get the Business Card' },
@@ -37,23 +43,13 @@ export const game: Game = {
                 description: 'A worn, leather-bound notebook. It feels heavy with secrets. A lock prevents it from being opened without the right password.',
                 unlockedDescription: "The notebook is open. Inside, you see a folded newspaper article and a small data chip, likely a video or audio recording. You could try to 'read article' or 'watch video'.",
                 items: [],
-                content: [
-                    {
-                        id: 'content_article',
-                        name: 'article',
-                        type: 'article',
-                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759241463/Screenshot_2025-09-30_at_15.51.35_gyj3d5.png'
-                    },
-                    {
-                        id: 'content_video',
-                        name: 'video',
-                        type: 'video',
-                        url: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759241547/0930_eit8he.mov'
-                    }
-                ],
                 isOpenable: true,
                 isLocked: true,
                 unlocksWithPhrase: 'JUSTICE FOR SILAS BLOOM',
+                onUnlockActions: [
+                    { type: 'SET_FLAG', flag: 'has_unlocked_notebook' as Flag },
+                    { type: 'START_INTERACTION', objectId: 'obj_brown_notebook' as GameObjectId, interactionStateId: 'start' }
+                ],
                 unlocksWithUrl: 'https://6000-firebase-studio-1759162726172.cluster-4cmpbiopffe5oqk7tloeb2ltrk.cloudworkstations.dev/games/the-notebook',
                 defaultInteractionStateId: 'start',
                 interactionStates: {
@@ -147,6 +143,9 @@ export const game: Game = {
                 welcomeMessage: 'Good Morning Sir, how can I help you? Would you like to try our Specialty Coffee today?',
                 goodbyeMessage: "I'm sorry, mister. But I do have to return to my work. I wish you all the best.",
                 image: 'barista',
+                startConversationActions: [
+                    { type: 'SET_FLAG', flag: 'has_talked_to_barista' as Flag }
+                ],
                 cannedResponses: [
                     { topic: 'greeting', response: 'Just coffee today, or can I help with something else?' },
                     { topic: 'mystery', response: "The man who just left? Ah, him. He's a regular. Comes in, gets his coffee, doesn't say much." },

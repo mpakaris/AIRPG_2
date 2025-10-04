@@ -74,11 +74,11 @@ export type GameObject = {
   description: string;
   unlockedDescription?: string;
   items: ItemId[];
-  content?: GameObjectContent[];
   isOpenable?: boolean;
   isLocked?: boolean;
   unlocksWith?: ItemId;
   unlocksWithPhrase?: string;
+  onUnlockActions?: Action[];
   unlocksWithUrl?: string;
   interactionStates?: Record<string, ObjectInteractionState>;
   defaultInteractionStateId?: string;
@@ -95,11 +95,10 @@ export type NPC = {
   name: string;
   description: string;
   welcomeMessage: string;
-  mainMessage?: string; // Kept for backwards compatibility or other NPCs
-  finalMessage?: string; // Kept for backwards compatibility or other NPCs
   goodbyeMessage: string;
   image?: ImagePlaceholder['id'];
   cannedResponses?: CannedResponse[];
+  startConversationActions?: Action[];
 };
 
 export type Location = {
@@ -116,6 +115,11 @@ export type ChapterObjective = {
     label: string;
 };
 
+export type NextChapterInfo = {
+    title: string;
+    transitionCommand: string;
+};
+
 export type Chapter = {
   id: ChapterId;
   title: string;
@@ -127,6 +131,8 @@ export type Chapter = {
   items: Record<ItemId, Item>;
   npcs: Record<NpcId, NPC>;
   postChapterMessage?: string;
+  completionVideo?: string;
+  nextChapter?: NextChapterInfo;
 };
 
 export type Game = {
@@ -136,4 +142,5 @@ export type Game = {
   gameType: GameType;
   chapters: Record<ChapterId, Chapter>;
   startChapterId: ChapterId;
+  narratorName?: string;
 };

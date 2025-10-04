@@ -37,15 +37,19 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState }) => {
   const { toast } = useToast();
 
   const handleCommandSubmit = (command: string) => {
-    const playerMessage: Message = {
-      id: crypto.randomUUID(),
-      sender: 'player',
-      senderName: 'You',
-      type: 'text',
-      content: command,
-      timestamp: Date.now(),
-    };
-    setMessages(prev => [...prev, playerMessage]);
+    const isDevCommand = command.startsWith('dev:');
+
+    if (!isDevCommand) {
+        const playerMessage: Message = {
+            id: crypto.randomUUID(),
+            sender: 'player',
+            senderName: 'You',
+            type: 'text',
+            content: command,
+            timestamp: Date.now(),
+        };
+        setMessages(prev => [...prev, playerMessage]);
+    }
 
     startTransition(async () => {
       try {

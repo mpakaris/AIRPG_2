@@ -2,7 +2,7 @@
 
 import { BookOpen, Box, Compass, ScrollText, Target, User, CheckCircle, Code } from 'lucide-react';
 import type { FC } from 'react';
-import type { Game, PlayerState, Flag } from '@/lib/game/types';
+import type { Game, PlayerState, Flag, ChapterId } from '@/lib/game/types';
 import {
   Sidebar,
   SidebarContent,
@@ -31,6 +31,10 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
 
   const isObjectiveComplete = (flag: Flag): boolean => {
     return playerState.flags.includes(flag);
+  }
+
+  const handleDevCommand = (chapterId: ChapterId) => {
+      onCommandSubmit(`dev:complete_${chapterId}`);
   }
 
   return (
@@ -133,7 +137,7 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
                 Dev Controls
             </SidebarGroupLabel>
             <div className='flex flex-col gap-2 px-2'>
-                <Button variant="outline" size="sm" onClick={() => onCommandSubmit('CH I complete')}>Complete Chapter I</Button>
+                <Button variant="outline" size="sm" onClick={() => handleDevCommand('ch1-the-cafe' as ChapterId)}>Complete Chapter I</Button>
                 <Button variant="outline" size="sm" disabled>Complete Chapter II</Button>
                 <Button variant="outline" size="sm" disabled>Complete Chapter III</Button>
                 <Button variant="outline" size="sm" disabled>Complete Chapter IV</Button>

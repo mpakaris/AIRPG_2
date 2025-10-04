@@ -44,9 +44,10 @@ type CommandResult = {
 
 // --- Generic Action Processor ---
 
-function processActions(initialState: PlayerState, actions: Action[]): CommandResult {
+function processActions(initialState: PlayerState, actions: Action[], game: Game): CommandResult {
     let newState = { ...initialState };
     const messages: Message[] = [];
+    const chapter = game.chapters[newState.currentChapterId];
 
     for (const action of actions) {
         switch (action.type) {
@@ -61,11 +62,14 @@ function processActions(initialState: PlayerState, actions: Action[]): CommandRe
                 }
                 break;
             case 'SHOW_MESSAGE':
-                messages.push(createMessage(action.sender, action.senderName, action.content, action.messageType, action.imageId));
+                let senderName = action.senderName;
+                if (action.sender === 'agent' && game.narratorName) {
+                    senderName = game.narratorName;
+                }
+                messages.push(createMessage(action.sender, senderName, action.content, action.messageType, action.imageId));
                 break;
             case 'END_CONVERSATION':
                  if (newState.activeConversationWith) {
-                    const chapter = gameCartridge.chapters[newState.currentChapterId];
                     const npc = chapter.npcs[newState.activeConversationWith];
                     messages.push(createMessage('system', 'System', `You ended the conversation with ${npc.name}.`));
                     if (npc.goodbyeMessage) {
@@ -85,7 +89,6 @@ function processActions(initialState: PlayerState, actions: Action[]): CommandRe
                 break;
             case 'END_INTERACTION':
                 if (newState.interactingWithObject) {
-                    const chapter = gameCartridge.chapters[newState.currentChapterId];
                     const object = chapter.gameObjects[newState.interactingWithObject];
                     messages.push(createMessage('system', 'System', `You stop examining the ${object.name}.`));
                     newState.interactingWithObject = null;
@@ -128,7 +131,7 @@ async function handleConversation(state: PlayerState, playerInput: string, game:
     const npc = chapter.npcs[state.activeConversationWith];
 
     if (isEndingConversation(playerInput)) {
-        const result = processActions(state, [{type: 'END_CONVERSATION'}]);
+        const result = processActions(state, [{type: 'END_CONVERSATION'}], game);
         return result;
     }
 
@@ -153,7 +156,7 @@ async function handleConversation(state: PlayerState, playerInput: string, game:
 
     const initialMessage = createMessage(npc.id as NpcId, npc.name, `"${npcMessageContent}"`);
     
-    const actionResult = processActions(state, actionsToProcess);
+    const actionResult = processActions(state, actionsToProcess, game);
 
     return {
         newState: actionResult.newState,
@@ -187,17 +190,18 @@ function handleObjectInteraction(state: PlayerState, playerInput: string, game: 
     
     if (matchingCommand) {
         const actions = currentInteractionState.commands[matchingCommand];
-        const result = processActions(state, actions);
+        const result = processActions(state, actions, game);
         
         const completion = checkChapterCompletion(result.newState, game);
         if (completion.isComplete) {
-            result.newState.flags = [...result.newState.flags, 'chapter_1_complete' as Flag];
+            result.newState.flags.push(chapterCompletionFlag(result.newState.currentChapterId));
             result.messages.push(...completion.messages);
         }
         
         return result;
     } else {
-         return { newState: state, messages: [createMessage('narrator', 'Narrator', currentInteractionState.description)] };
+        const narratorName = game.narratorName || "Narrator";
+        return { newState: state, messages: [createMessage('narrator', narratorName, currentInteractionState.description)] };
     }
 }
 
@@ -209,6 +213,7 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
   const location = chapter.locations[state.currentLocationId];
   let newState = { ...state };
   targetName = targetName.toLowerCase();
+  const narratorName = game.narratorName || "Narrator";
 
   const allSearchableIds: (GameObjectId | ItemId)[] = [
     ...location.objects,
@@ -227,28 +232,28 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
     if (isGameObject) {
         const targetObject = getLiveGameObject(targetId as GameObjectId, state, game);
         if (targetObject.isOpenable && targetObject.isLocked && targetObject.unlocksWithUrl) {
-          newState.flags = [...newState.flags, 'has_seen_notebook_url' as Flag];
+          newState.flags = [...newState.flags, 'has_seen_notebook_url' as Flag]; // This is still a bit specific, could be an action.
           const message = `${targetObject.description} A mini-game opens on your device: ${targetObject.unlocksWithUrl}`;
           return {
               newState,
-              messages: [createMessage('narrator', 'Narrator', message)],
+              messages: [createMessage('narrator', narratorName, message)],
           };
         }
         if (targetObject.isOpenable && !targetObject.isLocked) {
             const actions: Action[] = [{ type: 'START_INTERACTION', objectId: targetObject.id as GameObjectId, interactionStateId: targetObject.defaultInteractionStateId || 'start' }];
-            const result = processActions(newState, actions);
-            result.messages.push(createMessage('narrator', 'Narrator', targetObject.unlockedDescription || `You open the ${targetObject.name}.`));
+            const result = processActions(newState, actions, game);
+            result.messages.push(createMessage('narrator', narratorName, targetObject.unlockedDescription || `You open the ${targetObject.name}.`));
             return result;
         }
          return {
             newState: state,
-            messages: [createMessage('narrator', 'Narrator', `You examine the ${targetObject.name}. ${targetObject.description}`)],
+            messages: [createMessage('narrator', narratorName, `You examine the ${targetObject.name}. ${targetObject.description}`)],
         };
     } else {
          const targetItem = chapter.items[targetId as ItemId];
          return {
             newState: state,
-            messages: [createMessage('narrator', 'Narrator', `You examine the ${targetItem.name}. ${targetItem.description}`)],
+            messages: [createMessage('narrator', narratorName, `You examine the ${targetItem.name}. ${targetItem.description}`)],
         };
     }
   }
@@ -261,8 +266,9 @@ function handleTake(state: PlayerState, targetName: string, game: Game): Command
   const location = chapter.locations[state.currentLocationId];
   const newState = { ...state, inventory: [...state.inventory], objectStates: {...state.objectStates} };
   targetName = targetName.toLowerCase();
+  const narratorName = game.narratorName || "Narrator";
 
-  if (targetName === 'business card') {
+  if (targetName === 'business card') { // This is game specific and should be in the cartridge logic
       return { newState, messages: [createMessage('system', 'System', `You can't just take that. You should talk to the barista.`)] };
   }
   
@@ -282,7 +288,7 @@ function handleTake(state: PlayerState, targetName: string, game: Game): Command
             const newObjectItems = currentObjectItems.filter(id => id !== itemToTake.id);
             newState.objectStates[objId] = { ...newState.objectStates[objId], items: newObjectItems };
 
-            return { newState, messages: [createMessage('narrator', 'Narrator', `You take the ${itemToTake.name}.`)] };
+            return { newState, messages: [createMessage('narrator', narratorName, `You take the ${itemToTake.name}.`)] };
         }
      }
   }
@@ -294,6 +300,7 @@ function handleGo(state: PlayerState, targetName: string, game: Game): CommandRe
     const chapter = game.chapters[state.currentChapterId];
     const currentLocation = chapter.locations[state.currentLocationId];
     targetName = targetName.toLowerCase();
+    const narratorName = game.narratorName || "Narrator";
 
     let targetLocation: Location | undefined;
     targetLocation = Object.values(chapter.locations).find(loc => loc.name.toLowerCase() === targetName);
@@ -316,7 +323,7 @@ function handleGo(state: PlayerState, targetName: string, game: Game): CommandRe
             newState,
             messages: [
                 createMessage('system', 'System', `You go to the ${targetLocation.name}.`),
-                createMessage('narrator', 'Narrator', targetLocation.description)
+                createMessage('narrator', narratorName, targetLocation.description)
             ]
         };
     }
@@ -328,6 +335,7 @@ function handleGo(state: PlayerState, targetName: string, game: Game): CommandRe
 function handleUse(state: PlayerState, itemName: string, objectName: string, game: Game): CommandResult {
   const chapter = game.chapters[state.currentChapterId];
   const location = chapter.locations[state.currentLocationId];
+  const narratorName = game.narratorName || "Narrator";
   
   const itemInInventory = state.inventory
     .map(id => chapter.items[id])
@@ -349,7 +357,7 @@ function handleUse(state: PlayerState, itemName: string, objectName: string, gam
     const newState = { ...state, objectStates: { ...state.objectStates }};
     newState.objectStates[targetObject.id] = { ...newState.objectStates[targetObject.id], isLocked: false };
     
-    return { newState, messages: [createMessage('narrator', 'Narrator', `You use the ${itemInInventory.name} on the ${targetObject.name}. It unlocks with a click!`)] };
+    return { newState, messages: [createMessage('narrator', narratorName, `You use the ${itemInInventory.name} on the ${targetObject.name}. It unlocks with a click!`)] };
   }
 
   return { newState: state, messages: [createMessage('system', 'System', `That doesn't seem to work.`)] };
@@ -367,14 +375,13 @@ async function handleTalk(state: PlayerState, npcName: string, game: Game): Prom
         let newState = { ...state, activeConversationWith: npc.id, interactingWithObject: null };
         let messages: Message[] = [];
         
-        // This is game-specific logic that should be moved to the cartridge
-        if (npc.id === 'npc_barista') {
-             const actions: Action[] = [{ type: 'SET_FLAG', flag: 'has_talked_to_barista' as Flag }];
-             const result = processActions(newState, actions);
-             newState = result.newState;
+        if (npc.startConversationActions) {
+            const result = processActions(newState, npc.startConversationActions, game);
+            newState = result.newState;
+            messages.push(...result.messages);
         }
 
-        messages.push(createMessage('system', 'System', `You are now talking to ${npc.name}. Type your message to continue the conversation. To end the conversation, type 'goodbye'.`));
+        messages.unshift(createMessage('system', 'System', `You are now talking to ${npc.name}. Type your message to continue the conversation. To end the conversation, type 'goodbye'.`));
         
         const welcomeMessage = (npc as NPC).welcomeMessage || "Hello.";
         messages.push(createMessage(npc.id as NpcId, npc.name, `"${welcomeMessage}"`, 'image', npc.image));
@@ -386,7 +393,8 @@ async function handleTalk(state: PlayerState, npcName: string, game: Game): Prom
 }
 
 function handleLook(state: PlayerState, game: Game, summary: string): CommandResult {
-  return { newState: state, messages: [createMessage('narrator', 'Narrator', summary.trim())] };
+  const narratorName = game.narratorName || "Narrator";
+  return { newState: state, messages: [createMessage('narrator', narratorName, summary.trim())] };
 }
 
 
@@ -412,6 +420,7 @@ function handlePassword(state: PlayerState, command: string, game: Game): Comman
     const [, objectName, phrase] = passwordMatch;
     const chapter = game.chapters[state.currentChapterId];
     const location = chapter.locations[state.currentLocationId];
+    const narratorName = game.narratorName || "Narrator";
     
     const targetObjectId = location.objects.find(objId => chapter.gameObjects[objId]?.name.toLowerCase() === objectName.trim().toLowerCase());
 
@@ -426,18 +435,14 @@ function handlePassword(state: PlayerState, command: string, game: Game): Comman
     }
 
     if (targetObject.unlocksWithPhrase?.toLowerCase() === phrase.toLowerCase()) {
-        const newState = { ...state, objectStates: { ...state.objectStates }};
-        
-        const actions: Action[] = [
-            { type: 'SET_FLAG', flag: 'has_unlocked_notebook' as Flag },
-            { type: 'START_INTERACTION', objectId: targetObject.id as GameObjectId, interactionStateId: targetObject.defaultInteractionStateId || 'start' }
-        ];
-
+        let newState = { ...state, objectStates: { ...state.objectStates }};
         newState.objectStates[targetObject.id] = { ...newState.objectStates[targetObject.id], isLocked: false };
-        const result = processActions(newState, actions);
         
-        result.messages.unshift(createMessage('narrator', 'Narrator', `You speak the words, and the ${targetObject.name} unlocks with a soft click.`));
-        result.messages.push(createMessage('narrator', 'Narrator', targetObject.unlockedDescription || `You open the ${targetObject.name}.`));
+        const actions: Action[] = targetObject.onUnlockActions || [];
+        const result = processActions(newState, actions, game);
+        
+        result.messages.unshift(createMessage('narrator', narratorName, `You speak the words, and the ${targetObject.name} unlocks with a soft click.`));
+        result.messages.push(createMessage('narrator', narratorName, targetObject.unlockedDescription || `You open the ${targetObject.name}.`));
         
         return result;
     }
@@ -446,18 +451,24 @@ function handlePassword(state: PlayerState, command: string, game: Game): Comman
 }
 
 // --- Chapter Completion Check ---
+const chapterCompletionFlag = (chapterId: ChapterId) => `chapter_${chapterId}_complete` as Flag;
+
 function checkChapterCompletion(state: PlayerState, game: Game): { isComplete: boolean; messages: Message[] } {
     const chapter = game.chapters[state.currentChapterId];
-    if (!chapter.objectives || state.flags.includes('chapter_1_complete' as Flag)) {
+    const completionFlag = chapterCompletionFlag(state.currentChapterId);
+
+    if (!chapter.objectives || state.flags.includes(completionFlag)) {
         return { isComplete: false, messages: [] };
     }
     
     const allObjectivesMet = chapter.objectives.every(obj => state.flags.includes(obj.flag));
 
     if (allObjectivesMet) {
-        const messages = [
-            createMessage('narrator', 'Narrator', 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759591583/Pr%C3%A4sentation1_ke0qg7.mp4', 'video')
-        ];
+        const messages: Message[] = [];
+        if (chapter.completionVideo) {
+            const narratorName = game.narratorName || "Narrator";
+            messages.push(createMessage('narrator', narratorName, chapter.completionVideo, 'video'))
+        }
         return { isComplete: true, messages };
     }
     
@@ -474,44 +485,47 @@ export async function processCommand(
   const game = gameCartridge;
   const lowerInput = playerInput.toLowerCase();
   const chapter = game.chapters[currentState.currentChapterId];
+  const narratorName = game.narratorName || "Narrator";
+  const completionFlag = chapterCompletionFlag(currentState.currentChapterId);
 
-  // Post-chapter state for Chapter 1
-  if (currentState.flags.includes('chapter_1_complete' as Flag)) {
-      if (lowerInput.includes('jazz club')) {
+  // Post-chapter state
+  if (currentState.flags.includes(completionFlag)) {
+      if (chapter.nextChapter?.transitionCommand && lowerInput.includes(chapter.nextChapter.transitionCommand)) {
           return {
-              newState: currentState,
-              messages: [createMessage('system', 'System', 'Transitioning to Chapter 2... (Not yet implemented)')]
+              newState: currentState, // In future, this would change state to next chapter
+              messages: [createMessage('system', 'System', `Transitioning to ${chapter.nextChapter.title}... (Not yet implemented)`)]
           };
       }
       return {
           newState: currentState,
-          messages: [createMessage('agent', 'Agent Sharma', chapter.postChapterMessage || "Let's move on.")]
+          messages: [createMessage('agent', narratorName, chapter.postChapterMessage || "Let's move on.")]
       };
   }
 
-  // Dev command to complete chapter 1
-  if (playerInput === 'CH I complete') {
-    let newState = { ...currentState };
-    
-    chapter.objectives?.forEach(obj => {
-        if (!newState.flags.includes(obj.flag)) {
-            newState.flags = [...newState.flags, obj.flag];
-        }
-    });
+  // Dev command to complete a chapter
+  if (playerInput.startsWith('dev:complete_')) {
+    const chapterId = playerInput.replace('dev:complete_', '') as ChapterId;
+    const targetChapter = game.chapters[chapterId];
 
-    const businessCardItem = Object.values(chapter.items).find(i => i.id === 'item_business_card');
-    if (businessCardItem && !newState.inventory.includes(businessCardItem.id)) {
-        newState.inventory = [...newState.inventory, businessCardItem.id];
+    if (targetChapter) {
+        let newState = { ...currentState };
+        
+        targetChapter.objectives?.forEach(obj => {
+            if (!newState.flags.includes(obj.flag)) {
+                newState.flags = [...newState.flags, obj.flag];
+            }
+        });
+        
+        const completion = checkChapterCompletion(newState, game);
+        let messages = [createMessage('system', 'System', `DEV: ${targetChapter.title} flags set to complete.`)];
+
+        if (completion.isComplete) {
+          newState.flags.push(chapterCompletionFlag(chapterId));
+          messages.push(...completion.messages);
+        }
+        
+        return { newState, messages };
     }
-    
-    const completion = checkChapterCompletion(newState, game);
-    let messages = [createMessage('system', 'System', 'DEV: Chapter 1 flags set to complete.')];
-    if (completion.isComplete) {
-      newState.flags = [...newState.flags, 'chapter_1_complete' as Flag];
-      messages.push(...completion.messages);
-    }
-    
-    return { newState, messages };
   }
 
   // Handle special interaction states first. These bypass the main AI.
@@ -602,7 +616,7 @@ export async function processCommand(
     let finalMessages = [...result.messages];
 
     if (completion.isComplete) {
-        result.newState.flags = [...result.newState.flags, 'chapter_1_complete' as Flag];
+        result.newState.flags.push(chapterCompletionFlag(result.newState.currentChapterId));
         finalMessages.push(...completion.messages);
     }
     
@@ -610,7 +624,7 @@ export async function processCommand(
     const hasSystemMessage = result.messages.some(m => m.sender === 'system');
 
     if (!hasSystemMessage) {
-        const agentMessage = createMessage('agent', 'Agent Sharma', `${aiResponse.agentResponse}`);
+        const agentMessage = createMessage('agent', narratorName, `${aiResponse.agentResponse}`);
         finalMessages.unshift(agentMessage);
     }
     
