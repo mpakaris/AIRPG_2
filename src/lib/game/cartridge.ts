@@ -61,6 +61,7 @@ export const game: Game = {
                 welcomeMessage: 'Good Morning Sir, how can I help you? Would you like to try our Specialty Coffee today?',
                 mainMessage: "The mystery man you saw? Plays the saxophone on the corner every day. Real talented. He left his business card here once, if you're interested.",
                 finalMessage: "Sorry Sir, I've told you all I know. Do you still want a coffee or can I get back to my work?",
+                goodbyeMessage: "Happy to help, sir.",
                 image: 'barista'
             },
             'npc_manager': {
@@ -70,6 +71,7 @@ export const game: Game = {
                 welcomeMessage: "Welcome! May I interest you in our special today? You get a cheese cake with every Coffee you order!",
                 mainMessage: "Can't talk now, I'm very busy! But if you need anything, just ask.",
                 finalMessage: "I really must get back to work now. Let me know if you need anything else!",
+                goodbyeMessage: "Have a great day!",
             }
         }
     }

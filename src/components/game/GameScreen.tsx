@@ -11,6 +11,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import type { Game, Message, PlayerState } from '@/lib/game/types';
 import { cn } from '@/lib/utils';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 
 interface GameScreenProps {
   messages: Message[];
@@ -139,14 +140,29 @@ const MessageLog: FC<Pick<GameScreenProps, 'messages'>> = ({ messages }) => {
                 )}
                 <MessageContent message={message} />
                  {message.type === 'image' && message.image && (
-                    <Image
-                        src={message.image.imageUrl}
-                        alt={message.image.description}
-                        width={200}
-                        height={200}
-                        className="mt-2 rounded-lg border-2 border-border"
-                        data-ai-hint={message.image.imageHint}
-                    />
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <button className="mt-2 block w-full cursor-pointer">
+                          <Image
+                            src={message.image.imageUrl}
+                            alt={message.image.description}
+                            width={200}
+                            height={200}
+                            className="rounded-lg border-2 border-border"
+                            data-ai-hint={message.image.imageHint}
+                          />
+                        </button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-3xl">
+                        <Image
+                          src={message.image.imageUrl}
+                          alt={message.image.description}
+                          width={800}
+                          height={600}
+                          className="mx-auto rounded-lg"
+                        />
+                      </DialogContent>
+                    </Dialog>
                 )}
               </div>
             </div>

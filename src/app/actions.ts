@@ -33,7 +33,7 @@ function createMessage(
 
 // --- Conversation Helpers ---
 
-const CONVERSATION_END_KEYWORDS = ['goodbye', 'bye', 'leave', 'stop', 'end', 'exit'];
+const CONVERSATION_END_KEYWORDS = ['goodbye', 'bye', 'leave', 'stop', 'end', 'exit', 'thank you and goodbye'];
 const BUSINESS_CARD_KEYWORDS = ['business card', 'card', 'his card'];
 
 function isEndingConversation(input: string): boolean {
@@ -53,11 +53,14 @@ async function handleConversation(state: PlayerState, playerInput: string, game:
     const npc = chapter.npcs[state.activeConversationWith];
     const location = chapter.locations[state.currentLocationId];
     let messages: Message[] = [];
-    let newState = { ...state };
+    let newState = { ...state, inventory: [...state.inventory] };
 
     if (isEndingConversation(playerInput)) {
         newState.activeConversationWith = null;
         messages.push(createMessage('system', 'System', `You ended the conversation with ${npc.name}.`));
+        if (npc.goodbyeMessage) {
+            messages.push(createMessage(npc.id as NpcId, npc.name, `"${npc.goodbyeMessage}"`));
+        }
         return { newState, messages };
     } 
 
@@ -76,7 +79,6 @@ async function handleConversation(state: PlayerState, playerInput: string, game:
     const npcMessageContent = `"${aiResponse.npcResponse}"`;
     messages.push(createMessage(npc.id as NpcId, npc.name, npcMessageContent));
 
-    // Check if the AI's response is about giving the business card and if the player doesn't have it yet.
     const businessCardItem = Object.values(chapter.items).find(i => i.id === 'item_business_card');
     if (businessCardItem && !newState.inventory.includes(businessCardItem.id) && mentionsBusinessCard(aiResponse.npcResponse)) {
         newState.inventory.push(businessCardItem.id);
@@ -84,7 +86,6 @@ async function handleConversation(state: PlayerState, playerInput: string, game:
         const cardMessage = `The barista hands you a business card. It's been added to your inventory.`;
         messages.push(createMessage('narrator', 'Narrator', cardMessage, 'image', businessCardItem.image));
         
-        // Update the NPC's main message so they don't keep offering it.
         const npcInCartridge = gameCartridge.chapters[newState.currentChapterId].npcs[npc.id];
         if (npcInCartridge) {
             npcInCartridge.mainMessage = "I already gave you the business card. I don't have anything else for you.";
@@ -121,7 +122,7 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
     let description = objectInLocation.description;
     
      if (objectInLocation.isLocked && objectInLocation.unlocksWithUrl) {
-      description += ` A lock prevents it from being opened. On the cover, a URL is inscribed: ${objectInLocation.unlocksWithUrl}`;
+      description += ` A lock prevents it from being opened. On the cover, a URL is inscribed: ${objectInlocation.unlocksWithUrl}`;
     } else if (objectInLocation.isOpenable && !objectInLocation.isLocked && objectInLocation.items.length > 0) {
       // Check for items inside if object is openable but not locked
       const itemNames = objectInLocation.items.map(id => chapter.items[id].name).join(', ');
@@ -262,22 +263,8 @@ async function handleTalk(state: PlayerState, npcName: string, game: Game): Prom
     return { newState: state, messages: [createMessage('system', 'System', `There is no one called "${npcName}" here.`)] };
 }
 
-function handleLook(state: PlayerState, game: Game): CommandResult {
-  const chapter = game.chapters[state.currentChapterId];
-  const location = chapter.locations[state.currentLocationId];
-  const objectNames = location.objects.map(id => chapter.gameObjects[id]?.name).join(', ');
-  const npcNames = location.npcs.map(id => chapter.npcs[id]?.name).join(', ');
-
-  let description = `${location.description}\n\n`;
-
-  if(objectNames) {
-    description += `You can see: ${objectNames}.\n`;
-  }
-  if(npcNames) {
-    description += `${npcNames} are here.`;
-  }
-
-  return { newState: state, messages: [createMessage('narrator', 'Narrator', description.trim())] };
+function handleLook(state: PlayerState, game: Game, summary: string): CommandResult {
+  return { newState: state, messages: [createMessage('narrator', 'Narrator', summary.trim())] };
 }
 
 
@@ -342,12 +329,21 @@ export async function processCommand(
   // Otherwise, process as a game command
   const chapter = game.chapters[currentState.currentChapterId];
   const location = chapter.locations[currentState.currentLocationId];
+  const objectNames = location.objects.map(id => chapter.gameObjects[id]?.name).join(', ');
+  const npcNames = location.npcs.map(id => chapter.npcs[id]?.name).join(', ');
+
+  let lookAroundSummary = `${location.description}\n\n`;
+  if(objectNames) {
+    lookAroundSummary += `You can see: ${objectNames}.\n`;
+  }
+  if(npcNames) {
+    lookAroundSummary += `You see ${npcNames} here.`;
+  }
 
   const gameStateSummary = `
-    Player is in: ${location.name} (${location.description}).
+    Player is in: ${location.name}.
     Inventory: ${currentState.inventory.map(id => chapter.items[id]?.name).join(', ') || 'empty'}.
-    Game Objects here: ${location.objects.map(id => chapter.gameObjects[id]?.name).join(', ')}.
-    NPCs here: ${location.npcs.map(id => chapter.npcs[id]?.name).join(', ')}.
+    The player can see the following: ${lookAroundSummary}
     Game Goal: ${chapter.goal}.
   `;
 
@@ -389,7 +385,7 @@ export async function processCommand(
              result = await handleTalk(currentState, restOfCommand.replace('to ', ''), game);
              break;
         case 'look':
-             result = handleLook(currentState, game);
+             result = handleLook(currentState, game, lookAroundSummary);
              break;
         case 'inventory':
             result = handleInventory(currentState, game);

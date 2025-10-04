@@ -55,12 +55,13 @@ export type NPC = {
   welcomeMessage: string;
   mainMessage: string;
   finalMessage: string;
+  goodbyeMessage: string;
   image?: ImagePlaceholder['id'];
 };
 
 export type Location = {
   id: LocationId;
-  name: string;
+  name:string;
   description: string;
   gridPosition: { x: number; y: number };
   objects: GameObjectId[];
