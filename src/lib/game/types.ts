@@ -8,14 +8,6 @@ export type GameObjectId = string & { readonly __brand: 'GameObjectId' };
 export type ItemId = string & { readonly __brand: 'ItemId' };
 export type NpcId = string & { readonly __brand: 'NpcId' };
 export type Flag = string & { readonly __brand: 'Flag' };
-export type MediaAssetId = string & { readonly __brand: 'MediaAssetId' };
-
-export type MediaAsset = {
-  id: MediaAssetId;
-  type: 'audio' | 'image' | 'video';
-  url: string;
-  description: string;
-};
 
 export type Message = {
   id: string;
@@ -63,6 +55,7 @@ export type NPC = {
   welcomeMessage: string;
   mainMessage: string;
   finalMessage: string;
+  image?: ImagePlaceholder['id'];
 };
 
 export type Location = {

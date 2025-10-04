@@ -5,6 +5,7 @@ import { generateNpcResponse } from '@/ai/flows/generate-npc-responses';
 import { game as gameCartridge } from '@/lib/game/cartridge';
 import { AVAILABLE_COMMANDS } from '@/lib/game/commands';
 import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC } from '@/lib/game/types';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 type CommandResult = {
   newState: PlayerState;
@@ -15,14 +16,17 @@ function createMessage(
   sender: Message['sender'],
   senderName: string,
   content: string,
-  type: Message['type'] = 'text'
+  type: Message['type'] = 'text',
+  image_id?: string
 ): Message {
+  const image = image_id ? PlaceHolderImages.find(p => p.id === image_id) : undefined;
   return {
     id: crypto.randomUUID(),
     sender,
     senderName,
     content,
     type,
+    image,
     timestamp: Date.now(),
   };
 }
@@ -30,9 +34,14 @@ function createMessage(
 // --- Conversation Helpers ---
 
 const CONVERSATION_END_KEYWORDS = ['goodbye', 'bye', 'leave', 'stop', 'end', 'exit'];
+const BUSINESS_CARD_KEYWORDS = ['business card', 'card', 'his card'];
 
 function isEndingConversation(input: string): boolean {
-    return CONVERSATION_END_KEYWORDS.includes(input.toLowerCase().trim());
+    return CONVERSATION_END_KEYWORDS.some(keyword => input.toLowerCase().includes(keyword));
+}
+
+function mentionsBusinessCard(input: string): boolean {
+    return BUSINESS_CARD_KEYWORDS.some(keyword => input.toLowerCase().includes(keyword));
 }
 
 async function handleConversation(state: PlayerState, playerInput: string, game: Game): Promise<CommandResult> {
@@ -49,20 +58,40 @@ async function handleConversation(state: PlayerState, playerInput: string, game:
     if (isEndingConversation(playerInput)) {
         newState.activeConversationWith = null;
         messages.push(createMessage('system', 'System', `You ended the conversation with ${npc.name}.`));
-    } else {
-        const gameStateSummary = `Player is in ${location.name}. Inventory: ${state.inventory.map(id => chapter.items[id]?.name).join(', ') || 'empty'}.`;
-        
-        const fullNpcDescription = `${npc.description} Their main clue is: ${npc.mainMessage} Their final message, to be used when they have nothing more to say, is: ${npc.finalMessage}`;
+        return { newState, messages };
+    } 
 
-        const aiResponse = await generateNpcResponse({
-            playerInput: playerInput,
-            npcName: npc.name,
-            npcDescription: fullNpcDescription,
-            locationDescription: location.description,
-            gameState: gameStateSummary,
-        });
-        messages.push(createMessage(npc.id as NpcId, npc.name, `"${aiResponse.npcResponse}"`));
+    const gameStateSummary = `Player is in ${location.name}. Inventory: ${state.inventory.map(id => chapter.items[id]?.name).join(', ') || 'empty'}.`;
+    
+    const fullNpcDescription = `${npc.description} Their main clue is: ${npc.mainMessage} Their final message, to be used when they have nothing more to say, is: ${npc.finalMessage}`;
+
+    const aiResponse = await generateNpcResponse({
+        playerInput: playerInput,
+        npcName: npc.name,
+        npcDescription: fullNpcDescription,
+        locationDescription: location.description,
+        gameState: gameStateSummary,
+    });
+    
+    const npcMessageContent = `"${aiResponse.npcResponse}"`;
+    messages.push(createMessage(npc.id as NpcId, npc.name, npcMessageContent));
+
+    // Check if the AI's response is about giving the business card and if the player doesn't have it yet.
+    const businessCardItem = Object.values(chapter.items).find(i => i.id === 'item_business_card');
+    if (businessCardItem && !newState.inventory.includes(businessCardItem.id) && mentionsBusinessCard(aiResponse.npcResponse)) {
+        newState.inventory.push(businessCardItem.id);
+        
+        const cardMessage = `The barista hands you a business card. It's been added to your inventory.`;
+        messages.push(createMessage('narrator', 'Narrator', cardMessage, 'image', businessCardItem.image));
+        
+        // Update the NPC's main message so they don't keep offering it.
+        const npcInCartridge = gameCartridge.chapters[newState.currentChapterId].npcs[npc.id];
+        if (npcInCartridge) {
+            npcInCartridge.mainMessage = "I already gave you the business card. I don't have anything else for you.";
+            npcInCartridge.finalMessage = "I told you all I know.";
+        }
     }
+
 
     return { newState, messages };
 }
@@ -112,18 +141,6 @@ function handleTake(state: PlayerState, targetName: string, game: Game): Command
   const chapter = game.chapters[state.currentChapterId];
   const location = chapter.locations[state.currentLocationId];
   const newState = JSON.parse(JSON.stringify(state));
-
-  // Special case for taking the business card from the barista
-  if (targetName === 'business card') {
-      const businessCard = Object.values(chapter.items).find(i => i.name.toLowerCase() === 'business card');
-      if (businessCard) {
-          if (newState.inventory.includes(businessCard.id)) {
-              return { newState, messages: [createMessage('system', 'System', `You already have the business card.`)] };
-          }
-          newState.inventory.push(businessCard.id);
-          return { newState, messages: [createMessage('narrator', 'Narrator', `The barista hands you the business card.`)] };
-      }
-  }
 
   let itemToTake: Item | undefined;
   let itemSource: { items: string[] } | undefined;
@@ -237,7 +254,7 @@ async function handleTalk(state: PlayerState, npcName: string, game: Game): Prom
         }
         
         const welcomeMessage = (npc as NPC).welcomeMessage || npc.mainMessage;
-        messages.push(createMessage(npc.id as NpcId, npc.name, `"${welcomeMessage}"`));
+        messages.push(createMessage(npc.id as NpcId, npc.name, `"${welcomeMessage}"`, 'image', npc.image));
 
         return { newState, messages };
     }

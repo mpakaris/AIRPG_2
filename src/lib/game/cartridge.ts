@@ -1,25 +1,4 @@
-import type { Game, Chapter, MediaAsset, ChapterId, LocationId, ItemId, GameObjectId, NpcId, GameId } from './types';
-
-export const mediaAssets: MediaAsset[] = [
-    {
-      id: "MEDIA_SILAS_BLOOM_AUDIO",
-      type: "audio",
-      url: "https://res.cloudinary.com/dg912bwcc/video/upload/v1759241547/0930_eit8he.mov",
-      description: "Audio of the Midnight Lounge Jazz Club announcement for Silas Bloom and Rose Carmichael."
-    },
-    {
-      id: "MEDIA_1943_NEWS_ARTICLE",
-      type: "image",
-      url: "https://res.cloudinary.com/dg912bwcc/image/upload/v1759241463/Screenshot_2025-09-30_at_15.51.35_gyj3d5.png",
-      description: "Newspaper article detailing the murder of Rose and the arrest of Silas Bloom, naming Dean Macklin."
-    },
-    {
-        "id": "MEDIA_BUSINESS_CARD",
-        "type": "image",
-        "url": "https://images.unsplash.com/photo-1563771649911-1c93716f1a4a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxidXNpbmVzcyUyMGNhcmR8ZW58MHx8fHwxNzU5NjcwNjYwfDA&ixlib=rb-4.1.0&q=80&w=1080",
-        "description": "A business card for a saxophone player named 'S A X O'."
-    }
-];
+import type { Game, Chapter, ChapterId, LocationId, ItemId, GameObjectId, NpcId, GameId } from './types';
 
 export const game: Game = {
   id: 'the-starlight-murder' as GameId,
@@ -82,6 +61,7 @@ export const game: Game = {
                 welcomeMessage: 'Good Morning Sir, how can I help you? Would you like to try our Specialty Coffee today?',
                 mainMessage: "The mystery man you saw? Plays the saxophone on the corner every day. Real talented. He left his business card here once, if you're interested.",
                 finalMessage: "Sorry Sir, I've told you all I know. Do you still want a coffee or can I get back to my work?",
+                image: 'barista'
             },
             'npc_manager': {
                 id: 'npc_manager' as NpcId,
@@ -95,7 +75,3 @@ export const game: Game = {
     }
   }
 };
-
-export function getMediaAssetById(id: string): MediaAsset | undefined {
-    return mediaAssets.find(m => m.id === id);
-}

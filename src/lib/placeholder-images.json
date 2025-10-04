@@ -14,9 +14,15 @@
     },
     {
       "id": "business_card",
-      "description": "A business card.",
-      "imageUrl": "https://images.unsplash.com/photo-1563771649911-1c93716f1a4a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxidXNpbmVzcyUyMGNhcmR8ZW58MHx8fHwxNzU5NjcwNjYwfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "description": "A business card for a saxophone player.",
+      "imageUrl": "https://res.cloudinary.com/dg912bwcc/image/upload/v1759241477/Screenshot_2025-09-30_at_15.46.02_fuk4tb.png",
       "imageHint": "business card"
+    },
+    {
+      "id": "barista",
+      "description": "A portrait of the cafe barista.",
+      "imageUrl": "https://res.cloudinary.com/dg912bwcc/image/upload/v1759241505/Cafe_barrista_hpwona.png",
+      "imageHint": "male barista"
     }
   ]
 }
