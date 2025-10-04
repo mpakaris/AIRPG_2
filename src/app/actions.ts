@@ -218,15 +218,16 @@ async function handleTalk(state: PlayerState, npcName: string, fullCommand: stri
 }
 
 function handleLook(state: PlayerState, game: Game): CommandResult {
-    const chapter = game.chapters[state.currentChapterId];
-    const location = chapter.locations[state.currentLocationId];
-    const objectNames = location.objects.map(id => chapter.gameObjects[id]?.name).join(', ');
-    const npcNames = location.npcs.map(id => chapter.npcs[id]?.name).join(', ');
+  const chapter = game.chapters[state.currentChapterId];
+  const location = chapter.locations[state.currentLocationId];
+  const objectNames = location.objects.map(id => chapter.gameObjects[id]?.name).join(', ');
+  const npcNames = location.npcs.map(id => chapter.npcs[id]?.name).join(', ');
 
-    const description = `${location.description}\n\nYou can see: ${objectNames}.\n${npcNames} are here.`;
+  const description = `${location.description}\n\nYou can see: ${objectNames}.\n${npcNames} are here.`;
 
-    return { newState: state, messages: [createMessage('narrator', 'Narrator', description)] };
+  return { newState: state, messages: [createMessage('narrator', 'Narrator', description)] };
 }
+
 
 function handleInventory(state: PlayerState, game: Game): CommandResult {
     const chapter = game.chapters[state.currentChapterId];
@@ -238,7 +239,7 @@ function handleInventory(state: PlayerState, game: Game): CommandResult {
 }
 
 function handlePassword(state: PlayerState, command: string, game: Game): CommandResult {
-  const passwordMatch = command.match(/for (.*) "(.*)"/i);
+  const passwordMatch = command.match(/for (.*?) "(.*)"/i);
   if (!passwordMatch) {
     return { newState: state, messages: [createMessage('system', 'System', 'Invalid password format. Please use: password for <object> "<phrase>"')] };
   }
@@ -260,15 +261,19 @@ function handlePassword(state: PlayerState, command: string, game: Game): Comman
 
   if (targetObject.unlocksWithPhrase?.toLowerCase() === phrase.toLowerCase()) {
     const newState = JSON.parse(JSON.stringify(state));
-    const gameObjInState: GameObject = newState.game.chapters[state.currentChapterId].gameObjects[targetObject.id];
-    if (gameObjInState) {
-        gameObjInState.isLocked = false;
+    const mutableGameObject = newState.game.chapters[state.currentChapterId].gameObjects[targetObject.id];
+    if (mutableGameObject) {
+        mutableGameObject.isLocked = false;
+        mutableGameObject.description = 'The notebook is now unlocked. You can examine it to read the contents.';
     }
     
-    // In a real game, you would modify the game state permanently.
-    // For this simulation, we'll just return a success message.
-    // In a future step, we'll need to handle state mutation properly.
-    targetObject.isLocked = false; 
+    // This is a temporary way to handle state mutation.
+    // In a real game, you would want a more robust state management system.
+    const gameObjInCartridge = gameCartridge.chapters[state.currentChapterId].gameObjects[targetObject.id];
+    if(gameObjInCartridge) {
+        gameObjInCartridge.isLocked = false;
+    }
+
 
     return { newState, messages: [createMessage('narrator', 'Narrator', `You speak the words, and the ${targetObject.name} unlocks with a soft click. It can now be examined.`)] };
   }
@@ -307,6 +312,7 @@ export async function processCommand(
     const restOfCommand = args.join(' ');
 
     let result: CommandResult = { newState: currentState, messages: [] };
+    let agentMessage = createMessage('agent', 'Agent Sharma', `${aiResponse.agentResponse}`);
 
     switch (verb) {
         case 'examine':
@@ -336,14 +342,13 @@ export async function processCommand(
             result = handleInventory(currentState, gameCartridge);
             break;
         case 'password':
-            result = handlePassword(currentState, restOfCommand, gameCartridge);
+            result = handlePassword(currentState, commandToExecute.substring('password '.length), gameCartridge);
             break;
       default:
         result = { newState: currentState, messages: [createMessage('system', 'System', "I don't understand that command.")] };
     }
     
-    const agentMessage = createMessage('agent', 'Agent Sharma', `${aiResponse.agentResponse}`);
-    
+
     return {
       newState: result.newState,
       messages: [agentMessage, ...result.messages],
@@ -357,3 +362,5 @@ export async function processCommand(
     };
   }
 }
+
+    
