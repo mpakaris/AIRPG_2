@@ -476,6 +476,32 @@ export async function processCommand(
 ): Promise<CommandResult> {
   const game = gameCartridge;
 
+  // Dev command to complete chapter 1
+  if (playerInput === 'CH I complete') {
+    const newState = {
+        ...currentState,
+        hasTalkedToBarista: true,
+        hasReceivedBusinessCard: true,
+        hasSeenNotebookUrl: true,
+        hasUnlockedNotebook: true,
+        notebookInteractionState: 'complete' as const,
+        flags: [...currentState.flags, 'chapter_1_complete' as Flag],
+        inventory: [...currentState.inventory]
+    };
+    const businessCardItem = Object.values(game.chapters[currentState.currentChapterId].items).find(i => i.id === 'item_business_card');
+    if (businessCardItem && !newState.inventory.includes(businessCardItem.id)) {
+        newState.inventory.push(businessCardItem.id);
+    }
+    const completion = checkChapterCompletion(newState);
+    return {
+        newState,
+        messages: [
+            createMessage('system', 'System', 'DEV: Chapter 1 flags set to complete.'),
+            ...completion.messages,
+        ],
+    };
+  }
+
   // Handle special interaction states first. These bypass the main AI.
   if (currentState.activeConversationWith) {
       return await handleConversation(currentState, playerInput, game);
