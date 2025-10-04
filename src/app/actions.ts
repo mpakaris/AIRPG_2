@@ -140,7 +140,7 @@ function handleObjectInteraction(state: PlayerState, playerInput: string, game: 
          const articleContent = object.content?.find(c => c.type === 'article');
          if (articleContent) {
             newState.notebookInteractionState = 'article_read';
-            messages.push(createMessage('narrator', 'Narrator', `You read the article:`, 'article', articleContent.url));
+            messages.push(createMessage('narrator', 'Narrator', articleContent.url, 'article'));
          } else {
             messages.push(createMessage('system', 'System', `There is no article to read in the ${object.name}.`));
          }
@@ -148,7 +148,7 @@ function handleObjectInteraction(state: PlayerState, playerInput: string, game: 
         const videoContent = object.content?.find(c => c.type === 'video');
         if (videoContent) {
             newState.notebookInteractionState = 'video_watched';
-            messages.push(createMessage('narrator', 'Narrator', `${videoContent.url}`, 'video'));
+            messages.push(createMessage('narrator', 'Narrator', videoContent.url, 'video'));
             messages.push(createMessage('agent', 'Agent Sharma', "Silas Bloom? I've never heard of him. But it seems he was a great musician. He wrote an amazing Song for this Rose. They really must have been crazy in love."));
             messages.push(createMessage('agent', 'Agent Sharma', "Burt, wait! It seems there is also a newspaper article. Maybe you should have a look at it."));
 
@@ -380,7 +380,7 @@ function handlePassword(state: PlayerState, command: string, game: Game): Comman
         }
         
         newState.interactingWithObject = targetObject.id;
-        const unlockedMessage = `You speak the words, and the ${targetObject.name} unlocks with a soft click. You are now examining it.`;
+        const unlockedMessage = `You speak the words, and the ${targetObject.name} unlocks with a soft click.`;
 
         return { newState, messages: [
                 createMessage('narrator', 'Narrator', unlockedMessage),
