@@ -141,6 +141,7 @@ function handleObjectInteraction(state: PlayerState, playerInput: string, game: 
          if (articleContent) {
             newState.notebookInteractionState = 'article_read';
             messages.push(createMessage('narrator', 'Narrator', articleContent.url, 'article', 'newspaper_article'));
+            messages.push(createMessage('agent', 'Agent Sharma', "Burt, the article talks about Agent Mackling. Is that coincidence? It cant be. That must be what? Your grandfather? You are in law enforcement for 4 generations. Oh my god, this is huge, Burt!"));
          } else {
             messages.push(createMessage('narrator', 'Narrator', `There is no article to read in the ${object.name}.`));
          }
