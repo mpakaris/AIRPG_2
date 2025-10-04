@@ -113,37 +113,31 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
   const location = chapter.locations[state.currentLocationId];
   targetName = targetName.toLowerCase();
 
-  const allSearchableObjects = [
+  const allSearchableObjects: (GameObject | Item)[] = [
     ...location.objects.map(objId => gameCartridge.chapters[chapter.id].gameObjects[objId]),
     ...state.inventory.map(invId => {
-        const item = gameCartridge.chapters[chapter.id].items[invId];
-        if (item) return null; // It's a simple item, not a game object
-        return gameCartridge.chapters[chapter.id].gameObjects[invId as GameObjectId]
+      const item = gameCartridge.chapters[chapter.id].items[invId];
+      if (item) return item;
+      const gameObject = gameCartridge.chapters[chapter.id].gameObjects[invId as GameObjectId];
+      if (gameObject) return gameObject;
+      return null;
     })
   ].filter(Boolean) as (GameObject | Item)[];
-
 
   const target = allSearchableObjects.find(i => i?.name.toLowerCase() === targetName);
 
   if (target) {
-    // It's a GameObject
-    if ('items' in target) {
+    if ('content' in target && !target.isLocked) { // It's a GameObject with content
         const gameObject = gameCartridge.chapters[state.currentChapterId].gameObjects[target.id as GameObjectId];
-        let description = gameObject.description;
-        if (!gameObject.isLocked && gameObject.unlockedDescription) {
-            description = gameObject.unlockedDescription;
-        }
+        let description = gameObject.unlockedDescription || gameObject.description;
         return { newState: state, messages: [createMessage('narrator', 'Narrator', description)] };
     }
-    // It's a simple Item
-    else {
-        return {
-            newState: state,
-            messages: [createMessage('narrator', 'Narrator', `You examine the ${target.name}. ${target.description}`)],
-        };
-    }
+    // It's any other item or a locked GameObject
+    return {
+        newState: state,
+        messages: [createMessage('narrator', 'Narrator', `You examine the ${target.name}. ${target.description}`)],
+    };
   }
-
 
   return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${targetName}" here.`)] };
 }
@@ -424,7 +418,13 @@ export async function processCommand(
 
   const gameStateSummary = `
     Player is in: ${location.name}.
-    Inventory: ${currentState.inventory.map(id => chapter.items[id]?.name).join(', ') || 'empty'}.
+    Inventory: ${currentState.inventory.map(id => {
+        const item = chapter.items[id];
+        if (item) return item.name;
+        const gameObject = chapter.gameObjects[id as GameObjectId];
+        if (gameObject) return gameObject.name;
+        return '';
+    }).filter(Boolean).join(', ') || 'empty'}.
     The player can see the following: ${lookAroundSummary}
     Game Goal: ${chapter.goal}.
   `;
