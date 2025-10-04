@@ -278,7 +278,7 @@ export async function processCommand(
     
     return {
       newState: result.newState,
-      messages: [agentMessage, ...result.messages],
+      messages: [...result.messages, agentMessage],
     };
 
   } catch (error) {
