@@ -47,7 +47,7 @@ export const game: Game = {
             'obj_brown_notebook': {
                 id: 'obj_brown_notebook' as GameObjectId,
                 name: 'Brown Notebook',
-                description: 'A worn, leather-bound notebook. It feels heavy with secrets. A lock prevents it from being opened without the right password. On the cover, a URL is inscribed: https://textcraft.dev/minigame. Whatever it hides, it must be utterly important to its owner!',
+                description: 'A worn, leather-bound notebook. It feels heavy with secrets. A lock prevents it from being opened without the right password. On the cover, a URL is inscribed: https://6000-firebase-studio-1759162726172.cluster-4cmpbiopffe5oqk7tloeb2ltrk.cloudworkstations.dev/games/the-notebook. Whatever it hides, it must be utterly important to its owner!',
                 items: [],
                 isOpenable: true,
                 isLocked: true,
