@@ -10,6 +10,13 @@ export const game: Game = {
         id: 'ch1-the-cafe' as ChapterId,
         title: 'A Blast from the Past',
         goal: "Unlock the contents of the notebook.",
+        objectives: [
+            { flag: 'hasTalkedToBarista', label: 'Talk to the Barista' },
+            { flag: 'hasReceivedBusinessCard', label: 'Get the Business Card' },
+            { flag: 'hasSeenNotebookUrl', label: 'Find the Notebook Minigame' },
+            { flag: 'hasUnlockedNotebook', label: 'Unlock the Notebook' },
+            { flag: 'notebookInteractionComplete', label: 'View the Notebook Contents' },
+        ],
         startLocationId: 'loc_cafe' as LocationId,
         locations: {
             'loc_cafe': {

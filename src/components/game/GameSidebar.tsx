@@ -1,6 +1,6 @@
 'use client';
 
-import { BookOpen, Box, Compass, ScrollText, Target, User } from 'lucide-react';
+import { BookOpen, Box, Compass, ScrollText, Target, User, CheckCircle } from 'lucide-react';
 import type { FC } from 'react';
 import type { Game, PlayerState } from '@/lib/game/types';
 import {
@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/sidebar';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import Image from 'next/image';
+import { cn } from '@/lib/utils';
 
 interface GameSidebarProps {
   game: Game;
@@ -25,6 +26,13 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState }) => {
   const chapter = game.chapters[playerState.currentChapterId];
   const location = chapter.locations[playerState.currentLocationId];
   const inventoryItems = playerState.inventory.map(id => chapter.items[id]).filter(Boolean);
+
+  const isObjectiveComplete = (flag: keyof PlayerState | 'notebookInteractionComplete'): boolean => {
+    if (flag === 'notebookInteractionComplete') {
+        return playerState.notebookInteractionState === 'complete';
+    }
+    return !!playerState[flag as keyof PlayerState];
+  }
 
   return (
     <Sidebar>
@@ -44,10 +52,30 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState }) => {
         <SidebarGroup>
           <SidebarGroupLabel className="flex items-center gap-2">
             <Target />
-            Objective
+            Overall Objective
           </SidebarGroupLabel>
           <p className="px-2 text-sm text-muted-foreground">{chapter.goal}</p>
         </SidebarGroup>
+
+        {chapter.objectives && chapter.objectives.length > 0 && (
+            <SidebarGroup>
+                <SidebarGroupLabel className='flex items-center gap-2'>
+                    <ScrollText />
+                    Chapter Objectives
+                </SidebarGroupLabel>
+                <div className='flex flex-col gap-2 px-2 text-sm text-muted-foreground'>
+                    {chapter.objectives.map((obj) => (
+                        <div key={obj.flag} className='flex items-center gap-2'>
+                            <CheckCircle className={cn('h-4 w-4 text-muted', isObjectiveComplete(obj.flag) && 'text-green-500')} />
+                            <span className={cn(isObjectiveComplete(obj.flag) && 'line-through')}>
+                                {obj.label}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            </SidebarGroup>
+        )}
+
         <SidebarGroup>
           <SidebarGroupLabel className="flex items-center gap-2">
             <Box />

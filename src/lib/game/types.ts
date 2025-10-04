@@ -95,10 +95,16 @@ export type Location = {
   npcs: NpcId[];
 };
 
+export type ChapterObjective = {
+    flag: keyof PlayerState | 'notebookInteractionComplete';
+    label: string;
+};
+
 export type Chapter = {
   id: ChapterId;
   title: string;
   goal: string;
+  objectives?: ChapterObjective[];
   startLocationId: LocationId;
   locations: Record<LocationId, Location>;
   gameObjects: Record<GameObjectId, GameObject>;
