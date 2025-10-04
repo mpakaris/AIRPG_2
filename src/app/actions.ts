@@ -137,10 +137,20 @@ function handleObjectInteraction(state: PlayerState, playerInput: string, game: 
 
     const content = object.content?.find(c => c.type === verb || c.name.toLowerCase() === targetName);
 
-    if (verb === 'read' && content?.type === 'article') {
-         messages.push(createMessage('narrator', 'Narrator', `You read the ${content.name}:\n${content.url}`, 'text'));
-    } else if (verb === 'watch' && content?.type === 'video') {
-        messages.push(createMessage('narrator', 'Narrator', `${content.url}`, 'video'));
+    if ((verb === 'read' && content?.type === 'article') || playerInput.toLowerCase() === 'read article' ) {
+         const articleContent = object.content?.find(c => c.type === 'article');
+         if (articleContent) {
+            messages.push(createMessage('narrator', 'Narrator', `You read the ${articleContent.name}:\n${articleContent.url}`, 'text'));
+         } else {
+            messages.push(createMessage('system', 'System', `There is no article to read in the ${object.name}.`));
+         }
+    } else if ((verb === 'watch' && content?.type === 'video') || playerInput.toLowerCase() === 'watch video') {
+        const videoContent = object.content?.find(c => c.type === 'video');
+        if (videoContent) {
+            messages.push(createMessage('narrator', 'Narrator', `${videoContent.url}`, 'video'));
+        } else {
+            messages.push(createMessage('system', 'System', `There is no video to watch in the ${object.name}.`));
+        }
     } else {
         messages.push(createMessage('system', 'System', `You can't do that with the ${object.name}. Try 'read article' or 'watch video'. To stop, type 'exit'.`));
     }
@@ -466,9 +476,11 @@ export async function processCommand(
 
     const agentMessage = createMessage('agent', 'Agent Sharma', `${aiResponse.agentResponse}`);
     
+    // Only add agent message if the command was successful and not a system error
     const finalMessages = (result.messages.length > 0 && result.messages[0].sender !== 'system') 
         ? [agentMessage, ...result.messages] 
-        : result.messages;
+        : [agentMessage, ...result.messages.filter(m => m.sender !== 'system')];
+
 
     return {
         newState: result.newState,
