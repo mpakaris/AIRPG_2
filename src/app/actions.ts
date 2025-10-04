@@ -37,7 +37,12 @@ const CONVERSATION_END_KEYWORDS = ['goodbye', 'bye', 'leave', 'stop', 'end', 'ex
 const BUSINESS_CARD_KEYWORDS = ['business card', 'card', 'his card'];
 
 function isEndingConversation(input: string): boolean {
-    return CONVERSATION_END_KEYWORDS.some(keyword => input.toLowerCase().includes(keyword));
+    const lowerInput = input.toLowerCase().trim();
+    return CONVERSATION_END_KEYWORDS.some(keyword => {
+        // Use a regex to match whole words only.
+        const regex = new RegExp(`\\b${keyword}\\b`, 'i');
+        return regex.test(lowerInput);
+    });
 }
 
 function mentionsBusinessCard(input: string): boolean {
@@ -122,7 +127,7 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
     let description = objectInLocation.description;
     
      if (objectInLocation.isLocked && objectInLocation.unlocksWithUrl) {
-      description += ` A lock prevents it from being opened. On the cover, a URL is inscribed: ${objectInlocation.unlocksWithUrl}`;
+      description += ` A lock prevents it from being opened. On the cover, a URL is inscribed: ${objectInLocation.unlocksWithUrl}`;
     } else if (objectInLocation.isOpenable && !objectInLocation.isLocked && objectInLocation.items.length > 0) {
       // Check for items inside if object is openable but not locked
       const itemNames = objectInLocation.items.map(id => chapter.items[id].name).join(', ');
