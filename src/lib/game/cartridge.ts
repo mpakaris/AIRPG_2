@@ -4,6 +4,7 @@ export const game: Game = {
   id: 'the-starlight-murder' as GameId,
   title: 'The Crimson Case',
   description: "You are Burt Macklin, FBI. A mysterious stranger hands you a worn notebook from the 1940s—the secret case file of a forgotten murder. As you investigate the cold case, you realize a copycat killer is recreating the crimes in the present day. You must solve the past to stop a killer in the present.",
+  gameType: 'Escape Game',
   startChapterId: 'ch1-the-cafe' as ChapterId,
   chapters: {
     'ch1-the-cafe': {

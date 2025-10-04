@@ -8,6 +8,7 @@ export type GameObjectId = string & { readonly __brand: 'GameObjectId' };
 export type ItemId = string & { readonly __brand: 'ItemId' };
 export type NpcId = string & { readonly __brand: 'NpcId' };
 export type Flag = string & { readonly __brand: 'Flag' };
+export type GameType = 'Escape Game' | 'Limited Open World' | 'Open World' | 'Multi Player';
 
 export type Message = {
   id: string;
@@ -116,6 +117,7 @@ export type Game = {
   id: GameId;
   title: string;
   description: string;
+  gameType: GameType;
   chapters: Record<ChapterId, Chapter>;
   startChapterId: ChapterId;
 };
