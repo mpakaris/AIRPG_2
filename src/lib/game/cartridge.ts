@@ -1,3 +1,4 @@
+
 import type { Game, ChapterId, LocationId, ItemId, GameObjectId, NpcId, GameId, Flag } from './types';
 
 export const game: Game = {
@@ -42,7 +43,7 @@ export const game: Game = {
                 id: 'obj_brown_notebook' as GameObjectId,
                 name: 'Brown Notebook',
                 description: 'A worn, leather-bound notebook. It feels heavy with secrets. A lock prevents it from being opened without the right password.',
-                unlockedDescription: "The notebook is open. Inside, you see a folded newspaper article and a small data chip, likely a video or audio recording. You could try to 'read article' or 'watch video'.",
+                unlockedDescription: "The notebook is open. Inside, you see a small data chip. You could try to 'watch video'.",
                 items: [],
                 isOpenable: true,
                 isLocked: true,
@@ -56,18 +57,11 @@ export const game: Game = {
                 interactionStates: {
                     'start': {
                         id: 'start',
-                        description: "The notebook is open. Inside, you see a folded newspaper article and a small data chip, likely a video or audio recording. You could try to 'read article' or 'watch video'.",
+                        description: "The notebook is open. You see a small data chip. You could 'watch video'.",
                         commands: {
-                            'read article': [
-                                { type: 'SHOW_MESSAGE', sender: 'narrator', senderName: 'Narrator', content: 'A newspaper article about Silas Bloom.', messageType: 'article', imageId: 'newspaper_article' },
-                                { type: 'SHOW_MESSAGE', sender: 'agent', senderName: 'Agent Sharma', content: "Burt, the article talks about Agent Mackling. Is that coincidence? It cant be. That must be what? Your grandfather? You are in law enforcement for 4 generations. Oh my god, this is huge, Burt!" },
-                                { type: 'SET_INTERACTION_STATE', state: 'article_read' },
-                                { type: 'SET_FLAG', flag: 'notebook_article_read' as Flag },
-                            ],
                             'watch video': [
                                 { type: 'SHOW_MESSAGE', sender: 'narrator', senderName: 'Narrator', content: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759241547/0930_eit8he.mov', messageType: 'video' },
                                 { type: 'SHOW_MESSAGE', sender: 'agent', senderName: 'Agent Sharma', content: "Silas Bloom? I've never heard of him. But it seems he was a great musician. He wrote an amazing Song for this Rose. They really must have been crazy in love." },
-                                { type: 'SHOW_MESSAGE', sender: 'agent', senderName: 'Agent Sharma', content: "Burt, wait! It seems there is also a newspaper article. Maybe you should have a look at it." },
                                 { type: 'SET_INTERACTION_STATE', state: 'video_watched' },
                                 { type: 'SET_FLAG', flag: 'notebook_video_watched' as Flag },
                             ],
@@ -77,7 +71,7 @@ export const game: Game = {
                     },
                     'video_watched': {
                         id: 'video_watched',
-                        description: "You've watched the video. The newspaper article is still here. You could try to 'read article' or 'exit'.",
+                        description: "You've watched the video. Tucked behind the data chip, you now see a folded newspaper article. You could 'read article' or 'exit'.",
                         commands: {
                             'read article': [
                                 { type: 'SHOW_MESSAGE', sender: 'narrator', senderName: 'Narrator', content: 'A newspaper article about Silas Bloom.', messageType: 'article', imageId: 'newspaper_article' },
@@ -177,3 +171,5 @@ export const game: Game = {
     }
   }
 };
+
+    
