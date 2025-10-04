@@ -4,7 +4,7 @@ import { guidePlayerWithNarrator } from '@/ai/flows/guide-player-with-narrator';
 import { generateNpcResponse } from '@/ai/flows/generate-npc-responses';
 import { game as gameCartridge } from '@/lib/game/cartridge';
 import { AVAILABLE_COMMANDS } from '@/lib/game/commands';
-import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectId, GameObjectState } from '@/lib/game/types';
+import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectId, GameObjectState, ItemId } from '@/lib/game/types';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 
@@ -144,10 +144,13 @@ function handleObjectInteraction(state: PlayerState, playerInput: string, game: 
         return { newState, messages };
     }
     
-    const wantsToReadArticle = lowerInput.includes('read') && lowerInput.includes('article');
-    const wantsToWatchVideo = (lowerInput.includes('watch') || lowerInput.includes('play') || lowerInput.includes('what is')) && (lowerInput.includes('video') || lowerInput.includes('recording'));
+    const readKeywords = ['read', 'look at', 'examine', 'check out'];
+    const videoKeywords = ['watch', 'play', 'view', 'what is'];
 
-    if (newState.notebookInteractionState === 'start' && wantsToWatchVideo) {
+    const wantsToReadArticle = readKeywords.some(k => lowerInput.includes(k)) && lowerInput.includes('article');
+    const wantsToWatchVideo = videoKeywords.some(k => lowerInput.includes(k)) && (lowerInput.includes('video') || lowerInput.includes('recording'));
+
+    if (wantsToWatchVideo) {
         const videoContent = object.content?.find(c => c.type === 'video');
         if (videoContent) {
             newState.notebookInteractionState = 'video_watched';
@@ -157,7 +160,7 @@ function handleObjectInteraction(state: PlayerState, playerInput: string, game: 
         } else {
             messages.push(createMessage('narrator', 'Narrator', `There is no video to watch in the ${object.name}.`));
         }
-    } else if (newState.notebookInteractionState === 'video_watched' && wantsToReadArticle) {
+    } else if (wantsToReadArticle) {
         const articleContent = object.content?.find(c => c.type === 'article');
         if (articleContent) {
            newState.notebookInteractionState = 'article_read';
@@ -167,7 +170,7 @@ function handleObjectInteraction(state: PlayerState, playerInput: string, game: 
            messages.push(createMessage('narrator', 'Narrator', `There is no article to read in the ${object.name}.`));
         }
     } else {
-        // Initial interaction or unrecognized command within interaction
+        // Fallback messages based on state
         switch (newState.notebookInteractionState) {
             case 'start':
                 messages.push(createMessage('narrator', 'Narrator', "The notebook is open. Inside, you see what appears to be a small data chip, likely a video or audio recording."));
@@ -203,8 +206,8 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
   
   const targetId = allSearchableIds.find(id => {
       const isGameObject = id in chapter.gameObjects;
-      const name = isGameObject ? chapter.gameObjects[id].name : chapter.items[id].name;
-      return name.toLowerCase() === targetName;
+      const item = isGameObject ? chapter.gameObjects[id as GameObjectId] : chapter.items[id as ItemId];
+      return item.name.toLowerCase() === targetName;
   });
 
 
@@ -215,6 +218,7 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
         if (targetObject.isOpenable && !targetObject.isLocked) {
             newState.interactingWithObject = targetObject.id as GameObjectId;
             newState.notebookInteractionState = 'start';
+            // Start the interaction with an empty input to get the initial description
             return handleObjectInteraction(newState, '', game);
         }
          return {
@@ -405,6 +409,7 @@ function handlePassword(state: PlayerState, command: string, game: Game): Comman
         newState.notebookInteractionState = 'start';
 
         const unlockedMessage = `You speak the words, and the ${targetObject.name} unlocks with a soft click.`;
+        // Start the interaction with an empty input to get the initial description
         const initialInteractionMessages = handleObjectInteraction(newState, '', game).messages;
 
         return { newState, messages: [
@@ -511,7 +516,9 @@ export async function processCommand(
     
     // Only add the agent's message if the command was successful and didn't come from the system.
     const finalMessages = [...result.messages];
-    if (result.messages.every(m => m.sender !== 'system')) {
+    const hasSystemMessage = result.messages.some(m => m.sender === 'system');
+
+    if (!hasSystemMessage) {
         const agentMessage = createMessage('agent', 'Agent Sharma', `${aiResponse.agentResponse}`);
         finalMessages.unshift(agentMessage);
     }
