@@ -34,6 +34,12 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: '1drv.ms',
+        port: '',
+        pathname: '/**',
+      }
     ],
   },
 };

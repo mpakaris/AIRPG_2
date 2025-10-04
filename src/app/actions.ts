@@ -128,6 +128,14 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
   if (objectInLocation && location.objects.includes(objectInLocation.id)) {
     let description = objectInLocation.description;
 
+    // This logic is now a bit more complex. 
+    // If the notebook is unlocked, it has a different description.
+    // The description might be updated in the game state.
+    const gameObjInState: GameObject | undefined = game.chapters[state.currentChapterId].gameObjects[objectInLocation.id];
+    if(gameObjInState) {
+        description = gameObjInState.description;
+    }
+
     if (objectInLocation.isLocked && objectInLocation.unlocksWithUrl) {
       description += ` A lock prevents it from being opened. On the cover, a URL is inscribed: ${objectInLocation.unlocksWithUrl}`;
     }
@@ -148,6 +156,11 @@ function handleTake(state: PlayerState, targetName: string, game: Game): Command
 
   let itemToTake: Item | undefined;
   let itemSource: { items: string[] } | undefined;
+
+  // The business card can't be "taken", it is given.
+  if (targetName.toLowerCase() === 'business card') {
+      return { newState, messages: [createMessage('system', 'System', `You can't just take that. You should talk to the barista.`)] };
+  }
 
   for (const objId of location.objects) {
     const obj = chapter.gameObjects[objId];
@@ -277,7 +290,7 @@ function handleInventory(state: PlayerState, game: Game): CommandResult {
         return { newState: state, messages: [createMessage('system', 'System', 'Your inventory is empty.')] };
     }
     const itemNames = state.inventory.map(id => chapter.items[id]?.name).join(', ');
-    return { newState, messages: [createMessage('system', 'System', `You are carrying: ${itemNames}.`)] };
+    return { newState: state, messages: [createMessage('system', 'System', `You are carrying: ${itemNames}.`)] };
 }
 
 function handlePassword(state: PlayerState, command: string, game: Game): CommandResult {
@@ -302,7 +315,7 @@ function handlePassword(state: PlayerState, command: string, game: Game): Comman
   }
 
   if (targetObject.unlocksWithPhrase?.toLowerCase() === phrase.toLowerCase()) {
-    const newState = JSON.parse(JSON.stringify(state));
+    const newState = { ...state };
     const gameObjInCartridge = gameCartridge.chapters[state.currentChapterId].gameObjects[targetObject.id];
     if(gameObjInCartridge) {
         gameObjInCartridge.isLocked = false;
