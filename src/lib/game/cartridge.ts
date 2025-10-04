@@ -62,6 +62,7 @@ export const game: Game = {
                             'watch video': [
                                 { type: 'SHOW_MESSAGE', sender: 'narrator', senderName: 'Narrator', content: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759241547/0930_eit8he.mov', messageType: 'video' },
                                 { type: 'SHOW_MESSAGE', sender: 'agent', senderName: 'Agent Sharma', content: "Silas Bloom? I've never heard of him. But it seems he was a great musician. He wrote an amazing Song for this Rose. They really must have been crazy in love." },
+                                { type: 'SHOW_MESSAGE', sender: 'narrator', senderName: 'Narrator', content: "It seems that there is also a newspaper article where the video was." },
                                 { type: 'SET_INTERACTION_STATE', state: 'video_watched' },
                                 { type: 'SET_FLAG', flag: 'notebook_video_watched' as Flag },
                             ],
