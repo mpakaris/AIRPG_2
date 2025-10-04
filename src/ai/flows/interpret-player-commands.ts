@@ -54,7 +54,7 @@ const interpretPlayerCommandPrompt = ai.definePrompt({
   {{/each}}
 
   Based on the player's command, draft a response to the player and determine which command to execute.
-  Ensure the command is from the list of available commands.
+  Ensure the command is from the list of available commands (examine, take, go, use, talk, look, inventory, password).
   Output should be formatted as valid JSON.
   `, safetySettings: [{
     category: 'HARM_CATEGORY_DANGEROUS_CONTENT',

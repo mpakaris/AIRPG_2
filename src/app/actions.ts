@@ -237,6 +237,46 @@ function handleInventory(state: PlayerState, game: Game): CommandResult {
     return { newState: state, messages: [createMessage('system', 'System', `You are carrying: ${itemNames}.`)] };
 }
 
+function handlePassword(state: PlayerState, command: string, game: Game): CommandResult {
+  const passwordMatch = command.match(/for (.*) "(.*)"/i);
+  if (!passwordMatch) {
+    return { newState: state, messages: [createMessage('system', 'System', 'Invalid password format. Please use: password for <object> "<phrase>"')] };
+  }
+
+  const [, objectName, phrase] = passwordMatch;
+  const chapter = game.chapters[state.currentChapterId];
+  const location = chapter.locations[state.currentLocationId];
+
+  const targetObject = Object.values(chapter.gameObjects)
+    .find(o => o.name.toLowerCase() === objectName.trim().toLowerCase() && location.objects.includes(o.id));
+
+  if (!targetObject) {
+    return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${objectName}" here.`)] };
+  }
+
+  if (!targetObject.isLocked) {
+    return { newState: state, messages: [createMessage('system', 'System', `The ${targetObject.name} is already unlocked.`)] };
+  }
+
+  if (targetObject.unlocksWithPhrase?.toLowerCase() === phrase.toLowerCase()) {
+    const newState = JSON.parse(JSON.stringify(state));
+    const gameObjInState: GameObject = newState.game.chapters[state.currentChapterId].gameObjects[targetObject.id];
+    if (gameObjInState) {
+        gameObjInState.isLocked = false;
+    }
+    
+    // In a real game, you would modify the game state permanently.
+    // For this simulation, we'll just return a success message.
+    // In a future step, we'll need to handle state mutation properly.
+    targetObject.isLocked = false; 
+
+    return { newState, messages: [createMessage('narrator', 'Narrator', `You speak the words, and the ${targetObject.name} unlocks with a soft click. It can now be examined.`)] };
+  }
+
+  return { newState: state, messages: [createMessage('system', 'System', 'That password doesn\'t work.')] };
+}
+
+
 // --- Main Action ---
 
 export async function processCommand(
@@ -295,16 +335,18 @@ export async function processCommand(
         case 'inventory':
             result = handleInventory(currentState, gameCartridge);
             break;
+        case 'password':
+            result = handlePassword(currentState, restOfCommand, gameCartridge);
+            break;
       default:
         result = { newState: currentState, messages: [createMessage('system', 'System', "I don't understand that command.")] };
     }
     
     const agentMessage = createMessage('agent', 'Agent Sharma', `${aiResponse.agentResponse}`);
     
-    // Ensure Narrator message comes first, then Agent Sharma's message.
     return {
       newState: result.newState,
-      messages: [...result.messages, agentMessage],
+      messages: [agentMessage, ...result.messages],
     };
 
   } catch (error) {

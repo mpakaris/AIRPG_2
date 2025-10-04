@@ -7,4 +7,5 @@ export const AVAILABLE_COMMANDS = [
   'inventory',
   'help',
   'look around',
+  'password for <object> "<phrase>"',
 ];
