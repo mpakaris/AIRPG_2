@@ -273,9 +273,17 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
             result.messages.push(createMessage('narrator', narratorName, interactionState?.description || targetObject.unlockedDescription || `You open the ${targetObject.name}.`));
             return result;
         }
+        
+         const message = createMessage(
+            'narrator', 
+            narratorName, 
+            `You examine the ${targetObject.name}. ${targetObject.description}`,
+            targetObject.image ? 'image' : 'text',
+            targetObject.id
+         );
          return {
             newState: state,
-            messages: [createMessage('narrator', narratorName, `You examine the ${targetObject.name}. ${targetObject.description}`)],
+            messages: [message],
         };
     } else {
          const targetItem = chapter.items[targetId as ItemId];
@@ -468,10 +476,7 @@ function handlePassword(state: PlayerState, command: string, game: Game): Comman
         const liveObject = getLiveGameObject(targetObject.id, result.newState, game);
         const interactionState = liveObject.interactionStates?.[liveObject.currentInteractionStateId || 'start'];
         
-        const unlockMessage = createMessage('narrator', narratorName, `You speak the words, and the ${targetObject.name} unlocks with a soft click.`, 'image');
-        if (liveObject.unlockedImage) {
-            unlockMessage.image = liveObject.unlockedImage;
-        }
+        const unlockMessage = createMessage('narrator', narratorName, `You speak the words, and the ${targetObject.name} unlocks with a soft click.`, 'image', liveObject.id);
         result.messages.unshift(unlockMessage);
 
         result.messages.push(createMessage('narrator', narratorName, interactionState?.description || liveObject.unlockedDescription || `You open the ${liveObject.name}.`));

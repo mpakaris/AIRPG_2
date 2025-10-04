@@ -125,12 +125,22 @@ export const game: Game = {
                 name: 'Chalkboard Menu',
                 description: "Today's special is three scones for the price of two. A deal almost as sweet as justice.",
                 items: [],
+                image: {
+                    url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759603706/Chalkboard_h61haz.png',
+                    description: 'A chalkboard menu in a cafe.',
+                    hint: 'chalkboard menu'
+                }
             },
             'obj_newspaper': {
                 id: 'obj_newspaper' as GameObjectId,
                 name: 'Newspaper',
                 description: "It's a copy of today's local paper. The main headlines discuss the current series of murders. The usual crazyness of a Metropolis.",
                 items: [],
+                image: {
+                    url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759603706/Newspaper_p85m1h.png',
+                    description: 'A newspaper on a table.',
+                    hint: 'newspaper'
+                }
             }
         },
         items: {
@@ -195,6 +205,11 @@ export const game: Game = {
                 description: 'A cheerful, slightly-too-energetic manager.',
                 welcomeMessage: "Welcome! May I interest you in our special today? You get a cheese cake with every Coffee you order!",
                 goodbyeMessage: "Have a great day!",
+                image: {
+                    url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759604054/cafe_manager_punwhs.png',
+                    description: 'Portrait of the cafe manager.',
+                    hint: 'female manager'
+                }
             }
         }
     }
