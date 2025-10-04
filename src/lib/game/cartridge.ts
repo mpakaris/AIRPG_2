@@ -11,6 +11,7 @@ export const game: Game = {
         id: 'ch1-the-cafe' as ChapterId,
         title: 'A Blast from the Past',
         goal: "Unlock the contents of the notebook.",
+        postChapterMessage: "Burt, it seems we got all the information here. Maybe we should continue elsewhere.",
         objectives: [
             { flag: 'has_talked_to_barista' as Flag, label: 'Talk to the Barista' },
             { flag: 'has_received_business_card' as Flag, label: 'Get the Business Card' },

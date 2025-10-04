@@ -4,7 +4,7 @@ import { guidePlayerWithNarrator } from '@/ai/flows/guide-player-with-narrator';
 import { selectNpcResponse } from '@/ai/flows/select-npc-response';
 import { game as gameCartridge } from '@/lib/game/cartridge';
 import { AVAILABLE_COMMANDS } from '@/lib/game/commands';
-import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectId, GameObjectState, ItemId, Flag, Action } from '@/lib/game/types';
+import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectId, GameObjectState, ItemId, Flag, Action, Chapter } from '@/lib/game/types';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 
@@ -29,7 +29,7 @@ function createMessage(
   };
 }
 
-function getLiveGameObject(id: GameObjectId, state: PlayerState, game: Game): GameObject {
+function getLiveGameObject(id: GameObjectId, state: PlayerState, game: Game): GameObject & GameObjectState {
     const chapter = game.chapters[state.currentChapterId];
     const baseObject = chapter.gameObjects[id];
     const objectState = state.objectStates[id] || {};
@@ -367,8 +367,11 @@ async function handleTalk(state: PlayerState, npcName: string, game: Game): Prom
         let newState = { ...state, activeConversationWith: npc.id, interactingWithObject: null };
         let messages: Message[] = [];
         
+        // This is game-specific logic that should be moved to the cartridge
         if (npc.id === 'npc_barista') {
-            newState.flags = [...newState.flags, 'has_talked_to_barista' as Flag];
+             const actions: Action[] = [{ type: 'SET_FLAG', flag: 'has_talked_to_barista' as Flag }];
+             const result = processActions(newState, actions);
+             newState = result.newState;
         }
 
         messages.push(createMessage('system', 'System', `You are now talking to ${npc.name}. Type your message to continue the conversation. To end the conversation, type 'goodbye'.`));
@@ -424,10 +427,13 @@ function handlePassword(state: PlayerState, command: string, game: Game): Comman
 
     if (targetObject.unlocksWithPhrase?.toLowerCase() === phrase.toLowerCase()) {
         const newState = { ...state, objectStates: { ...state.objectStates }};
-        newState.flags = [...newState.flags, 'has_unlocked_notebook' as Flag];
-        newState.objectStates[targetObject.id] = { ...newState.objectStates[targetObject.id], isLocked: false };
         
-        const actions: Action[] = [{ type: 'START_INTERACTION', objectId: targetObject.id as GameObjectId, interactionStateId: targetObject.defaultInteractionStateId || 'start' }];
+        const actions: Action[] = [
+            { type: 'SET_FLAG', flag: 'has_unlocked_notebook' as Flag },
+            { type: 'START_INTERACTION', objectId: targetObject.id as GameObjectId, interactionStateId: targetObject.defaultInteractionStateId || 'start' }
+        ];
+
+        newState.objectStates[targetObject.id] = { ...newState.objectStates[targetObject.id], isLocked: false };
         const result = processActions(newState, actions);
         
         result.messages.unshift(createMessage('narrator', 'Narrator', `You speak the words, and the ${targetObject.name} unlocks with a soft click.`));
@@ -467,6 +473,7 @@ export async function processCommand(
 ): Promise<CommandResult> {
   const game = gameCartridge;
   const lowerInput = playerInput.toLowerCase();
+  const chapter = game.chapters[currentState.currentChapterId];
 
   // Post-chapter state for Chapter 1
   if (currentState.flags.includes('chapter_1_complete' as Flag)) {
@@ -478,14 +485,13 @@ export async function processCommand(
       }
       return {
           newState: currentState,
-          messages: [createMessage('agent', 'Agent Sharma', "Burt, it seems we got all the information here. Maybe we should continue elsewhere.")]
+          messages: [createMessage('agent', 'Agent Sharma', chapter.postChapterMessage || "Let's move on.")]
       };
   }
 
   // Dev command to complete chapter 1
   if (playerInput === 'CH I complete') {
     let newState = { ...currentState };
-    const chapter = game.chapters[newState.currentChapterId];
     
     chapter.objectives?.forEach(obj => {
         if (!newState.flags.includes(obj.flag)) {
@@ -523,7 +529,6 @@ export async function processCommand(
 
   // AI processing for general commands
   try {
-    const chapter = game.chapters[currentState.currentChapterId];
     const location = chapter.locations[currentState.currentLocationId];
     const objectsInLocation = location.objects.map(id => getLiveGameObject(id, currentState, game));
     const objectStates = objectsInLocation.map(obj => `${obj.name} is ${obj.isLocked ? 'locked' : 'unlocked'}`).join('. ');

@@ -46,12 +46,6 @@ export type PlayerState = {
   objectStates: Record<GameObjectId, GameObjectState>;
   activeConversationWith: NpcId | null;
   interactingWithObject: GameObjectId | null;
-  // DEPRECATED: Chapter 1 Flags (will be moved to flags array)
-  hasTalkedToBarista: boolean;
-  hasReceivedBusinessCard: boolean;
-  hasSeenNotebookUrl: boolean;
-  hasUnlockedNotebook: boolean;
-  notebookInteractionState: 'start' | 'video_watched' | 'article_read' | 'complete'; // To be deprecated
 };
 
 export type Item = {
@@ -132,6 +126,7 @@ export type Chapter = {
   gameObjects: Record<GameObjectId, GameObject>;
   items: Record<ItemId, Item>;
   npcs: Record<NpcId, NPC>;
+  postChapterMessage?: string;
 };
 
 export type Game = {
