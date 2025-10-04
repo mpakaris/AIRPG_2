@@ -247,7 +247,8 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
   const targetId = allSearchableIds.find(id => {
       const isGameObject = id in chapter.gameObjects;
       const item = isGameObject ? chapter.gameObjects[id as GameObjectId] : chapter.items[id as ItemId];
-      return item.name.toLowerCase() === targetName;
+      // Allow partial matches, e.g. "chalkboard" matches "Chalkboard Menu"
+      return item.name.toLowerCase().includes(targetName);
   });
 
 
@@ -476,7 +477,7 @@ function handlePassword(state: PlayerState, command: string, game: Game): Comman
         const liveObject = getLiveGameObject(targetObject.id, result.newState, game);
         const interactionState = liveObject.interactionStates?.[liveObject.currentInteractionStateId || 'start'];
         
-        const unlockMessage = createMessage('narrator', narratorName, `You speak the words, and the ${targetObject.name} unlocks with a soft click.`, 'image', liveObject.id);
+        const unlockMessage = createMessage('narrator', narratorName, `You speak the words, and the ${targetObject.name} unlocks with a soft click.`, 'image', liveObject.unlockedImage ? liveObject.id : undefined);
         result.messages.unshift(unlockMessage);
 
         result.messages.push(createMessage('narrator', narratorName, interactionState?.description || liveObject.unlockedDescription || `You open the ${liveObject.name}.`));
