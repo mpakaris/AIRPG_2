@@ -23,6 +23,12 @@
       "description": "A portrait of the cafe barista.",
       "imageUrl": "https://res.cloudinary.com/dg912bwcc/image/upload/v1759241505/Cafe_barrista_hpwona.png",
       "imageHint": "male barista"
+    },
+    {
+      "id": "newspaper_article",
+      "description": "A newspaper article about Silas Bloom.",
+      "imageUrl": "https://res.cloudinary.com/dg912bwcc/image/upload/v1759241463/Screenshot_2025-09-30_at_15.51.35_gyj3d5.png",
+      "imageHint": "newspaper article"
     }
   ]
 }

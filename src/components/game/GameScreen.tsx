@@ -74,15 +74,31 @@ const MessageContent: FC<{ message: Message }> = ({ message }) => {
         )
     }
 
-    if (message.type === 'article') {
+    if (message.type === 'article' && message.image) {
         return (
-            <Image
-                src={message.content}
-                alt="Newspaper Article"
-                width={600}
-                height={800}
-                className="rounded-lg border-2 border-border"
-            />
+             <Dialog>
+                <DialogTrigger asChild>
+                <button className="mt-2 block w-full cursor-pointer">
+                    <Image
+                        src={message.image.imageUrl}
+                        alt={message.image.description}
+                        width={200}
+                        height={200}
+                        className="rounded-lg border-2 border-border"
+                        data-ai-hint={message.image.imageHint}
+                    />
+                </button>
+                </DialogTrigger>
+                <DialogContent className="max-w-3xl">
+                <Image
+                    src={message.image.imageUrl}
+                    alt={message.image.description}
+                    width={800}
+                    height={600}
+                    className="mx-auto rounded-lg"
+                />
+                </DialogContent>
+            </Dialog>
         )
     }
 
