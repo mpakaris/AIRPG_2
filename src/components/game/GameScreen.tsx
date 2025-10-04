@@ -11,7 +11,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import type { Game, Message, PlayerState } from '@/lib/game/types';
 import { cn } from '@/lib/utils';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 interface GameScreenProps {
   messages: Message[];
@@ -90,13 +90,14 @@ const MessageContent: FC<{ message: Message }> = ({ message }) => {
                 </button>
                 </DialogTrigger>
                 <DialogContent className="max-w-3xl">
-                <Image
-                    src={message.image.imageUrl}
-                    alt={message.image.description}
-                    width={800}
-                    height={600}
-                    className="mx-auto rounded-lg"
-                />
+                    <DialogTitle className="sr-only">{message.image.description}</DialogTitle>
+                    <Image
+                        src={message.image.imageUrl}
+                        alt={message.image.description}
+                        width={800}
+                        height={600}
+                        className="mx-auto rounded-lg"
+                    />
                 </DialogContent>
             </Dialog>
         )
@@ -189,6 +190,7 @@ const MessageLog: FC<Pick<GameScreenProps, 'messages'>> = ({ messages }) => {
                         </button>
                       </DialogTrigger>
                       <DialogContent className="max-w-3xl">
+                        <DialogTitle className="sr-only">{message.image.description}</DialogTitle>
                         <Image
                           src={message.image.imageUrl}
                           alt={message.image.description}
