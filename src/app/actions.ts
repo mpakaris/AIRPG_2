@@ -147,7 +147,7 @@ function handleObjectInteraction(state: PlayerState, playerInput: string, game: 
     const videoKeywords = ['watch', 'play', 'view', 'what is', 'recording', 'content', 'about', 'see'];
 
     const wantsToReadArticle = readKeywords.some(k => lowerInput.includes(k)) && lowerInput.includes('article');
-    const wantsToWatchVideo = videoKeywords.some(k => lowerInput.includes(k)) && (lowerInput.includes('video') || lowerInput.includes('recording') || lowerInput.includes('chip'));
+    const wantsToWatchVideo = videoKeywords.some(k => lowerInput.includes(k)) && (lowerInput.includes('video') || lowerInput.includes('chip'));
 
     if (wantsToWatchVideo) {
         const videoContent = object.content?.find(c => c.type === 'video');
@@ -475,6 +475,21 @@ export async function processCommand(
   playerInput: string
 ): Promise<CommandResult> {
   const game = gameCartridge;
+  const lowerInput = playerInput.toLowerCase();
+
+  // Post-chapter state for Chapter 1
+  if (currentState.flags.includes('chapter_1_complete' as Flag)) {
+      if (lowerInput.includes('jazz club')) {
+          return {
+              newState: currentState,
+              messages: [createMessage('system', 'System', 'Transitioning to Chapter 2... (Not yet implemented)')]
+          };
+      }
+      return {
+          newState: currentState,
+          messages: [createMessage('agent', 'Agent Sharma', "Burt, it seems we got all the information here. Maybe we should continue elsewhere.")]
+      };
+  }
 
   // Dev command to complete chapter 1
   if (playerInput === 'CH I complete') {
