@@ -223,9 +223,16 @@ function handleLook(state: PlayerState, game: Game): CommandResult {
   const objectNames = location.objects.map(id => chapter.gameObjects[id]?.name).join(', ');
   const npcNames = location.npcs.map(id => chapter.npcs[id]?.name).join(', ');
 
-  const description = `${location.description}\n\nYou can see: ${objectNames}.\n${npcNames} are here.`;
+  let description = `${location.description}\n\n`;
 
-  return { newState: state, messages: [createMessage('narrator', 'Narrator', description)] };
+  if(objectNames) {
+    description += `You can see: ${objectNames}.\n`;
+  }
+  if(npcNames) {
+    description += `${npcNames} are here.`;
+  }
+
+  return { newState: state, messages: [createMessage('narrator', 'Narrator', description.trim())] };
 }
 
 
@@ -261,17 +268,12 @@ function handlePassword(state: PlayerState, command: string, game: Game): Comman
 
   if (targetObject.unlocksWithPhrase?.toLowerCase() === phrase.toLowerCase()) {
     const newState = JSON.parse(JSON.stringify(state));
-    const mutableGameObject = newState.game.chapters[state.currentChapterId].gameObjects[targetObject.id];
-    if (mutableGameObject) {
-        mutableGameObject.isLocked = false;
-        mutableGameObject.description = 'The notebook is now unlocked. You can examine it to read the contents.';
-    }
-    
     // This is a temporary way to handle state mutation.
     // In a real game, you would want a more robust state management system.
     const gameObjInCartridge = gameCartridge.chapters[state.currentChapterId].gameObjects[targetObject.id];
     if(gameObjInCartridge) {
         gameObjInCartridge.isLocked = false;
+        gameObjInCartridge.description = 'The notebook is now unlocked. You can examine it to read the contents.';
     }
 
 
@@ -362,5 +364,3 @@ export async function processCommand(
     };
   }
 }
-
-    
