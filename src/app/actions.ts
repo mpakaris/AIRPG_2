@@ -55,6 +55,9 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
       const itemNames = objectInLocation.items.map(id => chapter.items[id].name).join(', ');
       description += ` You see a ${itemNames} inside.`;
     }
+     if (objectInLocation.isLocked) {
+      description += ` A lock prevents it from being opened. On the cover, a URL is inscribed: ${objectInLocation.unlocksWithUrl}`;
+    }
     return {
       newState: state,
       messages: [createMessage('system', 'System', description)],
@@ -253,7 +256,7 @@ export async function processCommand(
       availableCommands: AVAILABLE_COMMANDS.join(', '),
     });
 
-    const agentMessage = createMessage('agent', 'Agent Sharma', aiResponse.agentResponse);
+    const agentMessage = createMessage('agent', 'Agent Sharma', `${aiResponse.agentResponse}`);
     const commandToExecute = aiResponse.commandToExecute.toLowerCase();
     const [verb, ...args] = commandToExecute.split(' ');
     const restOfCommand = args.join(' ');
@@ -293,7 +296,7 @@ export async function processCommand(
     
     return {
       newState: result.newState,
-      messages: [...result.messages, agentMessage],
+      messages: [ ...result.messages, agentMessage],
     };
 
   } catch (error) {

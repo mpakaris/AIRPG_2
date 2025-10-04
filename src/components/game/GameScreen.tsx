@@ -74,7 +74,7 @@ const MessageLog: FC<Pick<GameScreenProps, 'messages'>> = ({ messages }) => {
   }, [messages]);
 
   return (
-    <ScrollArea className="h-full flex-grow" viewportRef={scrollViewportRef}>
+    <ScrollArea className="h-full flex-grow">
       <div className="mx-auto max-w-4xl space-y-6 px-4 py-6">
         {messages.map((message) => {
           const isPlayer = message.sender === 'player';
@@ -106,7 +106,7 @@ const MessageLog: FC<Pick<GameScreenProps, 'messages'>> = ({ messages }) => {
                     {message.senderName}
                   </div>
                 )}
-                <p className="whitespace-pre-wrap">{message.content}</p>
+                <p className={cn("whitespace-pre-wrap", isAgent && "italic")}>{message.content}</p>
                  {message.type === 'image' && message.image && (
                     <Image
                         src={message.image.imageUrl}
