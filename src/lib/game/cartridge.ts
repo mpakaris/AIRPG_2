@@ -74,10 +74,16 @@ export const game: Game = {
                 name: 'Barista',
                 description: 'A tired-looking male barista. He seems to have seen a lot in this cafe and is not easily impressed.',
                 welcomeMessage: 'Good Morning Sir, how can I help you? Would you like to try our Specialty Coffee today?',
-                mainMessage: "The mystery man you saw? Plays the saxophone on the corner every day. Real talented. He left his business card here once, if you're interested.",
-                finalMessage: "Sorry Sir, I've told you all I know. Do you still want a coffee or can I get back to my work?",
                 goodbyeMessage: "Happy to help, sir.",
-                image: 'barista'
+                image: 'barista',
+                cannedResponses: [
+                    { topic: 'greeting', response: 'Just coffee today, or can I help with something else?' },
+                    { topic: 'mystery', response: "The man who just left? Ah, him. He's a regular. Comes in, gets his coffee, doesn't say much." },
+                    { topic: 'saxophonist', response: "He's a musician. Plays the saxophone out on the corner most days. Pretty good, too." },
+                    { topic: 'clue', response: "You know, he left his business card here once. Said I could have it. If you're that interested, you can take it." },
+                    { topic: 'insult', response: "Hey, watch your tone. I'm just here to pour coffee, not take abuse." },
+                    { topic: 'default', response: "Sorry, I'm just a barista. I wouldn't know anything about that." }
+                ]
             },
             'npc_manager': {
                 id: 'npc_manager' as NpcId,

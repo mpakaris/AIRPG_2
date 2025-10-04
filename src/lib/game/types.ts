@@ -65,15 +65,21 @@ export type GameObject = {
   unlocksWithUrl?: string;
 };
 
+export type CannedResponse = {
+    topic: 'greeting' | 'mystery' | 'saxophonist' | 'clue' | 'insult' | 'default';
+    response: string;
+}
+
 export type NPC = {
   id: NpcId;
   name: string;
   description: string;
   welcomeMessage: string;
-  mainMessage: string;
-  finalMessage: string;
+  mainMessage?: string; // Kept for backwards compatibility or other NPCs
+  finalMessage?: string; // Kept for backwards compatibility or other NPCs
   goodbyeMessage: string;
   image?: ImagePlaceholder['id'];
+  cannedResponses?: CannedResponse[];
 };
 
 export type Location = {
@@ -93,7 +99,7 @@ export type Chapter = {
   locations: Record<LocationId, Location>;
   gameObjects: Record<GameObjectId, GameObject>;
   items: Record<ItemId, Item>;
-npcs: Record<NpcId, NPC>;
+  npcs: Record<NpcId, NPC>;
 };
 
 export type Game = {

@@ -2,11 +2,7 @@
 'use server';
 
 /**
- * @fileOverview Generates NPC responses based on player input and game context.
- *
- * - generateNpcResponse - A function that generates NPC responses.
- * - GenerateNpcResponseInput - The input type for the generateNpcResponse function.
- * - GenerateNpcResponseOutput - The return type for the generateNpcResponse function.
+ * @fileOverview DEPRECATED - This flow is no longer used. Replaced by select-npc-response.ts
  */
 
 import {ai} from '@/ai/genkit';

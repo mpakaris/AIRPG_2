@@ -1,7 +1,7 @@
 'use server';
 
 import { guidePlayerWithNarrator } from '@/ai/flows/guide-player-with-narrator';
-import { generateNpcResponse } from '@/ai/flows/generate-npc-responses';
+import { selectNpcResponse } from '@/ai/flows/select-npc-response';
 import { game as gameCartridge } from '@/lib/game/cartridge';
 import { AVAILABLE_COMMANDS } from '@/lib/game/commands';
 import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectId, GameObjectState, ItemId } from '@/lib/game/types';
@@ -45,7 +45,6 @@ type CommandResult = {
 // --- Conversation Helpers ---
 
 const CONVERSATION_END_KEYWORDS = ['goodbye', 'bye', 'leave', 'stop', 'end', 'exit', 'thank you and goodbye'];
-const BUSINESS_CARD_KEYWORDS = ['business card', 'card', 'his card'];
 
 function isEndingConversation(input: string): boolean {
     const lowerInput = input.toLowerCase().trim();
@@ -55,9 +54,6 @@ function isEndingConversation(input: string): boolean {
     });
 }
 
-function mentionsBusinessCard(input: string): boolean {
-    return BUSINESS_CARD_KEYWORDS.some(keyword => input.toLowerCase().includes(keyword));
-}
 
 async function handleConversation(state: PlayerState, playerInput: string, game: Game): Promise<CommandResult> {
     if (!state.activeConversationWith) {
@@ -66,7 +62,6 @@ async function handleConversation(state: PlayerState, playerInput: string, game:
 
     const chapter = game.chapters[state.currentChapterId];
     const npc = chapter.npcs[state.activeConversationWith];
-    const location = chapter.locations[state.currentLocationId];
     let messages: Message[] = [];
     let newState = { ...state, inventory: [...state.inventory] };
 
@@ -77,32 +72,30 @@ async function handleConversation(state: PlayerState, playerInput: string, game:
             messages.push(createMessage(npc.id as NpcId, npc.name, `"${npc.goodbyeMessage}"`));
         }
         return { newState, messages };
-    } 
-
-    const gameStateSummary = `Player is in ${location.name}. Inventory: ${state.inventory.map(id => chapter.items[id]?.name).join(', ') || 'empty'}.`;
-    
-    // NOTE: We're not mutating the cartridge here, just creating a temporary description for the AI.
-    // The actual state of the conversation (e.g. card given) is handled by adding items to inventory.
-    const tempNpc = JSON.parse(JSON.stringify(npc));
-    const businessCardItem = Object.values(chapter.items).find(i => i.id === 'item_business_card');
-    if (businessCardItem && newState.inventory.includes(businessCardItem.id)) {
-        tempNpc.mainMessage = "I already gave you the business card. I don't have anything else for you.";
-        tempNpc.finalMessage = "I told you all I know.";
     }
-    const fullNpcDescription = `${tempNpc.description} Their main clue is: ${tempNpc.mainMessage} Their final message, to be used when they have nothing more to say, is: ${tempNpc.finalMessage}`;
 
-    const aiResponse = await generateNpcResponse({
+    // Prepare canned responses for the AI
+    const cannedResponsesForAI = npc.cannedResponses?.map(r => ({ topic: r.topic, response: r.response })) || [];
+
+    const aiResponse = await selectNpcResponse({
         playerInput: playerInput,
         npcName: npc.name,
-        npcDescription: fullNpcDescription,
-        locationDescription: location.description,
-        gameState: gameStateSummary,
+        cannedResponses: cannedResponsesForAI,
     });
     
-    const npcMessageContent = `"${aiResponse.npcResponse}"`;
-    messages.push(createMessage(npc.id as NpcId, npc.name, npcMessageContent));
+    const chosenTopic = aiResponse.topic;
+    let npcMessageContent = npc.cannedResponses?.find(r => r.topic === 'default')?.response ?? "I don't know what to say.";
 
-    if (businessCardItem && !newState.inventory.includes(businessCardItem.id) && mentionsBusinessCard(aiResponse.npcResponse)) {
+    const selectedResponse = npc.cannedResponses?.find(r => r.topic === chosenTopic);
+    if (selectedResponse) {
+        npcMessageContent = selectedResponse.response;
+    }
+
+    messages.push(createMessage(npc.id as NpcId, npc.name, `"${npcMessageContent}"`));
+
+    const businessCardItem = Object.values(chapter.items).find(i => i.id === 'item_business_card');
+
+    if (businessCardItem && !newState.inventory.includes(businessCardItem.id) && chosenTopic === 'clue') {
         newState.inventory.push(businessCardItem.id);
         
         const cardMessage = `The barista hands you a business card. It's been added to your inventory.`;
@@ -144,8 +137,8 @@ function handleObjectInteraction(state: PlayerState, playerInput: string, game: 
         return { newState, messages };
     }
     
-    const readKeywords = ['read', 'look at', 'examine', 'check out'];
-    const videoKeywords = ['watch', 'play', 'view', 'what is'];
+    const readKeywords = ['read', 'look at', 'examine', 'check', 'closer look'];
+    const videoKeywords = ['watch', 'play', 'view', 'what is', 'recording', 'content'];
 
     const wantsToReadArticle = readKeywords.some(k => lowerInput.includes(k)) && lowerInput.includes('article');
     const wantsToWatchVideo = videoKeywords.some(k => lowerInput.includes(k)) && (lowerInput.includes('video') || lowerInput.includes('recording'));
@@ -164,7 +157,7 @@ function handleObjectInteraction(state: PlayerState, playerInput: string, game: 
         const articleContent = object.content?.find(c => c.type === 'article');
         if (articleContent) {
            newState.notebookInteractionState = 'article_read';
-           messages.push(createMessage('narrator', 'Narrator', articleContent.url, 'article', 'newspaper_article'));
+           messages.push(createMessage('narrator', 'Narrator', 'A newspaper article about Silas Bloom.', 'article', 'newspaper_article'));
            messages.push(createMessage('agent', 'Agent Sharma', "Burt, the article talks about Agent Mackling. Is that coincidence? It cant be. That must be what? Your grandfather? You are in law enforcement for 4 generations. Oh my god, this is huge, Burt!"));
         } else {
            messages.push(createMessage('narrator', 'Narrator', `There is no article to read in the ${object.name}.`));
@@ -353,7 +346,7 @@ async function handleTalk(state: PlayerState, npcName: string, game: Game): Prom
         }
         messages.push(createMessage('system', 'System', `You are now talking to ${npc.name}. Type your message to continue the conversation. To end the conversation, type 'goodbye'.`));
         
-        const welcomeMessage = (npc as NPC).welcomeMessage || npc.mainMessage;
+        const welcomeMessage = (npc as NPC).welcomeMessage || "Hello.";
         messages.push(createMessage(npc.id as NpcId, npc.name, `"${welcomeMessage}"`, 'image', npc.image));
 
         return { newState, messages };
