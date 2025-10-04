@@ -197,6 +197,13 @@ function handleObjectInteraction(state: PlayerState, playerInput: string, game: 
         }
     }
     
+    // Check for chapter completion right after interaction state changes
+    const completion = checkChapterCompletion(newState);
+    if (completion.isComplete) {
+        newState.flags.push('chapter_1_complete' as Flag);
+        messages.push(...completion.messages);
+    }
+    
     return { newState, messages };
 }
 
