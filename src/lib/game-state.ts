@@ -10,7 +10,10 @@ export function getInitialState(game: Game): PlayerState {
     objectStates: {},
     activeConversationWith: null,
     interactingWithObject: null,
-    hasStartedFirstConversation: false,
     notebookInteractionState: 'start',
+    hasTalkedToBarista: false,
+    hasReceivedBusinessCard: false,
+    hasSeenNotebookUrl: false,
+    hasUnlockedNotebook: false,
   };
 }

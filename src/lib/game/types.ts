@@ -33,8 +33,12 @@ export type PlayerState = {
   objectStates: Record<GameObjectId, GameObjectState>;
   activeConversationWith: NpcId | null;
   interactingWithObject: GameObjectId | null;
-  hasStartedFirstConversation: boolean;
-  notebookInteractionState: 'start' | 'video_watched' | 'article_read';
+  notebookInteractionState: 'start' | 'video_watched' | 'article_read' | 'complete';
+  // Chapter 1 Flags
+  hasTalkedToBarista: boolean;
+  hasReceivedBusinessCard: boolean;
+  hasSeenNotebookUrl: boolean;
+  hasUnlockedNotebook: boolean;
 };
 
 export type Item = {

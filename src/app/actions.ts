@@ -4,7 +4,7 @@ import { guidePlayerWithNarrator } from '@/ai/flows/guide-player-with-narrator';
 import { selectNpcResponse } from '@/ai/flows/select-npc-response';
 import { game as gameCartridge } from '@/lib/game/cartridge';
 import { AVAILABLE_COMMANDS } from '@/lib/game/commands';
-import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectId, GameObjectState, ItemId } from '@/lib/game/types';
+import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectId, GameObjectState, ItemId, Flag } from '@/lib/game/types';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 
@@ -96,8 +96,8 @@ async function handleConversation(state: PlayerState, playerInput: string, game:
     const businessCardItem = Object.values(chapter.items).find(i => i.id === 'item_business_card');
 
     if (businessCardItem && !state.inventory.includes(businessCardItem.id) && chosenTopic === 'clue') {
-        const newInventory = [...state.inventory, businessCardİtem.id];
-        newState = {...newState, inventory: newInventory};
+        const newInventory = [...state.inventory, businessCardItem.id];
+        newState = {...newState, inventory: newInventory, hasReceivedBusinessCard: true};
         
         const cardMessage = `The barista hands you a business card. It's been added to your inventory.`;
         messages.push(createMessage('narrator', 'Narrator', cardMessage, 'image', businessCardItem.image));
@@ -143,16 +143,20 @@ function handleObjectInteraction(state: PlayerState, playerInput: string, game: 
         return { newState, messages };
     }
     
-    const readKeywords = ['read', 'look at', 'examine', 'check', 'closer look', 'have a look'];
-    const videoKeywords = ['watch', 'play', 'view', 'what is', 'recording', 'content', 'about'];
+    const readKeywords = ['read', 'look at', 'examine', 'check', 'closer look', 'have a look', 'inspect'];
+    const videoKeywords = ['watch', 'play', 'view', 'what is', 'recording', 'content', 'about', 'see'];
 
     const wantsToReadArticle = readKeywords.some(k => lowerInput.includes(k)) && lowerInput.includes('article');
-    const wantsToWatchVideo = videoKeywords.some(k => lowerInput.includes(k)) && lowerInput.includes('video');
+    const wantsToWatchVideo = videoKeywords.some(k => lowerInput.includes(k)) && (lowerInput.includes('video') || lowerInput.includes('recording') || lowerInput.includes('chip'));
 
     if (wantsToWatchVideo) {
         const videoContent = object.content?.find(c => c.type === 'video');
         if (videoContent) {
-            newState.notebookInteractionState = 'video_watched';
+            if (newState.notebookInteractionState === 'article_read') {
+                newState.notebookInteractionState = 'complete';
+            } else {
+                newState.notebookInteractionState = 'video_watched';
+            }
             messages.push(createMessage('narrator', 'Narrator', videoContent.url, 'video'));
             messages.push(createMessage('agent', 'Agent Sharma', "Silas Bloom? I've never heard of him. But it seems he was a great musician. He wrote an amazing Song for this Rose. They really must have been crazy in love."));
             messages.push(createMessage('agent', 'Agent Sharma', "Burt, wait! It seems there is also a newspaper article. Maybe you should have a look at it."));
@@ -162,7 +166,11 @@ function handleObjectInteraction(state: PlayerState, playerInput: string, game: 
     } else if (wantsToReadArticle) {
         const articleContent = object.content?.find(c => c.type === 'article');
         if (articleContent) {
-           newState.notebookInteractionState = 'article_read';
+           if (newState.notebookInteractionState === 'video_watched') {
+               newState.notebookInteractionState = 'complete';
+           } else {
+               newState.notebookInteractionState = 'article_read';
+           }
            messages.push(createMessage('narrator', 'Narrator', 'A newspaper article about Silas Bloom.', 'article', 'newspaper_article'));
            messages.push(createMessage('agent', 'Agent Sharma', "Burt, the article talks about Agent Mackling. Is that coincidence? It cant be. That must be what? Your grandfather? You are in law enforcement for 4 generations. Oh my god, this is huge, Burt!"));
         } else {
@@ -172,14 +180,17 @@ function handleObjectInteraction(state: PlayerState, playerInput: string, game: 
         // Fallback messages based on state
         switch (newState.notebookInteractionState) {
             case 'start':
-                messages.push(createMessage('narrator', 'Narrator', "The notebook is open. Inside, you see what appears to be a small data chip, likely a video or audio recording. You could try to 'read article' or 'watch video'."));
+                messages.push(createMessage('narrator', 'Narrator', "The notebook is open. Inside, you see a folded newspaper article and a small data chip, likely a video or audio recording. You could try to 'read article' or 'watch video'."));
                 break;
             case 'video_watched':
                  messages.push(createMessage('narrator', 'Narrator', "You've watched the video. The newspaper article is still here. You could try to 'read article'."));
                  break;
             case 'article_read':
-                 messages.push(createMessage('narrator', 'Narrator', "You've examined the contents of the notebook. Type 'exit' to stop examining it."));
+                 messages.push(createMessage('narrator', 'Narrator', "You've read the article. The video is still here. You could try to 'watch video'."));
                  break;
+            case 'complete':
+                messages.push(createMessage('narrator', 'Narrator', "You've examined the contents of the notebook. Type 'exit' to stop examining it."));
+                break;
             default:
                 messages.push(createMessage('system', 'System', `You can 'read article' or 'watch video'. Type 'exit' to stop.`));
                 break;
@@ -215,9 +226,10 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
     if (isGameObject) {
         const targetObject = getLiveGameObject(targetId as GameObjectId, state, game);
         if (targetObject.isOpenable && targetObject.isLocked && targetObject.unlocksWithUrl) {
+          newState.hasSeenNotebookUrl = true;
           const message = `${targetObject.description} A mini-game opens on your device: ${targetObject.unlocksWithUrl}`;
           return {
-              newState: state,
+              newState,
               messages: [createMessage('narrator', 'Narrator', message)],
           };
         }
@@ -354,9 +366,10 @@ async function handleTalk(state: PlayerState, npcName: string, game: Game): Prom
         let newState = { ...state, activeConversationWith: npc.id, interactingWithObject: null };
         let messages: Message[] = [];
         
-        if (!state.hasStartedFirstConversation) {
-            newState.hasStartedFirstConversation = true;
+        if (npc.id === 'npc_barista') {
+            newState.hasTalkedToBarista = true;
         }
+
         messages.push(createMessage('system', 'System', `You are now talking to ${npc.name}. Type your message to continue the conversation. To end the conversation, type 'goodbye'.`));
         
         const welcomeMessage = (npc as NPC).welcomeMessage || "Hello.";
@@ -409,7 +422,7 @@ function handlePassword(state: PlayerState, command: string, game: Game): Comman
     }
 
     if (targetObject.unlocksWithPhrase?.toLowerCase() === phrase.toLowerCase()) {
-        const newState = { ...state, objectStates: { ...state.objectStates }};
+        const newState = { ...state, objectStates: { ...state.objectStates }, hasUnlockedNotebook: true };
         newState.objectStates[targetObject.id] = { ...newState.objectStates[targetObject.id], isLocked: false };
         
         const messages: Message[] = [];
@@ -425,6 +438,28 @@ function handlePassword(state: PlayerState, command: string, game: Game): Comman
 
     return { newState: state, messages: [createMessage('system', 'System', 'That password doesn\'t work.')] };
 }
+
+// --- Chapter Completion Check ---
+function checkChapterCompletion(state: PlayerState): { isComplete: boolean; messages: Message[] } {
+    if (state.currentChapterId === 'ch1-the-cafe' && !state.flags.includes('chapter_1_complete' as Flag)) {
+        const conditions = [
+            state.hasTalkedToBarista,
+            state.hasReceivedBusinessCard,
+            state.hasSeenNotebookUrl,
+            state.hasUnlockedNotebook,
+            state.notebookInteractionState === 'complete',
+        ];
+
+        if (conditions.every(c => c)) {
+            const messages = [
+                createMessage('narrator', 'Narrator', 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759591583/Pr%C3%A4sentation1_ke0qg7.mp4', 'video')
+            ];
+            return { isComplete: true, messages };
+        }
+    }
+    return { isComplete: false, messages: [] };
+}
+
 
 // --- Main Action ---
 
@@ -518,8 +553,16 @@ export async function processCommand(
              break;
     }
     
+    // Check for chapter completion
+    const completion = checkChapterCompletion(result.newState);
+    let finalMessages = [...result.messages];
+
+    if (completion.isComplete) {
+        result.newState.flags.push('chapter_1_complete' as Flag);
+        finalMessages.push(...completion.messages);
+    }
+    
     // Only add the agent's message if the command was successful and didn't come from the system.
-    const finalMessages = [...result.messages];
     const hasSystemMessage = result.messages.some(m => m.sender === 'system');
 
     if (!hasSystemMessage) {
