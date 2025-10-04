@@ -1,3 +1,4 @@
+
 import type { Game, ChapterId, LocationId, ItemId, GameObjectId, NpcId, GameId, Flag } from './types';
 
 export const game: Game = {
@@ -33,7 +34,7 @@ export const game: Game = {
                 name: 'The Cafe',
                 description: 'A bustling downtown cafe, smelling of coffee and rain. The afternoon light is dim. A puddle of rainwater is near the door, and a discarded newspaper lies on an empty table.',
                 gridPosition: { x: 1, y: 1 },
-                objects: ['obj_brown_notebook', 'obj_chalkboard_menu', 'obj_newspaper'] as GameObjectId[],
+                objects: ['obj_brown_notebook', 'obj_chalkboard_menu', 'obj_newspaper', 'obj_bookshelf'] as GameObjectId[],
                 npcs: ['npc_barista', 'npc_manager'] as NpcId[],
             }
         },
@@ -141,6 +142,17 @@ export const game: Game = {
                     description: 'A newspaper on a table.',
                     hint: 'newspaper'
                 }
+            },
+            'obj_bookshelf': {
+                id: 'obj_bookshelf' as GameObjectId,
+                name: 'Bookshelf',
+                description: 'A small bookshelf in a reading corner, filled with a variety of used paperbacks.',
+                items: [],
+                image: {
+                    url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759604596/Bookshelf_Cafe_kn4poz.png',
+                    description: 'A bookshelf in a cafe.',
+                    hint: 'bookshelf reading corner'
+                }
             }
         },
         items: {
@@ -215,3 +227,5 @@ export const game: Game = {
     }
   }
 };
+
+    
