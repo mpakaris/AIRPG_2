@@ -51,6 +51,7 @@ export type GameObject = {
   isLocked?: boolean;
   unlocksWith?: ItemId;
   unlocksWithPhrase?: string;
+  unlocksWithUrl?: string;
 };
 
 export type NPC = {

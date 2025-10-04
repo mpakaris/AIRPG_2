@@ -37,9 +37,9 @@ export const game: Game = {
             'loc_cafe': {
                 id: 'loc_cafe' as LocationId,
                 name: 'The Cafe',
-                description: 'A bustling downtown cafe. A tired-looking barista is cleaning the counter, and a manager is proudly pointing at a chalkboard menu.',
+                description: 'A bustling downtown cafe, smelling of coffee and rain. The afternoon light is dim. A puddle of rainwater is near the door, and a discarded newspaper lies on an empty table.',
                 gridPosition: { x: 1, y: 1 },
-                objects: ['obj_brown_notebook'] as GameObjectId[],
+                objects: ['obj_brown_notebook', 'obj_chalkboard_menu', 'obj_newspaper'] as GameObjectId[],
                 npcs: ['npc_barista', 'npc_manager'] as NpcId[],
             }
         },
@@ -52,6 +52,18 @@ export const game: Game = {
                 isOpenable: true,
                 isLocked: true,
                 unlocksWithPhrase: 'JUSTICE FOR SILAS BLOOM',
+            },
+            'obj_chalkboard_menu': {
+                id: 'obj_chalkboard_menu' as GameObjectId,
+                name: 'Chalkboard Menu',
+                description: "Today's special is three scones for the price of two. A deal almost as sweet as justice.",
+                items: [],
+            },
+            'obj_newspaper': {
+                id: 'obj_newspaper' as GameObjectId,
+                name: 'Newspaper',
+                description: "It's a copy of today's local paper. The headlines are boring.",
+                items: [],
             }
         },
         items: {

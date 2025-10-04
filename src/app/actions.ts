@@ -5,7 +5,7 @@ import { guidePlayerWithNarrator } from '@/ai/flows/guide-player-with-narrator';
 import { generateNpcResponse } from '@/ai/flows/generate-npc-responses';
 import { game as gameCartridge } from '@/lib/game/cartridge';
 import { AVAILABLE_COMMANDS } from '@/lib/game/commands';
-import type { Game, Item, Location, Message, PlayerState } from '@/lib/game/types';
+import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId } from '@/lib/game/types';
 
 type CommandResult = {
   newState: PlayerState;
@@ -55,12 +55,12 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
       const itemNames = objectInLocation.items.map(id => chapter.items[id].name).join(', ');
       description += ` You see a ${itemNames} inside.`;
     }
-     if (objectInLocation.isLocked) {
+     if (objectInLocation.isLocked && objectInLocation.unlocksWithUrl) {
       description += ` A lock prevents it from being opened. On the cover, a URL is inscribed: ${objectInLocation.unlocksWithUrl}`;
     }
     return {
       newState: state,
-      messages: [createMessage('system', 'System', description)],
+      messages: [createMessage('narrator', 'Narrator', description)],
     };
   }
 
@@ -80,7 +80,7 @@ function handleTake(state: PlayerState, targetName: string, game: Game): Command
               return { newState, messages: [createMessage('system', 'System', `You already have the business card.`)] };
           }
           newState.inventory.push(businessCard.id);
-          return { newState, messages: [createMessage('system', 'System', `The barista hands you the business card.`)] };
+          return { newState, messages: [createMessage('narrator', 'Narrator', `The barista hands you the business card.`)] };
       }
   }
 
@@ -109,7 +109,7 @@ function handleTake(state: PlayerState, targetName: string, game: Game): Command
     }
     newState.inventory.push(itemToTake.id);
     itemSource.items = itemSource.items.filter(id => id !== itemToTake!.id);
-    return { newState, messages: [createMessage('system', 'System', `You take the ${itemToTake.name}.`)] };
+    return { newState, messages: [createMessage('narrator', 'Narrator', `You take the ${itemToTake.name}.`)] };
   }
   
   return { newState, messages: [createMessage('system', 'System', `You can't take that.`)] };
@@ -177,17 +177,18 @@ function handleUse(state: PlayerState, itemName: string, objectName: string, gam
     if(gameObjInState) {
         gameObjInState.isLocked = false;
     }
-    return { newState, messages: [createMessage('system', 'System', `You use the ${itemInInventory.name} on the ${targetObject.name}. It unlocks with a click!`)] };
+    return { newState, messages: [createMessage('narrator', 'Narrator', `You use the ${itemInInventory.name} on the ${targetObject.name}. It unlocks with a click!`)] };
   }
   
   if (targetObject.unlocksWithPhrase && targetObject.unlocksWithPhrase.toLowerCase() === itemName.toLowerCase() && targetObject.isLocked) {
      const newState = JSON.parse(JSON.stringify(state));
-     const gameObjInState = chapter.gameObjects[targetObject.id];
+     // This is a bit of a hack, we should be properly updating the state
+     const gameObjInState: GameObject = game.chapters[state.currentChapterId].gameObjects[targetObject.id];
      if (gameObjInState) {
        gameObjInState.isLocked = false;
      }
 
-    return { newState, messages: [createMessage('system', 'System', `You say the phrase "${itemName}". The ${targetObject.name} unlocks with a click! You can now examine it to see what's inside.`)] };
+    return { newState, messages: [createMessage('narrator', 'Narrator', `You say the phrase "${itemName}". The ${targetObject.name} unlocks with a click! You can now examine it to see what's inside.`)] };
   }
 
   return { newState: state, messages: [createMessage('system', 'System', `That doesn't seem to work.`)] };
@@ -210,7 +211,7 @@ async function handleTalk(state: PlayerState, npcName: string, fullCommand: stri
             gameState: gameStateSummary,
         });
 
-        return { newState: state, messages: [createMessage(npc.id, npc.name, `"${aiResponse.npcResponse}"`)] };
+        return { newState: state, messages: [createMessage(npc.id as NpcId, npc.name, `"${aiResponse.npcResponse}"`)] };
     }
     
     return { newState: state, messages: [createMessage('system', 'System', `There is no one called "${npcName}" here.`)] };
@@ -219,7 +220,16 @@ async function handleTalk(state: PlayerState, npcName: string, fullCommand: stri
 function handleLook(state: PlayerState, game: Game): CommandResult {
     const chapter = game.chapters[state.currentChapterId];
     const location = chapter.locations[state.currentLocationId];
-    return { newState: state, messages: [createMessage('narrator', 'Narrator', location.description)] };
+    const objectNames = location.objects.map(id => chapter.gameObjects[id]?.name).join(', ');
+    const npcNames = location.npcs.map(id => chapter.npcs[id]?.name).join(', ');
+
+    let description = location.description;
+    description += `\n\nYou can see: ${objectNames}.`;
+    if (npcNames) {
+        description += `\n${npcNames} are here.`;
+    }
+
+    return { newState: state, messages: [createMessage('narrator', 'Narrator', description)] };
 }
 
 function handleInventory(state: PlayerState, game: Game): CommandResult {
