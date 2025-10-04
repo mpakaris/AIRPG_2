@@ -74,7 +74,7 @@ export const game: Game = {
                 name: 'Barista',
                 description: 'A tired-looking male barista. He seems to have seen a lot in this cafe and is not easily impressed.',
                 welcomeMessage: 'Good Morning Sir, how can I help you? Would you like to try our Specialty Coffee today?',
-                goodbyeMessage: "Happy to help, sir.",
+                goodbyeMessage: "I'm sorry, mister. But I do have to return to my work. I wish you all the best.",
                 image: 'barista',
                 cannedResponses: [
                     { topic: 'greeting', response: 'Just coffee today, or can I help with something else?' },

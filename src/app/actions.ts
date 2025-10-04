@@ -103,6 +103,11 @@ async function handleConversation(state: PlayerState, playerInput: string, game:
         
         const agentMessage = "Oh Burt you genious! Your instincts won, one more time! Maybe that is the key to open that Notebook!";
         messages.push(createMessage('agent', 'Agent Sharma', agentMessage));
+
+        // Automatically end conversation
+        newState.activeConversationWith = null;
+        messages.push(createMessage(npc.id as NpcId, npc.name, `"${npc.goodbyeMessage}"`));
+        messages.push(createMessage('system', 'System', `The conversation with ${npc.name} has ended.`));
     }
 
     return { newState, messages };
@@ -137,11 +142,11 @@ function handleObjectInteraction(state: PlayerState, playerInput: string, game: 
         return { newState, messages };
     }
     
-    const readKeywords = ['read', 'look at', 'examine', 'check', 'closer look'];
-    const videoKeywords = ['watch', 'play', 'view', 'what is', 'recording', 'content'];
+    const readKeywords = ['read', 'look at', 'examine', 'check', 'closer look', 'have a look'];
+    const videoKeywords = ['watch', 'play', 'view', 'what is', 'recording', 'content', 'about'];
 
     const wantsToReadArticle = readKeywords.some(k => lowerInput.includes(k)) && lowerInput.includes('article');
-    const wantsToWatchVideo = videoKeywords.some(k => lowerInput.includes(k)) && (lowerInput.includes('video') || lowerInput.includes('recording'));
+    const wantsToWatchVideo = videoKeywords.some(k => lowerInput.includes(k)) && lowerInput.includes('video');
 
     if (wantsToWatchVideo) {
         const videoContent = object.content?.find(c => c.type === 'video');
