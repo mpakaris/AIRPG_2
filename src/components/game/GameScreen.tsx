@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, type FC } from 'react';
+import { useEffect, useRef, useState, type FC, Fragment } from 'react';
 import Image from 'next/image';
 import { Send, LoaderCircle, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -61,6 +61,35 @@ const CommandInput: FC<Pick<GameScreenProps, 'onCommandSubmit' | 'isLoading'>> =
   );
 };
 
+const urlRegex = /(https?:\/\/[^\s]+)/g;
+
+const MessageContent: FC<{ message: Message }> = ({ message }) => {
+    const isAgent = message.sender === 'agent';
+    const parts = message.content.split(urlRegex);
+
+    return (
+        <p className={cn("whitespace-pre-wrap", isAgent && "italic")}>
+            {parts.map((part, index) => {
+                if (part.match(urlRegex)) {
+                    return (
+                        <a
+                            key={index}
+                            href={part}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-400 underline hover:text-blue-300"
+                        >
+                            {part}
+                        </a>
+                    );
+                }
+                return <Fragment key={index}>{part}</Fragment>;
+            })}
+        </p>
+    );
+};
+
+
 const MessageLog: FC<Pick<GameScreenProps, 'messages'>> = ({ messages }) => {
   const scrollViewportRef = useRef<HTMLDivElement>(null);
 
@@ -74,7 +103,7 @@ const MessageLog: FC<Pick<GameScreenProps, 'messages'>> = ({ messages }) => {
   }, [messages]);
 
   return (
-    <ScrollArea className="h-full flex-grow">
+    <ScrollArea viewportRef={scrollViewportRef} className="h-full flex-grow">
       <div className="mx-auto max-w-4xl space-y-6 px-4 py-6">
         {messages.map((message) => {
           const isPlayer = message.sender === 'player';
@@ -106,7 +135,7 @@ const MessageLog: FC<Pick<GameScreenProps, 'messages'>> = ({ messages }) => {
                     {message.senderName}
                   </div>
                 )}
-                <p className={cn("whitespace-pre-wrap", isAgent && "italic")}>{message.content}</p>
+                <MessageContent message={message} />
                  {message.type === 'image' && message.image && (
                     <Image
                         src={message.image.imageUrl}
