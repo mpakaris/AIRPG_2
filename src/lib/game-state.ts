@@ -1,4 +1,4 @@
-import type { Game, PlayerState } from './game/types';
+import type { Game, PlayerState, Flag } from './game/types';
 
 export function getInitialState(game: Game): PlayerState {
   return {
@@ -10,6 +10,7 @@ export function getInitialState(game: Game): PlayerState {
     objectStates: {},
     activeConversationWith: null,
     interactingWithObject: null,
+    // DEPRECATED state, will be removed later
     notebookInteractionState: 'start',
     hasTalkedToBarista: false,
     hasReceivedBusinessCard: false,

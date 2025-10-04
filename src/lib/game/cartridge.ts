@@ -1,4 +1,4 @@
-import type { Game, Chapter, ChapterId, LocationId, ItemId, GameObjectId, NpcId, GameId } from './types';
+import type { Game, ChapterId, LocationId, ItemId, GameObjectId, NpcId, GameId, Flag } from './types';
 
 export const game: Game = {
   id: 'the-starlight-murder' as GameId,
@@ -12,11 +12,11 @@ export const game: Game = {
         title: 'A Blast from the Past',
         goal: "Unlock the contents of the notebook.",
         objectives: [
-            { flag: 'hasTalkedToBarista', label: 'Talk to the Barista' },
-            { flag: 'hasReceivedBusinessCard', label: 'Get the Business Card' },
-            { flag: 'hasSeenNotebookUrl', label: 'Find the Notebook Minigame' },
-            { flag: 'hasUnlockedNotebook', label: 'Unlock the Notebook' },
-            { flag: 'notebookInteractionComplete', label: 'View the Notebook Contents' },
+            { flag: 'has_talked_to_barista' as Flag, label: 'Talk to the Barista' },
+            { flag: 'has_received_business_card' as Flag, label: 'Get the Business Card' },
+            { flag: 'has_seen_notebook_url' as Flag, label: 'Find the Notebook Minigame' },
+            { flag: 'has_unlocked_notebook' as Flag, label: 'Unlock the Notebook' },
+            { flag: 'notebook_interaction_complete' as Flag, label: 'View the Notebook Contents' },
         ],
         startLocationId: 'loc_cafe' as LocationId,
         locations: {
@@ -53,7 +53,69 @@ export const game: Game = {
                 isOpenable: true,
                 isLocked: true,
                 unlocksWithPhrase: 'JUSTICE FOR SILAS BLOOM',
-                unlocksWithUrl: 'https://6000-firebase-studio-1759162726172.cluster-4cmpbiopffe5oqk7tloeb2ltrk.cloudworkstations.dev/games/the-notebook'
+                unlocksWithUrl: 'https://6000-firebase-studio-1759162726172.cluster-4cmpbiopffe5oqk7tloeb2ltrk.cloudworkstations.dev/games/the-notebook',
+                defaultInteractionStateId: 'start',
+                interactionStates: {
+                    'start': {
+                        id: 'start',
+                        description: "The notebook is open. Inside, you see a folded newspaper article and a small data chip, likely a video or audio recording. You could try to 'read article' or 'watch video'.",
+                        commands: {
+                            'read article': [
+                                { type: 'SHOW_MESSAGE', sender: 'narrator', senderName: 'Narrator', content: 'A newspaper article about Silas Bloom.', messageType: 'article', imageId: 'newspaper_article' },
+                                { type: 'SHOW_MESSAGE', sender: 'agent', senderName: 'Agent Sharma', content: "Burt, the article talks about Agent Mackling. Is that coincidence? It cant be. That must be what? Your grandfather? You are in law enforcement for 4 generations. Oh my god, this is huge, Burt!" },
+                                { type: 'SET_INTERACTION_STATE', state: 'article_read' },
+                                { type: 'SET_FLAG', flag: 'notebook_article_read' as Flag },
+                            ],
+                            'watch video': [
+                                { type: 'SHOW_MESSAGE', sender: 'narrator', senderName: 'Narrator', content: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759241547/0930_eit8he.mov', messageType: 'video' },
+                                { type: 'SHOW_MESSAGE', sender: 'agent', senderName: 'Agent Sharma', content: "Silas Bloom? I've never heard of him. But it seems he was a great musician. He wrote an amazing Song for this Rose. They really must have been crazy in love." },
+                                { type: 'SHOW_MESSAGE', sender: 'agent', senderName: 'Agent Sharma', content: "Burt, wait! It seems there is also a newspaper article. Maybe you should have a look at it." },
+                                { type: 'SET_INTERACTION_STATE', state: 'video_watched' },
+                                { type: 'SET_FLAG', flag: 'notebook_video_watched' as Flag },
+                            ],
+                            'exit': [{ type: 'END_INTERACTION' }],
+                            'close': [{ type: 'END_INTERACTION' }],
+                        }
+                    },
+                    'video_watched': {
+                        id: 'video_watched',
+                        description: "You've watched the video. The newspaper article is still here. You could try to 'read article' or 'exit'.",
+                        commands: {
+                            'read article': [
+                                { type: 'SHOW_MESSAGE', sender: 'narrator', senderName: 'Narrator', content: 'A newspaper article about Silas Bloom.', messageType: 'article', imageId: 'newspaper_article' },
+                                { type: 'SHOW_MESSAGE', sender: 'agent', senderName: 'Agent Sharma', content: "Burt, the article talks about Agent Mackling. Is that coincidence? It cant be. That must be what? Your grandfather? You are in law enforcement for 4 generations. Oh my god, this is huge, Burt!" },
+                                { type: 'SET_INTERACTION_STATE', state: 'complete' },
+                                { type: 'SET_FLAG', flag: 'notebook_article_read' as Flag },
+                                { type: 'SET_FLAG', flag: 'notebook_interaction_complete' as Flag },
+                            ],
+                             'exit': [{ type: 'END_INTERACTION' }],
+                             'close': [{ type: 'END_INTERACTION' }],
+                        }
+                    },
+                    'article_read': {
+                        id: 'article_read',
+                        description: "You've read the article. The video is still here. You could try to 'watch video' or 'exit'.",
+                        commands: {
+                            'watch video': [
+                                { type: 'SHOW_MESSAGE', sender: 'narrator', senderName: 'Narrator', content: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759241547/0930_eit8he.mov', messageType: 'video' },
+                                { type: 'SHOW_MESSAGE', sender: 'agent', senderName: 'Agent Sharma', content: "Silas Bloom? I've never heard of him. But it seems he was a great musician. He wrote an amazing Song for this Rose. They really must have been crazy in love." },
+                                { type: 'SET_INTERACTION_STATE', state: 'complete' },
+                                { type: 'SET_FLAG', flag: 'notebook_video_watched' as Flag },
+                                { type: 'SET_FLAG', flag: 'notebook_interaction_complete' as Flag },
+                            ],
+                             'exit': [{ type: 'END_INTERACTION' }],
+                             'close': [{ type: 'END_INTERACTION' }],
+                        }
+                    },
+                    'complete': {
+                        id: 'complete',
+                        description: "You've examined the contents of the notebook. Type 'exit' to stop examining it.",
+                        commands: {
+                            'exit': [{ type: 'END_INTERACTION' }],
+                            'close': [{ type: 'END_INTERACTION' }],
+                        }
+                    }
+                }
             },
             'obj_chalkboard_menu': {
                 id: 'obj_chalkboard_menu' as GameObjectId,
@@ -88,7 +150,17 @@ export const game: Game = {
                     { topic: 'greeting', response: 'Just coffee today, or can I help with something else?' },
                     { topic: 'mystery', response: "The man who just left? Ah, him. He's a regular. Comes in, gets his coffee, doesn't say much." },
                     { topic: 'saxophonist', response: "He's a musician. Plays the saxophone out on the corner most days. Pretty good, too." },
-                    { topic: 'clue', response: "You know, he left his business card here once. Said I could have it. If you're that interested, you can take it." },
+                    { 
+                        topic: 'clue', 
+                        response: "You know, he left his business card here once. Said I could have it. If you're that interested, you can take it.",
+                        actions: [
+                            { type: 'ADD_ITEM', itemId: 'item_business_card' as ItemId },
+                            { type: 'SET_FLAG', flag: 'has_received_business_card' as Flag },
+                            { type: 'SHOW_MESSAGE', sender: 'narrator', senderName: 'Narrator', content: "The barista hands you a business card. It's been added to your inventory.", messageType: 'image', imageId: 'business_card' },
+                            { type: 'SHOW_MESSAGE', sender: 'agent', senderName: 'Agent Sharma', content: "Oh Burt you genious! Your instincts won, one more time! Maybe that is the key to open that Notebook!" },
+                            { type: 'END_CONVERSATION' }
+                        ]
+                    },
                     { topic: 'insult', response: "Hey, watch your tone. I'm just here to pour coffee, not take abuse." },
                     { topic: 'default', response: "Sorry, I'm just a barista. I wouldn't know anything about that." }
                 ]

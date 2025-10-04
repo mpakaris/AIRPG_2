@@ -2,7 +2,7 @@
 
 import { BookOpen, Box, Compass, ScrollText, Target, User, CheckCircle, Code } from 'lucide-react';
 import type { FC } from 'react';
-import type { Game, PlayerState } from '@/lib/game/types';
+import type { Game, PlayerState, Flag } from '@/lib/game/types';
 import {
   Sidebar,
   SidebarContent,
@@ -29,11 +29,8 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
   const location = chapter.locations[playerState.currentLocationId];
   const inventoryItems = playerState.inventory.map(id => chapter.items[id]).filter(Boolean);
 
-  const isObjectiveComplete = (flag: keyof PlayerState | 'notebookInteractionComplete'): boolean => {
-    if (flag === 'notebookInteractionComplete') {
-        return playerState.notebookInteractionState === 'complete';
-    }
-    return !!playerState[flag as keyof PlayerState];
+  const isObjectiveComplete = (flag: Flag): boolean => {
+    return playerState.flags.includes(flag);
   }
 
   return (

@@ -4,7 +4,7 @@ import { guidePlayerWithNarrator } from '@/ai/flows/guide-player-with-narrator';
 import { selectNpcResponse } from '@/ai/flows/select-npc-response';
 import { game as gameCartridge } from '@/lib/game/cartridge';
 import { AVAILABLE_COMMANDS } from '@/lib/game/commands';
-import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectId, GameObjectState, ItemId, Flag } from '@/lib/game/types';
+import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectId, GameObjectState, ItemId, Flag, Action } from '@/lib/game/types';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 
@@ -42,6 +42,70 @@ type CommandResult = {
 };
 
 
+// --- Generic Action Processor ---
+
+function processActions(initialState: PlayerState, actions: Action[]): CommandResult {
+    let newState = { ...initialState };
+    const messages: Message[] = [];
+
+    for (const action of actions) {
+        switch (action.type) {
+            case 'ADD_ITEM':
+                if (!newState.inventory.includes(action.itemId)) {
+                    newState.inventory = [...newState.inventory, action.itemId];
+                }
+                break;
+            case 'SET_FLAG':
+                if (!newState.flags.includes(action.flag)) {
+                    newState.flags = [...newState.flags, action.flag];
+                }
+                break;
+            case 'SHOW_MESSAGE':
+                messages.push(createMessage(action.sender, action.senderName, action.content, action.messageType, action.imageId));
+                break;
+            case 'END_CONVERSATION':
+                 if (newState.activeConversationWith) {
+                    const chapter = gameCartridge.chapters[newState.currentChapterId];
+                    const npc = chapter.npcs[newState.activeConversationWith];
+                    messages.push(createMessage('system', 'System', `You ended the conversation with ${npc.name}.`));
+                    if (npc.goodbyeMessage) {
+                        messages.push(createMessage(npc.id as NpcId, npc.name, `"${npc.goodbyeMessage}"`));
+                    }
+                    newState.activeConversationWith = null;
+                }
+                break;
+            case 'START_INTERACTION':
+                newState.interactingWithObject = action.objectId;
+                if(action.interactionStateId){
+                    newState.objectStates[action.objectId] = {
+                        ...newState.objectStates[action.objectId],
+                        currentInteractionStateId: action.interactionStateId
+                    };
+                }
+                break;
+            case 'END_INTERACTION':
+                if (newState.interactingWithObject) {
+                    const chapter = gameCartridge.chapters[newState.currentChapterId];
+                    const object = chapter.gameObjects[newState.interactingWithObject];
+                    messages.push(createMessage('system', 'System', `You stop examining the ${object.name}.`));
+                    newState.interactingWithObject = null;
+                }
+                break;
+            case 'SET_INTERACTION_STATE':
+                if(newState.interactingWithObject) {
+                    newState.objectStates[newState.interactingWithObject] = {
+                        ...newState.objectStates[newState.interactingWithObject],
+                        currentInteractionStateId: action.state
+                    };
+                }
+                break;
+        }
+    }
+
+    return { newState, messages };
+}
+
+
 // --- Conversation Helpers ---
 
 const CONVERSATION_END_KEYWORDS = ['goodbye', 'bye', 'leave', 'stop', 'end', 'exit', 'thank you and goodbye'];
@@ -62,16 +126,10 @@ async function handleConversation(state: PlayerState, playerInput: string, game:
 
     const chapter = game.chapters[state.currentChapterId];
     const npc = chapter.npcs[state.activeConversationWith];
-    let messages: Message[] = [];
-    let newState = { ...state };
 
     if (isEndingConversation(playerInput)) {
-        newState.activeConversationWith = null;
-        messages.push(createMessage('system', 'System', `You ended the conversation with ${npc.name}.`));
-        if (npc.goodbyeMessage) {
-            messages.push(createMessage(npc.id as NpcId, npc.name, `"${npc.goodbyeMessage}"`));
-        }
-        return { newState, messages };
+        const result = processActions(state, [{type: 'END_CONVERSATION'}]);
+        return result;
     }
 
     // Prepare canned responses for the AI
@@ -85,45 +143,25 @@ async function handleConversation(state: PlayerState, playerInput: string, game:
     
     const chosenTopic = aiResponse.topic;
     let npcMessageContent = npc.cannedResponses?.find(r => r.topic === 'default')?.response ?? "I don't know what to say.";
+    let actionsToProcess: Action[] = [];
 
     const selectedResponse = npc.cannedResponses?.find(r => r.topic === chosenTopic);
     if (selectedResponse) {
         npcMessageContent = selectedResponse.response;
+        actionsToProcess = selectedResponse.actions || [];
     }
 
-    messages.push(createMessage(npc.id as NpcId, npc.name, `"${npcMessageContent}"`));
+    const initialMessage = createMessage(npc.id as NpcId, npc.name, `"${npcMessageContent}"`);
+    
+    const actionResult = processActions(state, actionsToProcess);
 
-    const businessCardItem = Object.values(chapter.items).find(i => i.id === 'item_business_card');
-
-    if (businessCardItem && !state.inventory.includes(businessCardItem.id) && chosenTopic === 'clue') {
-        const newInventory = [...state.inventory, businessCardItem.id];
-        newState = {...newState, inventory: newInventory, hasReceivedBusinessCard: true};
-        
-        const cardMessage = `The barista hands you a business card. It's been added to your inventory.`;
-        messages.push(createMessage('narrator', 'Narrator', cardMessage, 'image', businessCardItem.image));
-        
-        const agentMessage = "Oh Burt you genious! Your instincts won, one more time! Maybe that is the key to open that Notebook!";
-        messages.push(createMessage('agent', 'Agent Sharma', agentMessage));
-
-        // Automatically end conversation
-        newState.activeConversationWith = null;
-        messages.push(createMessage(npc.id as NpcId, npc.name, `"${npc.goodbyeMessage}"`));
-        messages.push(createMessage('system', 'System', `The conversation with ${npc.name} has ended.`));
-    }
-
-    return { newState, messages };
+    return {
+        newState: actionResult.newState,
+        messages: [initialMessage, ...actionResult.messages]
+    };
 }
 
 // --- Object Interaction Helper ---
-const INTERACTION_END_KEYWORDS = ['exit', 'close', 'stop', 'leave', 'close notebook'];
-
-function isEndingInteraction(input: string): boolean {
-    const lowerInput = input.toLowerCase().trim();
-    return INTERACTION_END_KEYWORDS.some(keyword => {
-        const regex = new RegExp(`\\b${keyword}\\b`, 'i');
-        return regex.test(lowerInput);
-    });
-}
 
 function handleObjectInteraction(state: PlayerState, playerInput: string, game: Game): CommandResult {
     if (!state.interactingWithObject) {
@@ -131,80 +169,36 @@ function handleObjectInteraction(state: PlayerState, playerInput: string, game: 
     }
 
     const objectId = state.interactingWithObject;
-    const object = getLiveGameObject(objectId, state, game);
-    let newState = { ...state };
-    let messages: Message[] = [];
+    const liveObject = getLiveGameObject(objectId, state, game);
     const lowerInput = playerInput.toLowerCase().trim();
 
-    if (isEndingInteraction(lowerInput)) {
-        newState.interactingWithObject = null;
-        newState.notebookInteractionState = 'start';
-        messages.push(createMessage('system', 'System', `You stop examining the ${object.name}.`));
-        return { newState, messages };
+    if (!liveObject.interactionStates) {
+        return { newState: state, messages: [createMessage('system', 'System', `You can't interact with the ${liveObject.name} in this way.`)] };
     }
+
+    const currentStateId = liveObject.currentInteractionStateId || liveObject.defaultInteractionStateId || 'start';
+    const currentInteractionState = liveObject.interactionStates[currentStateId];
+
+    if (!currentInteractionState) {
+         return { newState: state, messages: [createMessage('system', 'System', `Interaction error with ${liveObject.name}.`)] };
+    }
+
+    let matchingCommand = Object.keys(currentInteractionState.commands).find(cmd => lowerInput.includes(cmd));
     
-    const readKeywords = ['read', 'look at', 'examine', 'check', 'closer look', 'have a look', 'inspect'];
-    const videoKeywords = ['watch', 'play', 'view', 'what is', 'recording', 'content', 'about', 'see'];
-
-    const wantsToReadArticle = readKeywords.some(k => lowerInput.includes(k)) && lowerInput.includes('article');
-    const wantsToWatchVideo = videoKeywords.some(k => lowerInput.includes(k)) && (lowerInput.includes('video') || lowerInput.includes('chip'));
-
-    if (wantsToWatchVideo) {
-        const videoContent = object.content?.find(c => c.type === 'video');
-        if (videoContent) {
-            if (newState.notebookInteractionState === 'article_read') {
-                newState.notebookInteractionState = 'complete';
-            } else {
-                newState.notebookInteractionState = 'video_watched';
-            }
-            messages.push(createMessage('narrator', 'Narrator', videoContent.url, 'video'));
-            messages.push(createMessage('agent', 'Agent Sharma', "Silas Bloom? I've never heard of him. But it seems he was a great musician. He wrote an amazing Song for this Rose. They really must have been crazy in love."));
-            messages.push(createMessage('agent', 'Agent Sharma', "Burt, wait! It seems there is also a newspaper article. Maybe you should have a look at it."));
-        } else {
-            messages.push(createMessage('narrator', 'Narrator', `There is no video to watch in the ${object.name}.`));
+    if (matchingCommand) {
+        const actions = currentInteractionState.commands[matchingCommand];
+        const result = processActions(state, actions);
+        
+        const completion = checkChapterCompletion(result.newState, game);
+        if (completion.isComplete) {
+            result.newState.flags = [...result.newState.flags, 'chapter_1_complete' as Flag];
+            result.messages.push(...completion.messages);
         }
-    } else if (wantsToReadArticle) {
-        const articleContent = object.content?.find(c => c.type === 'article');
-        if (articleContent) {
-           if (newState.notebookInteractionState === 'video_watched') {
-               newState.notebookInteractionState = 'complete';
-           } else {
-               newState.notebookInteractionState = 'article_read';
-           }
-           messages.push(createMessage('narrator', 'Narrator', 'A newspaper article about Silas Bloom.', 'article', 'newspaper_article'));
-           messages.push(createMessage('agent', 'Agent Sharma', "Burt, the article talks about Agent Mackling. Is that coincidence? It cant be. That must be what? Your grandfather? You are in law enforcement for 4 generations. Oh my god, this is huge, Burt!"));
-        } else {
-           messages.push(createMessage('narrator', 'Narrator', `There is no article to read in the ${object.name}.`));
-        }
+        
+        return result;
     } else {
-        // Fallback messages based on state
-        switch (newState.notebookInteractionState) {
-            case 'start':
-                messages.push(createMessage('narrator', 'Narrator', "The notebook is open. Inside, you see a folded newspaper article and a small data chip, likely a video or audio recording. You could try to 'read article' or 'watch video'."));
-                break;
-            case 'video_watched':
-                 messages.push(createMessage('narrator', 'Narrator', "You've watched the video. The newspaper article is still here. You could try to 'read article'."));
-                 break;
-            case 'article_read':
-                 messages.push(createMessage('narrator', 'Narrator', "You've read the article. The video is still here. You could try to 'watch video'."));
-                 break;
-            case 'complete':
-                messages.push(createMessage('narrator', 'Narrator', "You've examined the contents of the notebook. Type 'exit' to stop examining it."));
-                break;
-            default:
-                messages.push(createMessage('system', 'System', `You can 'read article' or 'watch video'. Type 'exit' to stop.`));
-                break;
-        }
+         return { newState: state, messages: [createMessage('narrator', 'Narrator', currentInteractionState.description)] };
     }
-    
-    // Check for chapter completion right after interaction state changes
-    const completion = checkChapterCompletion(newState);
-    if (completion.isComplete) {
-        newState.flags.push('chapter_1_complete' as Flag);
-        messages.push(...completion.messages);
-    }
-    
-    return { newState, messages };
 }
 
 
@@ -233,7 +227,7 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
     if (isGameObject) {
         const targetObject = getLiveGameObject(targetId as GameObjectId, state, game);
         if (targetObject.isOpenable && targetObject.isLocked && targetObject.unlocksWithUrl) {
-          newState.hasSeenNotebookUrl = true;
+          newState.flags = [...newState.flags, 'has_seen_notebook_url' as Flag];
           const message = `${targetObject.description} A mini-game opens on your device: ${targetObject.unlocksWithUrl}`;
           return {
               newState,
@@ -241,10 +235,10 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
           };
         }
         if (targetObject.isOpenable && !targetObject.isLocked) {
-            newState.interactingWithObject = targetObject.id as GameObjectId;
-            newState.notebookInteractionState = 'start';
-            const description = targetObject.unlockedDescription || `You open the ${targetObject.name}.`;
-            return { newState, messages: [createMessage('narrator', 'Narrator', description)]};
+            const actions: Action[] = [{ type: 'START_INTERACTION', objectId: targetObject.id as GameObjectId, interactionStateId: targetObject.defaultInteractionStateId || 'start' }];
+            const result = processActions(newState, actions);
+            result.messages.push(createMessage('narrator', 'Narrator', targetObject.unlockedDescription || `You open the ${targetObject.name}.`));
+            return result;
         }
          return {
             newState: state,
@@ -374,7 +368,7 @@ async function handleTalk(state: PlayerState, npcName: string, game: Game): Prom
         let messages: Message[] = [];
         
         if (npc.id === 'npc_barista') {
-            newState.hasTalkedToBarista = true;
+            newState.flags = [...newState.flags, 'has_talked_to_barista' as Flag];
         }
 
         messages.push(createMessage('system', 'System', `You are now talking to ${npc.name}. Type your message to continue the conversation. To end the conversation, type 'goodbye'.`));
@@ -429,41 +423,38 @@ function handlePassword(state: PlayerState, command: string, game: Game): Comman
     }
 
     if (targetObject.unlocksWithPhrase?.toLowerCase() === phrase.toLowerCase()) {
-        const newState = { ...state, objectStates: { ...state.objectStates }, hasUnlockedNotebook: true };
+        const newState = { ...state, objectStates: { ...state.objectStates }};
+        newState.flags = [...newState.flags, 'has_unlocked_notebook' as Flag];
         newState.objectStates[targetObject.id] = { ...newState.objectStates[targetObject.id], isLocked: false };
         
-        const messages: Message[] = [];
-        messages.push(createMessage('narrator', 'Narrator', `You speak the words, and the ${targetObject.name} unlocks with a soft click.`));
-
-        newState.interactingWithObject = targetObject.id;
-        newState.notebookInteractionState = 'start';
-        const description = targetObject.unlockedDescription || `You open the ${targetObject.name}.`;
-        messages.push(createMessage('narrator', 'Narrator', description));
-
-        return { newState, messages };
+        const actions: Action[] = [{ type: 'START_INTERACTION', objectId: targetObject.id as GameObjectId, interactionStateId: targetObject.defaultInteractionStateId || 'start' }];
+        const result = processActions(newState, actions);
+        
+        result.messages.unshift(createMessage('narrator', 'Narrator', `You speak the words, and the ${targetObject.name} unlocks with a soft click.`));
+        result.messages.push(createMessage('narrator', 'Narrator', targetObject.unlockedDescription || `You open the ${targetObject.name}.`));
+        
+        return result;
     }
 
     return { newState: state, messages: [createMessage('system', 'System', 'That password doesn\'t work.')] };
 }
 
 // --- Chapter Completion Check ---
-function checkChapterCompletion(state: PlayerState): { isComplete: boolean; messages: Message[] } {
-    if (state.currentChapterId === 'ch1-the-cafe' && !state.flags.includes('chapter_1_complete' as Flag)) {
-        const conditions = [
-            state.hasTalkedToBarista,
-            state.hasReceivedBusinessCard,
-            state.hasSeenNotebookUrl,
-            state.hasUnlockedNotebook,
-            state.notebookInteractionState === 'complete',
-        ];
-
-        if (conditions.every(c => c)) {
-            const messages = [
-                createMessage('narrator', 'Narrator', 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759591583/Pr%C3%A4sentation1_ke0qg7.mp4', 'video')
-            ];
-            return { isComplete: true, messages };
-        }
+function checkChapterCompletion(state: PlayerState, game: Game): { isComplete: boolean; messages: Message[] } {
+    const chapter = game.chapters[state.currentChapterId];
+    if (!chapter.objectives || state.flags.includes('chapter_1_complete' as Flag)) {
+        return { isComplete: false, messages: [] };
     }
+    
+    const allObjectivesMet = chapter.objectives.every(obj => state.flags.includes(obj.flag));
+
+    if (allObjectivesMet) {
+        const messages = [
+            createMessage('narrator', 'Narrator', 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759591583/Pr%C3%A4sentation1_ke0qg7.mp4', 'video')
+        ];
+        return { isComplete: true, messages };
+    }
+    
     return { isComplete: false, messages: [] };
 }
 
@@ -493,32 +484,28 @@ export async function processCommand(
 
   // Dev command to complete chapter 1
   if (playerInput === 'CH I complete') {
-    let newState = {
-        ...currentState,
-        hasTalkedToBarista: true,
-        hasReceivedBusinessCard: true,
-        hasSeenNotebookUrl: true,
-        hasUnlockedNotebook: true,
-        notebookInteractionState: 'complete' as const,
-        inventory: [...currentState.inventory],
-    };
-    const businessCardItem = Object.values(game.chapters[currentState.currentChapterId].items).find(i => i.id === 'item_business_card');
+    let newState = { ...currentState };
+    const chapter = game.chapters[newState.currentChapterId];
+    
+    chapter.objectives?.forEach(obj => {
+        if (!newState.flags.includes(obj.flag)) {
+            newState.flags = [...newState.flags, obj.flag];
+        }
+    });
+
+    const businessCardItem = Object.values(chapter.items).find(i => i.id === 'item_business_card');
     if (businessCardItem && !newState.inventory.includes(businessCardItem.id)) {
-        newState.inventory.push(businessCardItem.id);
+        newState.inventory = [...newState.inventory, businessCardItem.id];
     }
     
-    const completion = checkChapterCompletion(newState);
+    const completion = checkChapterCompletion(newState, game);
+    let messages = [createMessage('system', 'System', 'DEV: Chapter 1 flags set to complete.')];
     if (completion.isComplete) {
       newState.flags = [...newState.flags, 'chapter_1_complete' as Flag];
+      messages.push(...completion.messages);
     }
     
-    return {
-        newState,
-        messages: [
-            createMessage('system', 'System', 'DEV: Chapter 1 flags set to complete.'),
-            ...completion.messages,
-        ],
-    };
+    return { newState, messages };
   }
 
   // Handle special interaction states first. These bypass the main AI.
@@ -606,11 +593,11 @@ export async function processCommand(
     }
     
     // Check for chapter completion
-    const completion = checkChapterCompletion(result.newState);
+    const completion = checkChapterCompletion(result.newState, game);
     let finalMessages = [...result.messages];
 
     if (completion.isComplete) {
-        result.newState.flags.push('chapter_1_complete' as Flag);
+        result.newState.flags = [...result.newState.flags, 'chapter_1_complete' as Flag];
         finalMessages.push(...completion.messages);
     }
     

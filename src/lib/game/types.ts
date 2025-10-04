@@ -20,9 +20,21 @@ export type Message = {
   timestamp: number;
 };
 
+// --- Action System ---
+export type Action =
+  | { type: 'ADD_ITEM'; itemId: ItemId }
+  | { type: 'SET_FLAG'; flag: Flag }
+  | { type: 'SHOW_MESSAGE'; sender: Message['sender']; senderName: string; content: string; messageType?: Message['type']; imageId?: string }
+  | { type: 'END_CONVERSATION' }
+  | { type: 'START_INTERACTION'; objectId: GameObjectId, interactionStateId?: string }
+  | { type: 'END_INTERACTION' }
+  | { type: 'SET_INTERACTION_STATE', state: string };
+
+
 export type GameObjectState = {
   isLocked?: boolean;
   items?: ItemId[];
+  currentInteractionStateId?: string;
 };
 
 export type PlayerState = {
@@ -34,12 +46,12 @@ export type PlayerState = {
   objectStates: Record<GameObjectId, GameObjectState>;
   activeConversationWith: NpcId | null;
   interactingWithObject: GameObjectId | null;
-  notebookInteractionState: 'start' | 'video_watched' | 'article_read' | 'complete';
-  // Chapter 1 Flags
+  // DEPRECATED: Chapter 1 Flags (will be moved to flags array)
   hasTalkedToBarista: boolean;
   hasReceivedBusinessCard: boolean;
   hasSeenNotebookUrl: boolean;
   hasUnlockedNotebook: boolean;
+  notebookInteractionState: 'start' | 'video_watched' | 'article_read' | 'complete'; // To be deprecated
 };
 
 export type Item = {
@@ -56,9 +68,15 @@ export type GameObjectContent = {
     url: string;
 };
 
+export type ObjectInteractionState = {
+    id: string;
+    description: string;
+    commands: Record<string, Action[]>;
+}
+
 export type GameObject = {
   id: GameObjectId;
-  name: string;
+  name:string;
   description: string;
   unlockedDescription?: string;
   items: ItemId[];
@@ -68,11 +86,14 @@ export type GameObject = {
   unlocksWith?: ItemId;
   unlocksWithPhrase?: string;
   unlocksWithUrl?: string;
+  interactionStates?: Record<string, ObjectInteractionState>;
+  defaultInteractionStateId?: string;
 };
 
 export type CannedResponse = {
-    topic: 'greeting' | 'mystery' | 'saxophonist' | 'clue' | 'insult' | 'default';
+    topic: string; // greeting, mystery, etc. No longer a strict type.
     response: string;
+    actions?: Action[];
 }
 
 export type NPC = {
@@ -97,7 +118,7 @@ export type Location = {
 };
 
 export type ChapterObjective = {
-    flag: keyof PlayerState | 'notebookInteractionComplete';
+    flag: Flag;
     label: string;
 };
 
