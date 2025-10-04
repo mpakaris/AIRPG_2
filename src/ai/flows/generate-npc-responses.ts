@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -33,7 +34,7 @@ const prompt = ai.definePrompt({
   name: 'generateNpcResponsePrompt',
   input: {schema: GenerateNpcResponseInputSchema},
   output: {schema: GenerateNpcResponseOutputSchema},
-  prompt: `You are the game master for a text-based RPG. A player is interacting with an NPC.
+  prompt: `You are the game master for a text-based RPG. A player is interacting with an NPC. Your goal is to guide the player by having the NPC provide their main clue when the player's questions are relevant.
 
   NPC Name: {{npcName}}
   NPC Description: {{npcDescription}}
@@ -41,11 +42,12 @@ const prompt = ai.definePrompt({
   Game State: {{gameState}}
   Player Input: {{playerInput}}
 
-  As the game master, generate a response from the NPC that is in character, provides subtle clues or hints related to the NPC's main message, and guides the player towards solving the puzzle. 
+  As the game master, generate a response from the NPC that is in character and moves the game forward.
   
-  - BE SUBTLE. Do not reveal all the information at once. Hint at the main message gradually.
+  - BE SUBTLE, BUT NOT OBSTRUCTIVE. Your main purpose is to help the player.
+  - If the player is asking questions related to the NPC's mainMessage, guide the conversation towards revealing that clue. Do not get stuck in a repetitive loop. Offer the clue proactively if the player is on the right track.
   - Maintain the NPC's described persona. Pay attention to their personality and gender. For example, a gruff male barista would not say "hon".
-  - If the player seems to be asking questions unrelated to the main clue or is repeating themselves, the NPC should politely end the conversation with their 'finalMessage'.
+  - If the player seems to be asking questions unrelated to the main clue or is repeating themselves after the clue has been given, the NPC should politely end the conversation with their 'finalMessage'.
 
   NPC Response:`,
 });
