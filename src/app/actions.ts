@@ -140,7 +140,7 @@ function handleObjectInteraction(state: PlayerState, playerInput: string, game: 
     if (verb === 'read' && content?.type === 'article') {
          messages.push(createMessage('narrator', 'Narrator', `You read the ${content.name}:\n${content.url}`, 'text'));
     } else if (verb === 'watch' && content?.type === 'video') {
-        messages.push(createMessage('narrator', 'Narrator', content.url, 'video'));
+        messages.push(createMessage('narrator', 'Narrator', `${content.url}`, 'video'));
     } else {
         messages.push(createMessage('system', 'System', `You can't do that with the ${object.name}. Try 'read article' or 'watch video'. To stop, type 'exit'.`));
     }
@@ -407,7 +407,7 @@ export async function processCommand(
     lookAroundSummary += `You see ${npcNames} here.`;
   }
 
-  const gameStateSummary = `
+  const gameStateSummaryForAI = `
     CHAPTER GOAL: ${chapter.goal}.
     CURRENT LOCATION: ${location.name}.
     INVENTORY: ${currentState.inventory.map(id => chapter.items[id]?.name).filter(Boolean).join(', ') || 'empty'}.
@@ -418,7 +418,7 @@ export async function processCommand(
   try {
     const aiResponse = await guidePlayerWithNarrator({
         gameSpecifications: game.description,
-        gameState: gameStateSummary,
+        gameState: gameStateSummaryForAI,
         playerCommand: playerInput,
         availableCommands: AVAILABLE_COMMANDS.join(', '),
     });
@@ -428,13 +428,7 @@ export async function processCommand(
     const restOfCommand = args.join(' ');
 
     let result: CommandResult = { newState: currentState, messages: [] };
-    let agentMessage: Message | null = null;
     
-    // In conversation or interaction mode, we don't want an agent message.
-    if (!currentState.activeConversationWith && !currentState.interactingWithObject) {
-       agentMessage = createMessage('agent', 'Agent Sharma', `${aiResponse.agentResponse}`);
-    }
-
     // Now, execute the command and get the result
     switch (verb) {
         case 'examine':
@@ -468,10 +462,13 @@ export async function processCommand(
             break;
         default:
              result = { newState: currentState, messages: [createMessage('system', 'System', "I don't understand that command.")] };
-             agentMessage = null; // Don't show agent message for invalid commands
     }
+
+    const agentMessage = createMessage('agent', 'Agent Sharma', `${aiResponse.agentResponse}`);
     
-    const finalMessages = agentMessage ? [agentMessage, ...result.messages] : result.messages;
+    const finalMessages = (result.messages.length > 0 && result.messages[0].sender !== 'system') 
+        ? [agentMessage, ...result.messages] 
+        : result.messages;
 
     return {
         newState: result.newState,
