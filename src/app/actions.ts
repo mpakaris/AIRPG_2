@@ -39,7 +39,6 @@ const BUSINESS_CARD_KEYWORDS = ['business card', 'card', 'his card'];
 function isEndingConversation(input: string): boolean {
     const lowerInput = input.toLowerCase().trim();
     return CONVERSATION_END_KEYWORDS.some(keyword => {
-        // Use a regex to match whole words only.
         const regex = new RegExp(`\\b${keyword}\\b`, 'i');
         return regex.test(lowerInput);
     });
@@ -91,6 +90,9 @@ async function handleConversation(state: PlayerState, playerInput: string, game:
         const cardMessage = `The barista hands you a business card. It's been added to your inventory.`;
         messages.push(createMessage('narrator', 'Narrator', cardMessage, 'image', businessCardItem.image));
         
+        const agentMessage = "Oh Burt you genious! Your instincts won, one more time! Maybe that is the key to open that Notebook!";
+        messages.push(createMessage('agent', 'Agent Sharma', agentMessage));
+
         const npcInCartridge = gameCartridge.chapters[newState.currentChapterId].npcs[npc.id];
         if (npcInCartridge) {
             npcInCartridge.mainMessage = "I already gave you the business card. I don't have anything else for you.";
@@ -279,7 +281,7 @@ function handleInventory(state: PlayerState, game: Game): CommandResult {
         return { newState: state, messages: [createMessage('system', 'System', 'Your inventory is empty.')] };
     }
     const itemNames = state.inventory.map(id => chapter.items[id]?.name).join(', ');
-    return { newState: state, messages: [createMessage('system', 'System', `You are carrying: ${itemNames}.`)] };
+    return { newState, messages: [createMessage('system', 'System', `You are carrying: ${itemNames}.`)] };
 }
 
 function handlePassword(state: PlayerState, command: string, game: Game): CommandResult {
