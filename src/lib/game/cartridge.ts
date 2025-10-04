@@ -13,6 +13,12 @@ export const mediaAssets: MediaAsset[] = [
       type: "image",
       url: "https://res.cloudinary.com/dg912bwcc/image/upload/v1759241463/Screenshot_2025-09-30_at_15.51.35_gyj3d5.png",
       description: "Newspaper article detailing the murder of Rose and the arrest of Silas Bloom, naming Dean Macklin."
+    },
+    {
+        "id": "MEDIA_BUSINESS_CARD",
+        "type": "image",
+        "url": "https://images.unsplash.com/photo-1563771649911-1c93716f1a4a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxidXNpbmVzcyUyMGNhcmR8ZW58MHx8fHwxNzU5NjcwNjYwfDA&ixlib=rb-4.1.0&q=80&w=1080",
+        "description": "A business card for a saxophone player named 'S A X O'."
     }
 ];
 
@@ -31,30 +37,43 @@ export const game: Game = {
             'loc_cafe': {
                 id: 'loc_cafe' as LocationId,
                 name: 'The Cafe',
-                description: 'A bustling downtown cafe.',
+                description: 'A bustling downtown cafe. A tired-looking barista is cleaning the counter, and a manager is proudly pointing at a chalkboard menu.',
                 gridPosition: { x: 1, y: 1 },
                 objects: ['obj_brown_notebook'] as GameObjectId[],
-                npcs: ['npc_barista'] as NpcId[],
+                npcs: ['npc_barista', 'npc_manager'] as NpcId[],
             }
         },
         gameObjects: {
             'obj_brown_notebook': {
                 id: 'obj_brown_notebook' as GameObjectId,
                 name: 'Brown Notebook',
-                description: 'A worn, leather-bound notebook. It feels heavy with secrets. It seems to be a brown leather bound notebook filled with news paper clips. A lock prevents it to be opened without the right password. Whatever it hides, it must be utterly important to its owner!',
+                description: 'A worn, leather-bound notebook. It feels heavy with secrets. A lock prevents it from being opened without the right password. On the cover, a URL is inscribed: https://textcraft.dev/minigame. Whatever it hides, it must be utterly important to its owner!',
                 items: [],
                 isOpenable: true,
                 isLocked: true,
                 unlocksWithPhrase: 'JUSTICE FOR SILAS BLOOM',
             }
         },
-        items: {},
+        items: {
+            'item_business_card': {
+                id: 'item_business_card' as ItemId,
+                name: 'Business Card',
+                description: 'A simple business card for a musician. It reads: "S A X O - The World\'s Best Sax Player". A phone number is listed, along with a handwritten number "1943" and the name "ROSE".',
+                image: 'business_card'
+            }
+        },
         npcs: {
             'npc_barista': {
                 id: 'npc_barista' as NpcId,
                 name: 'Barista',
-                description: 'A tired-looking barista.',
-                mainMessage: "What can I get you?",
+                description: 'A tired-looking barista. They seem to have seen a lot in this cafe.',
+                mainMessage: "The mystery man you saw? Plays the saxophone on the corner every day. Real talented. He left his business card here once, if you're interested.",
+            },
+            'npc_manager': {
+                id: 'npc_manager' as NpcId,
+                name: 'Cafe Manager',
+                description: 'A cheerful, slightly-too-energetic manager.',
+                mainMessage: "Welcome! May I interest you in our special today? Three scones for the price of two!",
             }
         }
     }

@@ -11,6 +11,12 @@
       "description": "A leather-bound notebook.",
       "imageUrl": "https://images.unsplash.com/photo-1581431886211-6b932f8367f2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxub3RlYm9va3xlbnwwfHx8fDE3NTk0Mjk1MTR8MA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "notebook"
+    },
+    {
+      "id": "business_card",
+      "description": "A business card.",
+      "imageUrl": "https://images.unsplash.com/photo-1563771649911-1c93716f1a4a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxidXNpbmVzcyUyMGNhcmR8ZW58MHx8fHwxNzU5NjcwNjYwfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "business card"
     }
   ]
 }
