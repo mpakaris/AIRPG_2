@@ -403,18 +403,20 @@ function handlePassword(state: PlayerState, command: string, game: Game): Comman
     if (targetObject.unlocksWithPhrase?.toLowerCase() === phrase.toLowerCase()) {
         const newState = { ...state, objectStates: { ...state.objectStates }};
         newState.objectStates[targetObject.id] = { ...newState.objectStates[targetObject.id], isLocked: false };
-        newState.interactingWithObject = targetObject.id;
-        newState.notebookInteractionState = 'start';
+        
+        const messages: Message[] = [];
+        messages.push(createMessage('narrator', 'Narrator', `You speak the words, and the ${targetObject.name} unlocks with a soft click.`));
 
-        const unlockedMessage = `You speak the words, and the ${targetObject.name} unlocks with a soft click.`;
-        // Start the interaction with an empty input to get the initial description
-        const initialInteractionMessages = handleObjectInteraction(newState, '', game).messages;
+        if (targetObject.unlocksWithUrl) {
+            messages.push(createMessage('narrator', 'Narrator', `A mini-game opens on your device: ${targetObject.unlocksWithUrl}`));
+        } else {
+            newState.interactingWithObject = targetObject.id;
+            newState.notebookInteractionState = 'start';
+            const initialInteractionMessages = handleObjectInteraction(newState, '', game).messages;
+            messages.push(...initialInteractionMessages);
+        }
 
-        return { newState, messages: [
-                createMessage('narrator', 'Narrator', unlockedMessage),
-                ...initialInteractionMessages
-            ]
-        };
+        return { newState, messages };
     }
 
     return { newState: state, messages: [createMessage('system', 'System', 'That password doesn\'t work.')] };
