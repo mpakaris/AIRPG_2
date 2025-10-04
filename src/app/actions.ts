@@ -377,7 +377,10 @@ function handlePassword(state: PlayerState, command: string, game: Game): Comman
             gameObjInCartridge.isLocked = false;
         }
         
-        return { newState, messages: [createMessage('narrator', 'Narrator', `You speak the words, and the ${targetObject.name} unlocks with a soft click. It can now be examined.`)] };
+        newState.interactingWithObject = targetObject.id;
+        const unlockedMessage = `You speak the words, and the ${targetObject.name} unlocks with a soft click. You have opened the notebook. You can 'read article' or 'watch video'. Type 'exit' to stop.`;
+
+        return { newState, messages: [createMessage('narrator', 'Narrator', unlockedMessage)] };
     }
 
     return { newState: state, messages: [createMessage('system', 'System', 'That password doesn\'t work.')] };
@@ -391,41 +394,39 @@ export async function processCommand(
 ): Promise<CommandResult> {
   const game = gameCartridge;
 
-  // If in conversation mode, handle as dialogue
+  // If in a special interaction state, handle that first and bypass AI.
   if (currentState.activeConversationWith) {
       return await handleConversation(currentState, playerInput, game);
   }
-  
-  // If interacting with an object, handle that first
   if (currentState.interactingWithObject) {
       return handleObjectInteraction(currentState, playerInput, game);
   }
 
-  // First, get the AI's interpretation of the command.
-  const chapter = game.chapters[currentState.currentChapterId];
-  const location = chapter.locations[currentState.currentLocationId];
-  const objectsInLocation = location.objects.map(id => game.chapters[chapter.id].gameObjects[id]);
-  const objectStates = objectsInLocation.map(obj => `${obj.name} is ${obj.isLocked ? 'locked' : 'unlocked'}`).join('. ');
-  const objectNames = location.objects.map(id => chapter.gameObjects[id]?.name).join(', ');
-  const npcNames = location.npcs.map(id => chapter.npcs[id]?.name).join(', ');
-  
-  let lookAroundSummary = `${location.description}\n\n`;
-  if(objectNames) {
-    lookAroundSummary += `You can see: ${objectNames}.\n`;
-  }
-  if(npcNames) {
-    lookAroundSummary += `You see ${npcNames} here.`;
-  }
-
-  const gameStateSummaryForAI = `
-    CHAPTER GOAL: ${chapter.goal}.
-    CURRENT LOCATION: ${location.name}.
-    INVENTORY: ${currentState.inventory.map(id => chapter.items[id]?.name).filter(Boolean).join(', ') || 'empty'}.
-    LOCATION DESCRIPTION: ${lookAroundSummary.trim()}.
-    OBJECT STATES: ${objectStates}.
-  `;
-
+  // AI processing for general commands
   try {
+    const chapter = game.chapters[currentState.currentChapterId];
+    const location = chapter.locations[currentState.currentLocationId];
+    const objectsInLocation = location.objects.map(id => game.chapters[chapter.id].gameObjects[id]);
+    const objectStates = objectsInLocation.map(obj => `${obj.name} is ${obj.isLocked ? 'locked' : 'unlocked'}`).join('. ');
+    const objectNames = location.objects.map(id => chapter.gameObjects[id]?.name).join(', ');
+    const npcNames = location.npcs.map(id => chapter.npcs[id]?.name).join(', ');
+    
+    let lookAroundSummary = `${location.description}\n\n`;
+    if(objectNames) {
+      lookAroundSummary += `You can see: ${objectNames}.\n`;
+    }
+    if(npcNames) {
+      lookAroundSummary += `You see ${npcNames} here.`;
+    }
+
+    const gameStateSummaryForAI = `
+      CHAPTER GOAL: ${chapter.goal}.
+      CURRENT LOCATION: ${location.name}.
+      INVENTORY: ${currentState.inventory.map(id => chapter.items[id]?.name).filter(Boolean).join(', ') || 'empty'}.
+      LOCATION DESCRIPTION: ${lookAroundSummary.trim()}.
+      OBJECT STATES: ${objectStates}.
+    `;
+
     const aiResponse = await guidePlayerWithNarrator({
         gameSpecifications: game.description,
         gameState: gameStateSummaryForAI,
@@ -439,7 +440,7 @@ export async function processCommand(
 
     let result: CommandResult = { newState: currentState, messages: [] };
     
-    // Now, execute the command and get the result
+    // Execute the command determined by the AI
     switch (verb) {
         case 'examine':
             result = handleExamine(currentState, restOfCommand, game);
@@ -474,14 +475,14 @@ export async function processCommand(
              result = { newState: currentState, messages: [createMessage('system', 'System', "I don't understand that command.")] };
     }
 
-    const agentMessage = createMessage('agent', 'Agent Sharma', `${aiResponse.agentResponse}`);
+    // Agent Sharma comments on the *result* of the action.
+    // We only add her message if the command was successful (i.e., not a system error).
+    const finalMessages = [...result.messages];
+    if (result.messages.length > 0 && result.messages[0].sender !== 'system') {
+        const agentMessage = createMessage('agent', 'Agent Sharma', `${aiResponse.agentResponse}`);
+        finalMessages.unshift(agentMessage);
+    }
     
-    // Only add agent message if the command was successful and not a system error
-    const finalMessages = (result.messages.length > 0 && result.messages[0].sender !== 'system') 
-        ? [agentMessage, ...result.messages] 
-        : [agentMessage, ...result.messages.filter(m => m.sender !== 'system')];
-
-
     return {
         newState: result.newState,
         messages: finalMessages,
@@ -495,3 +496,5 @@ export async function processCommand(
     };
   }
 }
+
+    
