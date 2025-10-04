@@ -115,13 +115,7 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
 
   const allSearchableObjects: (GameObject | Item)[] = [
     ...location.objects.map(objId => gameCartridge.chapters[chapter.id].gameObjects[objId]),
-    ...state.inventory.map(invId => {
-      const item = gameCartridge.chapters[chapter.id].items[invId];
-      if (item) return item;
-      const gameObject = gameCartridge.chapters[chapter.id].gameObjects[invId as GameObjectId];
-      if (gameObject) return gameObject;
-      return null;
-    })
+    ...state.inventory.map(invId => gameCartridge.chapters[chapter.id].items[invId])
   ].filter(Boolean) as (GameObject | Item)[];
 
   const target = allSearchableObjects.find(i => i?.name.toLowerCase() === targetName);
@@ -338,13 +332,8 @@ function handlePassword(state: PlayerState, command: string, game: Game): Comman
         if (gameObjInCartridge) {
             gameObjInCartridge.isLocked = false;
         }
-
-        // Move the unlocked object from the location to the player's inventory
-        const loc = gameCartridge.chapters[state.currentChapterId].locations[location.id];
-        loc.objects = loc.objects.filter(objId => objId !== targetObject.id);
-        newState.inventory.push(targetObject.id as ItemId);
-
-        return { newState, messages: [createMessage('narrator', 'Narrator', `You speak the words, and the ${targetObject.name} unlocks with a soft click. It has been added to your inventory and can now be examined.`)] };
+        
+        return { newState, messages: [createMessage('narrator', 'Narrator', `You speak the words, and the ${targetObject.name} unlocks with a soft click. It can now be examined.`)] };
     }
 
     return { newState: state, messages: [createMessage('system', 'System', 'That password doesn\'t work.')] };
@@ -357,10 +346,9 @@ function handleContentInteraction(state: PlayerState, contentType: 'read' | 'wat
 
     const allSearchableObjects = [
         ...location.objects.map(objId => gameCartridge.chapters[chapter.id].gameObjects[objId]),
-        ...state.inventory.map(invId => gameCartridge.chapters[chapter.id].gameObjects[invId as GameObjectId])
     ].filter(Boolean);
 
-    // Find an unlocked object in the current location or inventory that contains the content.
+    // Find an unlocked object in the current location that contains the content.
     const sourceObject = allSearchableObjects
         .find(obj => obj && !obj.isLocked && obj.content?.some(c => c.name.toLowerCase() === contentName));
 
