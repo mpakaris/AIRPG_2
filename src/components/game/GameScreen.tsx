@@ -66,7 +66,7 @@ const urlRegex = /(https?:\/\/[^\s]+)/g;
 
 const MessageContent: FC<{ message: Message }> = ({ message }) => {
     const isAgent = message.sender === 'agent';
-    const content = message.content.replace(/<i>/g, '').replace(/<\/i>/g, '');
+    const content = message.content.replace(/_|\*/g, '');
     const parts = content.split(urlRegex);
 
     return (
