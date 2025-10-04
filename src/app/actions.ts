@@ -1,3 +1,4 @@
+
 'use server';
 
 import { guidePlayerWithNarrator } from '@/ai/flows/guide-player-with-narrator';
@@ -538,7 +539,15 @@ export async function processCommand(
       return await handleConversation(currentState, playerInput, game);
   }
   if (currentState.interactingWithObject) {
-      return handleObjectInteraction(currentState, playerInput, game);
+      const result = handleObjectInteraction(currentState, playerInput, game);
+      const commandToExecute = playerInput.toLowerCase();
+      const didRunAction = result.messages.some(m => m.sender !== 'narrator'); // A bit of a hack
+      // If the direct command handler didn't find anything, try the AI
+      if(!didRunAction || commandToExecute.includes("examine") || commandToExecute.includes("look")) {
+         // Fall through to AI
+      } else {
+        return result;
+      }
   }
 
   // Handle structured commands that the AI struggles with.
@@ -561,14 +570,22 @@ export async function processCommand(
     if(npcNames) {
       lookAroundSummary += `You see ${npcNames} here.`;
     }
-
-    const gameStateSummaryForAI = `
+    
+    let gameStateSummaryForAI = `
       CHAPTER GOAL: ${chapter.goal}.
       CURRENT LOCATION: ${location.name}.
       INVENTORY: ${currentState.inventory.map(id => chapter.items[id]?.name).filter(Boolean).join(', ') || 'empty'}.
       LOCATION DESCRIPTION: ${lookAroundSummary.trim()}.
       OBJECT STATES: ${objectStates}.
     `;
+
+    if(currentState.interactingWithObject) {
+        const object = getLiveGameObject(currentState.interactingWithObject, currentState, game);
+        const interactionStateId = object.currentInteractionStateId || object.defaultInteractionStateId || 'start';
+        const interactionState = object.interactionStates?.[interactionStateId];
+        gameStateSummaryForAI += `\nINTERACTING WITH: The ${object.name}. The current state is: ${interactionState?.description}`;
+    }
+
 
     const aiResponse = await guidePlayerWithNarrator({
         promptContext: game.promptContext || '',
@@ -612,6 +629,14 @@ export async function processCommand(
         case 'inventory':
             result = handleInventory(currentState, game);
             break;
+        case 'watch':
+        case 'read':
+             if (currentState.interactingWithObject) {
+                result = handleObjectInteraction(currentState, commandToExecute, game);
+             } else {
+                 result = { newState: currentState, messages: [createMessage('system', 'System', "You need to be examining something to do that.")] };
+             }
+             break;
         default:
              result = { newState: currentState, messages: [createMessage('system', 'System', "I don't understand that command.")] };
              break;
@@ -643,7 +668,7 @@ export async function processCommand(
     console.error('Error processing command with GenKit:', error);
     return {
       newState: currentState,
-      messages: [createMessage('system', 'System', 'Sorry, an error occurred processing your command.')],
+      messages: [createMessage('system', 'System', 'Sorry, an error occurred while processing your command.')],
     };
   }
 }

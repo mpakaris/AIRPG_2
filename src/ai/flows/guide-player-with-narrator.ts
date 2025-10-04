@@ -60,6 +60,8 @@ Based on the player's intent and the game state, determine the most logical comm
 - If the player's intent is to 'look at', 'open', 'browse through', 'check', 'look inside', 'read article', 'watch video', or any other direct object interaction, the final command should be the most direct version (e.g., 'read article', 'watch video', 'examine <object>').
 - If the player's command is observational (e.g. "check the room", "look for hints", "what do I see?"), the command should be 'look around'.
 - If the player is just making conversation or the command is unclear, 'look around' is a safe default.
+- If the game state indicates the player is already interacting with an object, extract the most direct command from the player's input (e.g. if the player says "I want to watch the video", the commandToExecute should be "watch video").
+
 
 Your response must include:
 1.  A helpful, in-character response from you, the AI narrator.
