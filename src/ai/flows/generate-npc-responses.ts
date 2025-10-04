@@ -14,7 +14,7 @@ import {z} from 'genkit';
 const GenerateNpcResponseInputSchema = z.object({
   playerInput: z.string().describe('The player input/message to the NPC.'),
   npcName: z.string().describe('The name of the NPC.'),
-  npcDescription: z.string().describe('The description of the NPC, including their main message/clue.'),
+  npcDescription: z.string().describe('The description of the NPC, including their personality and main message/clue.'),
   locationDescription: z.string().describe('The description of the current location.'),
   gameState: z.string().describe('The current game state, including relevant flags and items.'),
 });
@@ -41,7 +41,11 @@ const prompt = ai.definePrompt({
   Game State: {{gameState}}
   Player Input: {{playerInput}}
 
-  As the game master, generate a response from the NPC that is in character, provides subtle clues or hints related to the NPC's main message, and guides the player towards solving the puzzle. Avoid revealing too much information directly.
+  As the game master, generate a response from the NPC that is in character, provides subtle clues or hints related to the NPC's main message, and guides the player towards solving the puzzle. 
+  
+  - BE SUBTLE. Do not reveal all the information at once. Hint at the main message gradually.
+  - Maintain the NPC's described persona. Pay attention to their personality and gender. For example, a gruff male barista would not say "hon".
+  - If the player seems to be asking questions unrelated to the main clue or is repeating themselves, the NPC should politely end the conversation with their 'finalMessage'.
 
   NPC Response:`,
 });

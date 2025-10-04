@@ -51,10 +51,13 @@ async function handleConversation(state: PlayerState, playerInput: string, game:
         messages.push(createMessage('system', 'System', `You ended the conversation with ${npc.name}.`));
     } else {
         const gameStateSummary = `Player is in ${location.name}. Inventory: ${state.inventory.map(id => chapter.items[id]?.name).join(', ') || 'empty'}.`;
+        
+        const fullNpcDescription = `${npc.description} Their main clue is: ${npc.mainMessage} Their final message, to be used when they have nothing more to say, is: ${npc.finalMessage}`;
+
         const aiResponse = await generateNpcResponse({
             playerInput: playerInput,
             npcName: npc.name,
-            npcDescription: npc.description + " Their main message is: " + npc.mainMessage,
+            npcDescription: fullNpcDescription,
             locationDescription: location.description,
             gameState: gameStateSummary,
         });

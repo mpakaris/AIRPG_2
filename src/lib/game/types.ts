@@ -62,6 +62,7 @@ export type NPC = {
   description: string;
   welcomeMessage: string;
   mainMessage: string;
+  finalMessage: string;
 };
 
 export type Location = {
