@@ -8,6 +8,7 @@ export function getInitialState(game: Game): PlayerState {
     inventory: [],
     flags: [],
     activeConversationWith: null,
+    interactingWithObject: null,
     hasStartedFirstConversation: false,
   };
 }

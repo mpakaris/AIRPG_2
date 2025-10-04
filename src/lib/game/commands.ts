@@ -12,4 +12,6 @@ export const AVAILABLE_COMMANDS = [
   'goodbye',
   'read <item>',
   'watch <item>',
+  'exit',
+  'close',
 ];

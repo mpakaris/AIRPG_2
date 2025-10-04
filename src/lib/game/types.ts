@@ -26,6 +26,7 @@ export type PlayerState = {
   inventory: ItemId[];
   flags: Flag[];
   activeConversationWith: NpcId | null;
+  interactingWithObject: GameObjectId | null;
   hasStartedFirstConversation: boolean;
 };
 
