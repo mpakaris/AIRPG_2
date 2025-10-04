@@ -30,8 +30,8 @@ export const game: Game = {
   chapters: {
     'ch1-the-cafe': {
         id: 'ch1-the-cafe' as ChapterId,
-        title: 'A Stranger in the Rain',
-        goal: "Unlock the mysterious notebook.",
+        title: 'A Blast from the Past',
+        goal: "Unlock the contents of the notebook.",
         startLocationId: 'loc_cafe' as LocationId,
         locations: {
             'loc_cafe': {
@@ -63,7 +63,7 @@ export const game: Game = {
             'obj_newspaper': {
                 id: 'obj_newspaper' as GameObjectId,
                 name: 'Newspaper',
-                description: "It's a copy of today's local paper. The headlines are boring.",
+                description: "It's a copy of today's local paper. The main headlines discuss the current series of murders. The usual crazyness of a Metropolis.",
                 items: [],
             }
         },
@@ -86,7 +86,7 @@ export const game: Game = {
                 id: 'npc_manager' as NpcId,
                 name: 'Cafe Manager',
                 description: 'A cheerful, slightly-too-energetic manager.',
-                mainMessage: "Welcome! May I interest you in our special today? Three scones for the price of two!",
+                mainMessage: "Welcome! May I interest you in our special today? You get a cheese cake with every Coffee you order!",
             }
         }
     }

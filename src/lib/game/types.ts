@@ -33,6 +33,8 @@ export type PlayerState = {
   currentLocationId: LocationId;
   inventory: ItemId[];
   flags: Flag[];
+  activeConversationWith: NpcId | null;
+  hasStartedFirstConversation: boolean;
 };
 
 export type Item = {

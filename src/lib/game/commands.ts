@@ -8,4 +8,5 @@ export const AVAILABLE_COMMANDS = [
   'help',
   'look around',
   'password for <object> "<phrase>"',
+  'goodbye',
 ];
