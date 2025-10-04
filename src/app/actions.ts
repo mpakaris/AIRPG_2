@@ -164,7 +164,7 @@ function handleObjectInteraction(state: PlayerState, playerInput: string, game: 
 function handleExamine(state: PlayerState, targetName: string, game: Game): CommandResult {
   const chapter = game.chapters[state.currentChapterId];
   const location = chapter.locations[state.currentLocationId];
-  const newState = {...state};
+  let newState = JSON.parse(JSON.stringify(state));
   targetName = targetName.toLowerCase();
 
   const allSearchableObjects: (GameObject | Item)[] = [
@@ -378,7 +378,7 @@ function handlePassword(state: PlayerState, command: string, game: Game): Comman
         }
         
         newState.interactingWithObject = targetObject.id;
-        const unlockedMessage = `You speak the words, and the ${targetObject.name} unlocks with a soft click. You have opened the notebook. You can 'read article' or 'watch video'. Type 'exit' to stop.`;
+        const unlockedMessage = `You speak the words, and the ${targetObject.name} unlocks with a soft click. You are now examining it. You can 'read article' or 'watch video'. Type 'exit' to stop.`;
 
         return { newState, messages: [createMessage('narrator', 'Narrator', unlockedMessage)] };
     }
@@ -438,7 +438,7 @@ export async function processCommand(
     const [verb, ...args] = commandToExecute.split(' ');
     const restOfCommand = args.join(' ');
 
-    let result: CommandResult = { newState: currentState, messages: [] };
+    let result: CommandResult;
     
     // Execute the command determined by the AI
     switch (verb) {
@@ -473,12 +473,13 @@ export async function processCommand(
             break;
         default:
              result = { newState: currentState, messages: [createMessage('system', 'System', "I don't understand that command.")] };
+             break;
     }
 
     // Agent Sharma comments on the *result* of the action.
     // We only add her message if the command was successful (i.e., not a system error).
     const finalMessages = [...result.messages];
-    if (result.messages.length > 0 && result.messages[0].sender !== 'system') {
+    if (result.messages.length > 0 && result.messages.every(m => m.sender !== 'system')) {
         const agentMessage = createMessage('agent', 'Agent Sharma', `${aiResponse.agentResponse}`);
         finalMessages.unshift(agentMessage);
     }
