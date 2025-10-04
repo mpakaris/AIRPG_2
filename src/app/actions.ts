@@ -96,7 +96,7 @@ async function handleConversation(state: PlayerState, playerInput: string, game:
     const businessCardItem = Object.values(chapter.items).find(i => i.id === 'item_business_card');
 
     if (businessCardItem && !state.inventory.includes(businessCardItem.id) && chosenTopic === 'clue') {
-        const newInventory = [...state.inventory, businessCardItem.id];
+        const newInventory = [...state.inventory, businessCardİtem.id];
         newState = {...newState, inventory: newInventory};
         
         const cardMessage = `The barista hands you a business card. It's been added to your inventory.`;
@@ -474,7 +474,7 @@ export async function processCommand(
 
     const aiResponse = await guidePlayerWithNarrator({
         gameSpecifications: game.description,
-        gameState: gameStateSummaryForaiResponse,
+        gameState: gameStateSummaryForAI,
         playerCommand: playerInput,
         availableCommands: AVAILABLE_COMMANDS.join(', '),
     });
