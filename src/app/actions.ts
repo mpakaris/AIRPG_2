@@ -41,7 +41,7 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
   if (itemInInventory) {
     return {
       newState: state,
-      messages: [createMessage('system', 'System', `You examine the ${itemInInventory.name}. ${itemInInventory.description}`)],
+      messages: [createMessage('narrator', 'Narrator', `You examine the ${itemInInventory.name}. ${itemInInventory.description}`)],
     };
   }
 
@@ -224,7 +224,9 @@ function handleLook(state: PlayerState, game: Game): CommandResult {
     const npcNames = location.npcs.map(id => chapter.npcs[id]?.name).join(', ');
 
     let description = location.description;
-    description += `\n\nYou can see: ${objectNames}.`;
+    if (objectNames) {
+      description += `\n\nYou can see: ${objectNames}.`;
+    }
     if (npcNames) {
         description += `\n${npcNames} are here.`;
     }
