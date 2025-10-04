@@ -115,7 +115,7 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
 
   const allSearchableObjects: (GameObject | Item)[] = [
     ...location.objects.map(objId => gameCartridge.chapters[chapter.id].gameObjects[objId]),
-    ...state.inventory.map(invId => gameCartridge.chapters[chapter.id].items[invId])
+    ...state.inventory.map(invId => chapter.items[invId])
   ].filter(Boolean) as (GameObject | Item)[];
 
   const target = allSearchableObjects.find(i => i?.name.toLowerCase() === targetName);
@@ -141,8 +141,8 @@ function handleTake(state: PlayerState, targetName: string, game: Game): Command
   const location = chapter.locations[state.currentLocationId];
   const newState = JSON.parse(JSON.stringify(state));
 
-  let itemToTake: Item | GameObject | undefined;
-  let itemSource: { items: ItemId[], objects?: GameObjectId[] } | Location | undefined;
+  let itemToTake: Item | undefined;
+  let itemSource: { items: ItemId[] } | undefined;
 
   // The business card can't be "taken", it is given.
   if (targetName.toLowerCase() === 'business card') {
@@ -165,28 +165,13 @@ function handleTake(state: PlayerState, targetName: string, game: Game): Command
      }
   }
 
-  // Check if it is a GameObject that can be taken from the location
-  if (!itemToTake) {
-      const gameObjectToTake = Object.values(chapter.gameObjects)
-        .find(obj => obj.name.toLowerCase() === targetName && location.objects.includes(obj.id));
-      if (gameObjectToTake) {
-          itemToTake = gameObjectToTake;
-          itemSource = gameCartridge.chapters[chapter.id].locations[location.id];
-      }
-  }
-
-
   if (itemToTake && itemSource) {
     if (newState.inventory.includes(itemToTake.id)) {
         return { newState, messages: [createMessage('system', 'System', `You already have the ${itemToTake.name}.`)] };
     }
     newState.inventory.push(itemToTake.id);
-    if ('items' in itemSource && itemSource.items) {
-        itemSource.items = itemSource.items.filter(id => id !== itemToTake!.id);
-    }
-    if ('objects' in itemSource && itemSource.objects) {
-        itemSource.objects = itemSource.objects.filter(id => id !== itemToTake!.id);
-    }
+    
+    itemSource.items = itemSource.items.filter(id => id !== itemToTake!.id);
     
     return { newState, messages: [createMessage('narrator', 'Narrator', `You take the ${itemToTake.name}.`)] };
   }
@@ -298,8 +283,6 @@ function handleInventory(state: PlayerState, game: Game): CommandResult {
     const itemNames = state.inventory.map(id => {
         const item = chapter.items[id];
         if (item) return item.name;
-        const gameObject = chapter.gameObjects[id as GameObjectId];
-        if (gameObject) return gameObject.name;
         return null;
     }).filter(Boolean).join(', ');
     return { newState: state, messages: [createMessage('system', 'System', `You are carrying: ${itemNames}.`)] };
@@ -346,6 +329,7 @@ function handleContentInteraction(state: PlayerState, contentType: 'read' | 'wat
 
     const allSearchableObjects = [
         ...location.objects.map(objId => gameCartridge.chapters[chapter.id].gameObjects[objId]),
+        ...state.inventory.map(invId => chapter.items[invId as any]).map(item => chapter.gameObjects[item?.id as any])
     ].filter(Boolean);
 
     // Find an unlocked object in the current location that contains the content.
@@ -404,17 +388,16 @@ export async function processCommand(
     lookAroundSummary += `You see ${npcNames} here.`;
   }
 
+  const objectsInLocation = location.objects.map(id => game.chapters[chapter.id].gameObjects[id]);
+  const objectStates = objectsInLocation.map(obj => `${obj.name} is ${obj.isLocked ? 'locked' : 'unlocked'}`).join('. ');
+
+
   const gameStateSummary = `
-    Player is in: ${location.name}.
-    Inventory: ${currentState.inventory.map(id => {
-        const item = chapter.items[id];
-        if (item) return item.name;
-        const gameObject = chapter.gameObjects[id as GameObjectId];
-        if (gameObject) return gameObject.name;
-        return '';
-    }).filter(Boolean).join(', ') || 'empty'}.
-    The player can see the following: ${lookAroundSummary}
-    Game Goal: ${chapter.goal}.
+    CHAPTER GOAL: ${chapter.goal}.
+    CURRENT LOCATION: ${location.name}.
+    INVENTORY: ${currentState.inventory.map(id => chapter.items[id]?.name).filter(Boolean).join(', ') || 'empty'}.
+    LOCATION DESCRIPTION: ${lookAroundSummary.trim()}.
+    OBJECT STATES: ${objectStates}.
   `;
 
   try {
@@ -496,3 +479,4 @@ export async function processCommand(
     };
   }
 }
+
