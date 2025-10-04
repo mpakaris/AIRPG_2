@@ -78,6 +78,7 @@ const MessageLog: FC<Pick<GameScreenProps, 'messages'>> = ({ messages }) => {
       <div className="mx-auto max-w-4xl space-y-6 px-4 py-6">
         {messages.map((message) => {
           const isPlayer = message.sender === 'player';
+          const isAgent = message.sender === 'agent';
           return (
             <div
               key={message.id}
@@ -91,12 +92,16 @@ const MessageLog: FC<Pick<GameScreenProps, 'messages'>> = ({ messages }) => {
                   'max-w-[75%] rounded-2xl px-4 py-2',
                   isPlayer
                     ? 'rounded-br-none bg-primary text-primary-foreground'
-                    : 'rounded-bl-none bg-muted'
+                    : 'rounded-bl-none bg-muted',
+                  isAgent && 'bg-blue-500/10 border border-blue-500/20'
                 )}
               >
                 {!isPlayer && (
                   <div
-                    className='text-xs font-bold text-primary mb-1'
+                    className={cn(
+                      'text-xs font-bold text-primary mb-1',
+                      isAgent && 'text-blue-500'
+                    )}
                   >
                     {message.senderName}
                   </div>
@@ -150,5 +155,3 @@ export const GameScreen: FC<GameScreenProps> = ({ messages, onCommandSubmit, isL
     </div>
   );
 };
-
-    

@@ -19,7 +19,7 @@ const GuidePlayerWithNarratorInputSchema = z.object({
 export type GuidePlayerWithNarratorInput = z.infer<typeof GuidePlayerWithNarratorInputSchema>;
 
 const GuidePlayerWithNarratorOutputSchema = z.object({
-  narratorResponse: z.string().describe('The narrator response to the player, guiding them and providing feedback.'),
+  agentResponse: z.string().describe("Agent Sharma's response to the player, guiding them and providing feedback."),
   revisedCommand: z.string().describe('The revised command after AI consideration.'),
   commandToExecute: z.string().describe('The command that engine should exectute based on the player input and game state.'),
 });
@@ -33,7 +33,7 @@ const prompt = ai.definePrompt({
   name: 'guidePlayerWithNarratorPrompt',
   input: {schema: GuidePlayerWithNarratorInputSchema},
   output: {schema: GuidePlayerWithNarratorOutputSchema},
-  prompt: `You are the game master for a text-based RPG. Your role is to guide the player, provide feedback, and ensure they stay focused on solving the game's puzzles.
+  prompt: `You are Agent Sharma, the partner and "good conscience" of FBI agent Burt Macklin (the player). Your role is to guide Burt, provide helpful hints, keep him on track, and act as a guardrail when he goes too far off mission. You are not the game master; you are his partner.
 
 Here are the game specifications:
 {{gameSpecifications}}
@@ -41,23 +41,23 @@ Here are the game specifications:
 Here is the current game state:
 {{gameState}}
 
-The player's command is:
+Burt's command is:
 {{playerCommand}}
 
 Available Commands:
 {{availableCommands}}
 
-Respond to the player with a helpful and engaging message. Ensure that the player command aligns with the game's rules and goals. If the command is illogical or against the rules, gently steer the player back to the main puzzle.
+Respond to Burt with a helpful and engaging message in character as Agent Sharma. If his command is illogical or against the rules, gently steer him back to the main puzzle.
 
 Your response should include:
-1. A narrator response to the player, guiding them and providing feedback.
-2. A potentially revised command based on AI considerations, to align more effectively with the game's goals.
+1. A helpful response from you, Agent Sharma.
+2. A potentially revised command to align more effectively with the game's goals.
 3. The final command to execute.
 
-Ensure the AI is not overly dramatic or poetic but straight to the point and focused on puzzle-solving.
+Ensure your response is straight to the point and focused on puzzle-solving, just like a seasoned agent would be.
 
 Output:
-Narrator Response: <narrator_response>
+Agent Response: <agent_response>
 Revised Command: <revised_command>
 Command to Execute: <command_to_execute>`,
 });

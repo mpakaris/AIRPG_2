@@ -147,7 +147,7 @@ function handleUse(state: PlayerState, itemName: string, objectName: string, gam
     .map(id => chapter.gameObjects[id])
     .find(o => o?.name.toLowerCase() === objectName);
 
-  if (!itemInInventory) {
+  if (!itemInInventory && !AVAILABLE_COMMANDS.includes(itemName)) {
     return { newState: state, messages: [createMessage('system', 'System', `You don't have a ${itemName}.`)] };
   }
 
@@ -155,7 +155,7 @@ function handleUse(state: PlayerState, itemName: string, objectName: string, gam
     return { newState: state, messages: [createMessage('system', 'System', `You don't see a ${objectName} here.`)] };
   }
 
-  if (targetObject.unlocksWith === itemInInventory.id && targetObject.isLocked) {
+  if (targetObject.unlocksWith === itemInInventory?.id && targetObject.isLocked) {
     const newState = JSON.parse(JSON.stringify(state));
     const gameObjInState = chapter.gameObjects[targetObject.id];
     if(gameObjInState) {
@@ -170,7 +170,7 @@ function handleUse(state: PlayerState, itemName: string, objectName: string, gam
     if(gameObjInState) {
         gameObjInState.isLocked = false;
     }
-    return { newState, messages: [createMessage('system', 'System', `You utter the phrase "${itemName}". The ${targetObject.name} unlocks with a click!`)] };
+    return { newState, messages: [createMessage('system', 'System', `You say the phrase "${itemName}". The ${targetObject.name} unlocks with a click!`)] };
   }
 
   return { newState: state, messages: [createMessage('system', 'System', `That doesn't seem to work.`)] };
@@ -232,7 +232,7 @@ export async function processCommand(
       availableCommands: AVAILABLE_COMMANDS.join(', '),
     });
 
-    const narratorMessage = createMessage('narrator', 'Narrator', aiResponse.narratorResponse);
+    const agentMessage = createMessage('agent', 'Agent Sharma', aiResponse.agentResponse);
     const commandToExecute = aiResponse.commandToExecute.toLowerCase();
     const [verb, ...args] = commandToExecute.split(' ');
     const restOfCommand = args.join(' ');
@@ -254,7 +254,13 @@ export async function processCommand(
             if (onMatch) {
                 result = handleUse(currentState, onMatch[1], onMatch[2], gameCartridge);
             } else {
-                result = { newState: currentState, messages: [createMessage('system', 'System', 'Please specify what to use and what to use it on, e.g., "use key on desk".')] };
+                // Allows for "use <phrase> on <object>"
+                 const phraseMatch = restOfCommand.match(/(.*) on (.*)/);
+                if (phraseMatch) {
+                    result = handleUse(currentState, phraseMatch[1], phraseMatch[2], gameCartridge);
+                } else {
+                    result = { newState: currentState, messages: [createMessage('system', 'System', 'Please specify what to use and what to use it on, e.g., "use key on desk".')] };
+                }
             }
             break;
         case 'talk':
@@ -272,7 +278,7 @@ export async function processCommand(
     
     return {
       newState: result.newState,
-      messages: [narratorMessage, ...result.messages],
+      messages: [agentMessage, ...result.messages],
     };
 
   } catch (error) {

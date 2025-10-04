@@ -19,7 +19,7 @@ export type MediaAsset = {
 
 export type Message = {
   id: string;
-  sender: 'narrator' | 'player' | 'system' | NpcId;
+  sender: 'narrator' | 'player' | 'system' | 'agent' | NpcId;
   senderName: string;
   type: 'text' | 'image';
   content: string;
