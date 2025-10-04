@@ -1,3 +1,4 @@
+
 'use server';
 
 import { guidePlayerWithNarrator } from '@/ai/flows/guide-player-with-narrator';
@@ -319,7 +320,7 @@ function handlePassword(state: PlayerState, command: string, game: Game): Comman
     const gameObjInCartridge = gameCartridge.chapters[state.currentChapterId].gameObjects[targetObject.id];
     if(gameObjInCartridge) {
         gameObjInCartridge.isLocked = false;
-        gameObjInCartridge.description = 'The notebook is now unlocked. Upon first glance, you find an old Audio/Video Message and a Newspaper Article from the past. You can now examine it to read the contents. \n\n- Read Article: https://1drv.ms/i/c/e7d3aeb87385d8a2/EYUcIv6_9MNHuqnzyMXYrpMBodwu6VeeaJ7-2RZ854N5Qw?e=g3lbfF \n- Watch Video: https://1drv.ms/v/c/e7d3aeb87385d8a2/EcgZlhJvCjhFlfCqCo7hVyQBeLOu4BrqNEhYgbZmEuNY2w?e=KDZkSd';
+        gameObjInCartridge.description = 'The notebook is now unlocked. Upon first glance, you find an old Audio/Video Message and a Newspaper Article from the past. You can now examine it to read the contents.';
     }
 
     return { newState, messages: [createMessage('narrator', 'Narrator', `You speak the words, and the ${targetObject.name} unlocks with a soft click. It can now be examined.`)] };
