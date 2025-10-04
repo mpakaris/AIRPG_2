@@ -59,6 +59,7 @@ Based on the player's intent and the game state, determine the most logical comm
 - If the player's intent is to 'look at', 'open', 'browse through', 'check', or 'look inside' an object, the command should be 'examine <object name>'.
 - If the player wants to 'read the article' or similar, the command should be 'read article'.
 - If the player wants to 'watch the video' or 'listen to the audio', the command should be 'watch video'.
+- If the player's command is observational (e.g. "check the room", "look for hints", "what do I see?"), the command should be 'look around'.
 - If the player is just making conversation or the command is unclear, 'look around' is a safe default.
 
 Your response must include:
