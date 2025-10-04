@@ -186,14 +186,19 @@ function handleObjectInteraction(state: PlayerState, playerInput: string, game: 
          return { newState: state, messages: [createMessage('system', 'System', `Interaction error with ${liveObject.name}.`)] };
     }
 
-    let matchingCommand = Object.keys(currentInteractionState.commands).find(cmd => lowerInput.includes(cmd));
+    // Find a command from the current state that is included in the player's input
+    const matchingCommand = Object.keys(currentInteractionState.commands).find(cmd => 
+        lowerInput.includes(cmd.toLowerCase())
+    );
     
     if (matchingCommand) {
         const actions = currentInteractionState.commands[matchingCommand];
         const result = processActions(state, actions, game);
         
+        // After processing actions, check for chapter completion.
         const completion = checkChapterCompletion(result.newState, game);
         if (completion.isComplete) {
+            // Use a consistent way to generate the completion flag
             result.newState.flags.push(chapterCompletionFlag(result.newState.currentChapterId));
             result.messages.push(...completion.messages);
         }
@@ -201,6 +206,7 @@ function handleObjectInteraction(state: PlayerState, playerInput: string, game: 
         return result;
     } else {
         const narratorName = game.narratorName || "Narrator";
+        // If no command matches, just repeat the description of the current interaction state
         return { newState: state, messages: [createMessage('narrator', narratorName, currentInteractionState.description)] };
     }
 }
@@ -267,10 +273,6 @@ function handleTake(state: PlayerState, targetName: string, game: Game): Command
   const newState = { ...state, inventory: [...state.inventory], objectStates: {...state.objectStates} };
   targetName = targetName.toLowerCase();
   const narratorName = game.narratorName || "Narrator";
-
-  if (targetName === 'business card') { // This is game specific and should be in the cartridge logic
-      return { newState, messages: [createMessage('system', 'System', `You can't just take that. You should talk to the barista.`)] };
-  }
   
   for (const objId of location.objects) {
     const liveObject = getLiveGameObject(objId, newState, game);
@@ -465,9 +467,12 @@ function checkChapterCompletion(state: PlayerState, game: Game): { isComplete: b
 
     if (allObjectivesMet) {
         const messages: Message[] = [];
+        const narratorName = game.narratorName || "Narrator";
         if (chapter.completionVideo) {
-            const narratorName = game.narratorName || "Narrator";
             messages.push(createMessage('narrator', narratorName, chapter.completionVideo, 'video'))
+        }
+        if(chapter.postChapterMessage) {
+            messages.push(createMessage('agent', narratorName, chapter.postChapterMessage));
         }
         return { isComplete: true, messages };
     }
@@ -616,8 +621,8 @@ export async function processCommand(
     const completion = checkChapterCompletion(result.newState, game);
     let finalMessages = [...result.messages];
 
-    if (completion.isComplete) {
-        result.newState.flags.push(chapterCompletionFlag(result.newState.currentChapterId));
+    if (completion.isComplete && !result.newState.flags.includes(completionFlag)) {
+        result.newState.flags.push(completionFlag);
         finalMessages.push(...completion.messages);
     }
     
@@ -638,7 +643,7 @@ export async function processCommand(
     console.error('Error processing command with GenKit:', error);
     return {
       newState: currentState,
-      messages: [createMessage('system', 'System', 'Sorry, my thoughts are a bit scrambled right now. Try again.')],
+      messages: [createMessage('system', 'System', 'Sorry, an error occurred processing your command.')],
     };
   }
 }

@@ -57,9 +57,7 @@ As the AI narrator, respond to the player with a helpful message (1-2 sentences)
 
 Based on the player's intent and the game state, determine the most logical command for the game engine to execute. It must be a valid command from the available list.
 - If the player's intent is to interact with a person, the command should be 'talk to <npc name>'.
-- If the player's intent is to 'look at', 'open', 'browse through', 'check', or 'look inside' an object, the command should be 'examine <object name>'.
-- If the player wants to 'read the article' or similar, the command should be 'read article'.
-- If the player wants to 'watch the video' or 'listen to the audio', the command should be 'watch video'.
+- If the player's intent is to 'look at', 'open', 'browse through', 'check', 'look inside', 'read article', 'watch video', or any other direct object interaction, the final command should be the most direct version (e.g., 'read article', 'watch video', 'examine <object>').
 - If the player's command is observational (e.g. "check the room", "look for hints", "what do I see?"), the command should be 'look around'.
 - If the player is just making conversation or the command is unclear, 'look around' is a safe default.
 
