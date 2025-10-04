@@ -60,6 +60,7 @@ export type NPC = {
   id: NpcId;
   name: string;
   description: string;
+  welcomeMessage: string;
   mainMessage: string;
 };
 

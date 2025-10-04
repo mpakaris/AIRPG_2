@@ -4,7 +4,7 @@ import { guidePlayerWithNarrator } from '@/ai/flows/guide-player-with-narrator';
 import { generateNpcResponse } from '@/ai/flows/generate-npc-responses';
 import { game as gameCartridge } from '@/lib/game/cartridge';
 import { AVAILABLE_COMMANDS } from '@/lib/game/commands';
-import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId } from '@/lib/game/types';
+import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC } from '@/lib/game/types';
 
 type CommandResult = {
   newState: PlayerState;
@@ -90,7 +90,7 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
     
      if (objectInLocation.isLocked && objectInLocation.unlocksWithUrl) {
       description += ` A lock prevents it from being opened. On the cover, a URL is inscribed: ${objectInLocation.unlocksWithUrl}`;
-    } else if (objectInlocation.isOpenable && !objectInLocation.isLocked && objectInLocation.items.length > 0) {
+    } else if (objectInLocation.isOpenable && !objectInLocation.isLocked && objectInLocation.items.length > 0) {
       // Check for items inside if object is openable but not locked
       const itemNames = objectInLocation.items.map(id => chapter.items[id].name).join(', ');
       description += ` You see a ${itemNames} inside.`;
@@ -233,7 +233,8 @@ async function handleTalk(state: PlayerState, npcName: string, game: Game): Prom
             messages.push(createMessage('system', 'System', `You are now talking to ${npc.name}. Type your message to continue the conversation. To end the conversation, type 'goodbye'.`));
         }
         
-        messages.push(createMessage(npc.id as NpcId, npc.name, `"${npc.mainMessage}"`));
+        const welcomeMessage = (npc as NPC).welcomeMessage || npc.mainMessage;
+        messages.push(createMessage(npc.id as NpcId, npc.name, `"${welcomeMessage}"`));
 
         return { newState, messages };
     }

@@ -1,5 +1,4 @@
-
-import type { Game, Chapter, MediaAsset, ChapterId, LocationId, ItemId, GameObjectId, NpcId } from './types';
+import type { Game, Chapter, MediaAsset, ChapterId, LocationId, ItemId, GameObjectId, NpcId, GameId } from './types';
 
 export const mediaAssets: MediaAsset[] = [
     {
@@ -80,13 +79,15 @@ export const game: Game = {
                 id: 'npc_barista' as NpcId,
                 name: 'Barista',
                 description: 'A tired-looking barista. They seem to have seen a lot in this cafe.',
+                welcomeMessage: 'Good Morning Sir, how can I help you? Would you like to try our Specialty Coffee today?',
                 mainMessage: "The mystery man you saw? Plays the saxophone on the corner every day. Real talented. He left his business card here once, if you're interested.",
             },
             'npc_manager': {
                 id: 'npc_manager' as NpcId,
                 name: 'Cafe Manager',
                 description: 'A cheerful, slightly-too-energetic manager.',
-                mainMessage: "Welcome! May I interest you in our special today? You get a cheese cake with every Coffee you order!",
+                welcomeMessage: "Welcome! May I interest you in our special today? You get a cheese cake with every Coffee you order!",
+                mainMessage: "Can't talk now, I'm very busy! But if you need anything, just ask.",
             }
         }
     }
