@@ -133,14 +133,14 @@ function handleObjectInteraction(state: PlayerState, playerInput: string, game: 
         return { newState, messages };
     }
     
-    if (lowerInput === 'read article') {
+    if (lowerInput.includes('read article')) {
          const articleContent = object.content?.find(c => c.type === 'article');
          if (articleContent) {
             messages.push(createMessage('narrator', 'Narrator', `You read the ${articleContent.name}:\n${articleContent.url}`, 'text'));
          } else {
             messages.push(createMessage('system', 'System', `There is no article to read in the ${object.name}.`));
          }
-    } else if (lowerInput === 'watch video') {
+    } else if (lowerInput.includes('watch video')) {
         const videoContent = object.content?.find(c => c.type === 'video');
         if (videoContent) {
             messages.push(createMessage('narrator', 'Narrator', `${videoContent.url}`, 'video'));
