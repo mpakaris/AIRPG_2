@@ -63,7 +63,7 @@ async function handleConversation(state: PlayerState, playerInput: string, game:
     const chapter = game.chapters[state.currentChapterId];
     const npc = chapter.npcs[state.activeConversationWith];
     let messages: Message[] = [];
-    let newState = { ...state, inventory: [...state.inventory] };
+    let newState = { ...state };
 
     if (isEndingConversation(playerInput)) {
         newState.activeConversationWith = null;
@@ -95,8 +95,9 @@ async function handleConversation(state: PlayerState, playerInput: string, game:
 
     const businessCardItem = Object.values(chapter.items).find(i => i.id === 'item_business_card');
 
-    if (businessCardItem && !newState.inventory.includes(businessCardItem.id) && chosenTopic === 'clue') {
-        newState.inventory.push(businessCardItem.id);
+    if (businessCardItem && !state.inventory.includes(businessCardItem.id) && chosenTopic === 'clue') {
+        const newInventory = [...state.inventory, businessCardItem.id];
+        newState = {...newState, inventory: newInventory};
         
         const cardMessage = `The barista hands you a business card. It's been added to your inventory.`;
         messages.push(createMessage('narrator', 'Narrator', cardMessage, 'image', businessCardItem.image));
@@ -171,7 +172,7 @@ function handleObjectInteraction(state: PlayerState, playerInput: string, game: 
         // Fallback messages based on state
         switch (newState.notebookInteractionState) {
             case 'start':
-                messages.push(createMessage('narrator', 'Narrator', "The notebook is open. Inside, you see what appears to be a small data chip, likely a video or audio recording."));
+                messages.push(createMessage('narrator', 'Narrator', "The notebook is open. Inside, you see what appears to be a small data chip, likely a video or audio recording. You could try to 'read article' or 'watch video'."));
                 break;
             case 'video_watched':
                  messages.push(createMessage('narrator', 'Narrator', "You've watched the video. The newspaper article is still here. You could try to 'read article'."));
@@ -213,11 +214,18 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
     const isGameObject = targetId in chapter.gameObjects;
     if (isGameObject) {
         const targetObject = getLiveGameObject(targetId as GameObjectId, state, game);
+        if (targetObject.isOpenable && targetObject.isLocked && targetObject.unlocksWithUrl) {
+          const message = `${targetObject.description} A mini-game opens on your device: ${targetObject.unlocksWithUrl}`;
+          return {
+              newState: state,
+              messages: [createMessage('narrator', 'Narrator', message)],
+          };
+        }
         if (targetObject.isOpenable && !targetObject.isLocked) {
             newState.interactingWithObject = targetObject.id as GameObjectId;
             newState.notebookInteractionState = 'start';
-            // Start the interaction with an empty input to get the initial description
-            return handleObjectInteraction(newState, '', game);
+            const description = targetObject.unlockedDescription || `You open the ${targetObject.name}.`;
+            return { newState, messages: [createMessage('narrator', 'Narrator', description)]};
         }
          return {
             newState: state,
@@ -407,14 +415,10 @@ function handlePassword(state: PlayerState, command: string, game: Game): Comman
         const messages: Message[] = [];
         messages.push(createMessage('narrator', 'Narrator', `You speak the words, and the ${targetObject.name} unlocks with a soft click.`));
 
-        if (targetObject.unlocksWithUrl) {
-            messages.push(createMessage('narrator', 'Narrator', `A mini-game opens on your device: ${targetObject.unlocksWithUrl}`));
-        } else {
-            newState.interactingWithObject = targetObject.id;
-            newState.notebookInteractionState = 'start';
-            const initialInteractionMessages = handleObjectInteraction(newState, '', game).messages;
-            messages.push(...initialInteractionMessages);
-        }
+        newState.interactingWithObject = targetObject.id;
+        newState.notebookInteractionState = 'start';
+        const description = targetObject.unlockedDescription || `You open the ${targetObject.name}.`;
+        messages.push(createMessage('narrator', 'Narrator', description));
 
         return { newState, messages };
     }
@@ -470,7 +474,7 @@ export async function processCommand(
 
     const aiResponse = await guidePlayerWithNarrator({
         gameSpecifications: game.description,
-        gameState: gameStateSummaryForAI,
+        gameState: gameStateSummaryForaiResponse,
         playerCommand: playerInput,
         availableCommands: AVAILABLE_COMMANDS.join(', '),
     });
