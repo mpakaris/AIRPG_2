@@ -34,7 +34,7 @@ export const game: Game = {
                 name: 'The Cafe',
                 description: 'A bustling downtown cafe, smelling of coffee and rain. The afternoon light is dim. A puddle of rainwater is near the door, and a discarded newspaper lies on an empty table.',
                 gridPosition: { x: 1, y: 1 },
-                objects: ['obj_brown_notebook', 'obj_chalkboard_menu', 'obj_newspaper', 'obj_bookshelf'] as GameObjectId[],
+                objects: ['obj_brown_notebook', 'obj_chalkboard_menu', 'obj_newspaper', 'obj_bookshelf', 'obj_painting'] as GameObjectId[],
                 npcs: ['npc_barista', 'npc_manager'] as NpcId[],
             }
         },
@@ -153,6 +153,17 @@ export const game: Game = {
                     description: 'A bookshelf in a cafe.',
                     hint: 'bookshelf reading corner'
                 }
+            },
+            'obj_painting': {
+                id: 'obj_painting' as GameObjectId,
+                name: 'Painting on the wall',
+                description: 'An abstract painting hangs on the wall, its swirls of color adding a touch of modern art to the cafe\'s cozy atmosphere.',
+                items: [],
+                image: {
+                    url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759604943/picture_on_wall_fcx10j.png',
+                    description: 'A painting on the wall of the cafe.',
+                    hint: 'abstract painting'
+                }
             }
         },
         items: {
@@ -228,4 +239,5 @@ export const game: Game = {
   }
 };
 
+    
     

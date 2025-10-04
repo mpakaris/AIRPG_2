@@ -600,10 +600,10 @@ export async function processCommand(
     
     let lookAroundSummary = `${location.description}\n\n`;
     if(objectNames) {
-      lookAroundSummary += `You can see: ${objectNames}.\n`;
+      lookAroundSummary += `You can see the following objects:\n${objectNames}\n`;
     }
     if(npcNames) {
-      lookAroundSummary += `You see ${npcNames} here.`;
+      lookAroundSummary += `\nYou see the following people here:\n${npcNames}`;
     }
     
     let gameStateSummaryForAI = `
