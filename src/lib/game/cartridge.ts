@@ -33,13 +33,13 @@ export const game: Game = {
                         id: 'content_article',
                         name: 'article',
                         type: 'article',
-                        url: 'https://1drv.ms/i/c/e7d3aeb87385d8a2/EYUcIv6_9MNHuqnzyMXYrpMBodwu6VeeaJ7-2RZ854N5Qw?e=g3lbfF'
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759241517/Newspaper_Article_Silas_Bloom_rqy1g5.png'
                     },
                     {
                         id: 'content_video',
                         name: 'video',
                         type: 'video',
-                        url: 'https://1drv.ms/v/c/e7d3aeb87385d8a2/EcgZlhJvCjhFlfCqCo7hVyQBeLOu4BrqNEhYgbZmEuNY2w?e=KDZkSd'
+                        url: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759241551/Silas_Bloom_Rose_Garden_Song_vocal_black_and_white_music_video_yobk2c.mp4'
                     }
                 ],
                 isOpenable: true,
