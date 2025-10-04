@@ -35,7 +35,7 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
   // Check inventory
   const itemInInventory = state.inventory
     .map(itemId => chapter.items[itemId])
-    .find(item => item.name.toLowerCase() === targetName);
+    .find(item => item?.name.toLowerCase() === targetName);
   if (itemInInventory) {
     return {
       newState: state,
@@ -74,10 +74,10 @@ function handleTake(state: PlayerState, targetName: string, game: Game): Command
   for (const objId of location.objects) {
     const obj = chapter.gameObjects[objId];
     // Can only take from openable and unlocked objects, or non-openable "containers" like a bookshelf
-     if ((obj.isOpenable && !obj.isLocked) || !obj.isOpenable) {
+     if (obj && ((obj.isOpenable && !obj.isLocked) || !obj.isOpenable)) {
        const foundItem = obj.items
          .map(itemId => chapter.items[itemId])
-         .find(item => item.name.toLowerCase() === targetName);
+         .find(item => item?.name.toLowerCase() === targetName);
         if (foundItem) {
             itemToTake = foundItem;
             itemSource = obj;
@@ -141,11 +141,11 @@ function handleUse(state: PlayerState, itemName: string, objectName: string, gam
   
   const itemInInventory = state.inventory
     .map(id => chapter.items[id])
-    .find(i => i.name.toLowerCase() === itemName);
+    .find(i => i?.name.toLowerCase() === itemName);
   
   const targetObject = location.objects
     .map(id => chapter.gameObjects[id])
-    .find(o => o.name.toLowerCase() === objectName);
+    .find(o => o?.name.toLowerCase() === objectName);
 
   if (!itemInInventory) {
     return { newState: state, messages: [createMessage('system', 'System', `You don't have a ${itemName}.`)] };
@@ -163,6 +163,15 @@ function handleUse(state: PlayerState, itemName: string, objectName: string, gam
     }
     return { newState, messages: [createMessage('system', 'System', `You use the ${itemInInventory.name} on the ${targetObject.name}. It unlocks with a click!`)] };
   }
+  
+  if (targetObject.unlocksWithPhrase && targetObject.unlocksWithPhrase.toLowerCase() === itemName.toLowerCase() && targetObject.isLocked) {
+     const newState = JSON.parse(JSON.stringify(state));
+    const gameObjInState = chapter.gameObjects[targetObject.id];
+    if(gameObjInState) {
+        gameObjInState.isLocked = false;
+    }
+    return { newState, messages: [createMessage('system', 'System', `You utter the phrase "${itemName}". The ${targetObject.name} unlocks with a click!`)] };
+  }
 
   return { newState: state, messages: [createMessage('system', 'System', `That doesn't seem to work.`)] };
 }
@@ -173,7 +182,7 @@ function handleTalk(state: PlayerState, npcName: string, game: Game): CommandRes
 
     const npc = location.npcs
         .map(id => chapter.npcs[id])
-        .find(n => n.name.toLowerCase().includes(npcName));
+        .find(n => n?.name.toLowerCase().includes(npcName));
 
     if (npc) {
         // TODO: Integrate generateNpcResponse for dynamic dialogue
@@ -194,7 +203,7 @@ function handleInventory(state: PlayerState, game: Game): CommandResult {
     if (state.inventory.length === 0) {
         return { newState: state, messages: [createMessage('system', 'System', 'Your inventory is empty.')] };
     }
-    const itemNames = state.inventory.map(id => chapter.items[id].name).join(', ');
+    const itemNames = state.inventory.map(id => chapter.items[id]?.name).join(', ');
     return { newState: state, messages: [createMessage('system', 'System', `You are carrying: ${itemNames}.`)] };
 }
 
@@ -209,9 +218,9 @@ export async function processCommand(
 
   const gameStateSummary = `
     Player is in: ${location.name} (${location.description}).
-    Inventory: ${currentState.inventory.map(id => chapter.items[id].name).join(', ') || 'empty'}.
-    Game Objects here: ${location.objects.map(id => chapter.gameObjects[id].name).join(', ')}.
-    NPCs here: ${location.npcs.map(id => chapter.npcs[id].name).join(', ')}.
+    Inventory: ${currentState.inventory.map(id => chapter.items[id]?.name).join(', ') || 'empty'}.
+    Game Objects here: ${location.objects.map(id => chapter.gameObjects[id]?.name).join(', ')}.
+    NPCs here: ${location.npcs.map(id => chapter.npcs[id]?.name).join(', ')}.
     Game Goal: ${chapter.goal}.
   `;
 

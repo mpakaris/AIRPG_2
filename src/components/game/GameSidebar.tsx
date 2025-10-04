@@ -24,7 +24,7 @@ interface GameSidebarProps {
 export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState }) => {
   const chapter = game.chapters[playerState.currentChapterId];
   const location = chapter.locations[playerState.currentLocationId];
-  const inventoryItems = playerState.inventory.map(id => chapter.items[id]);
+  const inventoryItems = playerState.inventory.map(id => chapter.items[id]).filter(Boolean);
 
   return (
     <Sidebar>
@@ -92,7 +92,7 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState }) => {
           </SidebarGroupLabel>
            {location.npcs.length > 0 ? (
             <p className="px-2 text-sm text-muted-foreground">
-                {location.npcs.map(id => chapter.npcs[id].name).join(", ")}
+                {location.npcs.map(id => chapter.npcs[id]?.name).filter(Boolean).join(", ")}
             </p>
            ) : (
             <p className="px-2 text-sm text-muted-foreground italic">
@@ -104,5 +104,3 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState }) => {
     </Sidebar>
   );
 };
-
-    
