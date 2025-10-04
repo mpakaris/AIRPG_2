@@ -112,7 +112,7 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
   const chapter = game.chapters[state.currentChapterId];
   const location = chapter.locations[state.currentLocationId];
 
-  // Check inventory
+  // Check inventory for items or game objects
   const itemInInventory = state.inventory
     .map(itemId => chapter.items[itemId])
     .find(item => item?.name.toLowerCase() === targetName);
@@ -122,6 +122,19 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
       messages: [createMessage('narrator', 'Narrator', `You examine the ${itemInInventory.name}. ${itemInInventory.description}`)],
     };
   }
+
+  const gameObjectInInventory = state.inventory
+      .map(itemId => chapter.gameObjects[itemId as GameObjectId]) // Try to find a game object with that ID
+      .find(obj => obj?.name.toLowerCase() === targetName);
+  if (gameObjectInInventory) {
+      const gameObject = gameCartridge.chapters[state.currentChapterId].gameObjects[gameObjectInInventory.id];
+      let description = gameObject.description;
+      if (!gameObject.isLocked && gameObject.unlockedDescription) {
+          description = gameObject.unlockedDescription;
+      }
+      return { newState: state, messages: [createMessage('narrator', 'Narrator', description)] };
+  }
+
 
   // Check objects in location
   const objectInLocation = Object.values(chapter.gameObjects)
@@ -149,8 +162,8 @@ function handleTake(state: PlayerState, targetName: string, game: Game): Command
   const location = chapter.locations[state.currentLocationId];
   const newState = JSON.parse(JSON.stringify(state));
 
-  let itemToTake: Item | undefined;
-  let itemSource: { items: string[] } | undefined;
+  let itemToTake: Item | GameObject | undefined;
+  let itemSource: { items: string[], objects?: GameObjectId[] } | undefined;
 
   // The business card can't be "taken", it is given.
   if (targetName.toLowerCase() === 'business card') {
@@ -171,12 +184,29 @@ function handleTake(state: PlayerState, targetName: string, game: Game): Command
      }
   }
 
+  // Check if it is a GameObject that can be taken
+  if (!itemToTake) {
+      const gameObjectToTake = Object.values(chapter.gameObjects)
+        .find(obj => obj.name.toLowerCase() === targetName && location.objects.includes(obj.id));
+      if (gameObjectToTake) {
+          itemToTake = gameObjectToTake;
+          itemSource = location;
+      }
+  }
+
+
   if (itemToTake && itemSource) {
     if (newState.inventory.includes(itemToTake.id)) {
         return { newState, messages: [createMessage('system', 'System', `You already have the ${itemToTake.name}.`)] };
     }
     newState.inventory.push(itemToTake.id);
-    itemSource.items = itemSource.items.filter(id => id !== itemToTake!.id);
+    if ('items' in itemSource && itemSource.items) {
+        itemSource.items = itemSource.items.filter(id => id !== itemToTake!.id);
+    }
+    if ('objects' in itemSource && itemSource.objects) {
+        itemSource.objects = itemSource.objects.filter(id => id !== itemToTake!.id);
+    }
+    
     return { newState, messages: [createMessage('narrator', 'Narrator', `You take the ${itemToTake.name}.`)] };
   }
   
@@ -284,7 +314,13 @@ function handleInventory(state: PlayerState, game: Game): CommandResult {
     if (state.inventory.length === 0) {
         return { newState: state, messages: [createMessage('system', 'System', 'Your inventory is empty.')] };
     }
-    const itemNames = state.inventory.map(id => chapter.items[id]?.name).join(', ');
+    const itemNames = state.inventory.map(id => {
+        const item = chapter.items[id];
+        if (item) return item.name;
+        const gameObject = chapter.gameObjects[id as GameObjectId];
+        if (gameObject) return gameObject.name;
+        return null;
+    }).filter(Boolean).join(', ');
     return { newState: state, messages: [createMessage('system', 'System', `You are carrying: ${itemNames}.`)] };
 }
 
@@ -297,6 +333,7 @@ function handlePassword(state: PlayerState, command: string, game: Game): Comman
     const [, objectName, phrase] = passwordMatch;
     const chapter = game.chapters[state.currentChapterId];
     const location = chapter.locations[state.currentLocationId];
+    const newState = JSON.parse(JSON.stringify(state));
 
     const targetObject = Object.values(chapter.gameObjects)
         .find(o => o.name.toLowerCase() === objectName.trim().toLowerCase() && location.objects.includes(o.id));
@@ -315,7 +352,12 @@ function handlePassword(state: PlayerState, command: string, game: Game): Comman
             gameObjInCartridge.isLocked = false;
         }
 
-        return { newState: state, messages: [createMessage('narrator', 'Narrator', `You speak the words, and the ${targetObject.name} unlocks with a soft click. It can now be examined.`)] };
+        // Move the unlocked object from the location to the player's inventory
+        const loc = gameCartridge.chapters[state.currentChapterId].locations[location.id];
+        loc.objects = loc.objects.filter(objId => objId !== targetObject.id);
+        newState.inventory.push(targetObject.id as ItemId);
+
+        return { newState, messages: [createMessage('narrator', 'Narrator', `You speak the words, and the ${targetObject.name} unlocks with a soft click. It has been added to your inventory and can now be examined.`)] };
     }
 
     return { newState: state, messages: [createMessage('system', 'System', 'That password doesn\'t work.')] };
@@ -326,9 +368,13 @@ function handleContentInteraction(state: PlayerState, contentType: 'read' | 'wat
     const chapter = game.chapters[state.currentChapterId];
     const location = chapter.locations[state.currentLocationId];
 
-    // Find an unlocked object in the current location that contains the content.
-    const sourceObject = location.objects
-        .map(objId => gameCartridge.chapters[chapter.id].gameObjects[objId])
+    const allSearchableObjects = [
+        ...location.objects.map(objId => gameCartridge.chapters[chapter.id].gameObjects[objId]),
+        ...state.inventory.map(invId => gameCartridge.chapters[chapter.id].gameObjects[invId as GameObjectId])
+    ].filter(Boolean);
+
+    // Find an unlocked object in the current location or inventory that contains the content.
+    const sourceObject = allSearchableObjects
         .find(obj => obj && !obj.isLocked && obj.content?.some(c => c.name.toLowerCase() === contentName));
 
     if (!sourceObject || !sourceObject.content) {
