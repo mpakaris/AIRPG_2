@@ -7,6 +7,7 @@ export function getInitialState(game: Game): PlayerState {
     currentLocationId: game.chapters[game.startChapterId].startLocationId,
     inventory: [],
     flags: [],
+    objectStates: {},
     activeConversationWith: null,
     interactingWithObject: null,
     hasStartedFirstConversation: false,

@@ -19,12 +19,18 @@ export type Message = {
   timestamp: number;
 };
 
+export type GameObjectState = {
+  isLocked?: boolean;
+  items?: ItemId[];
+};
+
 export type PlayerState = {
   currentGameId: GameId;
   currentChapterId: ChapterId;
   currentLocationId: LocationId;
   inventory: ItemId[];
   flags: Flag[];
+  objectStates: Record<GameObjectId, GameObjectState>;
   activeConversationWith: NpcId | null;
   interactingWithObject: GameObjectId | null;
   hasStartedFirstConversation: boolean;

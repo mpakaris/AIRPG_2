@@ -4,13 +4,11 @@ import { guidePlayerWithNarrator } from '@/ai/flows/guide-player-with-narrator';
 import { generateNpcResponse } from '@/ai/flows/generate-npc-responses';
 import { game as gameCartridge } from '@/lib/game/cartridge';
 import { AVAILABLE_COMMANDS } from '@/lib/game/commands';
-import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectContent, ItemId, GameObjectId } from '@/lib/game/types';
+import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectId, GameObjectState } from '@/lib/game/types';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
-type CommandResult = {
-  newState: PlayerState;
-  messages: Message[];
-};
+
+// --- Utility Functions ---
 
 function createMessage(
   sender: Message['sender'],
@@ -30,6 +28,19 @@ function createMessage(
     timestamp: Date.now(),
   };
 }
+
+function getLiveGameObject(id: GameObjectId, state: PlayerState, game: Game): GameObject {
+    const chapter = game.chapters[state.currentChapterId];
+    const baseObject = chapter.gameObjects[id];
+    const objectState = state.objectStates[id] || {};
+    return { ...baseObject, ...objectState };
+}
+
+type CommandResult = {
+  newState: PlayerState;
+  messages: Message[];
+};
+
 
 // --- Conversation Helpers ---
 
@@ -70,7 +81,15 @@ async function handleConversation(state: PlayerState, playerInput: string, game:
 
     const gameStateSummary = `Player is in ${location.name}. Inventory: ${state.inventory.map(id => chapter.items[id]?.name).join(', ') || 'empty'}.`;
     
-    const fullNpcDescription = `${npc.description} Their main clue is: ${npc.mainMessage} Their final message, to be used when they have nothing more to say, is: ${npc.finalMessage}`;
+    // NOTE: We're not mutating the cartridge here, just creating a temporary description for the AI.
+    // The actual state of the conversation (e.g. card given) is handled by adding items to inventory.
+    const tempNpc = JSON.parse(JSON.stringify(npc));
+    const businessCardItem = Object.values(chapter.items).find(i => i.id === 'item_business_card');
+    if (businessCardItem && newState.inventory.includes(businessCardItem.id)) {
+        tempNpc.mainMessage = "I already gave you the business card. I don't have anything else for you.";
+        tempNpc.finalMessage = "I told you all I know.";
+    }
+    const fullNpcDescription = `${tempNpc.description} Their main clue is: ${tempNpc.mainMessage} Their final message, to be used when they have nothing more to say, is: ${tempNpc.finalMessage}`;
 
     const aiResponse = await generateNpcResponse({
         playerInput: playerInput,
@@ -83,7 +102,6 @@ async function handleConversation(state: PlayerState, playerInput: string, game:
     const npcMessageContent = `"${aiResponse.npcResponse}"`;
     messages.push(createMessage(npc.id as NpcId, npc.name, npcMessageContent));
 
-    const businessCardItem = Object.values(chapter.items).find(i => i.id === 'item_business_card');
     if (businessCardItem && !newState.inventory.includes(businessCardItem.id) && mentionsBusinessCard(aiResponse.npcResponse)) {
         newState.inventory.push(businessCardItem.id);
         
@@ -92,14 +110,7 @@ async function handleConversation(state: PlayerState, playerInput: string, game:
         
         const agentMessage = "Oh Burt you genious! Your instincts won, one more time! Maybe that is the key to open that Notebook!";
         messages.push(createMessage('agent', 'Agent Sharma', agentMessage));
-
-        const npcInCartridge = gameCartridge.chapters[newState.currentChapterId].npcs[npc.id];
-        if (npcInCartridge) {
-            npcInCartridge.mainMessage = "I already gave you the business card. I don't have anything else for you.";
-            npcInCartridge.finalMessage = "I told you all I know.";
-        }
     }
-
 
     return { newState, messages };
 }
@@ -120,8 +131,8 @@ function handleObjectInteraction(state: PlayerState, playerInput: string, game: 
         return { newState: state, messages: [createMessage('system', 'System', 'Error: Not interacting with an object.')] };
     }
 
-    const chapter = game.chapters[state.currentChapterId];
-    const object = chapter.gameObjects[state.interactingWithObject];
+    const objectId = state.interactingWithObject;
+    const object = getLiveGameObject(objectId, state, game);
     let newState = { ...state };
     let messages: Message[] = [];
     const lowerInput = playerInput.toLowerCase().trim();
@@ -136,31 +147,40 @@ function handleObjectInteraction(state: PlayerState, playerInput: string, game: 
     const wantsToReadArticle = lowerInput.includes('read') && lowerInput.includes('article');
     const wantsToWatchVideo = (lowerInput.includes('watch') || lowerInput.includes('play') || lowerInput.includes('what is')) && (lowerInput.includes('video') || lowerInput.includes('recording'));
 
-    if (wantsToReadArticle) {
-         const articleContent = object.content?.find(c => c.type === 'article');
-         if (articleContent) {
-            newState.notebookInteractionState = 'article_read';
-            messages.push(createMessage('narrator', 'Narrator', articleContent.url, 'article', 'newspaper_article'));
-            messages.push(createMessage('agent', 'Agent Sharma', "Burt, the article talks about Agent Mackling. Is that coincidence? It cant be. That must be what? Your grandfather? You are in law enforcement for 4 generations. Oh my god, this is huge, Burt!"));
-         } else {
-            messages.push(createMessage('narrator', 'Narrator', `There is no article to read in the ${object.name}.`));
-         }
-    } else if (wantsToWatchVideo) {
+    if (newState.notebookInteractionState === 'start' && wantsToWatchVideo) {
         const videoContent = object.content?.find(c => c.type === 'video');
         if (videoContent) {
             newState.notebookInteractionState = 'video_watched';
             messages.push(createMessage('narrator', 'Narrator', videoContent.url, 'video'));
             messages.push(createMessage('agent', 'Agent Sharma', "Silas Bloom? I've never heard of him. But it seems he was a great musician. He wrote an amazing Song for this Rose. They really must have been crazy in love."));
             messages.push(createMessage('agent', 'Agent Sharma', "Burt, wait! It seems there is also a newspaper article. Maybe you should have a look at it."));
-
         } else {
             messages.push(createMessage('narrator', 'Narrator', `There is no video to watch in the ${object.name}.`));
         }
-    } else {
-        if (newState.notebookInteractionState === 'start') {
-             messages.push(createMessage('narrator', 'Narrator', "The notebook is open. Inside, you see what appears to be a small data chip, likely a video or audio recording."));
+    } else if (newState.notebookInteractionState === 'video_watched' && wantsToReadArticle) {
+        const articleContent = object.content?.find(c => c.type === 'article');
+        if (articleContent) {
+           newState.notebookInteractionState = 'article_read';
+           messages.push(createMessage('narrator', 'Narrator', articleContent.url, 'article', 'newspaper_article'));
+           messages.push(createMessage('agent', 'Agent Sharma', "Burt, the article talks about Agent Mackling. Is that coincidence? It cant be. That must be what? Your grandfather? You are in law enforcement for 4 generations. Oh my god, this is huge, Burt!"));
         } else {
-            messages.push(createMessage('narrator', 'Narrator', "You can 'read article' or 'watch video'. Type 'exit' to stop."));
+           messages.push(createMessage('narrator', 'Narrator', `There is no article to read in the ${object.name}.`));
+        }
+    } else {
+        // Initial interaction or unrecognized command within interaction
+        switch (newState.notebookInteractionState) {
+            case 'start':
+                messages.push(createMessage('narrator', 'Narrator', "The notebook is open. Inside, you see what appears to be a small data chip, likely a video or audio recording."));
+                break;
+            case 'video_watched':
+                 messages.push(createMessage('narrator', 'Narrator', "You've watched the video. The newspaper article is still here. You could try to 'read article'."));
+                 break;
+            case 'article_read':
+                 messages.push(createMessage('narrator', 'Narrator', "You've examined the contents of the notebook. Type 'exit' to stop examining it."));
+                 break;
+            default:
+                messages.push(createMessage('system', 'System', `You can 'read article' or 'watch video'. Type 'exit' to stop.`));
+                break;
         }
     }
     
@@ -173,26 +193,41 @@ function handleObjectInteraction(state: PlayerState, playerInput: string, game: 
 function handleExamine(state: PlayerState, targetName: string, game: Game): CommandResult {
   const chapter = game.chapters[state.currentChapterId];
   const location = chapter.locations[state.currentLocationId];
-  let newState = JSON.parse(JSON.stringify(state));
+  let newState = { ...state };
   targetName = targetName.toLowerCase();
 
-  const allSearchableObjects: (GameObject | Item)[] = [
-    ...location.objects.map(objId => game.chapters[chapter.id].gameObjects[objId]),
-    ...state.inventory.map(invId => chapter.items[invId])
-  ].filter(Boolean) as (GameObject | Item)[];
+  const allSearchableIds: (GameObjectId | ItemId)[] = [
+    ...location.objects,
+    ...state.inventory
+  ];
+  
+  const targetId = allSearchableIds.find(id => {
+      const isGameObject = id in chapter.gameObjects;
+      const name = isGameObject ? chapter.gameObjects[id].name : chapter.items[id].name;
+      return name.toLowerCase() === targetName;
+  });
 
-  const target = allSearchableObjects.find(i => i?.name.toLowerCase() === targetName);
 
-  if (target) {
-    if ('isOpenable' in target && target.isOpenable && !target.isLocked) {
-        newState.interactingWithObject = target.id as GameObjectId;
-        newState.notebookInteractionState = 'start';
-        return handleObjectInteraction(newState, '', game);
+  if (targetId) {
+    const isGameObject = targetId in chapter.gameObjects;
+    if (isGameObject) {
+        const targetObject = getLiveGameObject(targetId as GameObjectId, state, game);
+        if (targetObject.isOpenable && !targetObject.isLocked) {
+            newState.interactingWithObject = targetObject.id as GameObjectId;
+            newState.notebookInteractionState = 'start';
+            return handleObjectInteraction(newState, '', game);
+        }
+         return {
+            newState: state,
+            messages: [createMessage('narrator', 'Narrator', `You examine the ${targetObject.name}. ${targetObject.description}`)],
+        };
+    } else {
+         const targetItem = chapter.items[targetId as ItemId];
+         return {
+            newState: state,
+            messages: [createMessage('narrator', 'Narrator', `You examine the ${targetItem.name}. ${targetItem.description}`)],
+        };
     }
-    return {
-        newState: state,
-        messages: [createMessage('narrator', 'Narrator', `You examine the ${target.name}. ${target.description}`)],
-    };
   }
 
   return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${targetName}" here.`)] };
@@ -201,42 +236,32 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
 function handleTake(state: PlayerState, targetName: string, game: Game): CommandResult {
   const chapter = game.chapters[state.currentChapterId];
   const location = chapter.locations[state.currentLocationId];
-  const newState = JSON.parse(JSON.stringify(state));
+  const newState = { ...state, inventory: [...state.inventory], objectStates: {...state.objectStates} };
   targetName = targetName.toLowerCase();
 
-  let itemToTake: Item | undefined;
-  let itemSource: { items: ItemId[] } | undefined;
-
-  // The business card can't be "taken", it is given.
-  if (targetName.toLowerCase() === 'business card') {
+  if (targetName === 'business card') {
       return { newState, messages: [createMessage('system', 'System', `You can't just take that. You should talk to the barista.`)] };
   }
   
-  // Look in game objects in the current location
   for (const objId of location.objects) {
-    const obj = chapter.gameObjects[objId];
-    if (obj && ((obj.isOpenable && !obj.isLocked) || !obj.isOpenable)) {
-       const foundItem = obj.items
-         .map(itemId => chapter.items[itemId])
-         .find(item => item?.name.toLowerCase() === targetName);
-        if (foundItem) {
-            itemToTake = foundItem;
-            // This is messy - we need to modify the cartridge directly
-            itemSource = gameCartridge.chapters[chapter.id].gameObjects[objId];
-            break;
+    const liveObject = getLiveGameObject(objId, newState, game);
+    if (!liveObject.isOpenable || (liveObject.isOpenable && !liveObject.isLocked)) {
+       const itemToTakeId = (liveObject.items || []).find(itemId => chapter.items[itemId]?.name.toLowerCase() === targetName);
+
+        if (itemToTakeId) {
+            const itemToTake = chapter.items[itemToTakeId];
+            if (newState.inventory.includes(itemToTake.id)) {
+                return { newState, messages: [createMessage('system', 'System', `You already have the ${itemToTake.name}.`)] };
+            }
+            newState.inventory.push(itemToTake.id);
+            
+            const currentObjectItems = liveObject.items || [];
+            const newObjectItems = currentObjectItems.filter(id => id !== itemToTake.id);
+            newState.objectStates[objId] = { ...newState.objectStates[objId], items: newObjectItems };
+
+            return { newState, messages: [createMessage('narrator', 'Narrator', `You take the ${itemToTake.name}.`)] };
         }
      }
-  }
-
-  if (itemToTake && itemSource) {
-    if (newState.inventory.includes(itemToTake.id)) {
-        return { newState, messages: [createMessage('system', 'System', `You already have the ${itemToTake.name}.`)] };
-    }
-    newState.inventory.push(itemToTake.id);
-    
-    itemSource.items = itemSource.items.filter(id => id !== itemToTake!.id);
-    
-    return { newState, messages: [createMessage('narrator', 'Narrator', `You take the ${itemToTake.name}.`)] };
   }
   
   return { newState, messages: [createMessage('system', 'System', `You can't take that.`)] };
@@ -285,24 +310,22 @@ function handleUse(state: PlayerState, itemName: string, objectName: string, gam
     .map(id => chapter.items[id])
     .find(i => i?.name.toLowerCase() === itemName);
   
-  const targetObject = Object.values(chapter.gameObjects)
-    .find(o => o?.name.toLowerCase() === objectName);
+  const targetObjectId = location.objects.find(objId => chapter.gameObjects[objId]?.name.toLowerCase() === objectName);
 
   if (!itemInInventory) {
     return { newState: state, messages: [createMessage('system', 'System', `You don't have a ${itemName}.`)] };
   }
-
-  if (!targetObject || !location.objects.includes(targetObject.id)) {
+  
+  if (!targetObjectId) {
     return { newState: state, messages: [createMessage('system', 'System', `You don't see a ${objectName} here.`)] };
   }
+  
+  const targetObject = getLiveGameObject(targetObjectId, state, game);
 
   if (targetObject.unlocksWith === itemInInventory?.id && targetObject.isLocked) {
-    const newState = JSON.parse(JSON.stringify(state));
-    const gameObjInCartridge = gameCartridge.chapters[state.currentChapterId].gameObjects[targetObject.id];
-    if (gameObjInCartridge) {
-        gameObjInCartridge.isLocked = false;
-    }
-
+    const newState = { ...state, objectStates: { ...state.objectStates }};
+    newState.objectStates[targetObject.id] = { ...newState.objectStates[targetObject.id], isLocked: false };
+    
     return { newState, messages: [createMessage('narrator', 'Narrator', `You use the ${itemInInventory.name} on the ${targetObject.name}. It unlocks with a click!`)] };
   }
 
@@ -362,31 +385,26 @@ function handlePassword(state: PlayerState, command: string, game: Game): Comman
     const [, objectName, phrase] = passwordMatch;
     const chapter = game.chapters[state.currentChapterId];
     const location = chapter.locations[state.currentLocationId];
-    let newState = JSON.parse(JSON.stringify(state));
+    
+    const targetObjectId = location.objects.find(objId => chapter.gameObjects[objId]?.name.toLowerCase() === objectName.trim().toLowerCase());
 
-    const targetObject = Object.values(chapter.gameObjects)
-        .find(o => o.name.toLowerCase() === objectName.trim().toLowerCase() && location.objects.includes(o.id));
-
-    if (!targetObject) {
+    if (!targetObjectId) {
         return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${objectName}" here.`)] };
     }
     
+    const targetObject = getLiveGameObject(targetObjectId, state, game);
+
     if (!targetObject.isLocked) {
         return { newState: state, messages: [createMessage('system', 'System', `The ${targetObject.name} is already unlocked.`)] };
     }
 
-
     if (targetObject.unlocksWithPhrase?.toLowerCase() === phrase.toLowerCase()) {
-        const gameObjInCartridge = gameCartridge.chapters[state.currentChapterId].gameObjects[targetObject.id];
-        if (gameObjInCartridge) {
-            gameObjInCartridge.isLocked = false;
-        }
-        
+        const newState = { ...state, objectStates: { ...state.objectStates }};
+        newState.objectStates[targetObject.id] = { ...newState.objectStates[targetObject.id], isLocked: false };
         newState.interactingWithObject = targetObject.id;
         newState.notebookInteractionState = 'start';
 
         const unlockedMessage = `You speak the words, and the ${targetObject.name} unlocks with a soft click.`;
-        
         const initialInteractionMessages = handleObjectInteraction(newState, '', game).messages;
 
         return { newState, messages: [
@@ -424,9 +442,9 @@ export async function processCommand(
   try {
     const chapter = game.chapters[currentState.currentChapterId];
     const location = chapter.locations[currentState.currentLocationId];
-    const objectsInLocation = location.objects.map(id => game.chapters[chapter.id].gameObjects[id]);
+    const objectsInLocation = location.objects.map(id => getLiveGameObject(id, currentState, game));
     const objectStates = objectsInLocation.map(obj => `${obj.name} is ${obj.isLocked ? 'locked' : 'unlocked'}`).join('. ');
-    const objectNames = location.objects.map(id => chapter.gameObjects[id]?.name).join(', ');
+    const objectNames = objectsInLocation.map(obj => obj.name).join(', ');
     const npcNames = location.npcs.map(id => chapter.npcs[id]?.name).join(', ');
     
     let lookAroundSummary = `${location.description}\n\n`;
@@ -490,7 +508,8 @@ export async function processCommand(
              result = { newState: currentState, messages: [createMessage('system', 'System', "I don't understand that command.")] };
              break;
     }
-
+    
+    // Only add the agent's message if the command was successful and didn't come from the system.
     const finalMessages = [...result.messages];
     if (result.messages.every(m => m.sender !== 'system')) {
         const agentMessage = createMessage('agent', 'Agent Sharma', `${aiResponse.agentResponse}`);
