@@ -67,6 +67,13 @@ const urlRegex = /(https?:\/\/[^\s]+)/g;
 
 const MessageContent: FC<{ message: Message }> = ({ message }) => {
     const isAgent = message.sender === 'agent';
+    
+    if (message.type === 'video') {
+        return (
+            <video controls src={message.content} className="max-w-full rounded-lg" />
+        )
+    }
+
     const content = message.content.replace(/_|\*/g, '');
     const parts = content.split(urlRegex);
 

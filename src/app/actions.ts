@@ -138,9 +138,9 @@ function handleObjectInteraction(state: PlayerState, playerInput: string, game: 
     const content = object.content?.find(c => c.type === verb || c.name.toLowerCase() === targetName);
 
     if (verb === 'read' && content?.type === 'article') {
-         messages.push(createMessage('narrator', 'Narrator', `You read the ${content.name}:\n${content.url}`));
+         messages.push(createMessage('narrator', 'Narrator', `You read the ${content.name}:\n${content.url}`, 'text'));
     } else if (verb === 'watch' && content?.type === 'video') {
-        messages.push(createMessage('narrator', 'Narrator', `You watch the ${content.name}:\n${content.url}`));
+        messages.push(createMessage('narrator', 'Narrator', content.url, 'video'));
     } else {
         messages.push(createMessage('system', 'System', `You can't do that with the ${object.name}. Try 'read article' or 'watch video'. To stop, type 'exit'.`));
     }
@@ -165,19 +165,16 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
   const target = allSearchableObjects.find(i => i?.name.toLowerCase() === targetName);
 
   if (target) {
-     // If it's an openable object that is unlocked, enter interaction mode.
     if ('isOpenable' in target && target.isOpenable && !target.isLocked) {
         newState.interactingWithObject = target.id as GameObjectId;
         const description = (target as GameObject).unlockedDescription || (target as GameObject).description;
         return { 
             newState, 
             messages: [
-                createMessage('narrator', 'Narrator', description),
-                createMessage('system', 'System', `You are now examining the ${target.name}. You can 'read article' or 'watch video'. Type 'exit' to stop.`),
+                createMessage('system', 'System', `${description}\nYou are now examining the ${target.name}. You can 'read article' or 'watch video'. Type 'exit' to stop.`),
             ]
         };
     }
-    // It's any other item or a locked GameObject
     return {
         newState: state,
         messages: [createMessage('narrator', 'Narrator', `You examine the ${target.name}. ${target.description}`)],

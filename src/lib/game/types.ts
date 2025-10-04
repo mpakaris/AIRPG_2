@@ -13,7 +13,7 @@ export type Message = {
   id: string;
   sender: 'narrator' | 'player' | 'system' | 'agent' | NpcId;
   senderName: string;
-  type: 'text' | 'image';
+  type: 'text' | 'image' | 'video';
   content: string;
   image?: ImagePlaceholder;
   timestamp: number;
@@ -86,7 +86,7 @@ export type Chapter = {
   locations: Record<LocationId, Location>;
   gameObjects: Record<GameObjectId, GameObject>;
   items: Record<ItemId, Item>;
-  npcs: Record<NpcId, NPC>;
+npcs: Record<NpcId, NPC>;
 };
 
 export type Game = {
