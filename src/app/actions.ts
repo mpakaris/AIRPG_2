@@ -147,7 +147,9 @@ function handleObjectInteraction(state: PlayerState, playerInput: string, game: 
             messages.push(createMessage('system', 'System', `There is no video to watch in the ${object.name}.`));
         }
     } else {
-        messages.push(createMessage('system', 'System', `You can't do that with the ${object.name}. Try 'read article' or 'watch video'. To stop, type 'exit'.`));
+        const description = (object as GameObject).unlockedDescription || (object as GameObject).description;
+        messages.push(createMessage('narrator', 'Narrator', description));
+        messages.push(createMessage('system', 'System', "You can 'read article' or 'watch video'. Type 'exit' to stop."));
     }
     
     return { newState, messages };
@@ -353,7 +355,7 @@ function handlePassword(state: PlayerState, command: string, game: Game): Comman
     const [, objectName, phrase] = passwordMatch;
     const chapter = game.chapters[state.currentChapterId];
     const location = chapter.locations[state.currentLocationId];
-    const newState = JSON.parse(JSON.stringify(state));
+    let newState = JSON.parse(JSON.stringify(state));
 
     const targetObject = Object.values(chapter.gameObjects)
         .find(o => o.name.toLowerCase() === objectName.trim().toLowerCase() && location.objects.includes(o.id));
