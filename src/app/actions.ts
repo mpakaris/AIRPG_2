@@ -188,6 +188,7 @@ function handleTake(state: PlayerState, targetName: string, game: Game): Command
   const chapter = game.chapters[state.currentChapterId];
   const location = chapter.locations[state.currentLocationId];
   const newState = JSON.parse(JSON.stringify(state));
+  targetName = targetName.toLowerCase();
 
   let itemToTake: Item | undefined;
   let itemSource: { items: ItemId[] } | undefined;
@@ -230,6 +231,7 @@ function handleTake(state: PlayerState, targetName: string, game: Game): Command
 function handleGo(state: PlayerState, targetName: string, game: Game): CommandResult {
     const chapter = game.chapters[state.currentChapterId];
     const currentLocation = chapter.locations[state.currentLocationId];
+    targetName = targetName.toLowerCase();
 
     let targetLocation: Location | undefined;
     targetLocation = Object.values(chapter.locations).find(loc => loc.name.toLowerCase() === targetName);
@@ -296,6 +298,7 @@ function handleUse(state: PlayerState, itemName: string, objectName: string, gam
 async function handleTalk(state: PlayerState, npcName: string, game: Game): Promise<CommandResult> {
     const chapter = game.chapters[state.currentChapterId];
     const location = chapter.locations[state.currentLocationId];
+    npcName = npcName.toLowerCase();
 
     const npc = Object.values(chapter.npcs)
         .find(n => n?.name.toLowerCase().includes(npcName));
@@ -425,8 +428,12 @@ export async function processCommand(
     const restOfCommand = args.join(' ');
 
     let result: CommandResult = { newState: currentState, messages: [] };
-
-    let agentMessage = createMessage('agent', 'Agent Sharma', `${aiResponse.agentResponse}`);
+    let agentMessage: Message | null = null;
+    
+    // In conversation or interaction mode, we don't want an agent message.
+    if (!currentState.activeConversationWith && !currentState.interactingWithObject) {
+       agentMessage = createMessage('agent', 'Agent Sharma', `${aiResponse.agentResponse}`);
+    }
 
     // Now, execute the command and get the result
     switch (verb) {
@@ -460,24 +467,15 @@ export async function processCommand(
             result = handlePassword(currentState, commandToExecute, game);
             break;
         default:
-             // If we're here, the AI gave a command that doesn't exist.
-             // We can provide a generic message or even feed this back to the AI in a future iteration.
-            result = { newState: currentState, messages: [createMessage('system', 'System', "I don't understand that command.")] };
-            // We don't want the agent's message if the command was invalid.
-            return result;
+             result = { newState: currentState, messages: [createMessage('system', 'System', "I don't understand that command.")] };
+             agentMessage = null; // Don't show agent message for invalid commands
     }
     
-    // In conversation or interaction mode, we don't want an agent message.
-    if (result.newState.activeConversationWith || result.newState.interactingWithObject) {
-        return {
-            newState: result.newState,
-            messages: [...result.messages],
-        };
-    } 
+    const finalMessages = agentMessage ? [agentMessage, ...result.messages] : result.messages;
 
     return {
         newState: result.newState,
-        messages: [agentMessage, ...result.messages],
+        messages: finalMessages,
     };
 
   } catch (error) {
