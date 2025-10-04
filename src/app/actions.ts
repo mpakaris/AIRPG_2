@@ -114,15 +114,15 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
   targetName = targetName.toLowerCase();
 
   const allSearchableObjects: (GameObject | Item)[] = [
-    ...location.objects.map(objId => gameCartridge.chapters[chapter.id].gameObjects[objId]),
+    ...location.objects.map(objId => game.chapters[chapter.id].gameObjects[objId]),
     ...state.inventory.map(invId => chapter.items[invId])
   ].filter(Boolean) as (GameObject | Item)[];
 
   const target = allSearchableObjects.find(i => i?.name.toLowerCase() === targetName);
 
   if (target) {
-    if ('content' in target && !target.isLocked) { // It's a GameObject with content
-        const gameObject = gameCartridge.chapters[state.currentChapterId].gameObjects[target.id as GameObjectId];
+    if ('isLocked' in target && !target.isLocked) { // It's an unlocked GameObject
+        const gameObject = game.chapters[state.currentChapterId].gameObjects[target.id as GameObjectId];
         let description = gameObject.unlockedDescription || gameObject.description;
         return { newState: state, messages: [createMessage('narrator', 'Narrator', description)] };
     }
@@ -234,9 +234,9 @@ function handleUse(state: PlayerState, itemName: string, objectName: string, gam
 
   if (targetObject.unlocksWith === itemInInventory?.id && targetObject.isLocked) {
     const newState = JSON.parse(JSON.stringify(state));
-    const gameObjInState: GameObject | undefined = game.chapters[state.currentChapterId].gameObjects[targetObject.id];
-    if(gameObjInState) {
-        gameObjInState.isLocked = false;
+    const gameObjInCartridge = gameCartridge.chapters[state.currentChapterId].gameObjects[targetObject.id];
+    if (gameObjInCartridge) {
+        gameObjInCartridge.isLocked = false;
     }
 
     return { newState, messages: [createMessage('narrator', 'Narrator', `You use the ${itemInInventory.name} on the ${targetObject.name}. It unlocks with a click!`)] };
@@ -374,12 +374,14 @@ export async function processCommand(
       return await handleConversation(currentState, playerInput, game);
   }
   
-  // Otherwise, process as a game command
+  // First, get the AI's interpretation of the command.
   const chapter = game.chapters[currentState.currentChapterId];
   const location = chapter.locations[currentState.currentLocationId];
+  const objectsInLocation = location.objects.map(id => game.chapters[chapter.id].gameObjects[id]);
+  const objectStates = objectsInLocation.map(obj => `${obj.name} is ${obj.isLocked ? 'locked' : 'unlocked'}`).join('. ');
   const objectNames = location.objects.map(id => chapter.gameObjects[id]?.name).join(', ');
   const npcNames = location.npcs.map(id => chapter.npcs[id]?.name).join(', ');
-
+  
   let lookAroundSummary = `${location.description}\n\n`;
   if(objectNames) {
     lookAroundSummary += `You can see: ${objectNames}.\n`;
@@ -387,10 +389,6 @@ export async function processCommand(
   if(npcNames) {
     lookAroundSummary += `You see ${npcNames} here.`;
   }
-
-  const objectsInLocation = location.objects.map(id => game.chapters[chapter.id].gameObjects[id]);
-  const objectStates = objectsInLocation.map(obj => `${obj.name} is ${obj.isLocked ? 'locked' : 'unlocked'}`).join('. ');
-
 
   const gameStateSummary = `
     CHAPTER GOAL: ${chapter.goal}.
@@ -402,10 +400,10 @@ export async function processCommand(
 
   try {
     const aiResponse = await guidePlayerWithNarrator({
-      gameSpecifications: game.description,
-      gameState: gameStateSummary,
-      playerCommand: playerInput,
-      availableCommands: AVAILABLE_COMMANDS.join(', '),
+        gameSpecifications: game.description,
+        gameState: gameStateSummary,
+        playerCommand: playerInput,
+        availableCommands: AVAILABLE_COMMANDS.join(', '),
     });
 
     const commandToExecute = aiResponse.commandToExecute.toLowerCase();
@@ -413,9 +411,8 @@ export async function processCommand(
     const restOfCommand = args.join(' ');
 
     let result: CommandResult = { newState: currentState, messages: [] };
-    let agentMessage = createMessage('agent', 'Agent Sharma', `${aiResponse.agentResponse}`);
-    let finalResult: CommandResult;
 
+    // Now, execute the command and get the result
     switch (verb) {
         case 'examine':
             result = handleExamine(currentState, restOfCommand, game);
@@ -456,20 +453,19 @@ export async function processCommand(
             result = { newState: currentState, messages: [createMessage('system', 'System', "I don't understand that command.")] };
     }
     
+    let agentMessage = createMessage('agent', 'Agent Sharma', `${aiResponse.agentResponse}`);
     // In conversation mode, we don't want an agent message.
     if (result.newState.activeConversationWith) {
-        finalResult = {
+        return {
             newState: result.newState,
             messages: [...result.messages],
         };
-    } else {
-        finalResult = {
-            newState: result.newState,
-            messages: [agentMessage, ...result.messages],
-        };
-    }
+    } 
 
-    return finalResult;
+    return {
+        newState: result.newState,
+        messages: [agentMessage, ...result.messages],
+    };
 
   } catch (error) {
     console.error('Error processing command with GenKit:', error);
@@ -479,4 +475,3 @@ export async function processCommand(
     };
   }
 }
-
