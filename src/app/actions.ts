@@ -127,13 +127,9 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
     .find(obj => obj.name.toLowerCase() === targetName);
   if (objectInLocation && location.objects.includes(objectInLocation.id)) {
     let description = objectInLocation.description;
-    
-     if (objectInLocation.isLocked && objectInLocation.unlocksWithUrl) {
+
+    if (objectInLocation.isLocked && objectInLocation.unlocksWithUrl) {
       description += ` A lock prevents it from being opened. On the cover, a URL is inscribed: ${objectInLocation.unlocksWithUrl}`;
-    } else if (objectInLocation.isOpenable && !objectInLocation.isLocked && objectInLocation.items.length > 0) {
-      // Check for items inside if object is openable but not locked
-      const itemNames = objectInLocation.items.map(id => chapter.items[id].name).join(', ');
-      description += ` You see a ${itemNames} inside.`;
     }
 
     return {
@@ -310,7 +306,7 @@ function handlePassword(state: PlayerState, command: string, game: Game): Comman
     const gameObjInCartridge = gameCartridge.chapters[state.currentChapterId].gameObjects[targetObject.id];
     if(gameObjInCartridge) {
         gameObjInCartridge.isLocked = false;
-        gameObjInCartridge.description = 'The notebook is now unlocked. You can examine it to read the contents.';
+        gameObjInCartridge.description = 'The notebook is now unlocked. Upon first glance, you find an old Audio/Video Message and a Newspaper Article from the past. You can now examine it to read the contents. \n\n- Read Article: https://1drv.ms/i/c/e7d3aeb87385d8a2/EYUcIv6_9MNHuqnzyMXYrpMBodwu6VeeaJ7-2RZ854N5Qw?e=g3lbfF \n- Watch Video: https://1drv.ms/v/c/e7d3aeb87385d8a2/EcgZlhJvCjhFlfCqCo7hVyQBeLOu4BrqNEhYgbZmEuNY2w?e=KDZkSd';
     }
 
     return { newState, messages: [createMessage('narrator', 'Narrator', `You speak the words, and the ${targetObject.name} unlocks with a soft click. It can now be examined.`)] };
