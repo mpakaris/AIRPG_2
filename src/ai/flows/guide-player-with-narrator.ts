@@ -49,15 +49,16 @@ Available Commands:
 {{availableCommands}}
 
 Respond to Burt with a helpful and engaging message in character as Agent Sharma. Your response should be brief (1-2 sentences).
-- If his command is 'look around' or 'examine' something, encourage him to survey the scene.
 - If his command seems reasonable, encourage it. Help him figure out the next step.
 - If his command is to talk to someone (e.g., 'approach the barista'), encourage the interaction. It could be a valuable lead.
 - If his command is to read or watch something, support it as a good way to find clues.
+- If his command is 'look around', 'examine' something, or to 'open' or 'browse' an object, encourage him to survey the scene.
 
 Example of a good response: "Good thinking, Burt. That notebook is our primary lead. Let's start by giving it a thorough examination."
 
 Based on the player's intent and the game state, determine the most logical command for the game engine to execute. It must be a valid command from the available list.
 - If the player's intent is to interact with a person, the command should be 'talk to <npc name>'.
+- If the player's intent is to 'look at', 'open', 'browse through', or 'check' an object, the command should be 'examine <object name>'.
 - If the player wants to 'read the article' or similar, the command should be 'read article'.
 - If the player wants to 'watch the video' or 'listen to the audio', the command should be 'watch video'.
 - If the player is just making conversation or the command is unclear, 'look around' is a safe default.

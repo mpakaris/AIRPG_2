@@ -5,7 +5,7 @@ import { guidePlayerWithNarrator } from '@/ai/flows/guide-player-with-narrator';
 import { generateNpcResponse } from '@/ai/flows/generate-npc-responses';
 import { game as gameCartridge } from '@/lib/game/cartridge';
 import { AVAILABLE_COMMANDS } from '@/lib/game/commands';
-import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectContent } from '@/lib/game/types';
+import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectContent, ItemId, GameObjectId } from '@/lib/game/types';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 type CommandResult = {
@@ -111,48 +111,39 @@ async function handleConversation(state: PlayerState, playerInput: string, game:
 function handleExamine(state: PlayerState, targetName: string, game: Game): CommandResult {
   const chapter = game.chapters[state.currentChapterId];
   const location = chapter.locations[state.currentLocationId];
+  targetName = targetName.toLowerCase();
 
-  // Check inventory for items or game objects
-  const itemInInventory = state.inventory
-    .map(itemId => chapter.items[itemId])
-    .find(item => item?.name.toLowerCase() === targetName);
-  if (itemInInventory) {
-    return {
-      newState: state,
-      messages: [createMessage('narrator', 'Narrator', `You examine the ${itemInInventory.name}. ${itemInInventory.description}`)],
-    };
-  }
-
-  const gameObjectInInventory = state.inventory
-      .map(itemId => chapter.gameObjects[itemId as GameObjectId]) // Try to find a game object with that ID
-      .find(obj => obj?.name.toLowerCase() === targetName);
-  if (gameObjectInInventory) {
-      const gameObject = gameCartridge.chapters[state.currentChapterId].gameObjects[gameObjectInInventory.id];
-      let description = gameObject.description;
-      if (!gameObject.isLocked && gameObject.unlockedDescription) {
-          description = gameObject.unlockedDescription;
-      }
-      return { newState: state, messages: [createMessage('narrator', 'Narrator', description)] };
-  }
+  const allSearchableObjects = [
+    ...location.objects.map(objId => gameCartridge.chapters[chapter.id].gameObjects[objId]),
+    ...state.inventory.map(invId => {
+        const item = gameCartridge.chapters[chapter.id].items[invId];
+        if (item) return null; // It's a simple item, not a game object
+        return gameCartridge.chapters[chapter.id].gameObjects[invId as GameObjectId]
+    })
+  ].filter(Boolean) as (GameObject | Item)[];
 
 
-  // Check objects in location
-  const objectInLocation = Object.values(chapter.gameObjects)
-    .find(obj => obj.name.toLowerCase() === targetName);
-  if (objectInLocation && location.objects.includes(objectInLocation.id)) {
-    // Get the potentially modified object from the game cartridge in memory
-    const gameObject = gameCartridge.chapters[state.currentChapterId].gameObjects[objectInLocation.id];
-    let description = gameObject.description;
+  const target = allSearchableObjects.find(i => i?.name.toLowerCase() === targetName);
 
-    if (!gameObject.isLocked && gameObject.unlockedDescription) {
-        description = gameObject.unlockedDescription;
+  if (target) {
+    // It's a GameObject
+    if ('items' in target) {
+        const gameObject = gameCartridge.chapters[state.currentChapterId].gameObjects[target.id as GameObjectId];
+        let description = gameObject.description;
+        if (!gameObject.isLocked && gameObject.unlockedDescription) {
+            description = gameObject.unlockedDescription;
+        }
+        return { newState: state, messages: [createMessage('narrator', 'Narrator', description)] };
     }
-
-    return {
-      newState: state,
-      messages: [createMessage('narrator', 'Narrator', description)],
-    };
+    // It's a simple Item
+    else {
+        return {
+            newState: state,
+            messages: [createMessage('narrator', 'Narrator', `You examine the ${target.name}. ${target.description}`)],
+        };
+    }
   }
+
 
   return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${targetName}" here.`)] };
 }
@@ -163,13 +154,14 @@ function handleTake(state: PlayerState, targetName: string, game: Game): Command
   const newState = JSON.parse(JSON.stringify(state));
 
   let itemToTake: Item | GameObject | undefined;
-  let itemSource: { items: string[], objects?: GameObjectId[] } | undefined;
+  let itemSource: { items: ItemId[], objects?: GameObjectId[] } | Location | undefined;
 
   // The business card can't be "taken", it is given.
   if (targetName.toLowerCase() === 'business card') {
       return { newState, messages: [createMessage('system', 'System', `You can't just take that. You should talk to the barista.`)] };
   }
-
+  
+  // Look in game objects in the current location
   for (const objId of location.objects) {
     const obj = chapter.gameObjects[objId];
     if (obj && ((obj.isOpenable && !obj.isLocked) || !obj.isOpenable)) {
@@ -178,19 +170,20 @@ function handleTake(state: PlayerState, targetName: string, game: Game): Command
          .find(item => item?.name.toLowerCase() === targetName);
         if (foundItem) {
             itemToTake = foundItem;
-            itemSource = obj;
+            // This is messy - we need to modify the cartridge directly
+            itemSource = gameCartridge.chapters[chapter.id].gameObjects[objId];
             break;
         }
      }
   }
 
-  // Check if it is a GameObject that can be taken
+  // Check if it is a GameObject that can be taken from the location
   if (!itemToTake) {
       const gameObjectToTake = Object.values(chapter.gameObjects)
         .find(obj => obj.name.toLowerCase() === targetName && location.objects.includes(obj.id));
       if (gameObjectToTake) {
           itemToTake = gameObjectToTake;
-          itemSource = location;
+          itemSource = gameCartridge.chapters[chapter.id].locations[location.id];
       }
   }
 
