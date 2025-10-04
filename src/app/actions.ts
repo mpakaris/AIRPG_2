@@ -1,4 +1,3 @@
-
 'use server';
 
 import { guidePlayerWithNarrator } from '@/ai/flows/guide-player-with-narrator';
@@ -133,14 +132,14 @@ function handleObjectInteraction(state: PlayerState, playerInput: string, game: 
         return { newState, messages };
     }
     
-    if (lowerInput.includes('read article')) {
+    if (lowerInput.includes('read') && lowerInput.includes('article')) {
          const articleContent = object.content?.find(c => c.type === 'article');
          if (articleContent) {
             messages.push(createMessage('narrator', 'Narrator', `You read the ${articleContent.name}:\n${articleContent.url}`, 'text'));
          } else {
             messages.push(createMessage('system', 'System', `There is no article to read in the ${object.name}.`));
          }
-    } else if (lowerInput.includes('watch video')) {
+    } else if (lowerInput.includes('watch') && lowerInput.includes('video')) {
         const videoContent = object.content?.find(c => c.type === 'video');
         if (videoContent) {
             messages.push(createMessage('narrator', 'Narrator', `${videoContent.url}`, 'video'));
@@ -177,7 +176,7 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
         return { 
             newState, 
             messages: [
-                createMessage('system', 'System', `${description}\nYou are now examining the ${target.name}. You can 'read article' or 'watch video'. Type 'exit' to stop.`),
+                createMessage('system', 'System', `You are now examining the ${target.name}. You can 'read article' or 'watch video'. Type 'exit' to stop.`),
             ]
         };
     }
@@ -348,7 +347,7 @@ function handleInventory(state: PlayerState, game: Game): CommandResult {
 function handlePassword(state: PlayerState, command: string, game: Game): CommandResult {
     const passwordMatch = command.toLowerCase().match(/password for (.*?) "(.*)"/);
     if (!passwordMatch) {
-        return { newState: state, messages: [createMessage('system', 'System', 'Invalid password format. Please use: password for <object> "<phrase>"')] };
+        return { newState: state, messages: [createMessage('system', 'System', 'Invalid password format. Please use: password for &lt;object&gt; "&lt;phrase&gt;"')] };
     }
 
     const [, objectName, phrase] = passwordMatch;
