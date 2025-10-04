@@ -478,21 +478,25 @@ export async function processCommand(
 
   // Dev command to complete chapter 1
   if (playerInput === 'CH I complete') {
-    const newState = {
+    let newState = {
         ...currentState,
         hasTalkedToBarista: true,
         hasReceivedBusinessCard: true,
         hasSeenNotebookUrl: true,
         hasUnlockedNotebook: true,
         notebookInteractionState: 'complete' as const,
-        flags: [...currentState.flags, 'chapter_1_complete' as Flag],
-        inventory: [...currentState.inventory]
+        inventory: [...currentState.inventory],
     };
     const businessCardItem = Object.values(game.chapters[currentState.currentChapterId].items).find(i => i.id === 'item_business_card');
     if (businessCardItem && !newState.inventory.includes(businessCardItem.id)) {
         newState.inventory.push(businessCardItem.id);
     }
+    
     const completion = checkChapterCompletion(newState);
+    if (completion.isComplete) {
+      newState.flags = [...newState.flags, 'chapter_1_complete' as Flag];
+    }
+    
     return {
         newState,
         messages: [
