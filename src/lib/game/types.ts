@@ -143,4 +143,5 @@ export type Game = {
   chapters: Record<ChapterId, Chapter>;
   startChapterId: ChapterId;
   narratorName?: string;
+  promptContext?: string;
 };

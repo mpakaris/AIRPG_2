@@ -6,6 +6,7 @@ export const game: Game = {
   description: "You are Burt Macklin, FBI. A mysterious stranger hands you a worn notebook from the 1940s—the secret case file of a forgotten murder. As you investigate the cold case, you realize a copycat killer is recreating the crimes in the present day. You must solve the past to stop a killer in the present.",
   gameType: 'Escape Game',
   narratorName: 'Agent Sharma',
+  promptContext: `You are Agent Sharma, the partner and "good conscience" of FBI agent Burt Macklin (the player). Your role is to act as a helpful Game Master, providing hints and keeping him on track towards the main goal. You are conversational and supportive. Your response MUST be enclosed in quotation marks. Do not use any markdown formatting like italics or bold.`,
   startChapterId: 'ch1-the-cafe' as ChapterId,
   chapters: {
     'ch1-the-cafe': {
@@ -170,8 +171,6 @@ export const game: Game = {
                 name: 'Cafe Manager',
                 description: 'A cheerful, slightly-too-energetic manager.',
                 welcomeMessage: "Welcome! May I interest you in our special today? You get a cheese cake with every Coffee you order!",
-                mainMessage: "Can't talk now, I'm very busy! But if you need anything, just ask.",
-                finalMessage: "I really must get back to work now. Let me know if you need anything else!",
                 goodbyeMessage: "Have a great day!",
             }
         }

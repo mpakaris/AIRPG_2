@@ -4,7 +4,7 @@ import { guidePlayerWithNarrator } from '@/ai/flows/guide-player-with-narrator';
 import { selectNpcResponse } from '@/ai/flows/select-npc-response';
 import { game as gameCartridge } from '@/lib/game/cartridge';
 import { AVAILABLE_COMMANDS } from '@/lib/game/commands';
-import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectId, GameObjectState, ItemId, Flag, Action, Chapter } from '@/lib/game/types';
+import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectId, GameObjectState, ItemId, Flag, Action, Chapter, ChapterId } from '@/lib/game/types';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 
@@ -566,6 +566,7 @@ export async function processCommand(
     `;
 
     const aiResponse = await guidePlayerWithNarrator({
+        promptContext: game.promptContext || '',
         gameSpecifications: game.description,
         gameState: gameStateSummaryForAI,
         playerCommand: playerInput,
