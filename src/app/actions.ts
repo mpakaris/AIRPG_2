@@ -285,7 +285,7 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
             narratorName, 
             itemInInventory.description,
             'image',
-            { id: itemInInventory.id, game, state: newState, showEvenIfExamined: false }
+            { id: itemInInventory.id, game, state: newState, showEvenIfExamined: isAlreadyExamined ? false : true }
         );
         
         if (!isAlreadyExamined) {
@@ -327,7 +327,7 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
             narratorName,
             messageContent,
             'image',
-            { id: liveObject.id, game, state: actionResult.newState, showEvenIfExamined: false }
+            { id: liveObject.id, game, state: actionResult.newState, showEvenIfExamined: isAlreadyExamined ? false : true }
         );
         
         if (!actionResult.newState.flags.includes(flag)) {
@@ -518,51 +518,27 @@ function handleInventory(state: PlayerState, game: Game): CommandResult {
 }
 
 function handlePassword(state: PlayerState, command: string, game: Game): CommandResult {
-    const parts = command.split(' ');
-    if (parts.length < 3) {
-        return { newState: state, messages: [createMessage('system', 'System', 'Invalid password command format. e.g., password <object> <phrase>')] };
-    }
-
-    const verb = parts[0];
-    const phraseParts = [];
-    let objectNameParts = [];
-    let foundPhrase = false;
-    for (let i = 1; i < parts.length; i++) {
-        if(foundPhrase) {
-            phraseParts.push(parts[i]);
-            continue;
-        }
-        const chapter = game.chapters[state.currentChapterId];
-        const obj = Object.values(chapter.gameObjects).find(o => o.name.toLowerCase().includes(parts[i].toLowerCase()));
-        
-        if(obj) {
-             objectNameParts.push(parts[i]);
-        } else {
-             // Heuristic: if we find a word that's not part of any object name, assume the rest is the phrase
-             phraseParts.push(...parts.slice(i));
-             foundPhrase = true;
-        }
-    }
-
-    const objectName = objectNameParts.join(' ');
-    const phrase = phraseParts.join(' ');
-
-    return processPassword(state, objectName, phrase, game);
-}
-
-
-function processPassword(state: PlayerState, objectName: string, phrase: string, game: Game): CommandResult {
     const chapter = game.chapters[state.currentChapterId];
     const location = chapter.locations[state.currentLocationId];
     const narratorName = game.narratorName || "Narrator";
-    
-    const targetObjectId = location.objects.find(objId => chapter.gameObjects[objId]?.name.toLowerCase().includes(objectName.toLowerCase()));
 
-    if (!targetObjectId) {
-        return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${objectName}" here.`)] };
+    // Find the target object
+    const targetObject = location.objects
+        .map(id => getLiveGameObject(id, state, game))
+        .find(obj => command.toLowerCase().includes(obj.name.toLowerCase()));
+
+    if (!targetObject) {
+        return { newState: state, messages: [createMessage('system', 'System', "I'm not sure which object you're trying to use a password on.")] };
     }
     
-    const targetObject = getLiveGameObject(targetObjectId, state, game);
+    // Extract the phrase
+    const objectNameIndex = command.toLowerCase().indexOf(targetObject.name.toLowerCase());
+    // The phrase is everything after the object name
+    const phrase = command.substring(objectNameIndex + targetObject.name.length).trim();
+    
+    if (!phrase) {
+        return { newState: state, messages: [createMessage('system', 'System', "You need to provide a password phrase.")] };
+    }
 
     if (!targetObject.isLocked) {
         return { newState: state, messages: [createMessage('system', 'System', `The ${targetObject.name} is already unlocked.`)] };
@@ -596,6 +572,7 @@ function processPassword(state: PlayerState, objectName: string, phrase: string,
 
     return { newState: state, messages: [createMessage('narrator', narratorName, targetObject.onUnlock?.failMessage || 'That password doesn\'t work.')] };
 }
+
 
 const chapterCompletionFlag = (chapterId: ChapterId) => `chapter_${chapterId}_complete` as Flag;
 
@@ -813,3 +790,6 @@ export async function processCommand(
     };
   }
 }
+
+
+    
