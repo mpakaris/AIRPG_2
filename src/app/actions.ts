@@ -545,15 +545,15 @@ function handleInventory(state: PlayerState, game: Game): CommandResult {
 }
 
 function handlePassword(state: PlayerState, command: string, game: Game): CommandResult {
-    // This function now expects a command in the format: `password <object name> <phrase>`
-    // The AI is responsible for ensuring the format is correct.
+    // This function expects a command in the format: `password <object name> <phrase>`
     const parts = command.split(' ');
     if (parts.length < 3) {
-        return { newState: state, messages: [createMessage('system', 'System', 'Invalid password command format.')] };
+        return { newState: state, messages: [createMessage('system', 'System', 'Invalid password command format. e.g., password <object> <phrase>')] };
     }
 
-    const objectName = parts[1]; // e.g., "notebook"
-    const phrase = parts.slice(2).join(' '); // e.g., "Justice for Silas Bloom"
+    const verb = parts[0];
+    const phrase = parts.slice(2).join(' ');
+    const objectName = parts[1];
     
     return processPassword(state, objectName, phrase, game);
 }
