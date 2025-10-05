@@ -8,6 +8,7 @@ import { SidebarProvider } from '@/components/ui/sidebar';
 import { GameSidebar } from './GameSidebar';
 import { GameScreen } from './GameScreen';
 import { useToast } from '@/hooks/use-toast';
+import { getInitialState } from '@/lib/game-state';
 
 interface GameClientProps {
   game: Game;
@@ -22,9 +23,9 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState }) => {
   
     const welcomeMessage = {
       id: 'start',
-      sender: 'narrator',
-      senderName: 'Narrator',
-      type: 'text',
+      sender: 'narrator' as const,
+      senderName: game.narratorName || 'Narrator',
+      type: 'text' as const,
       content: `Welcome to ${game.title}. Your journey begins.`,
       timestamp: Date.now(),
     };
@@ -33,9 +34,9 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState }) => {
     if (startChapter.introductionVideo) {
       initialMessages.push({
         id: 'intro-video',
-        sender: 'narrator',
-        senderName: 'Narrator',
-        type: 'video',
+        sender: 'narrator' as const,
+        senderName: game.narratorName || 'Narrator',
+        type: 'video' as const,
         content: startChapter.introductionVideo,
         timestamp: Date.now() + 1,
       });

@@ -72,6 +72,7 @@ export const game: Game = {
                     ]
                 },
                 onFailure: {
+                    default: "That's not going to work. It's a key piece of evidence.",
                     break: "You hammer on the notebook, but the old leather is surprisingly tough. The lock doesn't budge.",
                     destroy: "You consider destroying the notebook, but that would defeat the whole purpose of being here. There must be a more subtle way.",
                     open: "You try to force the lock, but it's no use. You'll need the correct password.",
@@ -152,6 +153,7 @@ export const game: Game = {
                    default: { message: "Today's special is three scones for the price of two. A deal almost as sweet as justice." }
                 },
                 onFailure: {
+                    default: "Probably best to leave the menu alone. It's not part of the case.",
                     break: "You could probably smash the chalkboard, but that would just make a mess and draw unwanted attention.",
                     destroy: "It's just a menu, Macklin. Let's focus on the case.",
                     move: "You shift the chalkboard stand an inch to the left. Nothing of interest is revealed.",
@@ -172,6 +174,7 @@ export const game: Game = {
                    default: { message: "It's a copy of today's local paper. The main headlines discuss the current series of murders. The usual crazyness of a Metropolis." }
                 },
                 onFailure: {
+                    default: "The newspaper is old news. Let's stick to the facts of our case.",
                     take: "You could take it, but you have no reason to. It's just today's paper.",
                     destroy: "Tearing up the newspaper won't help you solve any crimes."
                 },
@@ -190,6 +193,7 @@ export const game: Game = {
                    default: { message: "A small bookshelf filled with used paperbacks. You scan the titles: 'The Art of the Deal', 'A Brief History of Time', 'How to Win Friends and Influence People', and a romance novel titled 'Justice for My Love'." }
                 },
                 onFailure: {
+                    default: "It's just a bookshelf. Let's not get sidetracked.",
                     take: "You can't take the whole bookshelf, Burt.",
                     move: "It's too heavy to move by yourself."
                 },
@@ -208,6 +212,7 @@ export const game: Game = {
                    default: { message: "An abstract painting hangs on the wall, its swirls of color adding a touch of modern art to the cafe's cozy atmosphere. It seems to be signed 'S.B.'" }
                 },
                 onFailure: {
+                    default: "The painting is nice, but it's not a clue.",
                     take: "The painting is securely fastened to the wall.",
                     "look behind": "You try to look behind the painting, but it's flush against the wall."
                 },

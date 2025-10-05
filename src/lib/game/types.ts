@@ -30,7 +30,7 @@ export type Message = {
 export type Action =
   | { type: 'ADD_ITEM'; itemId: ItemId }
   | { type: 'SET_FLAG'; flag: Flag }
-  | { type: 'SHOW_MESSAGE'; sender: Message['sender']; senderName: string; content: string; messageType?: Message['type']; imageId?: ItemId | NpcId | GameObjectId } // item, npc, or game object ID
+  | { type: 'SHOW_MESSAGE'; sender: Message['sender']; senderName?: string; content: string; messageType?: Message['type']; imageId?: ItemId | NpcId | GameObjectId } // item, npc, or game object ID
   | { type: 'END_CONVERSATION' }
   | { type: 'START_INTERACTION'; objectId: GameObjectId, interactionStateId?: string }
   | { type: 'END_INTERACTION' }
@@ -109,7 +109,10 @@ export type GameObject = {
   };
 
   // For handling non-standard verbs like "break", "destroy", "climb", etc.
-  onFailure?: Record<string, string>;
+  onFailure?: {
+    default: string; // Generic fallback for any unhandled verb
+    [verb: string]: string; // Specific message for a given verb
+  };
   
   // For complex, multi-step interactions
   interactionStates?: Record<string, ObjectInteractionState>;
