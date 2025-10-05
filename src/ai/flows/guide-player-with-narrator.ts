@@ -14,7 +14,7 @@ import {z} from 'genkit';
 const GuidePlayerWithNarratorInputSchema = z.object({
   promptContext: z.string().describe('The persona and instructions for the AI narrator.'),
   gameSpecifications: z.string().describe('The overall specifications and rules of the game.'),
-  gameState: z.string().describe('A detailed summary of the current state of the game, including chapter goal, player location, inventory, visible objects, and NPCs present.'),
+  gameState: z.string().describe('A detailed summary of the current state of the apgame, including chapter goal, player location, inventory, visible objects, and NPCs present.'),
   playerCommand: z.string().describe('The command or action the player wants to perform.'),
   availableCommands: z.string().describe('A list of available commands in the game.'),
 });
@@ -50,14 +50,15 @@ You are the AI narrator. Your primary job is to interpret the player's raw text 
 **Your Task:**
 
 1.  **Analyze Intent:** Understand what the player is trying to do.
-2.  **Select Command:** Choose the *best* matching command from the \`Available Commands\` list.
-    *   If the player says "look at the book," the command is \`examine brown notebook\`.
-    *   If the player says "pick up the card," the command is \`take business card\`.
-    *   If the player says "chat with the coffee guy," the command is \`talk to barista\`.
-    *   If the player wants to provide a password, the command is \`password <object> <phrase>\`. For example: "password for notebook 'JUSTICE FOR SILAS BLOOM'".
-    *   If the player wants to move, the command is \`go <direction or location>\`.
-    *   If the input is conversational, observational ("what do i see?"), or doesn't map to a clear action, the command is \`look around\`.
-    *   If the action is illogical, impossible, violent, or destructive (e.g., "smash the notebook," "fly to the moon," "attack the barista"), you MUST set the \`commandToExecute\` to "invalid".
+2.  **Select Command:** Choose the *best* matching command from the 'Available Commands' list.
+    *   If the player says "look at the book," the command is 'examine brown notebook'.
+    *   If the player says "pick up the card," the command is 'take business card'.
+    *   If the player says "chat with the coffee guy," the command is 'talk to barista'.
+    *   If the player wants to provide a password, the command is 'password <object> <phrase>'. For example: "password for notebook 'JUSTICE FOR SILAS BLOOM'".
+    *   If the player wants to move, the command is 'go <direction or location>'.
+    *   If the input is conversational, observational ("what do i see?"), or doesn't map to a clear action, the command is 'look around'.
+    *   If the action is illogical, impossible, violent, or destructive (e.g., "smash the notebook," "fly to the moon," "attack the barista"), you MUST set the 'commandToExecute' to "invalid".
+    *   If the player wants to 'look behind' an object, the command is 'look behind <object>'.
 3.  **Provide Guidance:** Write a brief, in-character response (1-2 sentences) that gives the player a gentle hint or confirms their action, guiding them toward the chapter goal.
 
 **Example 1 (Valid Command):**
@@ -66,7 +67,11 @@ You are the AI narrator. Your primary job is to interpret the player's raw text 
 
 **Example 2 (Invalid Command):**
 *Player Input:* "I smash the coffee machine."
-*Your Response:* { "agentResponse": "Easy there, Macklin. Let's not cause a scene. Vandalism won't get us any closer to solving this case.", "commandToExecute": "invalid" }
+*Your Response:* { "agentResponse": "Easy there, Macklin. Let's not cause a scene. Vandalism won't get us any closer to solving this case.", "commandToExecute": "invalid coffee machine" }
+
+**Example 3 (Look Behind):**
+*Player Input:* "I look behind the menu"
+*Your Response:* { "agentResponse": "Good thinking, let's see if anything is hidden.", "commandToExecute": "look behind chalkboard menu" }
 
 Your entire output must be a single, valid JSON object matching the output schema.
 `,

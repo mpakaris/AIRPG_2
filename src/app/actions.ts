@@ -9,6 +9,7 @@ import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC
 
 
 // --- Utility Functions ---
+const examinedObjectFlag = (objectId: GameObjectId) => `examined_${objectId}` as Flag;
 
 function createMessage(
   sender: Message['sender'],
@@ -84,7 +85,18 @@ function processActions(initialState: PlayerState, actions: Action[], game: Game
                 if (action.sender === 'agent' && game.narratorName) {
                     senderName = game.narratorName;
                 }
-                messages.push(createMessage(action.sender, senderName, action.content, action.messageType, action.imageId));
+
+                let imageIdToShow = action.imageId;
+                if (action.imageId && action.sender === 'narrator') {
+                    // Check if the object has been examined before
+                    const flag = examinedObjectFlag(action.imageId as GameObjectId);
+                    if (newState.flags.includes(flag)) {
+                        imageIdToShow = undefined; // Don't show image again
+                    } else {
+                        newState.flags = [...newState.flags, flag]; // Set flag for future
+                    }
+                }
+                messages.push(createMessage(action.sender, senderName, action.content, action.messageType, imageIdToShow));
                 break;
             case 'END_CONVERSATION':
                  if (newState.activeConversationWith) {
@@ -245,9 +257,14 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
       .find(item => item?.name.toLowerCase().includes(targetName));
 
   if (itemInInventory) {
+      const flag = examinedObjectFlag(itemInInventory.id as unknown as GameObjectId); // Treat item ID as game object ID for flag purposes
+      const imageId = !newState.flags.includes(flag) ? itemInInventory.id : undefined;
+      if (imageId) {
+          newState.flags = [...newState.flags, flag];
+      }
       return {
           newState,
-          messages: [createMessage('narrator', narratorName, itemInInventory.description, 'image', itemInInventory.id)]
+          messages: [createMessage('narrator', narratorName, itemInInventory.description, 'image', imageId)]
       };
   }
   
@@ -258,25 +275,29 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
 
   if (targetObjectId) {
       const liveObject = getLiveGameObject(targetObjectId, state, game);
+      const actions: Action[] = [{ 
+          type: 'SHOW_MESSAGE', 
+          sender: 'narrator', 
+          senderName: narratorName, 
+          content: 'You examine the object.', // Default message
+          imageId: liveObject.image ? liveObject.id : undefined
+      }];
 
-      // If the object is locked and has a specific locked message
       if (liveObject.isLocked && liveObject.onExamine?.locked) {
-          const result = processActions(newState, liveObject.onExamine.locked.actions || [], game);
-          result.messages.unshift(createMessage('narrator', narratorName, liveObject.onExamine.locked.message, 'image', liveObject.image ? liveObject.id : undefined));
-          return result;
+          actions[0].content = liveObject.onExamine.locked.message;
+          actions.push(...(liveObject.onExamine.locked.actions || []));
+      } else if (!liveObject.isLocked && liveObject.onExamine?.unlocked) {
+          actions[0].content = liveObject.onExamine.unlocked.message;
+          if (liveObject.unlockedImage) actions[0].imageId = liveObject.id;
+          actions.push(...(liveObject.onExamine.unlocked.actions || []));
+      } else if (liveObject.onExamine?.default) {
+          actions[0].content = liveObject.onExamine.default.message;
+          actions.push(...(liveObject.onExamine.default.actions || []));
+      } else {
+          actions[0].content = `You examine the ${liveObject.name}.`;
       }
       
-      // If the object is unlocked and has a specific unlocked message
-      if (!liveObject.isLocked && liveObject.onExamine?.unlocked) {
-          const result = processActions(newState, liveObject.onExamine.unlocked.actions || [], game);
-          result.messages.unshift(createMessage('narrator', narratorName, liveObject.onExamine.unlocked.message, 'image', liveObject.unlockedImage ? liveObject.id : undefined));
-          return result;
-      }
-
-      // Default examine message
-      const result = processActions(newState, liveObject.onExamine?.default.actions || [], game);
-      result.messages.unshift(createMessage('narrator', narratorName, liveObject.onExamine?.default.message || `You examine the ${liveObject.name}.`, 'image', liveObject.image ? liveObject.id : undefined));
-      return result;
+      return processActions(newState, actions, game);
   }
 
   return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${targetName}" here.`)] };
@@ -609,16 +630,16 @@ export async function processCommand(
 
     const agentMessage = createMessage('agent', narratorName, `${aiResponse.agentResponse}`);
     const commandToExecute = aiResponse.commandToExecute.toLowerCase();
+    const [verb, ...args] = commandToExecute.split(' ');
+    const restOfCommand = args.join(' ');
     
     // Handle invalid commands first
-    if (commandToExecute === 'invalid') {
-        const [verb, ...args] = playerInput.toLowerCase().split(' ');
-        const targetName = args.join(' ');
-        
-        const targetObject = objectsInLocation.find(obj => obj.name.toLowerCase().includes(targetName));
+    if (verb === 'invalid') {
+        const [originalVerb] = playerInput.toLowerCase().split(' ');
+        const targetObject = objectsInLocation.find(obj => commandToExecute.includes(obj.name.toLowerCase()));
 
-        if (targetObject?.onFailure?.[verb]) {
-             return { newState: currentState, messages: [createMessage('narrator', narratorName, targetObject.onFailure[verb]!)] };
+        if (targetObject?.onFailure?.[originalVerb]) {
+             return { newState: currentState, messages: [createMessage('narrator', narratorName, targetObject.onFailure[originalVerb]!)] };
         }
         
         // Return only the agent's guiding message if no specific failure message is found
@@ -628,8 +649,6 @@ export async function processCommand(
         };
     }
     
-    const [verb, ...args] = commandToExecute.split(' ');
-    const restOfCommand = args.join(' ');
 
     let result: CommandResult;
     
@@ -656,7 +675,20 @@ export async function processCommand(
              result = await handleTalk(currentState, restOfCommand.replace('to ', ''), game);
              break;
         case 'look':
-             result = handleLook(currentState, game, lookAroundSummary);
+            // "look" can mean "look around" or be a prefix for "look behind", etc.
+            if(restOfCommand === 'around') {
+                result = handleLook(currentState, game, lookAroundSummary);
+            } else {
+                const targetObject = objectsInLocation.find(obj => restOfCommand.includes(obj.name.toLowerCase()));
+                 if (targetObject?.onFailure?.[verb]) {
+                     result = { newState: currentState, messages: [createMessage('narrator', narratorName, targetObject.onFailure[verb]!)] };
+                 } else if (targetObject?.onFailure?.['look behind']) { // Specific check for "look behind"
+                     result = { newState: currentState, messages: [createMessage('narrator', narratorName, targetObject.onFailure['look behind']!)] };
+                 }
+                 else {
+                     result = handleLook(currentState, game, lookAroundSummary); // Default to look around
+                 }
+            }
              break;
         case 'inventory':
             result = handleInventory(currentState, game);
@@ -673,8 +705,14 @@ export async function processCommand(
              }
              break;
         default:
-             result = { newState: currentState, messages: [agentMessage] }; // Default to agent's message if command is unclear
-             break;
+            // This handles generic verbs like 'move', 'break', 'look behind'
+            const targetObject = objectsInLocation.find(obj => restOfCommand.includes(obj.name.toLowerCase()));
+            if (targetObject?.onFailure?.[verb]) {
+                result = { newState: currentState, messages: [createMessage('narrator', narratorName, targetObject.onFailure[verb]!)] };
+            } else {
+                result = { newState: currentState, messages: [agentMessage] }; // Default to agent's message if command is unclear
+            }
+            break;
     }
     
     // Check for chapter completion
