@@ -25,7 +25,7 @@ function createMessage(
         const chapter = game.chapters[state.currentChapterId];
         const isAlreadyExamined = state.flags.includes(examinedObjectFlag(id));
         
-        if (!isAlreadyExamined || showEvenIfExamined) {
+        if (showEvenIfExamined || !isAlreadyExamined) {
             const item = chapter.items[id as ItemId];
             const npc = chapter.npcs[id as NpcId];
             const gameObject = chapter.gameObjects[id as GameObjectId];
@@ -112,7 +112,7 @@ function processActions(initialState: PlayerState, actions: Action[], game: Game
                     action.senderName || narratorName,
                     action.content,
                     action.messageType,
-                    messageImageId ? { id: messageImageId, game, state: newState } : undefined
+                    messageImageId ? { id: messageImageId, game, state: newState, showEvenIfExamined: true } : undefined
                 );
                 messages.push(message);
 
@@ -299,7 +299,7 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
             narratorName, 
             itemInInventory.description,
             'image',
-            { id: itemInInventory.id, game, state: newState, showEvenIfExamined: !isAlreadyExamined }
+            { id: itemInInventory.id, game, state: newState, showEvenIfExamined: true }
         );
         
         if (!isAlreadyExamined) {
@@ -335,17 +335,16 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
         }
         
         let actionResult = processActions(newState, actions, game);
-        const isAlreadyExamined = actionResult.newState.flags.includes(flag);
         
         const mainMessage = createMessage(
             'narrator',
             narratorName,
             messageContent,
             'image',
-            { id: liveObject.id, game, state: actionResult.newState, showEvenIfExamined: !isAlreadyExamined }
+            { id: liveObject.id, game, state: actionResult.newState, showEvenIfExamined: true }
         );
         
-        if (!isAlreadyExamined) {
+        if (!actionResult.newState.flags.includes(flag)) {
             actionResult.newState.flags.push(flag);
         }
         
@@ -486,7 +485,7 @@ async function handleTalk(state: PlayerState, npcName: string, game: Game): Prom
         
         const startActions = npc.startConversationActions || [];
         const actionResult = processActions(newState, startActions, game);
-        newState = actionResult.newState;
+newState = actionResult.newState;
         messages.push(...actionResult.messages);
 
         messages.unshift(createMessage('system', 'System', `You are now talking to ${npc.name}. Type your message to continue the conversation. To end the conversation, type 'goodbye'.`));
@@ -494,19 +493,18 @@ async function handleTalk(state: PlayerState, npcName: string, game: Game): Prom
         const welcomeMessage = (npc as NPC).welcomeMessage || "Hello.";
         
         const flag = examinedObjectFlag(npc.id);
-        const isAlreadyExamined = newState.flags.includes(flag);
 
         const npcMessage = createMessage(
             npc.id as NpcId,
             npc.name,
             `"${welcomeMessage}"`,
             'image',
-            { id: npc.id, game, state: newState, showEvenIfExamined: !isAlreadyExamined }
+            { id: npc.id, game, state: newState, showEvenIfExamined: true }
         );
         messages.push(npcMessage);
 
 
-        if (!isAlreadyExamined) {
+        if (!newState.flags.includes(flag)) {
             newState.flags.push(flag);
         }
 
@@ -539,7 +537,7 @@ function handlePassword(state: PlayerState, command: string, game: Game): Comman
     // Robustly find the phrase in quotes
     const phraseMatch = command.match(/"(.*?)"/);
     if (!phraseMatch) {
-        return { newState: state, messages: [createMessage('system', 'System', 'Invalid password format. Please enclose the password phrase in quotes, e.g., password &lt;object&gt; "&lt;phrase&gt;"')] };
+        return { newState: state, messages: [createMessage('system', 'System', 'Invalid password format. Please enclose the password phrase in quotes, e.g., password <object> "<phrase>"')] };
     }
     const phrase = phraseMatch[1];
     
@@ -548,7 +546,14 @@ function handlePassword(state: PlayerState, command: string, game: Game): Comman
 
     // The object name is everything between "password" and the start of the phrase
     const commandVerb = "password";
-    const objectName = command.substring(commandVerb.length, phraseStartIndex).trim();
+    // Find the beginning of the object name
+    const commandVerbIndex = command.toLowerCase().indexOf(commandVerb);
+    
+    if (commandVerbIndex === -1) {
+        return { newState: state, messages: [createMessage('system', 'System', `Invalid password format. Could not find the word "password" in command: "${command}"`)] };
+    }
+
+    const objectName = command.substring(commandVerbIndex + commandVerb.length, phraseStartIndex).trim();
 
     if (!objectName || !phrase) {
         return { newState: state, messages: [createMessage('system', 'System', `Invalid password format. Could not determine object or phrase from command: "${command}"`)] };
@@ -585,17 +590,16 @@ function processPassword(state: PlayerState, objectName: string, phrase: string,
         const actions = targetObject.onUnlock?.actions || [];
         const result = processActions(newState, actions, game);
         
-        const isAlreadyExamined = result.newState.flags.includes(examinedObjectFlag(targetObject.id));
         const unlockMessage = createMessage(
             'narrator', 
             narratorName, 
             targetObject.onUnlock?.successMessage || "It unlocks!", 
             'image', 
-            { id: targetObject.id, game, state: result.newState, showEvenIfExamined: !isAlreadyExamined }
+            { id: targetObject.id, game, state: result.newState, showEvenIfExamined: true }
         );
         result.messages.unshift(unlockMessage);
 
-        if (!isAlreadyExamined) {
+        if (!result.newState.flags.includes(examinedObjectFlag(targetObject.id))) {
             result.newState.flags.push(examinedObjectFlag(targetObject.id));
         }
         
@@ -693,6 +697,19 @@ export async function processCommand(
   if (currentState.interactingWithObject) {
       return await handleObjectInteraction(currentState, playerInput, game);
   }
+
+    // --- Password Command Fast Path ---
+    // Create a dedicated path for the password command to make it more reliable.
+    if (lowerInput.includes('password') && lowerInput.includes('"')) {
+        const agentMessage = createMessage('agent', narratorName, "Let's see if that works...");
+        const result = handlePassword(currentState, playerInput, game);
+        // Prepend the agent message only if the command didn't fail with a system message
+        if (!result.messages.some(m => m.sender === 'system')) {
+            result.messages.unshift(agentMessage);
+        }
+        return result;
+    }
+
 
   // AI processing for general commands
   try {
