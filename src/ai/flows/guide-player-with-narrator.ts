@@ -56,7 +56,7 @@ As the AI narrator, respond to the player with a helpful message (1-2 sentences)
 - Use the detailed game state to provide specific, context-aware advice. For example, if an object is unlocked, encourage the player to examine it to find the next clue.
 
 Based on the player's intent and the game state, determine the most logical command for the game engine to execute. It must be a valid command from the available list.
-- If the player's command is illogical or cannot be mapped to a valid command (e.g., trying to use violence, using items they don't have), you MUST set the 'commandToExecute' to 'invalid'.
+- If the player's command is illogical, violent, or cannot be mapped to a valid command (e.g., trying to use items they don't have), you MUST set the 'commandToExecute' to 'invalid'.
 - If the player's intent is to interact with a person, the command should be 'talk to <npc name>'.
 - If the player's intent is to 'look at', 'open', 'browse through', 'check', 'look inside', 'read article', 'watch video', or any other direct object interaction, the final command should be the most direct version (e.g., 'read article', 'watch video', 'examine <object>').
 - If the player's command is observational (e.g. "check the room", "look for hints", "what do I see?"), the command should be 'look around'.

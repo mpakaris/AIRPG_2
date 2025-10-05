@@ -271,7 +271,7 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
              const liveObject = getLiveGameObject(targetObject.id as GameObjectId, result.newState, game);
              const interactionState = liveObject.interactionStates?.[liveObject.currentInteractionStateId || 'start'];
 
-            result.messages.push(createMessage('narrator', narratorName, interactionState?.description || targetObject.unlockedDescription || `You open the ${targetObject.name}.`));
+            result.messages.push(createMessage('narrator', narratorName, interactionState?.description || targetObject.unlockedDescription || `You open the ${targetObject.name}.`, 'image', liveObject.unlockedImage ? liveObject.id : undefined));
             return result;
         }
         
@@ -480,7 +480,9 @@ function handlePassword(state: PlayerState, command: string, game: Game): Comman
         const unlockMessage = createMessage('narrator', narratorName, `You speak the words, and the ${targetObject.name} unlocks with a soft click.`, 'image', liveObject.unlockedImage ? liveObject.id : undefined);
         result.messages.unshift(unlockMessage);
 
-        result.messages.push(createMessage('narrator', narratorName, interactionState?.description || liveObject.unlockedDescription || `You open the ${liveObject.name}.`));
+        if(interactionState?.description || liveObject.unlockedDescription) {
+            result.messages.push(createMessage('narrator', narratorName, interactionState?.description || liveObject.unlockedDescription || `You open the ${liveObject.name}.`));
+        }
         
         return result;
     }
@@ -595,7 +597,7 @@ export async function processCommand(
     const location = chapter.locations[currentState.currentLocationId];
     const objectsInLocation = location.objects.map(id => getLiveGameObject(id, currentState, game));
     const objectStates = objectsInLocation.map(obj => `${obj.name} is ${obj.isLocked ? 'locked' : 'unlocked'}`).join('. ');
-    const objectNames = objectsInlocaion.map(obj => obj.name);
+    const objectNames = objectsInLocation.map(obj => obj.name);
     const npcNames = location.npcs.map(id => chapter.npcs[id]?.name).filter(Boolean) as string[];
     
     let lookAroundSummary = `${location.description}\n\n`;

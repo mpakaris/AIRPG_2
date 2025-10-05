@@ -18,17 +18,18 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState }) => {
   const [playerState, setPlayerState] = useState<PlayerState>(initialGameState);
   const [messages, setMessages] = useState<Message[]>(() => {
     const startChapter = game.chapters[initialGameState.currentChapterId];
-    const initialMessages: Message[] = [
-      {
-        id: 'start',
-        sender: 'narrator',
-        senderName: 'Narrator',
-        type: 'text',
-        content: `Welcome to ${game.title}. Your journey begins.`,
-        timestamp: Date.now(),
-      },
-    ];
-
+    const initialMessages: Message[] = [];
+  
+    const welcomeMessage = {
+      id: 'start',
+      sender: 'narrator',
+      senderName: 'Narrator',
+      type: 'text',
+      content: `Welcome to ${game.title}. Your journey begins.`,
+      timestamp: Date.now(),
+    };
+    initialMessages.push(welcomeMessage);
+    
     if (startChapter.introductionVideo) {
       initialMessages.push({
         id: 'intro-video',
@@ -39,7 +40,7 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState }) => {
         timestamp: Date.now() + 1,
       });
     }
-
+  
     return initialMessages;
   });
 
