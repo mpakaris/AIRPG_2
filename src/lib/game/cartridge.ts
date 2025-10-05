@@ -15,7 +15,7 @@ export const game: Game = {
         title: 'A Blast from the Past',
         goal: "Unlock the contents of the notebook.",
         introductionVideo: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759670681/CH_I_Intro_ccy0og.mov',
-        completionVideo: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759591583/Pr%C3%A4sentation1_ke0qg7.mp4',
+        completionVideo: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759678377/CH_I_completion_jqtyme.mp4',
         postChapterMessage: "Burt, it seems we got all the information here. Maybe we should continue elsewhere.",
         nextChapter: {
             title: 'The Midnight Lounge',
