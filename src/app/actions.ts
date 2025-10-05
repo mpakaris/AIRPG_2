@@ -390,7 +390,6 @@ function handleGo(state: PlayerState, targetName: string, game: Game): CommandRe
     targetName = targetName.toLowerCase();
     const narratorName = game.narratorName || "Narrator";
 
-    // Check for chapter transition
     if (targetName === 'next_chapter') {
         const completion = checkChapterCompletion(state, game);
         if (completion.isComplete) {
@@ -408,20 +407,18 @@ function handleGo(state: PlayerState, targetName: string, game: Game): CommandRe
                 return {
                     newState,
                     messages: [
-                        createMessage('system', 'System', `You arrive at the ${newLocation.name}.`),
-                        createMessage('narrator', narratorName, newLocation.description)
+                        createMessage('system', 'System', `You are now in Chapter: ${nextChapter.title}.`),
+                        createMessage('narrator', narratorName, newLocation.description),
                     ]
                 };
             } else {
                  return { newState: state, messages: [createMessage('system', 'System', `There is no next chapter defined.`)] };
             }
         } else {
-            // Player is trying to leave before finishing the chapter
-            return { newState: state, messages: [createMessage('agent', narratorName, "Burt, I have a feeling that we are not done here.")] };
+            return { newState: state, messages: [createMessage('agent', narratorName, `Hold on, Burt. We still need to ${chapter.goal.toLowerCase()} here in ${currentLocation.name}. We can't move on until we've figured that out.`)] };
         }
     }
 
-    // Standard location movement
     let targetLocation: Location | undefined;
     targetLocation = Object.values(chapter.locations).find(loc => loc.name.toLowerCase() === targetName);
 
@@ -557,21 +554,33 @@ function handlePassword(state: PlayerState, command: string, game: Game): Comman
     const objectsInLocation = location.objects.map(id => getLiveGameObject(id, state, game));
     
     const commandLower = command.toLowerCase();
-    
-    // Find the target object whose name is in the command
-    const targetObject = objectsInLocation.find(obj => commandLower.includes(obj.name.toLowerCase()));
 
-    if (!targetObject) {
-        return { newState: state, messages: [createMessage('system', 'System', `You don't see that object here.`)] };
-    }
+    const targetObject = objectsInLocation.find(obj => {
+        if (!obj.unlocksWithPhrase) return false;
+        // Check if the object's name is in the command
+        return commandLower.includes(obj.name.toLowerCase());
+    });
 
-    if (!targetObject.unlocksWithPhrase) {
-        return { newState: state, messages: [createMessage('narrator', narratorName, `You can't use a password on the ${targetObject.name}.`)] };
+    if (!targetObject || !targetObject.unlocksWithPhrase) {
+        // Fallback for when the AI might just send the password without the object
+        const fallbackObject = objectsInLocation.find(obj => obj.isLocked && obj.unlocksWithPhrase);
+        if (fallbackObject) {
+            return processPassword(state, command, fallbackObject, game);
+        }
+        return { newState: state, messages: [createMessage('system', 'System', 'You can\'t use a password on anything here, or you need to be more specific.')] };
     }
     
-    // Extract the phrase by removing the "password" verb and the object name
-    const objectNameIndex = commandLower.indexOf(targetObject.name.toLowerCase());
-    const phrase = command.substring(objectNameIndex + targetObject.name.length).trim().replace(/^"|"$/g, '');
+    return processPassword(state, command, targetObject, game);
+}
+
+function processPassword(state: PlayerState, command: string, targetObject: GameObject & GameObjectState, game: Game): CommandResult {
+    const narratorName = game.narratorName || "Narrator";
+    const commandLower = command.toLowerCase();
+    const objectNameLower = targetObject.name.toLowerCase();
+    
+    // Extract the phrase by removing the verb and object name from the command
+    let phrase = commandLower.replace("password", "").replace(objectNameLower, "").trim();
+    phrase = phrase.replace(/^"|"$/g, '').replace(/^for |^is /,'').trim();
 
     if (!phrase) {
         return { newState: state, messages: [createMessage('narrator', narratorName, 'You need to specify a password phrase.')] };
@@ -579,7 +588,7 @@ function handlePassword(state: PlayerState, command: string, game: Game): Comman
     
     const expectedPhrase = targetObject.unlocksWithPhrase;
 
-    if (phrase.toLowerCase() === expectedPhrase.toLowerCase()) {
+    if (phrase.toLowerCase() === expectedPhrase!.toLowerCase()) {
         let newState = { ...state, objectStates: { ...state.objectStates }};
         newState.objectStates[targetObject.id] = { ...newState.objectStates[targetObject.id], isLocked: false };
         
@@ -616,10 +625,9 @@ const chapterCompletionFlag = (chapterId: ChapterId) => `chapter_${chapterId}_co
 
 function checkChapterCompletion(state: PlayerState, game: Game): { isComplete: boolean; messages: Message[] } {
     const chapter = game.chapters[state.currentChapterId];
-    const completionFlag = chapterCompletionFlag(state.currentChapterId);
 
-    if (!chapter.objectives || state.flags.includes(completionFlag)) {
-        return { isComplete: false, messages: [] };
+    if (!chapter.objectives || chapter.objectives.length === 0) {
+        return { isComplete: true, messages: [] }; 
     }
     
     const allObjectivesMet = chapter.objectives.every(obj => state.flags.includes(obj.flag));
@@ -649,8 +657,6 @@ export async function processCommand(
   const game = gameCartridge;
   const chapter = game.chapters[currentState.currentChapterId];
   const narratorName = game.narratorName || "Narrator";
-  const completionFlag = chapterCompletionFlag(currentState.currentChapterId);
-
 
   if (playerInput.startsWith('dev:complete_')) {
     const chapterId = playerInput.replace('dev:complete_', '') as ChapterId;
@@ -788,7 +794,6 @@ export async function processCommand(
             break;
     }
     
-    // This is run after every command, so we check for completion here as well.
     const completion = checkChapterCompletion(result.newState, game);
     let finalMessages = [...result.messages];
 
@@ -822,3 +827,5 @@ export async function processCommand(
     };
   }
 }
+
+    
