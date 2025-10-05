@@ -595,7 +595,7 @@ export async function processCommand(
     const location = chapter.locations[currentState.currentLocationId];
     const objectsInLocation = location.objects.map(id => getLiveGameObject(id, currentState, game));
     const objectStates = objectsInLocation.map(obj => `${obj.name} is ${obj.isLocked ? 'locked' : 'unlocked'}`).join('. ');
-    const objectNames = objectsInLocation.map(obj => obj.name);
+    const objectNames = objectsInlocaion.map(obj => obj.name);
     const npcNames = location.npcs.map(id => chapter.npcs[id]?.name).filter(Boolean) as string[];
     
     let lookAroundSummary = `${location.description}\n\n`;
