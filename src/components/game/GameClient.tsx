@@ -40,15 +40,6 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState }) => {
       });
     }
 
-    initialMessages.push({
-      id: 'start-location',
-      sender: 'narrator',
-      senderName: 'Narrator',
-      type: 'text',
-      content: startChapter.locations[initialGameState.currentLocationId].description,
-      timestamp: Date.now() + 2,
-    });
-
     return initialMessages;
   });
 
