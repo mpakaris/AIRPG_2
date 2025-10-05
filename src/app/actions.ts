@@ -25,7 +25,17 @@ function createMessage(
         const chapter = game.chapters[state.currentChapterId];
         const isAlreadyExamined = state.flags.includes(examinedObjectFlag(id));
         
-        if (showEvenIfExamined || !isAlreadyExamined) {
+        // Default to showing the image.
+        let shouldShowImage = true;
+        
+        // If showEvenIfExamined is not explicitly true, then check if it's already examined.
+        if (showEvenIfExamined !== true) {
+            if (isAlreadyExamined) {
+                shouldShowImage = false;
+            }
+        }
+
+        if (shouldShowImage) {
             const item = chapter.items[id as ItemId];
             const npc = chapter.npcs[id as NpcId];
             const gameObject = chapter.gameObjects[id as GameObjectId];
@@ -299,7 +309,7 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
             narratorName, 
             itemInInventory.description,
             'image',
-            { id: itemInInventory.id, game, state: newState, showEvenIfExamined: false }
+            { id: itemInInventory.id, game, state: newState, showEvenIfExamined: isAlreadyExamined }
         );
         
         if (!isAlreadyExamined) {
@@ -342,7 +352,7 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
             narratorName,
             messageContent,
             'image',
-            { id: liveObject.id, game, state: actionResult.newState, showEvenIfExamined: isAlreadyExamined ? false : true }
+            { id: liveObject.id, game, state: actionResult.newState, showEvenIfExamined: isAlreadyExamined }
         );
         
         if (!actionResult.newState.flags.includes(flag)) {
@@ -535,21 +545,17 @@ function handleInventory(state: PlayerState, game: Game): CommandResult {
 }
 
 function handlePassword(state: PlayerState, command: string, game: Game): CommandResult {
-    // Robustly find the phrase in quotes
-    const phraseMatch = command.match(/"(.*?)"/);
-    if (!phraseMatch) {
-        return { newState: state, messages: [createMessage('system', 'System', 'Invalid password format. Please enclose the password phrase in quotes, e.g., password <object> "<phrase>"')] };
+    // This function now expects a command in the format: `password <object name> <phrase>`
+    // The AI is responsible for ensuring the format is correct.
+    const parts = command.split(' ');
+    if (parts.length < 3) {
+        return { newState: state, messages: [createMessage('system', 'System', 'Invalid password command format.')] };
     }
-    const phrase = phraseMatch[1];
+
+    const objectName = parts[1]; // e.g., "notebook"
+    const phrase = parts.slice(2).join(' '); // e.g., "Justice for Silas Bloom"
     
-    // Create a version of the command with the phrase and "password" removed.
-    let objectNameCandidate = command.replace(`"${phrase}"`, '').replace(/password/i, '').trim();
-
-    if (!objectNameCandidate) {
-        return { newState: state, messages: [createMessage('system', 'System', `Invalid password format. Could not determine object from command: "${command}"`)] };
-    }
-
-    return processPassword(state, objectNameCandidate, phrase, game);
+    return processPassword(state, objectName, phrase, game);
 }
 
 
@@ -635,14 +641,13 @@ export async function processCommand(
   playerInput: string
 ): Promise<CommandResult> {
   const game = gameCartridge;
-  const lowerInput = playerInput.toLowerCase();
   const chapter = game.chapters[currentState.currentChapterId];
   const narratorName = game.narratorName || "Narrator";
   const completionFlag = chapterCompletionFlag(currentState.currentChapterId);
 
   // Post-chapter state
   if (currentState.flags.includes(completionFlag)) {
-      if (chapter.nextChapter?.transitionCommand && lowerInput.includes(chapter.nextChapter.transitionCommand)) {
+      if (chapter.nextChapter?.transitionCommand && playerInput.toLowerCase().includes(chapter.nextChapter.transitionCommand)) {
           return {
               newState: currentState, // In future, this would change state to next chapter
               messages: [createMessage('system', 'System', `Transitioning to ${chapter.nextChapter.title}... (Not yet implemented)`)]
@@ -687,19 +692,6 @@ export async function processCommand(
   if (currentState.interactingWithObject) {
       return await handleObjectInteraction(currentState, playerInput, game);
   }
-
-    // --- Password Command Fast Path ---
-    if (lowerInput.includes('password') && lowerInput.includes('"')) {
-        const agentMessage = createMessage('agent', narratorName, "Let's see if that works...");
-        const result = handlePassword(currentState, playerInput, game);
-        
-        // Prepend the agent message only if the command didn't fail with a system message
-        if (!result.messages.some(m => m.sender === 'system')) {
-            result.messages.unshift(agentMessage);
-        }
-        return result;
-    }
-
 
   // AI processing for general commands
   try {
@@ -784,7 +776,6 @@ export async function processCommand(
             result = handleInventory(currentState, game);
             break;
         case 'password':
-            // This is a fallback if the fast path fails for some reason.
             result = handlePassword(currentState, commandToExecute, game);
             break;
         case 'invalid':

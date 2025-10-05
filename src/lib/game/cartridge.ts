@@ -47,7 +47,7 @@ export const game: Game = {
                 items: [],
                 isOpenable: true,
                 isLocked: true,
-                unlocksWithPhrase: 'JUSTICE FOR SILAS BLOOM',
+                unlocksWithPhrase: 'Justice for Silas Bloom',
                 onExamine: {
                     locked: {
                         message: "A lock prevents it from being opened without the right password. A mini-game opens on your device.",
