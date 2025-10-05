@@ -73,35 +73,6 @@ const MessageContent: FC<{ message: Message }> = ({ message }) => {
         )
     }
 
-    if (message.type === 'article' && message.image) {
-        return (
-             <Dialog>
-                <DialogTrigger asChild>
-                <button className="mt-2 block w-full cursor-pointer">
-                    <Image
-                        src={message.image.url}
-                        alt={message.image.description}
-                        width={200}
-                        height={200}
-                        className="rounded-lg border-2 border-border"
-                        data-ai-hint={message.image.hint}
-                    />
-                </button>
-                </DialogTrigger>
-                <DialogContent className="max-w-3xl">
-                    <DialogTitle className="sr-only">{message.image.description}</DialogTitle>
-                    <Image
-                        src={message.image.url}
-                        alt={message.image.description}
-                        width={800}
-                        height={600}
-                        className="mx-auto rounded-lg"
-                    />
-                </DialogContent>
-            </Dialog>
-        )
-    }
-
     const content = message.content.replace(/_|\*/g, '');
     const parts = content.split(urlRegex);
 
@@ -174,7 +145,7 @@ const MessageLog: FC<Pick<GameScreenProps, 'messages'>> = ({ messages }) => {
                   </div>
                 )}
                 <MessageContent message={message} />
-                 {message.type === 'image' && message.image && (
+                 {message.image && (
                     <Dialog>
                       <DialogTrigger asChild>
                         <button className="mt-2 block w-full cursor-pointer">
@@ -238,3 +209,5 @@ export const GameScreen: FC<GameScreenProps> = ({ messages, onCommandSubmit, isL
     </div>
   );
 };
+
+    

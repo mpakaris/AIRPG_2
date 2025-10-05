@@ -16,26 +16,35 @@ function createMessage(
   senderName: string,
   content: string,
   type: Message['type'] = 'text',
-  imageDetails?: { id: ItemId | NpcId | GameObjectId, isAlreadyExamined: boolean }
+  imageDetails?: { id: ItemId | NpcId | GameObjectId, game: Game, state: PlayerState, showEvenIfExamined?: boolean }
 ): Message {
     let image;
     
-    // Only add the image if it hasn't been examined before.
-    if (imageDetails && !imageDetails.isAlreadyExamined) {
-        const chapter = gameCartridge.chapters[gameCartridge.startChapterId];
-        const { id } = imageDetails;
-
-        const item = chapter.items[id as ItemId];
-        const npc = chapter.npcs[id as NpcId];
-        const gameObject = chapter.gameObjects[id as GameObjectId];
-        const liveGameObject = gameObject ? getLiveGameObject(gameObject.id, getInitialState(gameCartridge), gameCartridge) : null;
-
-
-        if (item?.image) image = item.image;
-        else if (npc?.image) image = npc.image;
-        else if (liveGameObject?.isLocked && gameObject?.image) image = gameObject.image;
-        else if (!liveGameObject?.isLocked && gameObject?.unlockedImage) image = gameObject.unlockedImage;
-        else if (gameObject?.image) image = gameObject.image;
+    if (imageDetails) {
+        const { id, game, state, showEvenIfExamined } = imageDetails;
+        const chapter = game.chapters[state.currentChapterId];
+        const isAlreadyExamined = state.flags.includes(examinedObjectFlag(id));
+        
+        // Only add the image if it hasn't been examined, or if we force it
+        if (!isAlreadyExamined || showEvenIfExamined) {
+            const item = chapter.items[id as ItemId];
+            const npc = chapter.npcs[id as NpcId];
+            const gameObject = chapter.gameObjects[id as GameObjectId];
+            
+            // Special handling for unlocked game objects
+            if (gameObject) {
+                const liveObject = getLiveGameObject(gameObject.id, state, game);
+                if (!liveObject.isLocked && liveObject.unlockedImage) {
+                    image = liveObject.unlockedImage;
+                } else {
+                    image = gameObject.image;
+                }
+            } else if (item?.image) {
+                image = item.image;
+            } else if (npc?.image) {
+                image = npc.image;
+            }
+        }
     }
 
 
@@ -50,7 +59,7 @@ function createMessage(
   };
 }
 
-// Dummy initial state for getLiveGameObject calls outside of component lifecycle
+
 function getInitialState(game: Game): PlayerState {
     return {
         currentGameId: game.id,
@@ -99,20 +108,17 @@ function processActions(initialState: PlayerState, actions: Action[], game: Game
                 }
                 break;
             case 'SHOW_MESSAGE':
-                 const imageId = action.imageId;
-                 const isExamined = imageId ? newState.flags.includes(examinedObjectFlag(imageId)) : false;
-
-                 if (imageId && !isExamined) {
-                     newState.flags.push(examinedObjectFlag(imageId));
-                 }
-
                 messages.push(createMessage(
                     action.sender,
                     action.senderName || narratorName,
                     action.content,
                     action.messageType,
-                    imageId ? { id: imageId, isAlreadyExamined: isExamined } : undefined
+                    action.imageId ? { id: action.imageId, game, state: newState } : undefined
                 ));
+                 // After showing a message with an image, flag it as examined.
+                 if (action.imageId && !newState.flags.includes(examinedObjectFlag(action.imageId))) {
+                     newState.flags.push(examinedObjectFlag(action.imageId));
+                 }
                 break;
             case 'END_CONVERSATION':
                  if (newState.activeConversationWith) {
@@ -199,15 +205,14 @@ async function handleConversation(state: PlayerState, playerInput: string, game:
         npcMessageContent = selectedResponse.response;
         actionsToProcess = selectedResponse.actions || [];
     }
-
-    const initialMessage = createMessage(npc.id as NpcId, npc.name, `"${npcMessageContent}"`);
     
-    const actionResult = processActions(state, actionsToProcess, game);
+    const initialResult = processActions(state, actionsToProcess, game);
+    
+    const initialMessage = createMessage(npc.id as NpcId, npc.name, `"${npcMessageContent}"`);
+    initialResult.messages.unshift(initialMessage);
 
-    return {
-        newState: actionResult.newState,
-        messages: [initialMessage, ...actionResult.messages]
-    };
+
+    return initialResult;
 }
 
 // --- Object Interaction Helper ---
@@ -273,14 +278,24 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
       .find(item => item?.name.toLowerCase().includes(targetName));
 
   if (itemInInventory) {
-      const isExamined = newState.flags.includes(examinedObjectFlag(itemInInventory.id));
-      if (!isExamined) {
-          newState.flags.push(examinedObjectFlag(itemInInventory.id));
+      const flag = examinedObjectFlag(itemInInventory.id);
+      const isAlreadyExamined = newState.flags.includes(flag);
+      
+      const message = createMessage(
+          'narrator', 
+          narratorName, 
+          itemInInventory.description, 
+          'image', 
+          { id: itemInInventory.id, game, state: newState }
+      );
+      
+      if (!isAlreadyExamined) {
+          newState.flags.push(flag);
       }
 
       return {
           newState,
-          messages: [createMessage('narrator', narratorName, itemInInventory.description, 'image', { id: itemInInventory.id, isAlreadyExamined: isExamined })]
+          messages: [message]
       };
   }
   
@@ -291,35 +306,45 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
 
   if (targetObjectId) {
       const liveObject = getLiveGameObject(targetObjectId, state, game);
-      const isExamined = newState.flags.includes(examinedObjectFlag(liveObject.id));
-      if (!isExamined) {
-          newState.flags.push(examinedObjectFlag(liveObject.id));
-      }
-      
+      const flag = examinedObjectFlag(liveObject.id);
+      const isAlreadyExamined = newState.flags.includes(flag);
+
       const actions: Action[] = [];
-      let messageContent = `You examine the ${liveObject.name}.`; // Default message
+      let messageContent: string;
       
       const onExamine = liveObject.onExamine;
+
       if (liveObject.isLocked && onExamine?.locked) {
           messageContent = onExamine.locked.message;
           actions.push(...(onExamine.locked.actions || []));
       } else if (!liveObject.isLocked && onExamine?.unlocked) {
           messageContent = onExamine.unlocked.message;
           actions.push(...(onExamine.unlocked.actions || []));
-      } else if (onExamine?.default) {
-          messageContent = onExamine.default.message;
-          actions.push(...(onExamine.default.actions || []));
+      } else {
+           messageContent = onExamine?.default?.message || `You examine the ${liveObject.name}.`;
+           actions.push(...(onExamine?.default?.actions || []));
       }
       
-      actions.unshift({ 
-          type: 'SHOW_MESSAGE', 
-          sender: 'narrator', 
-          senderName: narratorName, 
-          content: messageContent,
-          imageId: liveObject.image ? liveObject.id : undefined
-      });
+      // We process other actions first to update state (e.g. unlocking)
+      const actionResult = processActions(newState, actions, game);
       
-      return processActions(newState, actions, game);
+      // Then we create the primary message with the potentially updated state
+      const mainMessage = createMessage(
+          'narrator', 
+          narratorName, 
+          messageContent,
+          'image',
+          { id: liveObject.id, game, state: actionResult.newState }
+      );
+      
+      // Add the examined flag to the *final* new state
+      if (!isAlreadyExamined) {
+          actionResult.newState.flags.push(flag);
+      }
+      
+      actionResult.messages.unshift(mainMessage);
+      
+      return actionResult;
   }
 
   return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${targetName}" here.`)] };
@@ -452,20 +477,29 @@ async function handleTalk(state: PlayerState, npcName: string, game: Game): Prom
         let newState = { ...state, activeConversationWith: npc.id, interactingWithObject: null };
         let messages: Message[] = [];
         
-        if (npc.startConversationActions) {
-            const result = processActions(newState, npc.startConversationActions, game);
-            newState = result.newState;
-            messages.push(...result.messages);
-        }
+        const startActions = npc.startConversationActions || [];
+        const actionResult = processActions(newState, startActions, game);
+        newState = actionResult.newState;
+        messages.push(...actionResult.messages);
 
         messages.unshift(createMessage('system', 'System', `You are now talking to ${npc.name}. Type your message to continue the conversation. To end the conversation, type 'goodbye'.`));
         
         const welcomeMessage = (npc as NPC).welcomeMessage || "Hello.";
-        const isExamined = newState.flags.includes(examinedObjectFlag(npc.id));
-        if (!isExamined) {
-            newState.flags.push(examinedObjectFlag(npc.id));
+        
+        const flag = examinedObjectFlag(npc.id);
+        const isAlreadyExamined = newState.flags.includes(flag);
+        
+        messages.push(createMessage(
+            npc.id as NpcId, 
+            npc.name, 
+            `"${welcomeMessage}"`, 
+            'image', 
+            { id: npc.id, game, state: newState }
+        ));
+
+        if (!isAlreadyExamined) {
+            newState.flags.push(flag);
         }
-        messages.push(createMessage(npc.id as NpcId, npc.name, `"${welcomeMessage}"`, 'image', { id: npc.id, isAlreadyExamined: isExamined }));
 
         return { newState, messages };
     }
@@ -525,8 +559,19 @@ function handlePassword(state: PlayerState, command: string, game: Game): Comman
         const actions = targetObject.onUnlock?.actions || [];
         const result = processActions(newState, actions, game);
         
-        const unlockMessage = createMessage('narrator', narratorName, targetObject.onUnlock?.successMessage || "It unlocks!", 'image', { id: targetObject.id, isAlreadyExamined: true }); // Mark as examined to show unlocked image
+        const unlockMessage = createMessage(
+            'narrator', 
+            narratorName, 
+            targetObject.onUnlock?.successMessage || "It unlocks!", 
+            'image', 
+            { id: targetObject.id, game, state: result.newState, showEvenIfExamined: true }
+        );
         result.messages.unshift(unlockMessage);
+
+        const flag = examinedObjectFlag(targetObject.id);
+        if (!result.newState.flags.includes(flag)) {
+            result.newState.flags.push(flag);
+        }
         
         return result;
     }
@@ -685,7 +730,18 @@ export async function processCommand(
              result = await handleTalk(currentState, restOfCommand.replace('to ', ''), game);
              break;
         case 'look':
-             result = handleLook(currentState, game, lookAroundSummary);
+             if (restOfCommand.startsWith('behind')) {
+                 const targetName = restOfCommand.replace('behind ', '').trim();
+                 const targetObject = objectsInLocation.find(obj => obj.name.toLowerCase().includes(targetName));
+                 if (targetObject) {
+                     const message = targetObject.onFailure?.['look behind'] || targetObject.onFailure?.default || `You look behind the ${targetObject.name} and see nothing out of the ordinary.`;
+                     result = { newState: currentState, messages: [createMessage('narrator', narratorName, message)] };
+                 } else {
+                     result = { newState: currentState, messages: [createMessage('narrator', narratorName, "You don't see that here.")] };
+                 }
+             } else {
+                result = handleLook(currentState, game, lookAroundSummary);
+             }
              break;
         case 'inventory':
             result = handleInventory(currentState, game);
@@ -712,10 +768,12 @@ export async function processCommand(
                 if (failureMessage) {
                     result = { newState: currentState, messages: [createMessage('narrator', narratorName, failureMessage)] };
                 } else {
+                    // Fallback if no specific failure message is found
                     result = { newState: currentState, messages: [agentMessage] };
                 }
             } else {
-                result = { newState: currentState, messages: [agentMessage] }; // Default to agent's message if command is unclear
+                // Fallback if no target object is identified
+                result = { newState: currentState, messages: [agentMessage] }; 
             }
             break;
     }
@@ -750,3 +808,4 @@ export async function processCommand(
   }
 }
 
+    
