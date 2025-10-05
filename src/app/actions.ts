@@ -299,7 +299,7 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
             narratorName, 
             itemInInventory.description,
             'image',
-            { id: itemInInventory.id, game, state: newState, showEvenIfExamined: true }
+            { id: itemInInventory.id, game, state: newState, showEvenIfExamined: false }
         );
         
         if (!isAlreadyExamined) {
@@ -317,6 +317,7 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
     if (targetObjectId) {
         const liveObject = getLiveGameObject(targetObjectId, state, game);
         const flag = examinedObjectFlag(liveObject.id);
+        const isAlreadyExamined = newState.flags.includes(flag);
         
         const actions: Action[] = [];
         let messageContent: string;
@@ -341,7 +342,7 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
             narratorName,
             messageContent,
             'image',
-            { id: liveObject.id, game, state: actionResult.newState, showEvenIfExamined: true }
+            { id: liveObject.id, game, state: actionResult.newState, showEvenIfExamined: isAlreadyExamined ? false : true }
         );
         
         if (!actionResult.newState.flags.includes(flag)) {
@@ -541,25 +542,14 @@ function handlePassword(state: PlayerState, command: string, game: Game): Comman
     }
     const phrase = phraseMatch[1];
     
-    // Find where the phrase starts
-    const phraseStartIndex = command.indexOf(`"${phrase}"`);
+    // Create a version of the command with the phrase and "password" removed.
+    let objectNameCandidate = command.replace(`"${phrase}"`, '').replace(/password/i, '').trim();
 
-    // The object name is everything between "password" and the start of the phrase
-    const commandVerb = "password";
-    // Find the beginning of the object name
-    const commandVerbIndex = command.toLowerCase().indexOf(commandVerb);
-    
-    if (commandVerbIndex === -1) {
-        return { newState: state, messages: [createMessage('system', 'System', `Invalid password format. Could not find the word "password" in command: "${command}"`)] };
+    if (!objectNameCandidate) {
+        return { newState: state, messages: [createMessage('system', 'System', `Invalid password format. Could not determine object from command: "${command}"`)] };
     }
 
-    const objectName = command.substring(commandVerbIndex + commandVerb.length, phraseStartIndex).trim();
-
-    if (!objectName || !phrase) {
-        return { newState: state, messages: [createMessage('system', 'System', `Invalid password format. Could not determine object or phrase from command: "${command}"`)] };
-    }
-
-    return processPassword(state, objectName, phrase, game);
+    return processPassword(state, objectNameCandidate, phrase, game);
 }
 
 
@@ -699,10 +689,10 @@ export async function processCommand(
   }
 
     // --- Password Command Fast Path ---
-    // Create a dedicated path for the password command to make it more reliable.
     if (lowerInput.includes('password') && lowerInput.includes('"')) {
         const agentMessage = createMessage('agent', narratorName, "Let's see if that works...");
         const result = handlePassword(currentState, playerInput, game);
+        
         // Prepend the agent message only if the command didn't fail with a system message
         if (!result.messages.some(m => m.sender === 'system')) {
             result.messages.unshift(agentMessage);
@@ -794,6 +784,7 @@ export async function processCommand(
             result = handleInventory(currentState, game);
             break;
         case 'password':
+            // This is a fallback if the fast path fails for some reason.
             result = handlePassword(currentState, commandToExecute, game);
             break;
         case 'invalid':
