@@ -631,7 +631,6 @@ export async function processCommand(
     });
 
     const agentMessage = createMessage('agent', narratorName, `${aiResponse.agentResponse}`);
-
     const commandToExecute = aiResponse.commandToExecute.toLowerCase();
     
     if (commandToExecute === 'invalid') {
