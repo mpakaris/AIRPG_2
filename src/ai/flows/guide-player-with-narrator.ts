@@ -16,7 +16,7 @@ const GuidePlayerWithNarratorInputSchema = z.object({
   gameSpecifications: z.string().describe('The overall specifications and rules of the game.'),
   gameState: z.string().describe('A detailed summary of the current state of the apgame, including chapter goal, player location, inventory, visible objects, and NPCs present.'),
   playerCommand: z.string().describe('The command or action the player wants to perform.'),
-  availableCommands: z.string().describe('A list of available commands in the game.'),
+  availableCommands: z.string().describe('A list of available commands in the game. This might be a global list or a smaller, context-specific list for an interaction.'),
 });
 export type GuidePlayerWithNarratorInput = z.infer<typeof GuidePlayerWithNarratorInputSchema>;
 
