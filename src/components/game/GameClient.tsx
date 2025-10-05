@@ -16,24 +16,42 @@ interface GameClientProps {
 
 export const GameClient: FC<GameClientProps> = ({ game, initialGameState }) => {
   const [playerState, setPlayerState] = useState<PlayerState>(initialGameState);
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 'start',
-      sender: 'narrator',
-      senderName: 'Narrator',
-      type: 'text',
-      content: `Welcome to ${game.title}. Your journey begins.`,
-      timestamp: Date.now(),
-    },
-    {
+  const [messages, setMessages] = useState<Message[]>(() => {
+    const startChapter = game.chapters[initialGameState.currentChapterId];
+    const initialMessages: Message[] = [
+      {
+        id: 'start',
+        sender: 'narrator',
+        senderName: 'Narrator',
+        type: 'text',
+        content: `Welcome to ${game.title}. Your journey begins.`,
+        timestamp: Date.now(),
+      },
+    ];
+
+    if (startChapter.introductionVideo) {
+      initialMessages.push({
+        id: 'intro-video',
+        sender: 'narrator',
+        senderName: 'Narrator',
+        type: 'video',
+        content: startChapter.introductionVideo,
+        timestamp: Date.now() + 1,
+      });
+    }
+
+    initialMessages.push({
       id: 'start-location',
       sender: 'narrator',
       senderName: 'Narrator',
       type: 'text',
-      content: game.chapters[initialGameState.currentChapterId].locations[initialGameState.currentLocationId].description,
-      timestamp: Date.now(),
-    },
-  ]);
+      content: startChapter.locations[initialGameState.currentLocationId].description,
+      timestamp: Date.now() + 2,
+    });
+
+    return initialMessages;
+  });
+
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
 

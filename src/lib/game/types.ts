@@ -139,6 +139,7 @@ export type Chapter = {
   gameObjects: Record<GameObjectId, GameObject>;
   items: Record<ItemId, Item>;
   npcs: Record<NpcId, NPC>;
+  introductionVideo?: string;
   postChapterMessage?: string;
   completionVideo?: string;
   nextChapter?: NextChapterInfo;

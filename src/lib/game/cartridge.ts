@@ -2,8 +2,8 @@
 import type { Game, ChapterId, LocationId, ItemId, GameObjectId, NpcId, GameId, Flag } from './types';
 
 export const game: Game = {
-  id: 'the-starlight-murder' as GameId,
-  title: 'The Crimson Case',
+  id: 'blood-on-brass' as GameId,
+  title: 'The Midnight Lounge Jazz Club Case',
   description: "You are Burt Macklin, FBI. A mysterious stranger hands you a worn notebook from the 1940s—the secret case file of a forgotten murder. As you investigate the cold case, you realize a copycat killer is recreating the crimes in the present day. You must solve the past to stop a killer in the present.",
   gameType: 'Escape Game',
   narratorName: 'Agent Sharma',
@@ -14,6 +14,7 @@ export const game: Game = {
         id: 'ch1-the-cafe' as ChapterId,
         title: 'A Blast from the Past',
         goal: "Unlock the contents of the notebook.",
+        introductionVideo: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759670681/CH_I_Intro_ccy0og.mov',
         completionVideo: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759591583/Pr%C3%A4sentation1_ke0qg7.mp4',
         postChapterMessage: "Burt, it seems we got all the information here. Maybe we should continue elsewhere.",
         nextChapter: {
@@ -32,7 +33,7 @@ export const game: Game = {
             'loc_cafe': {
                 id: 'loc_cafe' as LocationId,
                 name: 'The Cafe',
-                description: 'A bustling downtown cafe, smelling of coffee and rain. The afternoon light is dim. A puddle of rainwater is near the door, and a discarded newspaper lies on an empty table.',
+                description: 'A bustling downtown cafe, smelling of coffee and rain. A puddle of rainwater is near the door, and a discarded newspaper lies on an empty table.',
                 gridPosition: { x: 1, y: 1 },
                 objects: ['obj_brown_notebook', 'obj_chalkboard_menu', 'obj_newspaper', 'obj_bookshelf', 'obj_painting'] as GameObjectId[],
                 npcs: ['npc_barista', 'npc_manager'] as NpcId[],
@@ -238,6 +239,3 @@ export const game: Game = {
     }
   }
 };
-
-    
-    
