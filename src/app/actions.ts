@@ -25,10 +25,8 @@ function createMessage(
         const chapter = game.chapters[state.currentChapterId];
         const isAlreadyExamined = state.flags.includes(examinedObjectFlag(id));
         
-        // Default to showing the image.
         let shouldShowImage = true;
         
-        // If showEvenIfExamined is not explicitly true, then check if it's already examined.
         if (showEvenIfExamined !== true) {
             if (isAlreadyExamined) {
                 shouldShowImage = false;
@@ -65,20 +63,6 @@ function createMessage(
     image,
     timestamp: Date.now(),
   };
-}
-
-
-function getInitialState(game: Game): PlayerState {
-    return {
-        currentGameId: game.id,
-        currentChapterId: game.startChapterId,
-        currentLocationId: game.chapters[game.startChapterId].startLocationId,
-        inventory: [],
-        flags: [],
-        objectStates: {},
-        activeConversationWith: null,
-        interactingWithObject: null,
-    };
 }
 
 
@@ -126,7 +110,6 @@ function processActions(initialState: PlayerState, actions: Action[], game: Game
                 );
                 messages.push(message);
 
-                 // After showing a message with an image, flag it as examined.
                  if (messageImageId && !newState.flags.includes(examinedObjectFlag(messageImageId))) {
                      newState.flags.push(examinedObjectFlag(messageImageId));
                  }
@@ -198,7 +181,6 @@ async function handleConversation(state: PlayerState, playerInput: string, game:
         return result;
     }
 
-    // Prepare canned responses for the AI
     const cannedResponsesForAI = npc.cannedResponses?.map(r => ({ topic: r.topic, response: r.response })) || [];
 
     const aiResponse = await selectNpcResponse({
@@ -249,7 +231,6 @@ async function handleObjectInteraction(state: PlayerState, playerInput: string, 
 
     const availableInteractionCommands = Object.keys(currentInteractionState.commands);
 
-    // Use AI to interpret the player's intent within the context of the interaction
     const aiResponse = await guidePlayerWithNarrator({
         promptContext: `The player is currently examining the ${liveObject.name}. Your job is to map their input to one of the available actions.`,
         gameSpecifications: game.description,
@@ -269,18 +250,14 @@ async function handleObjectInteraction(state: PlayerState, playerInput: string, 
         
         result.messages.unshift(agentMessage);
 
-        // After processing actions, check for chapter completion.
         const completion = checkChapterCompletion(result.newState, game);
         if (completion.isComplete) {
-            // Use a consistent way to generate the completion flag
             result.newState.flags.push(chapterCompletionFlag(result.newState.currentChapterId));
             result.messages.push(...completion.messages);
         }
         
         return result;
     } else {
-        // If AI returns 'invalid' or a command not in the list, show the agent's guiding message
-        // and repeat the description of the current interaction state.
         return { newState: state, messages: [agentMessage, createMessage('narrator', narratorName, currentInteractionState.description)] };
     }
 }
@@ -295,7 +272,6 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
     targetName = targetName.toLowerCase();
     const narratorName = game.narratorName || "Narrator";
     
-    // Check inventory first
     const itemInInventory = state.inventory
         .map(id => chapter.items[id])
         .find(item => item?.name.toLowerCase().includes(targetName));
@@ -309,7 +285,7 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
             narratorName, 
             itemInInventory.description,
             'image',
-            { id: itemInInventory.id, game, state: newState, showEvenIfExamined: isAlreadyExamined }
+            { id: itemInInventory.id, game, state: newState, showEvenIfExamined: false }
         );
         
         if (!isAlreadyExamined) {
@@ -319,7 +295,6 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
         return { newState, messages: [message] };
     }
   
-    // Then check objects in location
     const targetObjectId = location.objects.find(id => 
         chapter.gameObjects[id]?.name.toLowerCase().includes(targetName)
     );
@@ -352,7 +327,7 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
             narratorName,
             messageContent,
             'image',
-            { id: liveObject.id, game, state: actionResult.newState, showEvenIfExamined: isAlreadyExamined }
+            { id: liveObject.id, game, state: actionResult.newState, showEvenIfExamined: false }
         );
         
         if (!actionResult.newState.flags.includes(flag)) {
@@ -375,11 +350,9 @@ function handleTake(state: PlayerState, targetName: string, game: Game): Command
   targetName = targetName.toLowerCase();
   const narratorName = game.narratorName || "Narrator";
   
-  // Find the object that *contains* the item we want to take.
   for (const objId of location.objects) {
     const liveObject = getLiveGameObject(objId, newState, game);
     
-    // Find the specific item by name within the object's potential items.
     const itemToTakeId = (liveObject.items || []).find(itemId => 
         chapter.items[itemId]?.name.toLowerCase() === targetName
     );
@@ -496,7 +469,7 @@ async function handleTalk(state: PlayerState, npcName: string, game: Game): Prom
         
         const startActions = npc.startConversationActions || [];
         const actionResult = processActions(newState, startActions, game);
-newState = actionResult.newState;
+        newState = actionResult.newState;
         messages.push(...actionResult.messages);
 
         messages.unshift(createMessage('system', 'System', `You are now talking to ${npc.name}. Type your message to continue the conversation. To end the conversation, type 'goodbye'.`));
@@ -510,7 +483,7 @@ newState = actionResult.newState;
             npc.name,
             `"${welcomeMessage}"`,
             'image',
-            { id: npc.id, game, state: newState, showEvenIfExamined: true }
+            { id: npc.id, game, state: newState, showEvenIfExamined: false }
         );
         messages.push(npcMessage);
 
@@ -545,16 +518,35 @@ function handleInventory(state: PlayerState, game: Game): CommandResult {
 }
 
 function handlePassword(state: PlayerState, command: string, game: Game): CommandResult {
-    // This function expects a command in the format: `password <object name> <phrase>`
     const parts = command.split(' ');
     if (parts.length < 3) {
         return { newState: state, messages: [createMessage('system', 'System', 'Invalid password command format. e.g., password <object> <phrase>')] };
     }
 
     const verb = parts[0];
-    const phrase = parts.slice(2).join(' ');
-    const objectName = parts[1];
-    
+    const phraseParts = [];
+    let objectNameParts = [];
+    let foundPhrase = false;
+    for (let i = 1; i < parts.length; i++) {
+        if(foundPhrase) {
+            phraseParts.push(parts[i]);
+            continue;
+        }
+        const chapter = game.chapters[state.currentChapterId];
+        const obj = Object.values(chapter.gameObjects).find(o => o.name.toLowerCase().includes(parts[i].toLowerCase()));
+        
+        if(obj) {
+             objectNameParts.push(parts[i]);
+        } else {
+             // Heuristic: if we find a word that's not part of any object name, assume the rest is the phrase
+             phraseParts.push(...parts.slice(i));
+             foundPhrase = true;
+        }
+    }
+
+    const objectName = objectNameParts.join(' ');
+    const phrase = phraseParts.join(' ');
+
     return processPassword(state, objectName, phrase, game);
 }
 
@@ -605,7 +597,6 @@ function processPassword(state: PlayerState, objectName: string, phrase: string,
     return { newState: state, messages: [createMessage('narrator', narratorName, targetObject.onUnlock?.failMessage || 'That password doesn\'t work.')] };
 }
 
-// --- Chapter Completion Check ---
 const chapterCompletionFlag = (chapterId: ChapterId) => `chapter_${chapterId}_complete` as Flag;
 
 function checkChapterCompletion(state: PlayerState, game: Game): { isComplete: boolean; messages: Message[] } {
@@ -645,11 +636,10 @@ export async function processCommand(
   const narratorName = game.narratorName || "Narrator";
   const completionFlag = chapterCompletionFlag(currentState.currentChapterId);
 
-  // Post-chapter state
   if (currentState.flags.includes(completionFlag)) {
       if (chapter.nextChapter?.transitionCommand && playerInput.toLowerCase().includes(chapter.nextChapter.transitionCommand)) {
           return {
-              newState: currentState, // In future, this would change state to next chapter
+              newState: currentState,
               messages: [createMessage('system', 'System', `Transitioning to ${chapter.nextChapter.title}... (Not yet implemented)`)]
           };
       }
@@ -659,7 +649,6 @@ export async function processCommand(
       };
   }
 
-  // Dev command to complete a chapter
   if (playerInput.startsWith('dev:complete_')) {
     const chapterId = playerInput.replace('dev:complete_', '') as ChapterId;
     const targetChapter = game.chapters[chapterId];
@@ -685,7 +674,6 @@ export async function processCommand(
     }
   }
 
-  // Handle special interaction states first.
   if (currentState.activeConversationWith) {
       return await handleConversation(currentState, playerInput, game);
   }
@@ -693,7 +681,6 @@ export async function processCommand(
       return await handleObjectInteraction(currentState, playerInput, game);
   }
 
-  // AI processing for general commands
   try {
     const location = chapter.locations[currentState.currentLocationId];
     const objectsInLocation = location.objects.map(id => getLiveGameObject(id, currentState, game));
@@ -732,7 +719,6 @@ export async function processCommand(
     
     let result: CommandResult;
     
-    // Execute the command determined by the AI
     switch (verb) {
         case 'examine':
             result = handleExamine(currentState, restOfCommand, game);
@@ -768,7 +754,6 @@ export async function processCommand(
                      result = { newState: currentState, messages: [createMessage('narrator', narratorName, "You don't see that here.")] };
                  }
              } else {
-                // If it's just "look" or "look at [something]", treat as examine
                 result = handleExamine(currentState, restOfCommand.replace('at ', ''), game);
              }
              break;
@@ -779,27 +764,22 @@ export async function processCommand(
             result = handlePassword(currentState, commandToExecute, game);
             break;
         case 'invalid':
-             // The AI has determined the command is invalid. Just show the agent's message.
              return { newState: currentState, messages: [agentMessage] };
         default:
-            // This handles generic verbs like 'move', 'break' that are not standard commands
             const targetObject = objectsInLocation.find(obj => restOfCommand.includes(obj.name.toLowerCase()));
             if (targetObject) {
                 const failureMessage = targetObject.onFailure?.[verb] || targetObject.onFailure?.default;
                 if (failureMessage) {
                     result = { newState: currentState, messages: [createMessage('narrator', narratorName, failureMessage)] };
                 } else {
-                    // Fallback if no specific failure message is found
                     result = { newState: currentState, messages: [agentMessage] };
                 }
             } else {
-                // Fallback if no target object is identified, or it's a pure conversational input
                 result = { newState: currentState, messages: [agentMessage] }; 
             }
             break;
     }
     
-    // Check for chapter completion
     const completion = checkChapterCompletion(result.newState, game);
     let finalMessages = [...result.messages];
 
@@ -808,7 +788,6 @@ export async function processCommand(
         finalMessages.push(...completion.messages);
     }
     
-    // Only add the agent's message if the command was successful and didn't come from the system.
     const hasSystemMessage = result.messages.some(m => m.sender === 'system');
 
     if (!hasSystemMessage) {
