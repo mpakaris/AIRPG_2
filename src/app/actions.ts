@@ -389,34 +389,39 @@ function handleGo(state: PlayerState, targetName: string, game: Game): CommandRe
     const currentLocation = chapter.locations[state.currentLocationId];
     targetName = targetName.toLowerCase();
     const narratorName = game.narratorName || "Narrator";
-    const completionFlag = chapterCompletionFlag(state.currentChapterId);
-    const isChapterComplete = state.flags.includes(completionFlag);
 
-    if (targetName === 'next_chapter' && isChapterComplete) {
-        const nextChapterId = chapter.nextChapter?.id;
-        if (nextChapterId && game.chapters[nextChapterId]) {
-            const nextChapter = game.chapters[nextChapterId];
-            const newState: PlayerState = {
-                ...state,
-                currentChapterId: nextChapterId,
-                currentLocationId: nextChapter.startLocationId,
-                activeConversationWith: null,
-                interactingWithObject: null,
-            };
-            const newLocation = nextChapter.locations[newState.currentLocationId];
-            return {
-                newState,
-                messages: [
-                    createMessage('system', 'System', `You arrive at the ${newLocation.name}.`),
-                    createMessage('narrator', narratorName, newLocation.description)
-                ]
-            };
+    // Check for chapter transition
+    if (targetName === 'next_chapter') {
+        const completion = checkChapterCompletion(state, game);
+        if (completion.isComplete) {
+            const nextChapterId = chapter.nextChapter?.id;
+            if (nextChapterId && game.chapters[nextChapterId]) {
+                const nextChapter = game.chapters[nextChapterId];
+                const newState: PlayerState = {
+                    ...state,
+                    currentChapterId: nextChapterId,
+                    currentLocationId: nextChapter.startLocationId,
+                    activeConversationWith: null,
+                    interactingWithObject: null,
+                };
+                const newLocation = nextChapter.locations[newState.currentLocationId];
+                return {
+                    newState,
+                    messages: [
+                        createMessage('system', 'System', `You arrive at the ${newLocation.name}.`),
+                        createMessage('narrator', narratorName, newLocation.description)
+                    ]
+                };
+            } else {
+                 return { newState: state, messages: [createMessage('system', 'System', `There is no next chapter defined.`)] };
+            }
         } else {
-             return { newState: state, messages: [createMessage('system', 'System', `There is no next chapter defined.`)] };
+            // Player is trying to leave before finishing the chapter
+            return { newState: state, messages: [createMessage('agent', narratorName, "Burt, I have a feeling that we are not done here.")] };
         }
     }
 
-
+    // Standard location movement
     let targetLocation: Location | undefined;
     targetLocation = Object.values(chapter.locations).find(loc => loc.name.toLowerCase() === targetName);
 
@@ -544,47 +549,37 @@ function handleInventory(state: PlayerState, game: Game): CommandResult {
     return { newState: state, messages: [createMessage('system', 'System', `You are carrying:\n${itemNames}`)] };
 }
 
+
 function handlePassword(state: PlayerState, command: string, game: Game): CommandResult {
     const narratorName = game.narratorName || "Narrator";
     const chapter = game.chapters[state.currentChapterId];
     const location = chapter.locations[state.currentLocationId];
     const objectsInLocation = location.objects.map(id => getLiveGameObject(id, state, game));
-    const commandParts = command.split(' ');
+    
+    const commandLower = command.toLowerCase();
+    
+    // Find the target object whose name is in the command
+    const targetObject = objectsInLocation.find(obj => commandLower.includes(obj.name.toLowerCase()));
 
-    // Verb should be 'password'
-    const verb = commandParts[0];
-    if (verb !== 'password') {
-        return { newState: state, messages: [createMessage('system', 'System', 'Invalid command for handlePassword.')] };
+    if (!targetObject) {
+        return { newState: state, messages: [createMessage('system', 'System', `You don't see that object here.`)] };
     }
 
-    // Find the target object
-    const objectNameParts: string[] = [];
-    const phraseParts: string[] = [];
-    let foundObject = false;
-
-    let targetObject;
-    for (const obj of objectsInLocation) {
-        if (command.toLowerCase().includes(obj.name.toLowerCase())) {
-            targetObject = obj;
-            break;
-        }
+    if (!targetObject.unlocksWithPhrase) {
+        return { newState: state, messages: [createMessage('narrator', narratorName, `You can't use a password on the ${targetObject.name}.`)] };
     }
     
-    if (!targetObject) {
-         return { newState: state, messages: [createMessage('system', 'System', `You don't see that object here.`)] };
-    }
-
-    const targetObjectNameLower = targetObject.name.toLowerCase();
-    const commandLower = command.toLowerCase();
-    const phrase = commandLower.split(targetObjectNameLower)[1]?.trim();
+    // Extract the phrase by removing the "password" verb and the object name
+    const objectNameIndex = commandLower.indexOf(targetObject.name.toLowerCase());
+    const phrase = command.substring(objectNameIndex + targetObject.name.length).trim().replace(/^"|"$/g, '');
 
     if (!phrase) {
         return { newState: state, messages: [createMessage('narrator', narratorName, 'You need to specify a password phrase.')] };
     }
     
-    const expectedPhrase = (targetObject.unlocksWithPhrase || "").trim().toLowerCase();
-    
-    if (expectedPhrase === phrase) {
+    const expectedPhrase = targetObject.unlocksWithPhrase;
+
+    if (phrase.toLowerCase() === expectedPhrase.toLowerCase()) {
         let newState = { ...state, objectStates: { ...state.objectStates }};
         newState.objectStates[targetObject.id] = { ...newState.objectStates[targetObject.id], isLocked: false };
         
@@ -604,10 +599,16 @@ function handlePassword(state: PlayerState, command: string, game: Game): Comman
             result.newState.flags.push(examinedObjectFlag(targetObject.id));
         }
         
-        return result;
-    }
+        const completion = checkChapterCompletion(result.newState, game);
+        if (completion.isComplete && !result.newState.flags.includes(chapterCompletionFlag(result.newState.currentChapterId))) {
+             result.newState.flags.push(chapterCompletionFlag(result.newState.currentChapterId));
+             result.messages.push(...completion.messages);
+        }
 
-    return { newState: state, messages: [createMessage('narrator', narratorName, targetObject.onUnlock?.failMessage || 'That password doesn\'t work.')] };
+        return result;
+    } else {
+        return { newState: state, messages: [createMessage('narrator', narratorName, targetObject.onUnlock?.failMessage || 'That password doesn\'t work.')] };
+    }
 }
 
 
@@ -649,7 +650,7 @@ export async function processCommand(
   const chapter = game.chapters[currentState.currentChapterId];
   const narratorName = game.narratorName || "Narrator";
   const completionFlag = chapterCompletionFlag(currentState.currentChapterId);
-  const isChapterComplete = currentState.flags.includes(completionFlag);
+
 
   if (playerInput.startsWith('dev:complete_')) {
     const chapterId = playerInput.replace('dev:complete_', '') as ChapterId;
@@ -688,6 +689,7 @@ export async function processCommand(
     const objectsInLocation = location.objects.map(id => getLiveGameObject(id, currentState, game));
     const objectNames = objectsInLocation.map(obj => obj.name);
     const npcNames = location.npcs.map(id => chapter.npcs[id]?.name).filter(Boolean) as string[];
+    const isChapterComplete = checkChapterCompletion(currentState, game).isComplete;
     
     let lookAroundSummary = `${location.description}\n\n`;
     if(objectNames.length > 0) {
@@ -786,11 +788,12 @@ export async function processCommand(
             break;
     }
     
+    // This is run after every command, so we check for completion here as well.
     const completion = checkChapterCompletion(result.newState, game);
     let finalMessages = [...result.messages];
 
-    if (completion.isComplete && !result.newState.flags.includes(completionFlag)) {
-        result.newState.flags.push(completionFlag);
+    if (completion.isComplete && !result.newState.flags.includes(chapterCompletionFlag(result.newState.currentChapterId))) {
+        result.newState.flags.push(chapterCompletionFlag(result.newState.currentChapterId));
         finalMessages.push(...completion.messages);
     }
     
@@ -819,8 +822,3 @@ export async function processCommand(
     };
   }
 }
-
-
-    
-
-    
