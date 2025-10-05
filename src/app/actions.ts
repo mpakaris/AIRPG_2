@@ -389,23 +389,27 @@ function handleGo(state: PlayerState, targetName: string, game: Game): CommandRe
     const currentLocation = chapter.locations[state.currentLocationId];
     targetName = targetName.toLowerCase();
     const narratorName = game.narratorName || "Narrator";
+    const completionFlag = chapterCompletionFlag(state.currentChapterId);
+    const isChapterComplete = state.flags.includes(completionFlag);
 
-    if (targetName === 'next_chapter') {
+    if (targetName === 'next_chapter' && isChapterComplete) {
         const nextChapterId = chapter.nextChapter?.id;
         if (nextChapterId && game.chapters[nextChapterId]) {
-            // This is a simplified transition. A real game would have more complex logic.
             const nextChapter = game.chapters[nextChapterId];
-            const newState = {
+            const newState: PlayerState = {
                 ...state,
                 currentChapterId: nextChapterId,
                 currentLocationId: nextChapter.startLocationId,
                 activeConversationWith: null,
                 interactingWithObject: null,
-                 // Reset flags or carry them over based on game design
             };
+            const newLocation = nextChapter.locations[newState.currentLocationId];
             return {
                 newState,
-                messages: [createMessage('system', 'System', `Transitioning to ${nextChapter.title}...`)]
+                messages: [
+                    createMessage('system', 'System', `You arrive at the ${newLocation.name}.`),
+                    createMessage('narrator', narratorName, newLocation.description)
+                ]
             };
         } else {
              return { newState: state, messages: [createMessage('system', 'System', `There is no next chapter defined.`)] };
@@ -545,42 +549,42 @@ function handlePassword(state: PlayerState, command: string, game: Game): Comman
     const chapter = game.chapters[state.currentChapterId];
     const location = chapter.locations[state.currentLocationId];
     const objectsInLocation = location.objects.map(id => getLiveGameObject(id, state, game));
+    const commandParts = command.split(' ');
 
-    const parts = command.toLowerCase().split(' ');
-    const passwordIndex = parts.indexOf('password');
-
-    if (passwordIndex === -1) {
-        return { newState: state, messages: [createMessage('system', 'System', 'Invalid password command.')] };
+    // Verb should be 'password'
+    const verb = commandParts[0];
+    if (verb !== 'password') {
+        return { newState: state, messages: [createMessage('system', 'System', 'Invalid command for handlePassword.')] };
     }
-    
-    // Find the object that is being referenced
-    const targetObject = objectsInLocation.find(obj => command.toLowerCase().includes(obj.name.toLowerCase()));
+
+    // Find the target object
+    const objectNameParts: string[] = [];
+    const phraseParts: string[] = [];
+    let foundObject = false;
+
+    let targetObject;
+    for (const obj of objectsInLocation) {
+        if (command.toLowerCase().includes(obj.name.toLowerCase())) {
+            targetObject = obj;
+            break;
+        }
+    }
     
     if (!targetObject) {
          return { newState: state, messages: [createMessage('system', 'System', `You don't see that object here.`)] };
     }
+
+    const targetObjectNameLower = targetObject.name.toLowerCase();
+    const commandLower = command.toLowerCase();
+    const phrase = commandLower.split(targetObjectNameLower)[1]?.trim();
+
+    if (!phrase) {
+        return { newState: state, messages: [createMessage('narrator', narratorName, 'You need to specify a password phrase.')] };
+    }
     
     const expectedPhrase = (targetObject.unlocksWithPhrase || "").trim().toLowerCase();
     
-    // Reconstruct the phrase from the AI command
-    const objectNameParts = targetObject.name.toLowerCase().split(' ');
-    const phraseParts = [];
-    let objectNameFound = false;
-    for(let i = passwordIndex + 1; i < parts.length; i++) {
-        if (!objectNameFound && objectNameParts.includes(parts[i])) {
-             if (parts.slice(i, i + objectNameParts.length).join(' ') === targetObject.name.toLowerCase()) {
-                objectNameFound = true;
-                i += objectNameParts.length - 1;
-             } else {
-                phraseParts.push(parts[i]);
-             }
-        } else if (objectNameFound) {
-            phraseParts.push(parts[i]);
-        }
-    }
-    const actualPhrase = phraseParts.join(' ').trim();
-    
-    if (expectedPhrase === actualPhrase) {
+    if (expectedPhrase === phrase) {
         let newState = { ...state, objectStates: { ...state.objectStates }};
         newState.objectStates[targetObject.id] = { ...newState.objectStates[targetObject.id], isLocked: false };
         
@@ -816,5 +820,7 @@ export async function processCommand(
   }
 }
 
+
+    
 
     
