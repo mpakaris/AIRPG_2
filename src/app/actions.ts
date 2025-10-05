@@ -630,7 +630,17 @@ export async function processCommand(
         availableCommands: AVAILABLE_COMMANDS.join(', '),
     });
 
+    const agentMessage = createMessage('agent', narratorName, `${aiResponse.agentResponse}`);
+
     const commandToExecute = aiResponse.commandToExecute.toLowerCase();
+    
+    if (commandToExecute === 'invalid') {
+        return {
+            newState: currentState,
+            messages: [agentMessage],
+        };
+    }
+    
     const [verb, ...args] = commandToExecute.split(' ');
     const restOfCommand = args.join(' ');
 
@@ -690,7 +700,6 @@ export async function processCommand(
     const hasSystemMessage = result.messages.some(m => m.sender === 'system');
 
     if (!hasSystemMessage) {
-        const agentMessage = createMessage('agent', narratorName, `${aiResponse.agentResponse}`);
         finalMessages.unshift(agentMessage);
     }
     

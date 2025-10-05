@@ -14,4 +14,5 @@ export const AVAILABLE_COMMANDS = [
   'watch video',
   'exit',
   'close',
+  'invalid',
 ];
