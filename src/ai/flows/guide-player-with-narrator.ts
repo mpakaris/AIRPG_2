@@ -14,7 +14,7 @@ import {z} from 'genkit';
 const GuidePlayerWithNarratorInputSchema = z.object({
   promptContext: z.string().describe('The persona and instructions for the AI narrator.'),
   gameSpecifications: z.string().describe('The overall specifications and rules of the game.'),
-  gameState: z.string().describe('A detailed summary of the current state of the game, including chapter goal, player location, inventory, visible objects and their states (e.g., locked/unlocked), and NPCs present.'),
+  gameState: z.string().describe('A detailed summary of the current state of the game, including chapter goal, player location, inventory, visible objects, and NPCs present.'),
   playerCommand: z.string().describe('The command or action the player wants to perform.'),
   availableCommands: z.string().describe('A list of available commands in the game.'),
 });
@@ -22,8 +22,7 @@ export type GuidePlayerWithNarratorInput = z.infer<typeof GuidePlayerWithNarrato
 
 const GuidePlayerWithNarratorOutputSchema = z.object({
   agentResponse: z.string().describe("The AI narrator's response to the player, guiding them and providing feedback."),
-  revisedCommand: z.string().describe('The revised command after AI consideration.'),
-  commandToExecute: z.string().describe('The command that engine should exectute based on the player input and game state.'),
+  commandToExecute: z.string().describe('The command that engine should execute based on the player input and game state.'),
 });
 export type GuidePlayerWithNarratorOutput = z.infer<typeof GuidePlayerWithNarratorOutputSchema>;
 
@@ -37,39 +36,39 @@ const prompt = ai.definePrompt({
   output: {schema: GuidePlayerWithNarratorOutputSchema},
   prompt: `{{promptContext}}
 
-Here are the game specifications:
-{{gameSpecifications}}
+You are the AI narrator. Your primary job is to interpret the player's raw text input and map it to a valid, executable game command from the list provided. You must also provide a helpful, in-character response to guide the player.
 
-Here is the current game state:
+**Game & Player State:**
 {{gameState}}
 
-The player's command is:
+**Player's Input:**
 "{{playerCommand}}"
 
-Available Commands:
+**Available Commands:**
 {{availableCommands}}
 
-As the AI narrator, respond to the player with a helpful message (1-2 sentences). Your primary job is to guide them toward the chapter goal.
-- Analyze the game state and the player's command in relation to the goal.
-- If the command is logical and moves the game forward, encourage it.
-- If the command is illogical, unproductive, or based on incorrect information, gently steer them back on track. For example, if they try to use an item they don't have, or interact with something that isn't there.
-- Use the detailed game state to provide specific, context-aware advice. For example, if an object is unlocked, encourage the player to examine it to find the next clue.
+**Your Task:**
 
-Based on the player's intent and the game state, determine the most logical command for the game engine to execute. It must be a valid command from the available list.
-- If the player's command is illogical, violent, or cannot be mapped to a valid command (e.g., trying to use items they don't have), you MUST set the 'commandToExecute' to 'invalid'.
-- If the player's intent is to interact with a person, the command should be 'talk to <npc name>'.
-- If the player's intent is to 'look at', 'open', 'browse through', 'check', 'look inside', 'read article', 'watch video', or any other direct object interaction, the final command should be the most direct version (e.g., 'read article', 'watch video', 'examine <object>').
-- If the player's command is observational (e.g. "check the room", "look for hints", "what do I see?"), the command should be 'look around'.
-- If the player is just making conversation or the command is unclear, 'look around' is a safe default unless the action is clearly invalid.
-- If the game state indicates the player is already interacting with an object, extract the most direct command from the player's input (e.g. if the player says "I want to watch the video", the commandToExecute should be "watch video").
+1.  **Analyze Intent:** Understand what the player is trying to do.
+2.  **Select Command:** Choose the *best* matching command from the \`Available Commands\` list.
+    *   If the player says "look at the book," the command is \`examine brown notebook\`.
+    *   If the player says "pick up the card," the command is \`take business card\`.
+    *   If the player says "chat with the coffee guy," the command is \`talk to barista\`.
+    *   If the player wants to provide a password, the command is \`password <object> <phrase>\`. For example: "password for notebook 'JUSTICE FOR SILAS BLOOM'".
+    *   If the player wants to move, the command is \`go <direction or location>\`.
+    *   If the input is conversational, observational ("what do i see?"), or doesn't map to a clear action, the command is \`look around\`.
+    *   If the action is illogical, impossible, violent, or destructive (e.g., "smash the notebook," "fly to the moon," "attack the barista"), you MUST set the \`commandToExecute\` to "invalid".
+3.  **Provide Guidance:** Write a brief, in-character response (1-2 sentences) that gives the player a gentle hint or confirms their action, guiding them toward the chapter goal.
 
+**Example 1 (Valid Command):**
+*Player Input:* "I want to see what that newspaper says."
+*Your Response:* { "agentResponse": "Good idea, Burt. Sometimes the headlines hide the real story.", "commandToExecute": "examine newspaper" }
 
-Your response must include:
-1.  A helpful, in-character response from you, the AI narrator.
-2.  A potentially revised command to align more effectively with the game's goals.
-3.  The final command to execute.
+**Example 2 (Invalid Command):**
+*Player Input:* "I smash the coffee machine."
+*Your Response:* { "agentResponse": "Easy there, Macklin. Let's not cause a scene. Vandalism won't get us any closer to solving this case.", "commandToExecute": "invalid" }
 
-Ensure your response is straight to the point and focused on puzzle-solving, just like a seasoned agent would be.
+Your entire output must be a single, valid JSON object matching the output schema.
 `,
 });
 

@@ -54,11 +54,22 @@ export type PlayerState = {
   interactingWithObject: GameObjectId | null;
 };
 
+type InteractionResult = {
+    message: string;
+    actions?: Action[];
+};
+
 export type Item = {
   id: ItemId;
   name: string;
   description: string;
   image?: ImageDetails;
+  isTakable?: boolean;
+  onTake?: {
+      successMessage: string;
+      failMessage: string;
+      successActions?: Action[];
+  }
 };
 
 export type GameObjectContent = {
@@ -77,18 +88,34 @@ export type ObjectInteractionState = {
 export type GameObject = {
   id: GameObjectId;
   name:string;
-  description: string;
-  unlockedDescription?: string;
+  description: string; // General description
   items: ItemId[];
+  
+  onExamine?: {
+      default?: InteractionResult;
+      locked?: InteractionResult;
+      unlocked?: InteractionResult;
+  };
+  
   isOpenable?: boolean;
   isLocked?: boolean;
+
   unlocksWith?: ItemId;
   unlocksWithPhrase?: string;
-  onUnlockActions?: Action[];
-  onExamineLockedActions?: Action[];
-  unlocksWithUrl?: string;
+  onUnlock?: {
+      successMessage: string;
+      failMessage: string;
+      actions?: Action[];
+  };
+
+  // For handling non-standard verbs like "break", "destroy", "climb", etc.
+  onFailure?: Record<string, string>;
+  
+  // For complex, multi-step interactions
   interactionStates?: Record<string, ObjectInteractionState>;
   defaultInteractionStateId?: string;
+
+  // Visuals
   image?: ImageDetails;
   unlockedImage?: ImageDetails;
 };

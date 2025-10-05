@@ -43,20 +43,39 @@ export const game: Game = {
             'obj_brown_notebook': {
                 id: 'obj_brown_notebook' as GameObjectId,
                 name: 'Brown Notebook',
-                description: 'A worn, leather-bound notebook. It feels heavy with secrets. A lock prevents it from being opened without the right password.',
-                unlockedDescription: "The notebook is open. Inside, you see a small data chip. You could try to 'watch video'.",
+                description: 'A worn, leather-bound notebook. It feels heavy with secrets.',
                 items: [],
                 isOpenable: true,
                 isLocked: true,
                 unlocksWithPhrase: 'JUSTICE FOR SILAS BLOOM',
-                onUnlockActions: [
-                    { type: 'SET_FLAG', flag: 'has_unlocked_notebook' as Flag },
-                    { type: 'START_INTERACTION', objectId: 'obj_brown_notebook' as GameObjectId, interactionStateId: 'start' }
-                ],
-                onExamineLockedActions: [
-                    { type: 'SET_FLAG', flag: 'has_seen_notebook_url' as Flag }
-                ],
-                unlocksWithUrl: 'https://6000-firebase-studio-1759162726172.cluster-4cmpbiopffe5oqk7tloeb2ltrk.cloudworkstations.dev/games/the-notebook',
+                onExamine: {
+                    locked: {
+                        message: "A lock prevents it from being opened without the right password. A mini-game opens on your device.",
+                        actions: [
+                            { type: 'SET_FLAG', flag: 'has_seen_notebook_url' as Flag },
+                            { type: 'SHOW_MESSAGE', sender: 'narrator', senderName: 'Narrator', content: 'Minigame: https://6000-firebase-studio-1759162726172.cluster-4cmpbiopffe5oqk7tloeb2ltrk.cloudworkstations.dev/games/the-notebook'}
+                        ]
+                    },
+                    unlocked: {
+                        message: "The notebook is open. Inside, you see a small data chip. You could try to 'watch video'.",
+                        actions: [
+                             { type: 'START_INTERACTION', objectId: 'obj_brown_notebook' as GameObjectId, interactionStateId: 'start' }
+                        ]
+                    }
+                },
+                onUnlock: {
+                    successMessage: "You speak the words, and the notebook unlocks with a soft click. The cover creaks open.",
+                    failMessage: "That password doesn't work. The lock remains stubbornly shut.",
+                    actions: [
+                         { type: 'SET_FLAG', flag: 'has_unlocked_notebook' as Flag },
+                         { type: 'START_INTERACTION', objectId: 'obj_brown_notebook' as GameObjectId, interactionStateId: 'start' }
+                    ]
+                },
+                onFailure: {
+                    break: "You hammer on the notebook, but the old leather is surprisingly tough. The lock doesn't budge.",
+                    destroy: "You consider destroying the notebook, but that would defeat the whole purpose of being here. There must be a more subtle way.",
+                    open: "You try to force the lock, but it's no use. You'll need the correct password."
+                },
                 image: {
                     url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759242347/Notebook_locked_ngfes0.png',
                     description: 'A locked notebook.',
@@ -125,8 +144,11 @@ export const game: Game = {
             'obj_chalkboard_menu': {
                 id: 'obj_chalkboard_menu' as GameObjectId,
                 name: 'Chalkboard Menu',
-                description: "Today's special is three scones for the price of two. A deal almost as sweet as justice.",
+                description: "A simple chalkboard menu.",
                 items: [],
+                onExamine: {
+                   default: { message: "Today's special is three scones for the price of two. A deal almost as sweet as justice." }
+                },
                 image: {
                     url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759603706/Chalkboard_h61haz.png',
                     description: 'A chalkboard menu in a cafe.',
@@ -136,8 +158,11 @@ export const game: Game = {
             'obj_newspaper': {
                 id: 'obj_newspaper' as GameObjectId,
                 name: 'Newspaper',
-                description: "It's a copy of today's local paper. The main headlines discuss the current series of murders. The usual crazyness of a Metropolis.",
+                description: "A discarded local newspaper.",
                 items: [],
+                 onExamine: {
+                   default: { message: "It's a copy of today's local paper. The main headlines discuss the current series of murders. The usual crazyness of a Metropolis." }
+                },
                 image: {
                     url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759603706/Newspaper_p85m1h.png',
                     description: 'A newspaper on a table.',
@@ -147,8 +172,11 @@ export const game: Game = {
             'obj_bookshelf': {
                 id: 'obj_bookshelf' as GameObjectId,
                 name: 'Bookshelf',
-                description: 'A small bookshelf in a reading corner, filled with a variety of used paperbacks.',
+                description: 'A small bookshelf in a reading corner.',
                 items: [],
+                 onExamine: {
+                   default: { message: "A small bookshelf filled with used paperbacks. You scan the titles: 'The Art of the Deal', 'A Brief History of Time', 'How to Win Friends and Influence People', and a romance novel titled 'Justice for My Love'." }
+                },
                 image: {
                     url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759604596/Bookshelf_Cafe_kn4poz.png',
                     description: 'A bookshelf in a cafe.',
@@ -158,8 +186,11 @@ export const game: Game = {
             'obj_painting': {
                 id: 'obj_painting' as GameObjectId,
                 name: 'Painting on the wall',
-                description: 'An abstract painting hangs on the wall, its swirls of color adding a touch of modern art to the cafe\'s cozy atmosphere.',
+                description: "A colorful abstract painting.",
                 items: [],
+                onExamine: {
+                   default: { message: "An abstract painting hangs on the wall, its swirls of color adding a touch of modern art to the cafe's cozy atmosphere. It seems to be signed 'S.B.'" }
+                },
                 image: {
                     url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759604943/picture_on_wall_fcx10j.png',
                     description: 'A painting on the wall of the cafe.',
@@ -172,6 +203,11 @@ export const game: Game = {
                 id: 'item_business_card' as ItemId,
                 name: 'Business Card',
                 description: 'A simple business card for a musician. It reads: "S A X O - The World\'s Best Sax Player". A phone number is listed, along with a handwritten number "1943" and the name "ROSE".',
+                isTakable: true,
+                onTake: {
+                    successMessage: "You pick up the business card.",
+                    failMessage: "You can't take that right now."
+                },
                 image: {
                     url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759241477/Screenshot_2025-09-30_at_15.46.02_fuk4tb.png',
                     description: 'A business card for a saxophone player.',
@@ -182,6 +218,7 @@ export const game: Game = {
                 id: 'newspaper_article' as ItemId,
                 name: 'Newspaper Article',
                 description: 'A newspaper article about Silas Bloom.',
+                isTakable: false,
                 image: {
                     url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759241463/Screenshot_2025-09-30_at_15.51.35_gyj3d5.png',
                     description: 'A newspaper article about Silas Bloom.',
