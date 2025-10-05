@@ -542,29 +542,44 @@ function handleInventory(state: PlayerState, game: Game): CommandResult {
 
 function handlePassword(state: PlayerState, command: string, game: Game): CommandResult {
     const narratorName = game.narratorName || "Narrator";
-
-    const parts = command.split(' ');
-    if (parts.length < 3) {
-        return { newState: state, messages: [createMessage('system', 'System', "Invalid password command format.")] };
-    }
-    
-    const objectName = parts[1];
-    const phrase = parts.slice(2).join(' ');
-
     const chapter = game.chapters[state.currentChapterId];
     const location = chapter.locations[state.currentLocationId];
+    const objectsInLocation = location.objects.map(id => getLiveGameObject(id, state, game));
 
-    const targetObject = location.objects
-        .map(id => getLiveGameObject(id, state, game))
-        .find(obj => obj.name.toLowerCase().includes(objectName.toLowerCase()));
+    const parts = command.toLowerCase().split(' ');
+    const passwordIndex = parts.indexOf('password');
 
+    if (passwordIndex === -1) {
+        return { newState: state, messages: [createMessage('system', 'System', 'Invalid password command.')] };
+    }
+    
+    // Find the object that is being referenced
+    const targetObject = objectsInLocation.find(obj => command.toLowerCase().includes(obj.name.toLowerCase()));
+    
     if (!targetObject) {
-        return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${objectName}" here.`)] };
+         return { newState: state, messages: [createMessage('system', 'System', `You don't see that object here.`)] };
     }
     
     const expectedPhrase = (targetObject.unlocksWithPhrase || "").trim().toLowerCase();
-    const actualPhrase = phrase.trim().toLowerCase();
-
+    
+    // Reconstruct the phrase from the AI command
+    const objectNameParts = targetObject.name.toLowerCase().split(' ');
+    const phraseParts = [];
+    let objectNameFound = false;
+    for(let i = passwordIndex + 1; i < parts.length; i++) {
+        if (!objectNameFound && objectNameParts.includes(parts[i])) {
+             if (parts.slice(i, i + objectNameParts.length).join(' ') === targetObject.name.toLowerCase()) {
+                objectNameFound = true;
+                i += objectNameParts.length - 1;
+             } else {
+                phraseParts.push(parts[i]);
+             }
+        } else if (objectNameFound) {
+            phraseParts.push(parts[i]);
+        }
+    }
+    const actualPhrase = phraseParts.join(' ').trim();
+    
     if (expectedPhrase === actualPhrase) {
         let newState = { ...state, objectStates: { ...state.objectStates }};
         newState.objectStates[targetObject.id] = { ...newState.objectStates[targetObject.id], isLocked: false };
