@@ -34,7 +34,7 @@ function createMessage(
             // Special handling for unlocked game objects
             if (gameObject) {
                 const liveObject = getLiveGameObject(gameObject.id, state, game);
-                if (!liveObject.isLocked && liveObject.unlockedImage) {
+                if (!liveObject.isLocked && live.unlockedImage) {
                     image = liveObject.unlockedImage;
                 } else {
                     image = gameObject.image;
@@ -266,86 +266,87 @@ function handleObjectInteraction(state: PlayerState, playerInput: string, game: 
 // --- Command Handlers ---
 
 function handleExamine(state: PlayerState, targetName: string, game: Game): CommandResult {
-  const chapter = game.chapters[state.currentChapterId];
-  const location = chapter.locations[state.currentLocationId];
-  let newState = { ...state, flags: [...state.flags] };
-  targetName = targetName.toLowerCase();
-  const narratorName = game.narratorName || "Narrator";
+    const chapter = game.chapters[state.currentChapterId];
+    const location = chapter.locations[state.currentLocationId];
+    let newState = { ...state, flags: [...state.flags] };
+    targetName = targetName.toLowerCase();
+    const narratorName = game.narratorName || "Narrator";
 
-  // Check inventory first
-  const itemInInventory = state.inventory
-      .map(id => chapter.items[id])
-      .find(item => item?.name.toLowerCase().includes(targetName));
+    const createExamineMessage = (
+        id: ItemId | GameObjectId, 
+        description: string, 
+        image?: ImageDetails, 
+        showEvenIfExamined: boolean = false
+    ): Message => {
+        const isAlreadyExamined = newState.flags.includes(examinedObjectFlag(id));
+        const messageImage = (image && (!isAlreadyExamined || showEvenIfExamined)) ? { id, game, state: newState, showEvenIfExamined } : undefined;
 
-  if (itemInInventory) {
-      const flag = examinedObjectFlag(itemInInventory.id);
-      
-      const message = createMessage(
-          'narrator', 
-          narratorName, 
-          itemInInventory.description, 
-          'image', 
-          { id: itemInInventory.id, game, state: newState }
-      );
-      
-      if (!newState.flags.includes(flag)) {
-          newState.flags.push(flag);
-      }
+        if (messageImage) {
+             return createMessage('narrator', narratorName, description, 'image', messageImage);
+        }
+        return createMessage('narrator', narratorName, description);
+    }
+    
+    // Check inventory first
+    const itemInInventory = state.inventory
+        .map(id => chapter.items[id])
+        .find(item => item?.name.toLowerCase().includes(targetName));
 
-      return {
-          newState,
-          messages: [message]
-      };
-  }
+    if (itemInInventory) {
+        const flag = examinedObjectFlag(itemInInventory.id);
+        const message = createExamineMessage(itemInInventory.id, itemInInventory.description, itemInInventory.image);
+        
+        if (!newState.flags.includes(flag)) {
+            newState.flags.push(flag);
+        }
+
+        return { newState, messages: [message] };
+    }
   
-  // Then check objects in location
-  const targetObjectId = location.objects.find(id => 
-      chapter.gameObjects[id]?.name.toLowerCase().includes(targetName)
-  );
+    // Then check objects in location
+    const targetObjectId = location.objects.find(id => 
+        chapter.gameObjects[id]?.name.toLowerCase().includes(targetName)
+    );
 
-  if (targetObjectId) {
-      const liveObject = getLiveGameObject(targetObjectId, state, game);
-      const flag = examinedObjectFlag(liveObject.id);
+    if (targetObjectId) {
+        const liveObject = getLiveGameObject(targetObjectId, state, game);
+        const flag = examinedObjectFlag(liveObject.id);
 
-      const actions: Action[] = [];
-      let messageContent: string;
-      
-      const onExamine = liveObject.onExamine;
+        const actions: Action[] = [];
+        let messageContent: string;
+        let imageToShow = liveObject.image;
+        
+        const onExamine = liveObject.onExamine;
 
-      if (liveObject.isLocked && onExamine?.locked) {
-          messageContent = onExamine.locked.message;
-          actions.push(...(onExamine.locked.actions || []));
-      } else if (!liveObject.isLocked && onExamine?.unlocked) {
-          messageContent = onExamine.unlocked.message;
-          actions.push(...(onExamine.unlocked.actions || []));
-      } else {
-           messageContent = onExamine?.default?.message || `You examine the ${liveObject.name}.`;
-           actions.push(...(onExamine?.default?.actions || []));
-      }
-      
-      // We process other actions first to update state (e.g. unlocking)
-      let actionResult = processActions(newState, actions, game);
-      
-      // Then we create the primary message with the potentially updated state
-      const mainMessage = createMessage(
-          'narrator', 
-          narratorName, 
-          messageContent,
-          'image',
-          { id: liveObject.id, game, state: newState }
-      );
-      
-      // Add the examined flag to the *final* new state
-      if (!actionResult.newState.flags.includes(flag)) {
-          actionResult.newState.flags.push(flag);
-      }
-      
-      actionResult.messages.unshift(mainMessage);
-      
-      return actionResult;
-  }
+        if (liveObject.isLocked && onExamine?.locked) {
+            messageContent = onExamine.locked.message;
+            actions.push(...(onExamine.locked.actions || []));
+        } else if (!liveObject.isLocked && onExamine?.unlocked) {
+            messageContent = onExamine.unlocked.message;
+            actions.push(...(onExamine.unlocked.actions || []));
+            imageToShow = liveObject.unlockedImage || liveObject.image;
+        } else {
+             messageContent = onExamine?.default?.message || `You examine the ${liveObject.name}.`;
+             actions.push(...(onExamine?.default?.actions || []));
+        }
+        
+        // We process other actions first to update state (e.g. unlocking)
+        let actionResult = processActions(newState, actions, game);
+        
+        // Then we create the primary message with the potentially updated state
+        const mainMessage = createExamineMessage(liveObject.id, messageContent, imageToShow);
+        
+        // Add the examined flag to the *final* new state
+        if (!actionResult.newState.flags.includes(flag)) {
+            actionResult.newState.flags.push(flag);
+        }
+        
+        actionResult.messages.unshift(mainMessage);
+        
+        return actionResult;
+    }
 
-  return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${targetName}" here.`)] };
+    return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${targetName}" here.`)] };
 }
 
 
@@ -485,16 +486,19 @@ async function handleTalk(state: PlayerState, npcName: string, game: Game): Prom
         const welcomeMessage = (npc as NPC).welcomeMessage || "Hello.";
         
         const flag = examinedObjectFlag(npc.id);
-        
-        messages.push(createMessage(
-            npc.id as NpcId, 
-            npc.name, 
-            `"${welcomeMessage}"`, 
-            'image', 
-            { id: npc.id, game, state: newState }
-        ));
+        const isAlreadyExamined = newState.flags.includes(flag);
 
-        if (!newState.flags.includes(flag)) {
+        const npcMessage = createMessage(
+            npc.id as NpcId,
+            npc.name,
+            `"${welcomeMessage}"`,
+            'image',
+            { id: npc.id, game, state: newState, showEvenIfExamined: !isAlreadyExamined }
+        );
+        messages.push(npcMessage);
+
+
+        if (!isAlreadyExamined) {
             newState.flags.push(flag);
         }
 
@@ -524,22 +528,32 @@ function handleInventory(state: PlayerState, game: Game): CommandResult {
 }
 
 function handlePassword(state: PlayerState, command: string, game: Game): CommandResult {
-    const narratorName = game.narratorName || "Narrator";
+    // Regex to find the phrase in quotes first
+    const quoteMatch = command.match(/"(.*?)"/);
+    const phrase = quoteMatch ? quoteMatch[1] : '';
+
+    // Remove the quoted phrase to find the object name
+    const commandWithoutPhrase = quoteMatch ? command.replace(quoteMatch[0], '') : command;
+    const objectNameMatch = commandWithoutPhrase.match(/password(?:\s+for)?\s+(.*)/);
     
-    // Improved regex to be more flexible. Looks for `password <stuff> <quoted phrase>`
-    const passwordMatch = command.toLowerCase().match(/password(?:\s+for)?\s+(.*?)\s+(?:is\s+)?['"](.*?)['"]/);
+    // If no object name is found after 'password', it's an invalid format.
+    if (!objectNameMatch) {
+         return { newState: state, messages: [createMessage('system', 'System', 'Invalid password format. Please use: password for <object> "<phrase>"')] };
+    }
     
-    if (!passwordMatch) {
-        // Fallback for commands that might not have quotes, like `password notebook JUSTICE FOR SILAS BLOOM`
-        const fallbackMatch = command.toLowerCase().match(/password(?:\s+for)?\s+(.*?)\s+(.*)/);
-        if (fallbackMatch) {
-            const [_, objectName, phrase] = fallbackMatch;
-            return processPassword(state, objectName, phrase, game);
+    const objectName = objectNameMatch[1].trim();
+
+    // If we have an object name but no phrase, it's also invalid.
+    if (!phrase) {
+        // This handles cases like `password notebook JUSTICE FOR ALL` where there are no quotes.
+        // We'll treat everything after the object name as the phrase.
+        const everythingAfterObject = command.substring(command.indexOf(objectName) + objectName.length).trim();
+        if (everythingAfterObject) {
+            return processPassword(state, objectName, everythingAfterObject, game);
         }
-        return { newState: state, messages: [createMessage('system', 'System', 'Invalid password format. Please use: password for <object> "<phrase>"')] };
+        return { newState: state, messages: [createMessage('system', 'System', 'Invalid password format. Please include the password phrase.')] };
     }
 
-    const [, objectName, phrase] = passwordMatch;
     return processPassword(state, objectName, phrase, game);
 }
 
@@ -819,3 +833,5 @@ export async function processCommand(
     };
   }
 }
+
+    
