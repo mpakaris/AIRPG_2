@@ -390,6 +390,29 @@ function handleGo(state: PlayerState, targetName: string, game: Game): CommandRe
     targetName = targetName.toLowerCase();
     const narratorName = game.narratorName || "Narrator";
 
+    if (targetName === 'next_chapter') {
+        const nextChapterId = chapter.nextChapter?.id;
+        if (nextChapterId && game.chapters[nextChapterId]) {
+            // This is a simplified transition. A real game would have more complex logic.
+            const nextChapter = game.chapters[nextChapterId];
+            const newState = {
+                ...state,
+                currentChapterId: nextChapterId,
+                currentLocationId: nextChapter.startLocationId,
+                activeConversationWith: null,
+                interactingWithObject: null,
+                 // Reset flags or carry them over based on game design
+            };
+            return {
+                newState,
+                messages: [createMessage('system', 'System', `Transitioning to ${nextChapter.title}...`)]
+            };
+        } else {
+             return { newState: state, messages: [createMessage('system', 'System', `There is no next chapter defined.`)] };
+        }
+    }
+
+
     let targetLocation: Location | undefined;
     targetLocation = Object.values(chapter.locations).find(loc => loc.name.toLowerCase() === targetName);
 
@@ -518,30 +541,25 @@ function handleInventory(state: PlayerState, game: Game): CommandResult {
 }
 
 function handlePassword(state: PlayerState, command: string, game: Game): CommandResult {
-    const chapter = game.chapters[state.currentChapterId];
-    const location = chapter.locations[state.currentLocationId];
     const narratorName = game.narratorName || "Narrator";
 
-    // Find the target object
+    const parts = command.split(' ');
+    if (parts.length < 3) {
+        return { newState: state, messages: [createMessage('system', 'System', "Invalid password command format.")] };
+    }
+    
+    const objectName = parts[1];
+    const phrase = parts.slice(2).join(' ');
+
+    const chapter = game.chapters[state.currentChapterId];
+    const location = chapter.locations[state.currentLocationId];
+
     const targetObject = location.objects
         .map(id => getLiveGameObject(id, state, game))
-        .find(obj => command.toLowerCase().includes(obj.name.toLowerCase()));
+        .find(obj => obj.name.toLowerCase().includes(objectName.toLowerCase()));
 
     if (!targetObject) {
-        return { newState: state, messages: [createMessage('system', 'System', "I'm not sure which object you're trying to use a password on.")] };
-    }
-    
-    // Extract the phrase
-    const objectNameIndex = command.toLowerCase().indexOf(targetObject.name.toLowerCase());
-    // The phrase is everything after the object name
-    const phrase = command.substring(objectNameIndex + targetObject.name.length).trim();
-    
-    if (!phrase) {
-        return { newState: state, messages: [createMessage('system', 'System', "You need to provide a password phrase.")] };
-    }
-
-    if (!targetObject.isLocked) {
-        return { newState: state, messages: [createMessage('system', 'System', `The ${targetObject.name} is already unlocked.`)] };
+        return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${objectName}" here.`)] };
     }
     
     const expectedPhrase = (targetObject.unlocksWithPhrase || "").trim().toLowerCase();
@@ -612,19 +630,7 @@ export async function processCommand(
   const chapter = game.chapters[currentState.currentChapterId];
   const narratorName = game.narratorName || "Narrator";
   const completionFlag = chapterCompletionFlag(currentState.currentChapterId);
-
-  if (currentState.flags.includes(completionFlag)) {
-      if (chapter.nextChapter?.transitionCommand && playerInput.toLowerCase().includes(chapter.nextChapter.transitionCommand)) {
-          return {
-              newState: currentState,
-              messages: [createMessage('system', 'System', `Transitioning to ${chapter.nextChapter.title}... (Not yet implemented)`)]
-          };
-      }
-      return {
-          newState: currentState,
-          messages: [createMessage('agent', narratorName, chapter.postChapterMessage || "Let's move on.")]
-      };
-  }
+  const isChapterComplete = currentState.flags.includes(completionFlag);
 
   if (playerInput.startsWith('dev:complete_')) {
     const chapterId = playerInput.replace('dev:complete_', '') as ChapterId;
@@ -679,6 +685,10 @@ export async function processCommand(
       VISIBLE OBJECTS: ${objectNames.join(', ')}.
       VISIBLE NPCS: ${npcNames.join(', ')}.
     `;
+
+    if (isChapterComplete && chapter.nextChapter) {
+        gameStateSummaryForAI += `\nCHAPTER COMPLETE. The player is ready to move on to the next chapter: '${chapter.nextChapter.title}'.`
+    }
 
 
     const aiResponse = await guidePlayerWithNarrator({

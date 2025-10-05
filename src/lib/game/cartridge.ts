@@ -18,6 +18,7 @@ export const game: Game = {
         completionVideo: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759678377/CH_I_completion_jqtyme.mp4',
         postChapterMessage: "Burt, it seems we got all the information here. Maybe we should continue elsewhere.",
         nextChapter: {
+            id: 'ch2-the-lounge' as ChapterId,
             title: 'The Midnight Lounge',
             transitionCommand: 'go to jazz club'
         },

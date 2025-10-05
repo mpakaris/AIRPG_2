@@ -155,6 +155,7 @@ export type ChapterObjective = {
 };
 
 export type NextChapterInfo = {
+    id: ChapterId;
     title: string;
     transitionCommand: string;
 };
