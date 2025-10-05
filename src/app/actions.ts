@@ -241,7 +241,7 @@ async function handleObjectInteraction(state: PlayerState, playerInput: string, 
 
     // Use AI to interpret the player's intent within the context of the interaction
     const aiResponse = await guidePlayerWithNarrator({
-        promptContext: `The player is currently examining the ${liveObject.name}. The only available actions are: ${availableInteractionCommands.join(', ')}. Your job is to map their input to one of these actions.`,
+        promptContext: `The player is currently examining the ${liveObject.name}. Your job is to map their input to one of the available actions.`,
         gameSpecifications: game.description,
         gameState: `Interacting with: ${liveObject.name}. Current state: ${currentInteractionState.description}`,
         playerCommand: playerInput,
@@ -292,15 +292,17 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
 
     if (itemInInventory) {
         const flag = examinedObjectFlag(itemInInventory.id);
+        const isAlreadyExamined = newState.flags.includes(flag);
+        
         const message = createMessage(
             'narrator', 
             narratorName, 
             itemInInventory.description,
             'image',
-            { id: itemInInventory.id, game, state: newState }
+            { id: itemInInventory.id, game, state: newState, showEvenIfExamined: !isAlreadyExamined }
         );
         
-        if (!newState.flags.includes(flag)) {
+        if (!isAlreadyExamined) {
             newState.flags.push(flag);
         }
 
@@ -333,7 +335,6 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
         }
         
         let actionResult = processActions(newState, actions, game);
-
         const isAlreadyExamined = actionResult.newState.flags.includes(flag);
         
         const mainMessage = createMessage(
@@ -535,22 +536,19 @@ function handleInventory(state: PlayerState, game: Game): CommandResult {
 }
 
 function handlePassword(state: PlayerState, command: string, game: Game): CommandResult {
-    const commandParts = command.toLowerCase().split(' ');
-    
-    // Find the start of the phrase (the first word in quotes)
-    const phraseStartIndex = command.indexOf('"');
-    
-    if (phraseStartIndex === -1) {
-        return { newState: state, messages: [createMessage('system', 'System', 'Invalid password format. Please enclose the password phrase in quotes, e.g., password <object> "<phrase>"')] };
-    }
-    
-    // Extract object name
-    // Assumes "password" is the first word.
-    const objectName = command.substring('password '.length, phraseStartIndex).trim();
-
-    // Extract phrase from quotes
+    // Robustly find the phrase in quotes
     const phraseMatch = command.match(/"(.*?)"/);
-    const phrase = phraseMatch ? phraseMatch[1] : '';
+    if (!phraseMatch) {
+        return { newState: state, messages: [createMessage('system', 'System', 'Invalid password format. Please enclose the password phrase in quotes, e.g., password &lt;object&gt; "&lt;phrase&gt;"')] };
+    }
+    const phrase = phraseMatch[1];
+    
+    // Find where the phrase starts
+    const phraseStartIndex = command.indexOf(`"${phrase}"`);
+
+    // The object name is everything between "password" and the start of the phrase
+    const commandVerb = "password";
+    const objectName = command.substring(commandVerb.length, phraseStartIndex).trim();
 
     if (!objectName || !phrase) {
         return { newState: state, messages: [createMessage('system', 'System', `Invalid password format. Could not determine object or phrase from command: "${command}"`)] };
