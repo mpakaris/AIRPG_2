@@ -136,11 +136,16 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
                 Dev Controls
             </SidebarGroupLabel>
             <div className='flex flex-col gap-2 px-2'>
+                <Button variant="outline" size="sm" onClick={() => onCommandSubmit('I look around')}>Look Around</Button>
+                <Button variant="outline" size="sm" onClick={() => onCommandSubmit('I examine the notebook')}>Examine Notebook</Button>
+                <Button variant="outline" size="sm" onClick={() => onCommandSubmit('Password for brown notebook "Justice for Silas Bloom"')}>Unlock Notebook</Button>
+                <Button variant="outline" size="sm" onClick={() => onCommandSubmit('I want to watch the video')}>Watch Video</Button>
+                <Button variant="outline" size="sm" onClick={() => onCommandSubmit('I want to read the article')}>Read Article</Button>
+                <Button variant="outline" size="sm" onClick={() => onCommandSubmit('talk to barista')}>Talk to Barista</Button>
+                <Button variant="outline" size="sm" onClick={() => onCommandSubmit('What do you know about that man that just left?')}>Ask about man</Button>
+                <Button variant="outline" size="sm" onClick={() => onCommandSubmit('Do you know his name or his address?')}>Ask for name</Button>
                 <Button variant="outline" size="sm" onClick={() => handleDevCommand('ch1-the-cafe' as ChapterId)}>Complete Chapter I</Button>
                 <Button variant="outline" size="sm" disabled>Complete Chapter II</Button>
-                <Button variant="outline" size="sm" disabled>Complete Chapter III</Button>
-                <Button variant="outline" size="sm" disabled>Complete Chapter IV</Button>
-                <Button variant="outline" size="sm" disabled>Complete Chapter V</Button>
             </div>
         </SidebarGroup>
       </SidebarContent>
