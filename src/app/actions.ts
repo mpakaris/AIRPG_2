@@ -279,7 +279,6 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
 
   if (itemInInventory) {
       const flag = examinedObjectFlag(itemInInventory.id);
-      const isAlreadyExamined = newState.flags.includes(flag);
       
       const message = createMessage(
           'narrator', 
@@ -289,7 +288,7 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
           { id: itemInInventory.id, game, state: newState }
       );
       
-      if (!isAlreadyExamined) {
+      if (!newState.flags.includes(flag)) {
           newState.flags.push(flag);
       }
 
@@ -307,7 +306,6 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
   if (targetObjectId) {
       const liveObject = getLiveGameObject(targetObjectId, state, game);
       const flag = examinedObjectFlag(liveObject.id);
-      const isAlreadyExamined = newState.flags.includes(flag);
 
       const actions: Action[] = [];
       let messageContent: string;
@@ -326,7 +324,7 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
       }
       
       // We process other actions first to update state (e.g. unlocking)
-      const actionResult = processActions(newState, actions, game);
+      let actionResult = processActions(newState, actions, game);
       
       // Then we create the primary message with the potentially updated state
       const mainMessage = createMessage(
@@ -334,11 +332,11 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
           narratorName, 
           messageContent,
           'image',
-          { id: liveObject.id, game, state: actionResult.newState }
+          { id: liveObject.id, game, state: newState }
       );
       
       // Add the examined flag to the *final* new state
-      if (!isAlreadyExamined) {
+      if (!actionResult.newState.flags.includes(flag)) {
           actionResult.newState.flags.push(flag);
       }
       
@@ -487,7 +485,6 @@ async function handleTalk(state: PlayerState, npcName: string, game: Game): Prom
         const welcomeMessage = (npc as NPC).welcomeMessage || "Hello.";
         
         const flag = examinedObjectFlag(npc.id);
-        const isAlreadyExamined = newState.flags.includes(flag);
         
         messages.push(createMessage(
             npc.id as NpcId, 
@@ -497,7 +494,7 @@ async function handleTalk(state: PlayerState, npcName: string, game: Game): Prom
             { id: npc.id, game, state: newState }
         ));
 
-        if (!isAlreadyExamined) {
+        if (!newState.flags.includes(flag)) {
             newState.flags.push(flag);
         }
 
@@ -527,14 +524,28 @@ function handleInventory(state: PlayerState, game: Game): CommandResult {
 }
 
 function handlePassword(state: PlayerState, command: string, game: Game): CommandResult {
-    const passwordMatch = command.toLowerCase().match(/(?:password for |password) (.*?) (?:is |")?(.*)/);
+    const narratorName = game.narratorName || "Narrator";
+    
+    // Improved regex to be more flexible. Looks for `password <stuff> <quoted phrase>`
+    const passwordMatch = command.toLowerCase().match(/password(?:\s+for)?\s+(.*?)\s+(?:is\s+)?['"](.*?)['"]/);
+    
     if (!passwordMatch) {
+        // Fallback for commands that might not have quotes, like `password notebook JUSTICE FOR SILAS BLOOM`
+        const fallbackMatch = command.toLowerCase().match(/password(?:\s+for)?\s+(.*?)\s+(.*)/);
+        if (fallbackMatch) {
+            const [_, objectName, phrase] = fallbackMatch;
+            return processPassword(state, objectName, phrase, game);
+        }
         return { newState: state, messages: [createMessage('system', 'System', 'Invalid password format. Please use: password for <object> "<phrase>"')] };
     }
 
-    let [, objectName, phrase] = passwordMatch;
-    phrase = phrase.replace(/"/g, ''); // remove quotes
+    const [, objectName, phrase] = passwordMatch;
+    return processPassword(state, objectName, phrase, game);
+}
+
+function processPassword(state: PlayerState, objectName: string, phrase: string, game: Game): CommandResult {
     objectName = objectName.trim();
+    phrase = phrase.trim();
 
     const chapter = game.chapters[state.currentChapterId];
     const location = chapter.locations[state.currentLocationId];
@@ -733,9 +744,10 @@ export async function processCommand(
              if (restOfCommand.startsWith('behind')) {
                  const targetName = restOfCommand.replace('behind ', '').trim();
                  const targetObject = objectsInLocation.find(obj => obj.name.toLowerCase().includes(targetName));
-                 if (targetObject) {
-                     const message = targetObject.onFailure?.['look behind'] || targetObject.onFailure?.default || `You look behind the ${targetObject.name} and see nothing out of the ordinary.`;
-                     result = { newState: currentState, messages: [createMessage('narrator', narratorName, message)] };
+                 if (targetObject?.onFailure?.['look behind']) {
+                     result = { newState: currentState, messages: [createMessage('narrator', narratorName, targetObject.onFailure['look behind'])] };
+                 } else if (targetObject) {
+                     result = { newState: currentState, messages: [createMessage('narrator', narratorName, targetObject.onFailure?.default || `You look behind the ${targetObject.name} and see nothing out of the ordinary.`)] };
                  } else {
                      result = { newState: currentState, messages: [createMessage('narrator', narratorName, "You don't see that here.")] };
                  }
@@ -761,7 +773,7 @@ export async function processCommand(
              // The AI has determined the command is invalid. Just show the agent's message.
              return { newState: currentState, messages: [agentMessage] };
         default:
-            // This handles generic verbs like 'move', 'break', 'look behind'
+            // This handles generic verbs like 'move', 'break' that are not standard commands
             const targetObject = objectsInLocation.find(obj => restOfCommand.includes(obj.name.toLowerCase()));
             if (targetObject) {
                 const failureMessage = targetObject.onFailure?.[verb] || targetObject.onFailure?.default;
@@ -772,7 +784,7 @@ export async function processCommand(
                     result = { newState: currentState, messages: [agentMessage] };
                 }
             } else {
-                // Fallback if no target object is identified
+                // Fallback if no target object is identified, or it's a pure conversational input
                 result = { newState: currentState, messages: [agentMessage] }; 
             }
             break;
@@ -807,5 +819,3 @@ export async function processCommand(
     };
   }
 }
-
-    
