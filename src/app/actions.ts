@@ -5,9 +5,10 @@ import { guidePlayerWithNarrator } from '@/ai/flows/guide-player-with-narrator';
 import { selectNpcResponse } from '@/ai/flows/select-npc-response';
 import { game as gameCartridge } from '@/lib/game/cartridge';
 import { AVAILABLE_COMMANDS } from '@/lib/game/commands';
-import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectId, GameObjectState, ItemId, Flag, Action, Chapter, ChapterId, ImageDetails, GameId } from '@/lib/game/types';
+import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectId, GameObjectState, ItemId, Flag, Action, Chapter, ChapterId, ImageDetails, GameId, User } from '@/lib/game/types';
 import { initializeFirebase } from '@/firebase';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, collection, query, where, getDocs, addDoc } from 'firebase/firestore';
+import { getInitialState } from '@/lib/game-state';
 
 
 // --- Utility Functions ---
@@ -78,7 +79,7 @@ function getLiveGameObject(id: GameObjectId, state: PlayerState, game: Game): Ga
 }
 
 type CommandResult = {
-  newState: PlayerState;
+  newState: PlayerState | null;
   messages: Message[];
 };
 
@@ -651,6 +652,30 @@ function checkChapterCompletion(state: PlayerState, game: Game): { isComplete: b
     return { isComplete: false, messages: [] };
 }
 
+// --- User Management ---
+
+async function findOrCreateUser(userId: string, username: string = 'New Player'): Promise<string> {
+    const { firestore } = initializeFirebase();
+    const usersRef = collection(firestore, 'users');
+    const q = query(usersRef, where('id', '==', userId));
+
+    const querySnapshot = await getDocs(q);
+
+    if (!querySnapshot.empty) {
+        // User exists
+        return querySnapshot.docs[0].id;
+    } else {
+        // User does not exist, create a new one
+        const newUser: User = {
+            id: userId,
+            username: username,
+            purchasedGames: [gameCartridge.id],
+        };
+        const userDocRef = await addDoc(usersRef, newUser);
+        return userDocRef.id;
+    }
+}
+
 
 // --- Main Action ---
 
@@ -661,30 +686,25 @@ export async function processCommand(
   const game = gameCartridge;
   const gameId = game.id;
 
-  // 1. Fetch user data (not used yet, but good practice)
-  const { firestore } = initializeFirebase();
-  const userRef = doc(firestore, 'users', userId);
-  const userSnap = await getDoc(userRef);
-
-  if (!userSnap.exists()) {
-      return { 
-          newState: null as any, // No valid state to return
-          messages: [createMessage('system', 'System', 'Error: User not found.')] 
-      };
-  }
-  const user = userSnap.data();
+  // 1. Find or create a user document ID based on the incoming user ID (phone number or dev ID)
+  // Note: We get the Firestore document ID, not the user's phone number/dev ID.
+  // This is because other parts of the code might expect the Firestore doc ID.
+  const userDocId = await findOrCreateUser(userId);
 
   // 2. Load the current player state from Firestore
+  const { firestore } = initializeFirebase();
   const stateRef = doc(firestore, 'player_states', `${userId}_${gameId}`);
   const stateSnap = await getDoc(stateRef);
   
+  let currentState: PlayerState;
+  
   if (!stateSnap.exists()) {
-      return { 
-          newState: null as any,
-          messages: [createMessage('system', 'System', 'Error: Player state not found.')] 
-      };
+      // If no state, create initial state and save it
+      currentState = getInitialState(game);
+      await logAndSave(userId, gameId, currentState, []); // Save initial state
+  } else {
+      currentState = stateSnap.data() as PlayerState;
   }
-  let currentState = stateSnap.data() as PlayerState;
 
 
   const chapter = game.chapters[currentState.currentChapterId];
@@ -859,6 +879,10 @@ export async function processCommand(
             break;
     }
     
+    if (!result.newState) {
+        return { newState: null, messages: result.messages };
+    }
+
     const completion = checkChapterCompletion(result.newState, game);
     let finalMessages = [...result.messages];
 
@@ -910,7 +934,9 @@ export async function logAndSave(
 
   try {
     // Overwrite the state and logs completely on each turn
-    await setDoc(stateRef, state, { merge: false });
+    if (state) {
+        await setDoc(stateRef, state, { merge: false });
+    }
     await setDoc(logRef, { messages: messages }, { merge: false });
 
   } catch (error) {

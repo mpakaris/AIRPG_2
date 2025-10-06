@@ -20,7 +20,7 @@ export type Message = {
   id: string;
   sender: 'narrator' | 'player' | 'system' | 'agent' | NpcId;
   senderName: string;
-  type: 'text' | 'image' | 'video' | 'article';
+  type: 'text' | 'image' | 'video' | 'article' | 'document' | 'audio';
   content: string;
   image?: ImageDetails;
   timestamp: number;
@@ -41,6 +41,12 @@ export type GameObjectState = {
   isLocked?: boolean;
   items?: ItemId[];
   currentInteractionStateId?: string;
+};
+
+export type User = {
+    id: string; // This can be a phone number or a dev ID
+    username: string;
+    purchasedGames: GameId[];
 };
 
 export type PlayerState = {
