@@ -1,4 +1,4 @@
-import type { Game, PlayerState, Chapter } from './game/types';
+import type { Game, PlayerState, Chapter, ChapterId } from './game/types';
 
 export function getInitialState(game: Game): PlayerState {
   const chapterKeys = Object.keys(game.chapters);
@@ -7,7 +7,7 @@ export function getInitialState(game: Game): PlayerState {
 
   // If the specified start chapter doesn't exist, fall back to the first one.
   if (!startChapter && chapterKeys.length > 0) {
-    startChapterId = chapterKeys[0] as typeof startChapterId;
+    startChapterId = chapterKeys[0] as ChapterId;
     startChapter = game.chapters[startChapterId];
   }
 
@@ -15,13 +15,26 @@ export function getInitialState(game: Game): PlayerState {
     throw new Error("No chapters found in the game cartridge. Cannot initialize state.");
   }
   
+  // Create a clean state. This will be called on every page refresh.
+  const initialObjectStates = {};
+  for (const chapterId in game.chapters) {
+      const chapter = game.chapters[chapterId as ChapterId];
+      for (const gameObjectId in chapter.gameObjects) {
+          const gameObject = chapter.gameObjects[gameObjectId as keyof typeof chapter.gameObjects];
+           initialObjectStates[gameObject.id] = {
+               isLocked: gameObject.isLocked,
+               items: gameObject.items,
+           };
+      }
+  }
+
   return {
     currentGameId: game.id,
     currentChapterId: startChapterId,
     currentLocationId: startChapter.startLocationId,
     inventory: [],
     flags: [],
-    objectStates: {},
+    objectStates: initialObjectStates,
     activeConversationWith: null,
     interactingWithObject: null,
   };

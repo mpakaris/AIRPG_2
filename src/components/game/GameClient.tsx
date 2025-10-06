@@ -1,8 +1,8 @@
 
 'use client';
 
-import { useState, useTransition, type FC } from 'react';
-import { processCommand } from '@/app/actions';
+import { useState, useTransition, type FC, useEffect } from 'react';
+import { processCommand, logAndSave } from '@/app/actions';
 import type { Game, Message, PlayerState } from '@/lib/game/types';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { GameSidebar } from './GameSidebar';
@@ -14,6 +14,9 @@ interface GameClientProps {
   game: Game;
   initialGameState: PlayerState;
 }
+
+// Hardcoded for dev environment
+const DEV_USER_ID = "0036308548589";
 
 export const GameClient: FC<GameClientProps> = ({ game, initialGameState }) => {
   const [playerState, setPlayerState] = useState<PlayerState>(initialGameState);
@@ -67,13 +70,22 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState }) => {
       try {
         const result = await processCommand(playerState, command);
         setPlayerState(result.newState);
-        setMessages(prev => [...prev, ...result.messages]);
+        
+        const allNewMessages = [...messages, ...result.messages];
+        setMessages(allNewMessages);
+
+        // Don't save dev commands to the log
+        if (!isDevCommand) {
+            await logAndSave(DEV_USER_ID, result.newState, allNewMessages);
+        }
+
       } catch (error) {
         console.error(error);
+        const errorMessage = error instanceof Error ? error.message : 'Failed to process command.';
         toast({
           variant: 'destructive',
           title: 'Error',
-          description: 'Failed to process command.',
+          description: errorMessage,
         });
       }
     });

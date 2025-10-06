@@ -6,6 +6,8 @@ import { selectNpcResponse } from '@/ai/flows/select-npc-response';
 import { game as gameCartridge } from '@/lib/game/cartridge';
 import { AVAILABLE_COMMANDS } from '@/lib/game/commands';
 import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectId, GameObjectState, ItemId, Flag, Action, Chapter, ChapterId, ImageDetails } from '@/lib/game/types';
+import { initializeFirebase } from '@/firebase';
+import { doc, setDoc } from 'firebase/firestore';
 
 
 // --- Utility Functions ---
@@ -814,7 +816,7 @@ export async function processCommand(
     };
 
   } catch (error) {
-    console.error('Error processing command with GenKit:', error);
+    console.error('Error processing command:', error);
     if (error instanceof Error) {
         return {
           newState: currentState,
@@ -828,4 +830,33 @@ export async function processCommand(
   }
 }
 
+export async function logAndSave(
+  userId: string,
+  state: PlayerState,
+  messages: Message[]
+): Promise<void> {
+  const { firestore } = initializeFirebase();
+  if (!firestore) {
+    console.error('Firestore is not initialized.');
+    return;
+  }
+
+  const stateRef = doc(firestore, 'player_states', `${userId}_${state.currentGameId}`);
+  const logRef = doc(firestore, 'logs', `${userId}_${state.currentGameId}`);
+
+  try {
+    await setDoc(stateRef, state, { merge: true });
+    
+    // To avoid writing all messages every time, we just append the new ones.
+    // Here, we'll just save the last 2 messages (player and agent response) for simplicity
+    const newLogs = messages.slice(-2);
+    const existingLogsSnap = await getDoc(logRef);
+    const existingLogs = existingLogsSnap.exists() ? existingLogsSnap.data().messages : [];
+    
+    await setDoc(logRef, { messages: [...existingLogs, ...newLogs] });
+
+  } catch (error) {
+    console.error('Failed to save game state or logs:', error);
+  }
+}
     
