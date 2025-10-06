@@ -23,10 +23,7 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initia
   const [playerState, setPlayerState] = useState<PlayerState>(initialGameState);
   
   const createInitialMessages = () => {
-    if (initialMessages && initialMessages.length > 0) {
-        return initialMessages;
-    }
-    
+    // This function creates the very first messages when a new game starts.
     const startChapter = game.chapters[initialGameState.currentChapterId];
     const newInitialMessages: Message[] = [];
   
@@ -54,7 +51,8 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initia
     return newInitialMessages;
   };
   
-  const [messages, setMessages] = useState<Message[]>(createInitialMessages);
+  // Initialize messages. If initialMessages are provided (e.g. from DB), use them. Otherwise, create fresh ones.
+  const [messages, setMessages] = useState<Message[]>(initialMessages.length > 0 ? initialMessages : createInitialMessages());
 
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
@@ -62,10 +60,15 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initia
   const handleResetGame = () => {
     startTransition(async () => {
         const freshState = getInitialState(game);
-        const freshMessages = createInitialMessages();
+        const freshMessages = createInitialMessages(); // Create the initial welcome messages
+        
+        // Update the client state immediately
         setPlayerState(freshState);
         setMessages(freshMessages);
+        
+        // Wipe the database state and logs
         await logAndSave(DEV_USER_ID, game.id, freshState, freshMessages);
+        
         toast({
           title: "Game Reset",
           description: "The game state and logs have been reset.",

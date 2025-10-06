@@ -689,9 +689,10 @@ export async function processCommand(
 
   const chapter = game.chapters[currentState.currentChapterId];
   const narratorName = game.narratorName || "Narrator";
+  const lowerInput = playerInput.toLowerCase().trim();
 
-  if (playerInput.startsWith('dev:complete_')) {
-    const chapterId = playerInput.replace('dev:complete_', '') as ChapterId;
+  if (lowerInput.startsWith('dev:complete_')) {
+    const chapterId = lowerInput.replace('dev:complete_', '') as ChapterId;
     const targetChapter = game.chapters[chapterId];
 
     if (targetChapter) {
@@ -715,29 +716,40 @@ export async function processCommand(
     }
   }
 
-  // Handle global commands that should work even in a sub-context
-  if (currentState.interactingWithObject) {
-      const lowerInput = playerInput.toLowerCase().trim();
-      const location = chapter.locations[currentState.currentLocationId];
-      const objectsInLocation = location.objects.map(id => getLiveGameObject(id, currentState, game));
-      const objectNames = objectsInLocation.map(obj => obj.name);
-      const npcNames = location.npcs.map(id => chapter.npcs[id]?.name).filter(Boolean) as string[];
+  // Handle global commands that should always work
+  const location = chapter.locations[currentState.currentLocationId];
+  const objectsInLocation = location.objects.map(id => getLiveGameObject(id, currentState, game));
+  const objectNames = objectsInLocation.map(obj => obj.name);
+  const npcNames = location.npcs.map(id => chapter.npcs[id]?.name).filter(Boolean) as string[];
 
-      if (lowerInput === 'look around' || lowerInput === 'look') {
-          let lookAroundSummary = `${location.description}\n\n`;
-          if(objectNames.length > 0) {
-            lookAroundSummary += `You can see the following objects:\n${objectNames.map(name => `• ${name}`).join('\n')}\n`;
-          }
-          if(npcNames.length > 0) {
-            lookAroundSummary += `\nYou see the following people here:\n${npcNames.map(name => `• ${name}`).join('\n')}`;
-          }
-          return { newState: currentState, messages: [createMessage('narrator', narratorName, lookAroundSummary)] };
-      } else if (lowerInput === 'exit' || lowerInput === 'close') {
-          return processActions(currentState, [{type: 'END_INTERACTION'}], game);
+  if (lowerInput === 'look around' || lowerInput === 'look') {
+      let lookAroundSummary = `${location.description}\n\n`;
+      if(objectNames.length > 0) {
+        lookAroundSummary += `You can see the following objects:\n${objectNames.map(name => `• ${name}`).join('\n')}\n`;
       }
+      if(npcNames.length > 0) {
+        lookAroundSummary += `\nYou see the following people here:\n${npcNames.map(name => `• ${name}`).join('\n')}`;
+      }
+      // If we are in an interaction, we need to end it before looking around.
+      if (currentState.interactingWithObject) {
+          const result = processActions(currentState, [{type: 'END_INTERACTION'}], game);
+          result.messages.push(createMessage('narrator', narratorName, lookAroundSummary));
+          return {newState: result.newState, messages: result.messages};
+      }
+      return { newState: currentState, messages: [createMessage('narrator', narratorName, lookAroundSummary)] };
+  } else if (lowerInput === 'inventory') {
+      return handleInventory(currentState, game);
   }
 
+  // Handle exiting sub-contexts
+  if (currentState.interactingWithObject && (lowerInput === 'exit' || lowerInput === 'close')) {
+      return processActions(currentState, [{type: 'END_INTERACTION'}], game);
+  }
+  if (currentState.activeConversationWith && isEndingConversation(lowerInput)) {
+      return await handleConversation(currentState, playerInput, game);
+  }
 
+  // --- Context-Specific Command Handling ---
   if (currentState.activeConversationWith) {
       return await handleConversation(currentState, playerInput, game);
   }
@@ -745,11 +757,8 @@ export async function processCommand(
       return await handleObjectInteraction(currentState, playerInput, game);
   }
 
+  // --- Main AI-Driven Command Parsing ---
   try {
-    const location = chapter.locations[currentState.currentLocationId];
-    const objectsInLocation = location.objects.map(id => getLiveGameObject(id, currentState, game));
-    const objectNames = objectsInLocation.map(obj => obj.name);
-    const npcNames = location.npcs.map(id => chapter.npcs[id]?.name).filter(Boolean) as string[];
     const isChapterComplete = checkChapterCompletion(currentState, game).isComplete;
     
     let lookAroundSummary = `${location.description}\n\n`;
@@ -827,6 +836,7 @@ export async function processCommand(
              }
              break;
         case 'inventory':
+            // This is already handled by the global command check above, but we keep it here as a fallback.
             result = handleInventory(currentState, game);
             break;
         case 'password':
@@ -901,11 +911,9 @@ export async function logAndSave(
   try {
     // Overwrite the state and logs completely on each turn
     await setDoc(stateRef, state, { merge: false });
-    await setDoc(logRef, { messages: messages });
+    await setDoc(logRef, { messages: messages }, { merge: false });
 
   } catch (error) {
     console.error('Failed to save game state or logs:', error);
   }
 }
-
-    
