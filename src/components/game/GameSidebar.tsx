@@ -1,7 +1,6 @@
-
 'use client';
 
-import { BookOpen, Box, Compass, ScrollText, Target, User, CheckCircle, Code, RotateCcw, MessageSquareShare, Send } from 'lucide-react';
+import { BookOpen, Box, Compass, ScrollText, Target, User, CheckCircle, Code, RotateCcw, MessageSquareShare, Send, Download } from 'lucide-react';
 import type { FC } from 'react';
 import { useState, useTransition } from 'react';
 import type { Game, PlayerState, Flag, ChapterId } from '@/lib/game/types';
@@ -27,11 +26,12 @@ interface GameSidebarProps {
   playerState: PlayerState;
   onCommandSubmit: (command: string) => void;
   onResetGame: () => void;
+  setCommandInputValue: (value: string) => void;
 }
 
 const DEV_USER_ID = "36308548589";
 
-export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommandSubmit, onResetGame }) => {
+export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommandSubmit, onResetGame, setCommandInputValue }) => {
   const chapter = game.chapters[playerState.currentChapterId];
   const location = chapter.locations[playerState.currentLocationId];
   const inventoryItems = playerState.inventory.map(id => chapter.items[id]).filter(Boolean);
@@ -75,6 +75,58 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
         }
     });
   };
+
+    const handleGetLastMessage = async () => {
+        toast({
+            title: 'Fetching last message...',
+            description: 'Calling the interceptor to get the last message.',
+        });
+        try {
+            const interceptorUrl = 'https://carroll-orangy-maladroitly.ngrok-free.dev/last';
+
+            const response = await fetch(interceptorUrl, {
+                method: 'GET',
+                headers: {
+                    'ngrok-skip-browser-warning': 'true',
+                    'Accept': 'application/json'
+                },
+                cache: 'no-store'
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Request failed with status ${response.status}. Response: ${errorText}`);
+            }
+            
+            const data = await response.json();
+
+            if (data.payload?.text) {
+                setCommandInputValue(data.payload.text);
+                toast({
+                    title: 'Message Loaded!',
+                    description: `Input field populated with: "${data.payload.text}"`,
+                });
+            } else if (data.error === 'No messages') {
+                toast({
+                    variant: 'destructive',
+                    title: 'No Messages Found',
+                    description: 'The interceptor has no messages saved.',
+                });
+            } else {
+                throw new Error('Payload received, but it has an unexpected format.');
+            }
+
+        } catch (error) {
+            console.error('Get Last Message error:', error);
+            const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+            toast({
+                variant: 'destructive',
+                title: 'Fetch Error',
+                description: errorMessage,
+            });
+        }
+    };
+
 
   const handleFetchWhinself = async () => {
     toast({
@@ -252,7 +304,8 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
                     </div>
                 </div>
                 <Button variant="destructive" size="sm" onClick={onResetGame}><RotateCcw className='mr-2 h-4 w-4'/>Reset Game</Button>
-                <Button variant="secondary" size="sm" onClick={handleFetchWhinself}><MessageSquareShare className='mr-2 h-4 w-4'/>Fetch WhatsApp Msg</Button>
+                <Button variant="secondary" size="sm" onClick={handleFetchWhinself}><MessageSquareShare className='mr-2 h-4 w-4'/>Fetch & Submit Msg</Button>
+                <Button variant="secondary" size="sm" onClick={handleGetLastMessage}><Download className='mr-2 h-4 w-4'/>Get Last Message</Button>
                 <Button variant="outline" size="sm" onClick={() => onCommandSubmit('look around')}>Look Around</Button>
                 <Button variant="outline" size="sm" onClick={() => onCommandSubmit('examine notebook')}>Examine Notebook</Button>
                 <Button variant="outline" size="sm" onClick={() => onCommandSubmit('password for brown notebook "Justice for Silas Bloom"')}>Unlock Notebook</Button>

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useTransition, type FC, useEffect } from 'react';
@@ -21,6 +20,7 @@ const DEV_USER_ID = "36308548589";
 
 export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initialMessages }) => {
   const [playerState, setPlayerState] = useState<PlayerState>(initialGameState);
+  const [commandInputValue, setCommandInputValue] = useState('');
   
   const createInitialMessages = () => {
     // This function creates the very first messages when a new game starts.
@@ -77,6 +77,9 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initia
   };
 
   const handleCommandSubmit = (command: string) => {
+    if (!command.trim()) return;
+    setCommandInputValue(''); // Clear input after submission
+
     const isDevCommand = command.startsWith('dev:');
     let allNewMessages = [...messages];
 
@@ -129,6 +132,7 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initia
             playerState={playerState} 
             onCommandSubmit={handleCommandSubmit}
             onResetGame={handleResetGame}
+            setCommandInputValue={setCommandInputValue}
         />
         <main className="transition-all duration-300 ease-in-out md:pl-[20rem] group-data-[state=collapsed]/sidebar-wrapper:md:pl-0">
             <GameScreen
@@ -137,6 +141,8 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initia
             isLoading={isPending}
             game={game}
             playerState={playerState}
+            commandInputValue={commandInputValue}
+            setCommandInputValue={setCommandInputValue}
             />
         </main>
       </div>
