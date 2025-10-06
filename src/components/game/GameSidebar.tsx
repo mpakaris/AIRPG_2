@@ -46,7 +46,7 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
         description: 'Calling the interceptor to get the last message.',
     });
     try {
-      const interceptorUrl = 'https://carroll-orangy-maladroitly.ngrok-free.dev/forward';
+      const interceptorUrl = 'https://carroll-orangy-maladroitly.ngrok-free.dev/last';
 
       const response = await fetch(interceptorUrl, {
         method: 'GET',
