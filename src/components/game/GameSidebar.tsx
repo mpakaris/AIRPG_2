@@ -51,18 +51,17 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
       const response = await fetch(interceptorUrl, {
         method: 'GET',
         headers: {
-            'Content-Type': 'application/json',
-            'ngrok-skip-browser-warning': 'true'
+            'ngrok-skip-browser-warning': 'true',
+            'Accept': 'application/json'
         },
+        cache: 'no-store'
       });
       
       if (!response.ok) {
-        // If response is not ok, get the body as text and throw an error
         const errorText = await response.text();
         throw new Error(`Request failed with status ${response.status}. Response: ${errorText}`);
       }
 
-      // Check content-type before parsing
       const contentType = response.headers.get("content-type");
       if (contentType && contentType.indexOf("application/json") !== -1) {
           const data = await response.json();
@@ -78,7 +77,6 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
              throw new Error('Payload received, but message content was empty or in the wrong format.');
           }
       } else {
-          // If it's not JSON, get the body as text and throw an error
           const errorText = await response.text();
           throw new Error(`Expected JSON response, but received content-type: ${contentType}. Response: ${errorText}`);
       }
