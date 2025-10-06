@@ -44,16 +44,9 @@ export async function GET(request: Request) {
     // --- Process the game command ---
     const result = await processCommand(phone, messageText);
 
-    // --- Send responses back to the user via Whinself ---
-    if (result.messages && result.messages.length > 0) {
-      for (const message of result.messages) {
-        if (message.sender !== 'player') {
-          await dispatchMessage(phone, message);
-        }
-      }
-    }
-    
-    // --- Save the new state and full log ---
+    // --- Save the player's message and the game state BEFORE sending responses ---
+    // This ensures our log is in the correct order.
+    let fullLog = [];
     if (result.newState) {
       const playerMessage = {
           id: crypto.randomUUID(),
@@ -63,9 +56,19 @@ export async function GET(request: Request) {
           content: messageText,
           timestamp: Date.now(),
       };
-      // We log the player message, then the game's responses to maintain order.
-      const fullLog = [playerMessage, ...result.messages]; 
+      // We start with the player message, then add the game's responses.
+      fullLog = [playerMessage, ...result.messages]; 
       await logAndSave(phone, game.id, result.newState, fullLog);
+    }
+    
+    // --- Send responses back to the user via Whinself ---
+    if (result.messages && result.messages.length > 0) {
+      for (const message of result.messages) {
+        // We don't want to re-send the player's own message back to them.
+        if (message.sender !== 'player') {
+          await dispatchMessage(phone, message);
+        }
+      }
     }
 
     // --- Return a success response ---
