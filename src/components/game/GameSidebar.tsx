@@ -41,17 +41,47 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
   }
 
   const handleFetchWhinself = async () => {
+    toast({
+        title: 'Simulating Webhook...',
+        description: 'Sending a sample POST request to /api/whinself.',
+    });
     try {
-      const response = await fetch('/api/whinself');
+      // This is a sample payload. You can modify it to test different inputs.
+      const samplePayload = {
+          "event": {
+              "Info": {
+                  "Chat": "4917643330691@s.whatsapp.net",
+                  "Sender": "4917643330691@s.whatsapp.net",
+                  "ID": `test_id_${Date.now()}`,
+                  "Type": "text",
+                  "PushName": "JimmyJazz",
+                  "Timestamp": new Date().toISOString(),
+              },
+              "Message": {
+                  "conversation": "look around",
+              }
+          },
+          "phone": "4917643330691",
+          "slotid": "slotid"
+      };
+
+      const response = await fetch('/api/whinself', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(samplePayload)
+      });
+      
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch from Whinself API.');
+        throw new Error(data.details || data.error || 'Webhook simulation failed.');
       }
       
       toast({
-        title: 'Whinself API',
-        description: data.status || 'Request sent.',
+        title: 'Webhook Simulation Sent',
+        description: data.message || 'The test request was processed.',
       });
 
     } catch (error) {
@@ -172,7 +202,15 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
                 <Button variant="outline" size="sm" onClick={() => onCommandSubmit('I want to read the article')}>Read Article</Button>
                 <Button variant="outline" size="sm" onClick={() => onCommandSubmit('talk to barista')}>Talk to Barista</Button>
                 <Button variant="outline" size="sm" onClick={() => onCommandSubmit('What do you know about that man that just left?')}>Ask about man</Button>
-                <Button variant="outline" size="sm" onClick={() => onCommandSubmit('Do you know his name or his address?')}>Ask for name</Button>
+                <Button variant="outline" heigh-4 w-4/>Fetch WhatsApp Msg</Button>
+                <Button variant="outline" size="sm" onClick={() => onCommandSubmit('look around')}>Look Around</Button>
+                <Button variant="outline" size="sm" onClick={() => onCommandSubmit('examine notebook')}>Examine Notebook</Button>
+                <Button variant="outline" size="sm" onClick={() => onCommandSubmit('password for brown notebook "Justice for Silas Bloom"')}>Unlock Notebook</Button>
+                <Button variant="outline" size="sm" onClick={() => onCommandSubmit('watch video')}>Watch Video</Button>
+                <Button variant="outline" size="sm" onClick={() => onCommandSubmit('read article')}>Read Article</Button>
+                <Button variant="outline" size="sm" onClick={() => onCommandSubmit('talk to barista')}>Talk to Barista</Button>
+                <Button variant="outline" size="sm" onClick={() => onCommandSubmit('ask about man')}>Ask about man</Button>
+                <Button variant="outline" size="sm" onClick={() => onCommandSubmit('ask for name')}>Ask for name</Button>
                 <Button variant="outline" size="sm" onClick={() => handleDevCommand(game.startChapterId)}>Complete Chapter I</Button>
                 <Button variant="outline" size="sm" disabled>Complete Chapter II</Button>
             </div>
