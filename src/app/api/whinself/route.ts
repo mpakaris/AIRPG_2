@@ -40,7 +40,10 @@ export async function POST(request: Request) {
     };
 
     if (result.newState) {
-      await logAndSave(userId, gameCartridge.id, result.newState, [...result.messages, playerMessage]);
+      // In a real scenario, you'd merge messages. Here we are just logging the latest turn.
+      // The web client will get its updates via its own state management.
+      const messagesToLog = [...result.messages, playerMessage];
+      await logAndSave(userId, gameCartridge.id, result.newState, messagesToLog);
     }
 
     return NextResponse.json({ status: 'ok', message: 'Message processed and response sent.' });
