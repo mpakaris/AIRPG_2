@@ -2,10 +2,10 @@
 // Your web app's Firebase configuration.
 // This is not secret and is safe to be in client-side code.
 export const firebaseConfig = {
-  apiKey: "AIzaSyDHK9cDRDFfcKKGp78GvXqwLJVBHydGzlI",
-  authDomain: "studio-3435290734-37e3d.firebaseapp.com",
-  projectId: "studio-3435290734-37e3d",
-  storageBucket: "studio-3435290734-37e3d.appspot.com",
-  messagingSenderId: "697108854849",
-  appId: "1:697108854849:web:8d05e83b2ae335726feec0"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
