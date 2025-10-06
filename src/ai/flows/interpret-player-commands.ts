@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -70,7 +71,25 @@ const interpretPlayerCommandFlow = ai.defineFlow(
     outputSchema: InterpretPlayerCommandOutputSchema,
   },
   async input => {
-    const {output} = await interpretPlayerCommandPrompt(input);
-    return output!;
+    let attempts = 0;
+    const maxAttempts = 3;
+    const delay = 1000; // 1 second
+
+    while (attempts < maxAttempts) {
+      try {
+        const {output} = await interpretPlayerCommandPrompt(input);
+        return output!;
+      } catch (error) {
+        attempts++;
+        if (attempts >= maxAttempts) {
+          console.error("AI call failed after multiple retries:", error);
+          throw new Error("The AI is currently unavailable. Please try again in a moment.");
+        }
+        console.log(`AI call failed, retrying in ${delay / 1000}s... (Attempt ${attempts})`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+     // This part should be unreachable, but it satisfies TypeScript's need for a return path.
+    throw new Error("AI call failed after multiple retries.");
   }
 );
