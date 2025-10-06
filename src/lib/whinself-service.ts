@@ -13,13 +13,16 @@ async function sendMessage(jid: string, text: string) {
         throw new Error("WHINSELF_API_URL is not configured.");
     }
 
+    // This payload matches the simplified structure from the Whinself `curl` documentation.
     const payload = {
         text: text,
         jid: jid
     };
 
     try {
-        const response = await fetch(`${WHINSELF_API_URL}/wspout`, {
+        // Sending to /webhook as it's the only existing POST endpoint on the interceptor.
+        // This is for testing/debugging purposes to avoid a 404.
+        const response = await fetch(`${WHINSELF_API_URL}/webhook`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -46,6 +49,8 @@ async function sendMessage(jid: string, text: string) {
 
 
 export async function sendTextMessage(to: string, text: string) {
+    // The 'to' parameter is the user ID, e.g., '0036308548589'
+    // We format it into the jid that the Whinself API expects.
     const jid = `${to}@s.whatsapp.net`;
     return sendMessage(jid, text);
 }
