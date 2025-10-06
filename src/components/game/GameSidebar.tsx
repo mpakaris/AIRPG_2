@@ -86,6 +86,7 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
 
             const response = await fetch(interceptorUrl, {
                 method: 'GET',
+                mode: 'cors',
                 headers: {
                     'ngrok-skip-browser-warning': 'true',
                     'Accept': 'application/json'
@@ -138,6 +139,7 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
 
       const response = await fetch(interceptorUrl, {
         method: 'GET',
+        mode: 'cors',
         headers: {
             'ngrok-skip-browser-warning': 'true',
             'Accept': 'application/json'
