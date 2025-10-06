@@ -22,8 +22,8 @@ export function getInitialState(game: Game): PlayerState {
       for (const gameObjectId in chapter.gameObjects) {
           const gameObject = chapter.gameObjects[gameObjectId as keyof typeof chapter.gameObjects];
            initialObjectStates[gameObject.id] = {
-               isLocked: gameObject.isLocked,
-               items: gameObject.items,
+               isLocked: typeof gameObject.isLocked === 'boolean' ? gameObject.isLocked : false,
+               items: gameObject.items || [],
            };
       }
   }
