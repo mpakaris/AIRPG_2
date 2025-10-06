@@ -72,7 +72,8 @@ function getLiveGameObject(id: GameObjectId, state: PlayerState, game: Game): Ga
     const chapter = game.chapters[state.currentChapterId];
     const baseObject = chapter.gameObjects[id];
     const objectState = state.objectStates[id] || {};
-    // Important: The order of spread is crucial. We start with the base, then apply the dynamic state.
+    // Important: The order of spread is crucial. Start with the base, then layer the dynamic state on top.
+    // This ensures cartridge defaults are respected but can be overridden by saved state.
     return { ...baseObject, ...objectState };
 }
 
@@ -883,3 +884,5 @@ export async function logAndSave(
     console.error('Failed to save game state or logs:', error);
   }
 }
+
+    
