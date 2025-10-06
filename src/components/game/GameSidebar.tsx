@@ -100,11 +100,11 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
             
             const data = await response.json();
 
-            if (data.payload?.text) {
-                setCommandInputValue(data.payload.text);
+            if (data.text) {
+                setCommandInputValue(data.text);
                 toast({
                     title: 'Message Loaded!',
-                    description: `Input field populated with: "${data.payload.text}"`,
+                    description: `Input field populated with: "${data.text}"`,
                 });
             } else if (data.error === 'No messages') {
                 toast({
