@@ -1,4 +1,3 @@
-
 'use client';
 
 import { BookOpen, Box, Compass, ScrollText, Target, User, CheckCircle, Code, RotateCcw, MessageSquareShare } from 'lucide-react';
@@ -195,14 +194,6 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
             <div className='flex flex-col gap-2 px-2'>
                 <Button variant="destructive" size="sm" onClick={onResetGame}><RotateCcw className='mr-2 h-4 w-4'/>Reset Game</Button>
                 <Button variant="secondary" size="sm" onClick={handleFetchWhinself}><MessageSquareShare className='mr-2 h-4 w-4'/>Fetch WhatsApp Msg</Button>
-                <Button variant="outline" size="sm" onClick={() => onCommandSubmit('I look around')}>Look Around</Button>
-                <Button variant="outline" size="sm" onClick={() => onCommandSubmit('I examine the notebook')}>Examine Notebook</Button>
-                <Button variant="outline" size="sm" onClick={() => onCommandSubmit('Password for brown notebook "Justice for Silas Bloom"')}>Unlock Notebook</Button>
-                <Button variant="outline" size="sm" onClick={() => onCommandSubmit('I want to watch the video')}>Watch Video</Button>
-                <Button variant="outline" size="sm" onClick={() => onCommandSubmit('I want to read the article')}>Read Article</Button>
-                <Button variant="outline" size="sm" onClick={() => onCommandSubmit('talk to barista')}>Talk to Barista</Button>
-                <Button variant="outline" size="sm" onClick={() => onCommandSubmit('What do you know about that man that just left?')}>Ask about man</Button>
-                <Button variant="outline" heigh-4 w-4/>Fetch WhatsApp Msg</Button>
                 <Button variant="outline" size="sm" onClick={() => onCommandSubmit('look around')}>Look Around</Button>
                 <Button variant="outline" size="sm" onClick={() => onCommandSubmit('examine notebook')}>Examine Notebook</Button>
                 <Button variant="outline" size="sm" onClick={() => onCommandSubmit('password for brown notebook "Justice for Silas Bloom"')}>Unlock Notebook</Button>
