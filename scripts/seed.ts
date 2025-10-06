@@ -19,12 +19,15 @@ if (!serviceAccountKey) {
 }
 
 try {
+    // The key might be wrapped in single quotes, so we parse it carefully
+    const parsedKey = JSON.parse(serviceAccountKey.startsWith("'") ? serviceAccountKey.slice(1, -1) : serviceAccountKey);
     initializeApp({
-        credential: cert(JSON.parse(serviceAccountKey)),
+        credential: cert(parsedKey),
         projectId: gameCartridge.id,
     });
 } catch (error) {
     if (error.code !== 'app/duplicate-app') {
+        console.error("Failed to initialize Firebase Admin SDK:", error);
         throw error;
     }
     console.log('Firebase Admin already initialized.');
