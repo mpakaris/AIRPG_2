@@ -1,0 +1,5 @@
+Remove not commited changes: 
+git fetch origin
+git reset --hard origin/main
+git clean -fd 
+
