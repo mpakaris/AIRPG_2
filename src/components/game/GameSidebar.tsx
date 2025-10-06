@@ -101,12 +101,14 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
             const data = await response.json();
             console.log('Received data:', data);
 
+            // Correctly access the nested text property
+            const messageText = data?.payload?.event?.Message?.conversation;
 
-            if (data.payload && data.payload.text) {
-                setCommandInputValue(data.payload.text);
+            if (messageText) {
+                setCommandInputValue(messageText);
                 toast({
                     title: 'Message Loaded!',
-                    description: `Input field populated with: "${data.payload.text}"`,
+                    description: `Input field populated with: "${messageText}"`,
                 });
             } else if (data.error === 'No messages') {
                 toast({
@@ -155,7 +157,7 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
       const contentType = response.headers.get("content-type");
       if (contentType && contentType.indexOf("application/json") !== -1) {
           const data = await response.json();
-          const playerInput = data.payload?.text;
+          const playerInput = data?.payload?.event?.Message?.conversation;
 
           if (playerInput) {
             toast({
