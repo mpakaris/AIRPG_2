@@ -9,6 +9,7 @@ import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC
 import { initializeFirebase } from '@/firebase';
 import { doc, setDoc, getDoc, collection, query, where, getDocs, addDoc } from 'firebase/firestore';
 import { getInitialState } from '@/lib/game-state';
+import { dispatchMessage } from '@/lib/whinself-service';
 
 
 // --- Utility Functions ---
@@ -931,4 +932,25 @@ export async function logAndSave(
   } catch (error) {
     console.error('Failed to save game state or logs:', error);
   }
+}
+
+export async function sendWhinselfTestMessage(userId: string, message: string): Promise<void> {
+    try {
+        const messageObject: Message = {
+            id: crypto.randomUUID(),
+            sender: 'system',
+            senderName: 'System',
+            type: 'text',
+            content: message,
+            timestamp: Date.now(),
+        };
+        await dispatchMessage(userId, messageObject);
+    } catch (error) {
+        console.error("Failed to send Whinself test message:", error);
+        // We re-throw the error so the client-side can catch it and display a toast.
+        if (error instanceof Error) {
+            throw new Error(`Failed to send message: ${error.message}`);
+        }
+        throw new Error('An unknown error occurred while sending the message.');
+    }
 }
