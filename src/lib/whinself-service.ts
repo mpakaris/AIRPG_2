@@ -25,30 +25,55 @@ async function sendMessage(to: string, messageData: object) {
         if (!response.ok) {
             const errorBody = await response.text();
             console.error(`Whinself API error: ${response.status} ${response.statusText}`, errorBody);
+            throw new Error(`Whinself API responded with status ${response.status}`);
         }
     } catch (error) {
         console.error("Failed to send message via Whinself:", error);
+        if (error instanceof Error) {
+            throw error;
+        }
+        throw new Error('An unknown error occurred during the send message request.');
     }
 }
 
+function createPayload(to: string, type: 'text' | 'image' | 'video' | 'audio' | 'document', data: object) {
+    return {
+        event: "message",
+        data: {
+            from: "whatsapp:+14155238886", // Dummy sender
+            to: `whatsapp:${to}`, // Using the recipient ID
+            messageId: `whin_${crypto.randomUUID()}`,
+            timestamp: new Date().toISOString(),
+            type: type,
+            ...data,
+        }
+    };
+}
+
+
 export async function sendTextMessage(to: string, text: string) {
-    return sendMessage(to, { text });
+    const payload = createPayload(to, 'text', { text: { body: text } });
+    return sendMessage(to, payload);
 }
 
 export async function sendImageMessage(to: string, url: string, caption: string = '') {
-    return sendMessage(to, { image: url, caption });
+    const payload = createPayload(to, 'image', { image: { link: url, caption: caption } });
+    return sendMessage(to, payload);
 }
 
 export async function sendVideoMessage(to: string, url: string, caption: string = '') {
-    return sendMessage(to, { video: url, caption });
+    const payload = createPayload(to, 'video', { video: { link: url, caption: caption } });
+    return sendMessage(to, payload);
 }
 
 export async function sendAudioMessage(to: string, url: string) {
-    return sendMessage(to, { audio: url });
+    const payload = createPayload(to, 'audio', { audio: { link: url } });
+    return sendMessage(to, payload);
 }
 
 export async function sendDocumentMessage(to: string, url: string, filename: string) {
-    return sendMessage(to, { document: url, filename });
+    const payload = createPayload(to, 'document', { document: { link: url, filename: filename } });
+    return sendMessage(to, payload);
 }
 
 /**
@@ -58,6 +83,10 @@ export async function sendDocumentMessage(to: string, url: string, filename: str
  */
 export async function dispatchMessage(to: string, message: Message) {
     const { type, content, image } = message;
+
+    // The 'to' parameter is the DEV_USER_ID. The actual phone number needs to be mapped.
+    // For now, we assume the Whinself endpoint or interceptor handles this mapping.
+    // The payload we build will use a placeholder for the 'to' phonenumber.
 
     switch (type) {
         case 'text':
