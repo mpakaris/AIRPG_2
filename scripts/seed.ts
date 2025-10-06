@@ -35,7 +35,7 @@ try {
 
 const db = getFirestore();
 
-const DEV_USER_ID = '0036308548589';
+const DEV_USER_ID = '36308548589';
 
 async function seedDatabase() {
     console.log('Starting database seed...');
