@@ -10,16 +10,17 @@ if (!WHINSELF_API_URL) {
 async function sendMessage(to: string, messageData: object) {
     if (!WHINSELF_API_URL) {
         console.error("Cannot send message: WHINSELF_API_URL is not configured.");
-        return;
+        throw new Error("WHINSELF_API_URL is not configured.");
     }
 
     try {
-        const response = await fetch(`${WHINSELF_API_URL}/send`, {
+        // Corrected the endpoint from /send to /webhook
+        const response = await fetch(`${WHINSELF_API_URL}/webhook`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ to, ...messageData }),
+            body: JSON.stringify(messageData), // The messageData now contains the full payload structure
         });
 
         if (!response.ok) {
@@ -37,16 +38,19 @@ async function sendMessage(to: string, messageData: object) {
 }
 
 function createPayload(to: string, type: 'text' | 'image' | 'video' | 'audio' | 'document', data: object) {
+    // The recipient 'to' (0036308548589) is passed to this function.
+    // We construct the payload with a placeholder 'to' number, assuming the
+    // actual routing is handled by the Whinself API based on the 'to' in the outer request.
     return {
-        event: "message",
-        data: {
-            from: "whatsapp:+14155238886", // Dummy sender
-            to: `whatsapp:${to}`, // Using the recipient ID
-            messageId: `whin_${crypto.randomUUID()}`,
-            timestamp: new Date().toISOString(),
-            type: type,
-            ...data,
-        }
+      event: "message",
+      data: {
+        from: "whatsapp:+14155238886", // Dummy sender
+        to: `whatsapp:${to}`, // Using the recipient ID as whinself uid
+        messageId: `whin_${crypto.randomUUID()}`,
+        timestamp: new Date().toISOString(),
+        type: type,
+        ...data,
+      }
     };
 }
 
@@ -78,15 +82,11 @@ export async function sendDocumentMessage(to: string, url: string, filename: str
 
 /**
  * Dispatches a game message to the user via the Whinself service.
- * @param to The recipient's phone number.
+ * @param to The recipient's phone number or user ID.
  * @param message The game message object to send.
  */
 export async function dispatchMessage(to: string, message: Message) {
     const { type, content, image } = message;
-
-    // The 'to' parameter is the DEV_USER_ID. The actual phone number needs to be mapped.
-    // For now, we assume the Whinself endpoint or interceptor handles this mapping.
-    // The payload we build will use a placeholder for the 'to' phonenumber.
 
     switch (type) {
         case 'text':
