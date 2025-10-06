@@ -76,6 +76,7 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
       }
 
     } catch (error) {
+        console.error('Interceptor fetch error:', error);
         const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
         toast({
             variant: 'destructive',
