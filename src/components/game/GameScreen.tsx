@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useRef, useState, type FC, Fragment } from 'react';
@@ -18,19 +17,21 @@ interface GameScreenProps {
   isLoading: boolean;
   game: Game;
   playerState: PlayerState;
+  commandInputValue: string;
+  setCommandInputValue: (value: string) => void;
 }
 
-const CommandInput: FC<Pick<GameScreenProps, 'onCommandSubmit' | 'isLoading'>> = ({
+const CommandInput: FC<Pick<GameScreenProps, 'onCommandSubmit' | 'isLoading' | 'commandInputValue' | 'setCommandInputValue'>> = ({
   onCommandSubmit,
   isLoading,
+  commandInputValue,
+  setCommandInputValue,
 }) => {
-  const [command, setCommand] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (command.trim() && !isLoading) {
-      onCommandSubmit(command.trim());
-      setCommand('');
+    if (commandInputValue.trim() && !isLoading) {
+      onCommandSubmit(commandInputValue.trim());
     }
   };
 
@@ -39,8 +40,8 @@ const CommandInput: FC<Pick<GameScreenProps, 'onCommandSubmit' | 'isLoading'>> =
       <Input
         type="text"
         placeholder="Type your command..."
-        value={command}
-        onChange={(e) => setCommand(e.target.value)}
+        value={commandInputValue}
+        onChange={(e) => setCommandInputValue(e.target.value)}
         disabled={isLoading}
         className="h-12 flex-1 rounded-full bg-muted pl-4 pr-14 text-base"
         autoFocus
@@ -181,7 +182,7 @@ const MessageLog: FC<Pick<GameScreenProps, 'messages'>> = ({ messages }) => {
 };
 
 
-export const GameScreen: FC<GameScreenProps> = ({ messages, onCommandSubmit, isLoading, game, playerState }) => {
+export const GameScreen: FC<GameScreenProps> = ({ messages, onCommandSubmit, isLoading, game, playerState, commandInputValue, setCommandInputValue }) => {
     const chapter = game.chapters[playerState.currentChapterId];
   return (
     <div className="flex h-screen flex-col bg-background">
@@ -203,11 +204,14 @@ export const GameScreen: FC<GameScreenProps> = ({ messages, onCommandSubmit, isL
         </main>
          <footer className="border-t bg-card p-4">
             <div className="mx-auto max-w-4xl">
-              <CommandInput onCommandSubmit={onCommandSubmit} isLoading={isLoading} />
+              <CommandInput 
+                onCommandSubmit={onCommandSubmit} 
+                isLoading={isLoading} 
+                commandInputValue={commandInputValue}
+                setCommandInputValue={setCommandInputValue}
+              />
             </div>
         </footer>
     </div>
   );
 };
-
-    
