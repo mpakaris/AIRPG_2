@@ -72,6 +72,7 @@ function getLiveGameObject(id: GameObjectId, state: PlayerState, game: Game): Ga
     const chapter = game.chapters[state.currentChapterId];
     const baseObject = chapter.gameObjects[id];
     const objectState = state.objectStates[id] || {};
+    // Important: The order of spread is crucial. We start with the base, then apply the dynamic state.
     return { ...baseObject, ...objectState };
 }
 
