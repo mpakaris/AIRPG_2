@@ -38,14 +38,11 @@ async function sendMessage(to: string, messageData: object) {
 }
 
 function createPayload(to: string, type: 'text' | 'image' | 'video' | 'audio' | 'document', data: object) {
-    // The recipient 'to' (0036308548589) is passed to this function.
-    // We construct the payload with a placeholder 'to' number, assuming the
-    // actual routing is handled by the Whinself API based on the 'to' in the outer request.
     return {
       event: "message",
       data: {
         from: "whatsapp:+14155238886", // Dummy sender
-        to: `whatsapp:${to}`, // Using the recipient ID as whinself uid
+        to: `whatsapp:${to}`,
         messageId: `whin_${crypto.randomUUID()}`,
         timestamp: new Date().toISOString(),
         type: type,
