@@ -5,7 +5,7 @@ import { guidePlayerWithNarrator } from '@/ai/flows/guide-player-with-narrator';
 import { selectNpcResponse } from '@/ai/flows/select-npc-response';
 import { game as gameCartridge } from '@/lib/game/cartridge';
 import { AVAILABLE_COMMANDS } from '@/lib/game/commands';
-import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectId, GameObjectState, ItemId, Flag, Action, Chapter, ChapterId, ImageDetails } from '@/lib/game/types';
+import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectId, GameObjectState, ItemId, Flag, Action, Chapter, ChapterId, ImageDetails, GameId } from '@/lib/game/types';
 import { initializeFirebase } from '@/firebase';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 
@@ -653,10 +653,38 @@ function checkChapterCompletion(state: PlayerState, game: Game): { isComplete: b
 // --- Main Action ---
 
 export async function processCommand(
-  currentState: PlayerState,
+  userId: string,
   playerInput: string
 ): Promise<CommandResult> {
   const game = gameCartridge;
+  const gameId = game.id;
+
+  // 1. Fetch user data (not used yet, but good practice)
+  const { firestore } = initializeFirebase();
+  const userRef = doc(firestore, 'users', userId);
+  const userSnap = await getDoc(userRef);
+
+  if (!userSnap.exists()) {
+      return { 
+          newState: null as any, // No valid state to return
+          messages: [createMessage('system', 'System', 'Error: User not found.')] 
+      };
+  }
+  const user = userSnap.data();
+
+  // 2. Load the current player state from Firestore
+  const stateRef = doc(firestore, 'player_states', `${userId}_${gameId}`);
+  const stateSnap = await getDoc(stateRef);
+  
+  if (!stateSnap.exists()) {
+      return { 
+          newState: null as any,
+          messages: [createMessage('system', 'System', 'Error: Player state not found.')] 
+      };
+  }
+  let currentState = stateSnap.data() as PlayerState;
+
+
   const chapter = game.chapters[currentState.currentChapterId];
   const narratorName = game.narratorName || "Narrator";
 
@@ -832,6 +860,7 @@ export async function processCommand(
 
 export async function logAndSave(
   userId: string,
+  gameId: GameId,
   state: PlayerState,
   messages: Message[]
 ): Promise<void> {
@@ -841,19 +870,13 @@ export async function logAndSave(
     return;
   }
 
-  const stateRef = doc(firestore, 'player_states', `${userId}_${state.currentGameId}`);
-  const logRef = doc(firestore, 'logs', `${userId}_${state.currentGameId}`);
+  const stateRef = doc(firestore, 'player_states', `${userId}_${gameId}`);
+  const logRef = doc(firestore, 'logs', `${userId}_${gameId}`);
 
   try {
-    await setDoc(stateRef, state, { merge: true });
-    
-    // To avoid writing all messages every time, we just append the new ones.
-    // Here, we'll just save the last 2 messages (player and agent response) for simplicity
-    const newLogs = messages.slice(-2);
-    const existingLogsSnap = await getDoc(logRef);
-    const existingLogs = existingLogsSnap.exists() ? existingLogsSnap.data().messages : [];
-    
-    await setDoc(logRef, { messages: [...existingLogs, ...newLogs] });
+    // Overwrite the state and logs completely on each turn
+    await setDoc(stateRef, state, { merge: false });
+    await setDoc(logRef, { messages: messages });
 
   } catch (error) {
     console.error('Failed to save game state or logs:', error);

@@ -58,6 +58,7 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initia
 
   const handleCommandSubmit = (command: string) => {
     const isDevCommand = command.startsWith('dev:');
+    let allNewMessages = [...messages];
 
     if (!isDevCommand) {
         const playerMessage: Message = {
@@ -68,20 +69,23 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initia
             content: command,
             timestamp: Date.now(),
         };
-        setMessages(prev => [...prev, playerMessage]);
+        allNewMessages = [...allNewMessages, playerMessage];
+        setMessages(allNewMessages);
     }
 
     startTransition(async () => {
       try {
-        const result = await processCommand(playerState, command);
-        setPlayerState(result.newState);
+        const result = await processCommand(DEV_USER_ID, command);
         
-        const allNewMessages = [...messages, ...result.messages];
-        setMessages(allNewMessages);
+        if (result.newState) {
+            setPlayerState(result.newState);
+        }
 
-        // Don't save dev commands to the log
-        if (!isDevCommand) {
-            await logAndSave(DEV_USER_ID, result.newState, allNewMessages);
+        const finalMessages = [...allNewMessages, ...result.messages];
+        setMessages(finalMessages);
+
+        if (result.newState) {
+            await logAndSave(DEV_USER_ID, game.id, result.newState, finalMessages);
         }
 
       } catch (error) {
