@@ -19,7 +19,7 @@ async function sendMessage(jid: string, text: string) {
     };
 
     try {
-        const response = await fetch(`${WHINSELF_API_URL}/webhook`, {
+        const response = await fetch(`${WHINSELF_API_URL}/wspout`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
