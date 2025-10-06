@@ -1,7 +1,7 @@
 
 'use client';
 
-import { BookOpen, Box, Compass, ScrollText, Target, User, CheckCircle, Code, RotateCcw } from 'lucide-react';
+import { BookOpen, Box, Compass, ScrollText, Target, User, CheckCircle, Code, RotateCcw, MessageSquareShare } from 'lucide-react';
 import type { FC } from 'react';
 import type { Game, PlayerState, Flag, ChapterId } from '@/lib/game/types';
 import {
@@ -17,6 +17,7 @@ import {
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 
 interface GameSidebarProps {
   game: Game;
@@ -29,6 +30,7 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
   const chapter = game.chapters[playerState.currentChapterId];
   const location = chapter.locations[playerState.currentLocationId];
   const inventoryItems = playerState.inventory.map(id => chapter.items[id]).filter(Boolean);
+  const { toast } = useToast();
 
   const isObjectiveComplete = (flag: Flag): boolean => {
     return playerState.flags.includes(flag);
@@ -36,6 +38,30 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
 
   const handleDevCommand = (chapterId: ChapterId) => {
       onCommandSubmit(`dev:complete_${chapterId}`);
+  }
+
+  const handleFetchWhinself = async () => {
+    try {
+      const response = await fetch('/api/whinself');
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch from Whinself API.');
+      }
+      
+      toast({
+        title: 'Whinself API',
+        description: data.status || 'Request sent.',
+      });
+
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+        toast({
+            variant: 'destructive',
+            title: 'API Error',
+            description: errorMessage,
+        });
+    }
   }
 
   return (
@@ -138,6 +164,7 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
             </SidebarGroupLabel>
             <div className='flex flex-col gap-2 px-2'>
                 <Button variant="destructive" size="sm" onClick={onResetGame}><RotateCcw className='mr-2 h-4 w-4'/>Reset Game</Button>
+                <Button variant="secondary" size="sm" onClick={handleFetchWhinself}><MessageSquareShare className='mr-2 h-4 w-4'/>Fetch WhatsApp Msg</Button>
                 <Button variant="outline" size="sm" onClick={() => onCommandSubmit('I look around')}>Look Around</Button>
                 <Button variant="outline" size="sm" onClick={() => onCommandSubmit('I examine the notebook')}>Examine Notebook</Button>
                 <Button variant="outline" size="sm" onClick={() => onCommandSubmit('Password for brown notebook "Justice for Silas Bloom"')}>Unlock Notebook</Button>

@@ -66,7 +66,8 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initia
         setPlayerState(freshState);
         setMessages(freshMessages);
         
-        // Wipe the database state and logs
+        // Wipe the database state and logs for both dev user and potentially a phone number user.
+        // This is a bit of a shotgun approach for dev, but ensures a clean slate.
         await logAndSave(DEV_USER_ID, game.id, freshState, freshMessages);
         
         toast({
@@ -95,6 +96,7 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initia
 
     startTransition(async () => {
       try {
+        // We use the DEV_USER_ID when submitting commands from the web UI.
         const result = await processCommand(DEV_USER_ID, command);
         
         if (result.newState) {
