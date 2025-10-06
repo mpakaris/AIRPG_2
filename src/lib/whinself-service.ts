@@ -15,7 +15,7 @@ async function sendMessage(jid: string, text: string) {
 
     const payload = {
         text: text,
-        jid: `${jid}@s.whatsapp.net`
+        jid: jid
     };
 
     try {
@@ -33,7 +33,6 @@ async function sendMessage(jid: string, text: string) {
             throw new Error(`Whinself API responded with status ${response.status}: ${errorBody}`);
         }
         
-        // Return the success response body if any
         return await response.json();
 
     } catch (error) {
@@ -47,7 +46,8 @@ async function sendMessage(jid: string, text: string) {
 
 
 export async function sendTextMessage(to: string, text: string) {
-    return sendMessage(to, text);
+    const jid = `${to}@s.whatsapp.net`;
+    return sendMessage(jid, text);
 }
 
 // The following functions are kept for structural consistency but are simplified
