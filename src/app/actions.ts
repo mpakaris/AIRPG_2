@@ -654,26 +654,21 @@ function checkChapterCompletion(state: PlayerState, game: Game): { isComplete: b
 
 // --- User Management ---
 
-async function findOrCreateUser(userId: string, username: string = 'New Player'): Promise<string> {
+async function findOrCreateUser(userId: string): Promise<{userRef: any, isNew: boolean}> {
     const { firestore } = initializeFirebase();
-    const usersRef = collection(firestore, 'users');
-    const q = query(usersRef, where('id', '==', userId));
+    const userRef = doc(firestore, 'users', userId);
+    const userSnap = await getDoc(userRef);
 
-    const querySnapshot = await getDocs(q);
-
-    if (!querySnapshot.empty) {
-        // User exists
-        return querySnapshot.docs[0].id;
-    } else {
-        // User does not exist, create a new one
+    if (!userSnap.exists()) {
         const newUser: User = {
             id: userId,
-            username: username,
+            username: `Player_${userId.substring(userId.length - 4)}`,
             purchasedGames: [gameCartridge.id],
         };
-        const userDocRef = await addDoc(usersRef, newUser);
-        return userDocRef.id;
+        await setDoc(userRef, newUser);
+        return { userRef, isNew: true };
     }
+    return { userRef, isNew: false };
 }
 
 
@@ -686,12 +681,8 @@ export async function processCommand(
   const game = gameCartridge;
   const gameId = game.id;
 
-  // 1. Find or create a user document ID based on the incoming user ID (phone number or dev ID)
-  // Note: We get the Firestore document ID, not the user's phone number/dev ID.
-  // This is because other parts of the code might expect the Firestore doc ID.
-  const userDocId = await findOrCreateUser(userId);
+  await findOrCreateUser(userId);
 
-  // 2. Load the current player state from Firestore
   const { firestore } = initializeFirebase();
   const stateRef = doc(firestore, 'player_states', `${userId}_${gameId}`);
   const stateSnap = await getDoc(stateRef);
@@ -699,9 +690,7 @@ export async function processCommand(
   let currentState: PlayerState;
   
   if (!stateSnap.exists()) {
-      // If no state, create initial state and save it
       currentState = getInitialState(game);
-      await logAndSave(userId, gameId, currentState, []); // Save initial state
   } else {
       currentState = stateSnap.data() as PlayerState;
   }

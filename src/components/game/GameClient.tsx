@@ -66,8 +66,7 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initia
         setPlayerState(freshState);
         setMessages(freshMessages);
         
-        // Wipe the database state and logs for both dev user and potentially a phone number user.
-        // This is a bit of a shotgun approach for dev, but ensures a clean slate.
+        // Wipe the database state and logs for the dev user.
         await logAndSave(DEV_USER_ID, game.id, freshState, freshMessages);
         
         toast({
