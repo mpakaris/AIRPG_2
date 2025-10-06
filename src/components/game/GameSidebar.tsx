@@ -1,3 +1,4 @@
+
 'use client';
 
 import { BookOpen, Box, Compass, ScrollText, Target, User, CheckCircle, Code, RotateCcw, MessageSquareShare } from 'lucide-react';
