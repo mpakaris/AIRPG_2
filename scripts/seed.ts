@@ -22,8 +22,7 @@ try {
     // The key might be wrapped in single quotes, so we parse it carefully
     const parsedKey = JSON.parse(serviceAccountKey.startsWith("'") ? serviceAccountKey.slice(1, -1) : serviceAccountKey);
     initializeApp({
-        credential: cert(parsedKey),
-        projectId: gameCartridge.id,
+        credential: cert(parsedKey)
     });
 } catch (error) {
     if (error.code !== 'app/duplicate-app') {
