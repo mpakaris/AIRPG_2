@@ -5,8 +5,11 @@ import { dispatchMessage } from '@/lib/whinself-service';
 import { game as gameCartridge } from '@/lib/game/cartridge';
 
 /**
- * Receives webhook POST requests from Whinself, processes the player's command,
- * and sends back the game's response via the Whinself service.
+ * This is the primary webhook for receiving messages from Whinself.
+ * It is not currently used in development because of auth issues,
+ * but it is the code that would run in production.
+ * In development, we simulate calls to this by using the "Fetch WhatsApp Msg"
+ * button in the UI, which calls our interceptor service.
  */
 export async function POST(request: Request) {
   try {

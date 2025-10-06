@@ -42,53 +42,44 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
 
   const handleFetchWhinself = async () => {
     toast({
-        title: 'Simulating Webhook...',
-        description: 'Sending a sample POST request to /api/whinself.',
+        title: 'Fetching message...',
+        description: 'Calling the interceptor to get the last message.',
     });
     try {
-      // This is a sample payload. You can modify it to test different inputs.
-      const samplePayload = {
-          "event": {
-              "Info": {
-                  "Chat": "4917643330691@s.whatsapp.net",
-                  "Sender": "4917643330691@s.whatsapp.net",
-                  "ID": `test_id_${Date.now()}`,
-                  "Type": "text",
-                  "PushName": "JimmyJazz",
-                  "Timestamp": new Date().toISOString(),
-              },
-              "Message": {
-                  "conversation": "look around",
-              }
-          },
-          "phone": "4917643330691",
-          "slotid": "slotid"
-      };
+      const interceptorUrl = 'https://carroll-orangy-maladroitly.ngrok-free.dev/forward';
 
-      const response = await fetch('/api/whinself', {
-        method: 'POST',
+      const response = await fetch(interceptorUrl, {
+        method: 'GET',
         headers: {
+            // ngrok can sometimes be picky about browser-related headers
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify(samplePayload)
       });
       
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.details || data.error || 'Webhook simulation failed.');
+        throw new Error(data.error || 'Failed to fetch from interceptor.');
       }
       
-      toast({
-        title: 'Webhook Simulation Sent',
-        description: data.message || 'The test request was processed.',
-      });
+      const playerInput = data.event?.Message?.conversation;
+
+      if (playerInput) {
+        toast({
+          title: 'Message Received!',
+          description: `Processing: "${playerInput}"`,
+        });
+        // This will display the message in the web UI and process the command
+        onCommandSubmit(playerInput);
+      } else {
+         throw new Error('Payload received, but message content was empty or in the wrong format.');
+      }
 
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
         toast({
             variant: 'destructive',
-            title: 'API Error',
+            title: 'Interceptor Error',
             description: errorMessage,
         });
     }
