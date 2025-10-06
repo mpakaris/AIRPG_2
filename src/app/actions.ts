@@ -715,6 +715,30 @@ export async function processCommand(
     }
   }
 
+  // Handle global commands that should work even in a sub-context
+  if (currentState.interactingWithObject) {
+      const lowerInput = playerInput.toLowerCase().trim();
+      if (lowerInput === 'look around' || lowerInput === 'look') {
+          // Allow 'look around' to break out of interaction and describe the location
+          const location = chapter.locations[currentState.currentLocationId];
+          const objectsInLocation = location.objects.map(id => getLiveGameObject(id, currentState, game));
+          const objectNames = objectsInLocation.map(obj => obj.name);
+          const npcNames = location.npcs.map(id => chapter.npcs[id]?.name).filter(Boolean) as string[];
+          
+          let lookAroundSummary = `${location.description}\n\n`;
+          if(objectNames.length > 0) {
+            lookAroundSummary += `You can see the following objects:\n${objectNames.map(name => `• ${name}`).join('\n')}\n`;
+          }
+          if(npcNames.length > 0) {
+            lookAroundSummary += `\nYou see the following people here:\n${npcNames.map(name => `• ${name}`).join('\n')}`;
+          }
+          return { newState: currentState, messages: [createMessage('narrator', narratorName, lookAroundSummary)] };
+      } else if (lowerInput === 'exit' || lowerInput === 'close') {
+          return processActions(currentState, [{type: 'END_INTERACTION'}], game);
+      }
+  }
+
+
   if (currentState.activeConversationWith) {
       return await handleConversation(currentState, playerInput, game);
   }
