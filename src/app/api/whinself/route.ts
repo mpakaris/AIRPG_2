@@ -4,21 +4,6 @@ import { processCommand, logAndSave } from '@/app/actions';
 import { dispatchMessage } from '@/lib/whinself-service';
 import { game as gameCartridge } from '@/lib/game/cartridge';
 
-// Set up CORS headers
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-};
-
-export async function OPTIONS(request: Request) {
-  return new Response(null, {
-    status: 204,
-    headers: corsHeaders,
-  });
-}
-
-
 /**
  * This is the primary webhook for receiving messages from Whinself.
  * It is not currently used in development because of auth issues,
@@ -36,7 +21,7 @@ export async function POST(request: Request) {
 
     if (!userId || !playerInput) {
       console.error('Invalid payload: Missing phone number or message content.');
-      return new NextResponse(JSON.stringify({ error: 'Invalid payload' }), { status: 400, headers: corsHeaders });
+      return new NextResponse(JSON.stringify({ error: 'Invalid payload' }), { status: 400 });
     }
 
     // Process the player's command using the core game logic
@@ -64,11 +49,11 @@ export async function POST(request: Request) {
       await logAndSave(userId, gameCartridge.id, result.newState, messagesToLog);
     }
 
-    return new NextResponse(JSON.stringify({ status: 'ok', message: 'Message processed and response sent.' }), { status: 200, headers: corsHeaders });
+    return new NextResponse(JSON.stringify({ status: 'ok', message: 'Message processed and response sent.' }), { status: 200 });
 
   } catch (error) {
     console.error('Error in Whinself POST route:', error);
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    return new NextResponse(JSON.stringify({ error: 'Failed to process request', details: errorMessage }), { status: 500, headers: corsHeaders });
+    return new NextResponse(JSON.stringify({ error: 'Failed to process request', details: errorMessage }), { status: 500 });
   }
 }
