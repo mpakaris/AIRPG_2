@@ -1,8 +1,9 @@
 
 'use client';
 
-import { BookOpen, Box, Compass, ScrollText, Target, User, CheckCircle, Code, RotateCcw, MessageSquareShare } from 'lucide-react';
+import { BookOpen, Box, Compass, ScrollText, Target, User, CheckCircle, Code, RotateCcw, MessageSquareShare, Send } from 'lucide-react';
 import type { FC } from 'react';
+import { useState, useTransition } from 'react';
 import type { Game, PlayerState, Flag, ChapterId } from '@/lib/game/types';
 import {
   Sidebar,
@@ -17,7 +18,9 @@ import {
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { sendWhinselfTestMessage } from '@/app/actions';
 
 interface GameSidebarProps {
   game: Game;
@@ -26,11 +29,15 @@ interface GameSidebarProps {
   onResetGame: () => void;
 }
 
+const DEV_USER_ID = "0036308548589";
+
 export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommandSubmit, onResetGame }) => {
   const chapter = game.chapters[playerState.currentChapterId];
   const location = chapter.locations[playerState.currentLocationId];
   const inventoryItems = playerState.inventory.map(id => chapter.items[id]).filter(Boolean);
   const { toast } = useToast();
+  const [isPending, startTransition] = useTransition();
+  const [whinselfMessage, setWhinselfMessage] = useState('');
 
   const isObjectiveComplete = (flag: Flag): boolean => {
     return playerState.flags.includes(flag);
@@ -39,6 +46,35 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
   const handleDevCommand = (chapterId: ChapterId) => {
       onCommandSubmit(`dev:complete_${chapterId}`);
   }
+  
+  const handleSendWhinself = () => {
+    if (!whinselfMessage.trim()) {
+        toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Message cannot be empty.',
+        });
+        return;
+    }
+    startTransition(async () => {
+        try {
+            await sendWhinselfTestMessage(DEV_USER_ID, whinselfMessage);
+            toast({
+                title: 'Message Sent',
+                description: `Sent "${whinselfMessage}" to ${DEV_USER_ID}.`,
+            });
+            setWhinselfMessage('');
+        } catch (error) {
+            console.error('Send Whinself message error:', error);
+            const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+            toast({
+                variant: 'destructive',
+                title: 'Send Error',
+                description: errorMessage,
+            });
+        }
+    });
+  };
 
   const handleFetchWhinself = async () => {
     toast({
@@ -191,6 +227,30 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
                 Dev Controls
             </SidebarGroupLabel>
             <div className='flex flex-col gap-2 px-2'>
+                <div className='flex flex-col gap-2'>
+                    <p className='text-xs font-semibold text-muted-foreground'>Send Test Message</p>
+                    <div className="relative flex w-full items-center">
+                         <Input
+                            type="text"
+                            placeholder="Enter a message..."
+                            value={whinselfMessage}
+                            onChange={(e) => setWhinselfMessage(e.target.value)}
+                            disabled={isPending}
+                            className="h-9 pr-10"
+                        />
+                        <Button
+                            type="submit"
+                            size="icon"
+                            variant="ghost"
+                            disabled={isPending}
+                            onClick={handleSendWhinself}
+                            className="absolute right-0 h-9 w-9"
+                        >
+                            <Send className="h-4 w-4" />
+                            <span className="sr-only">Send</span>
+                        </Button>
+                    </div>
+                </div>
                 <Button variant="destructive" size="sm" onClick={onResetGame}><RotateCcw className='mr-2 h-4 w-4'/>Reset Game</Button>
                 <Button variant="secondary" size="sm" onClick={handleFetchWhinself}><MessageSquareShare className='mr-2 h-4 w-4'/>Fetch WhatsApp Msg</Button>
                 <Button variant="outline" size="sm" onClick={() => onCommandSubmit('look around')}>Look Around</Button>
