@@ -51,7 +51,6 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
       const response = await fetch(interceptorUrl, {
         method: 'GET',
         headers: {
-            // ngrok can sometimes be picky about browser-related headers
             'Content-Type': 'application/json'
         },
       });
@@ -69,7 +68,6 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
           title: 'Message Received!',
           description: `Processing: "${playerInput}"`,
         });
-        // This will display the message in the web UI and process the command
         onCommandSubmit(playerInput);
       } else {
          throw new Error('Payload received, but message content was empty or in the wrong format.');
