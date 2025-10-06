@@ -29,7 +29,7 @@ interface GameSidebarProps {
   onResetGame: () => void;
 }
 
-const DEV_USER_ID = "0036308548589";
+const DEV_USER_ID = "36308548589";
 
 export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommandSubmit, onResetGame }) => {
   const chapter = game.chapters[playerState.currentChapterId];
