@@ -7,7 +7,7 @@ import { game as gameCartridge } from '@/lib/game/cartridge';
 import { AVAILABLE_COMMANDS } from '@/lib/game/commands';
 import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectId, GameObjectState, ItemId, Flag, Action, Chapter, ChapterId, ImageDetails } from '@/lib/game/types';
 import { initializeFirebase } from '@/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 
 
 // --- Utility Functions ---
@@ -859,4 +859,3 @@ export async function logAndSave(
     console.error('Failed to save game state or logs:', error);
   }
 }
-    

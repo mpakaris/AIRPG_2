@@ -8,21 +8,26 @@ import { SidebarProvider } from '@/components/ui/sidebar';
 import { GameSidebar } from './GameSidebar';
 import { GameScreen } from './GameScreen';
 import { useToast } from '@/hooks/use-toast';
-import { getInitialState } from '@/lib/game-state';
 
 interface GameClientProps {
   game: Game;
   initialGameState: PlayerState;
+  initialMessages: Message[];
 }
 
 // Hardcoded for dev environment
 const DEV_USER_ID = "0036308548589";
 
-export const GameClient: FC<GameClientProps> = ({ game, initialGameState }) => {
+export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initialMessages }) => {
   const [playerState, setPlayerState] = useState<PlayerState>(initialGameState);
   const [messages, setMessages] = useState<Message[]>(() => {
+    if (initialMessages && initialMessages.length > 0) {
+        return initialMessages;
+    }
+    
+    // Fallback to welcome messages if no logs are loaded
     const startChapter = game.chapters[initialGameState.currentChapterId];
-    const initialMessages: Message[] = [];
+    const newInitialMessages: Message[] = [];
   
     const welcomeMessage = {
       id: 'start',
@@ -32,10 +37,10 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState }) => {
       content: `Welcome to ${game.title}. Your journey begins.`,
       timestamp: Date.now(),
     };
-    initialMessages.push(welcomeMessage);
+    newInitialMessages.push(welcomeMessage);
     
     if (startChapter.introductionVideo) {
-      initialMessages.push({
+      newInitialMessages.push({
         id: 'intro-video',
         sender: 'narrator' as const,
         senderName: game.narratorName || 'Narrator',
@@ -45,7 +50,7 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState }) => {
       });
     }
   
-    return initialMessages;
+    return newInitialMessages;
   });
 
   const [isPending, startTransition] = useTransition();
