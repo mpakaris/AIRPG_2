@@ -88,8 +88,7 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
                 method: 'GET',
                 mode: 'cors',
                 headers: {
-                    'ngrok-skip-browser-warning': 'true',
-                    'Accept': 'application/json'
+                    'ngrok-skip-browser-warning': 'true'
                 },
                 cache: 'no-store'
             });
@@ -141,8 +140,7 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
         method: 'GET',
         mode: 'cors',
         headers: {
-            'ngrok-skip-browser-warning': 'true',
-            'Accept': 'application/json'
+            'ngrok-skip-browser-warning': 'true'
         },
         cache: 'no-store'
       });
