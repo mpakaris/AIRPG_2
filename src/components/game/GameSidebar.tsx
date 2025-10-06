@@ -144,7 +144,7 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
                 <Button variant="outline" size="sm" onClick={() => onCommandSubmit('talk to barista')}>Talk to Barista</Button>
                 <Button variant="outline" size="sm" onClick={() => onCommandSubmit('What do you know about that man that just left?')}>Ask about man</Button>
                 <Button variant="outline" size="sm" onClick={() => onCommandSubmit('Do you know his name or his address?')}>Ask for name</Button>
-                <Button variant="outline" size="sm" onClick={() => handleDevCommand('ch1-the-cafe' as ChapterId)}>Complete Chapter I</Button>
+                <Button variant="outline" size="sm" onClick={() => handleDevCommand(game.startChapterId)}>Complete Chapter I</Button>
                 <Button variant="outline" size="sm" disabled>Complete Chapter II</Button>
             </div>
         </SidebarGroup>
