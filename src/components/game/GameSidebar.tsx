@@ -1,7 +1,7 @@
 
 'use client';
 
-import { BookOpen, Box, Compass, ScrollText, Target, User, CheckCircle, Code } from 'lucide-react';
+import { BookOpen, Box, Compass, ScrollText, Target, User, CheckCircle, Code, RotateCcw } from 'lucide-react';
 import type { FC } from 'react';
 import type { Game, PlayerState, Flag, ChapterId } from '@/lib/game/types';
 import {
@@ -22,9 +22,10 @@ interface GameSidebarProps {
   game: Game;
   playerState: PlayerState;
   onCommandSubmit: (command: string) => void;
+  onResetGame: () => void;
 }
 
-export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommandSubmit }) => {
+export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommandSubmit, onResetGame }) => {
   const chapter = game.chapters[playerState.currentChapterId];
   const location = chapter.locations[playerState.currentLocationId];
   const inventoryItems = playerState.inventory.map(id => chapter.items[id]).filter(Boolean);
@@ -136,6 +137,7 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
                 Dev Controls
             </SidebarGroupLabel>
             <div className='flex flex-col gap-2 px-2'>
+                <Button variant="destructive" size="sm" onClick={onResetGame}><RotateCcw className='mr-2 h-4 w-4'/>Reset Game</Button>
                 <Button variant="outline" size="sm" onClick={() => onCommandSubmit('I look around')}>Look Around</Button>
                 <Button variant="outline" size="sm" onClick={() => onCommandSubmit('I examine the notebook')}>Examine Notebook</Button>
                 <Button variant="outline" size="sm" onClick={() => onCommandSubmit('Password for brown notebook "Justice for Silas Bloom"')}>Unlock Notebook</Button>

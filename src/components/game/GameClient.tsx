@@ -8,6 +8,7 @@ import { SidebarProvider } from '@/components/ui/sidebar';
 import { GameSidebar } from './GameSidebar';
 import { GameScreen } from './GameScreen';
 import { useToast } from '@/hooks/use-toast';
+import { getInitialState } from '@/lib/game-state';
 
 interface GameClientProps {
   game: Game;
@@ -20,12 +21,12 @@ const DEV_USER_ID = "0036308548589";
 
 export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initialMessages }) => {
   const [playerState, setPlayerState] = useState<PlayerState>(initialGameState);
-  const [messages, setMessages] = useState<Message[]>(() => {
+  
+  const createInitialMessages = () => {
     if (initialMessages && initialMessages.length > 0) {
         return initialMessages;
     }
     
-    // Fallback to welcome messages if no logs are loaded
     const startChapter = game.chapters[initialGameState.currentChapterId];
     const newInitialMessages: Message[] = [];
   
@@ -51,10 +52,26 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initia
     }
   
     return newInitialMessages;
-  });
+  };
+  
+  const [messages, setMessages] = useState<Message[]>(createInitialMessages);
 
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
+
+  const handleResetGame = () => {
+    startTransition(async () => {
+        const freshState = getInitialState(game);
+        const freshMessages = createInitialMessages();
+        setPlayerState(freshState);
+        setMessages(freshMessages);
+        await logAndSave(DEV_USER_ID, game.id, freshState, freshMessages);
+        toast({
+          title: "Game Reset",
+          description: "The game state and logs have been reset.",
+        });
+    });
+  };
 
   const handleCommandSubmit = (command: string) => {
     const isDevCommand = command.startsWith('dev:');
@@ -103,7 +120,12 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initia
   return (
     <SidebarProvider defaultOpen={true}>
       <div className='relative min-h-screen'>
-        <GameSidebar game={game} playerState={playerState} onCommandSubmit={handleCommandSubmit} />
+        <GameSidebar 
+            game={game} 
+            playerState={playerState} 
+            onCommandSubmit={handleCommandSubmit}
+            onResetGame={handleResetGame}
+        />
         <main className="transition-all duration-300 ease-in-out md:pl-[20rem] group-data-[state=collapsed]/sidebar-wrapper:md:pl-0">
             <GameScreen
             messages={messages}
