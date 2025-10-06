@@ -13,15 +13,12 @@ async function sendMessage(jid: string, text: string) {
         throw new Error("WHINSELF_API_URL is not configured.");
     }
 
-    // This payload matches the simplified structure from the Whinself `curl` documentation.
     const payload = {
         text: text,
         jid: jid
     };
 
     try {
-        // Sending to /webhook as it's the only existing POST endpoint on the interceptor.
-        // This is for testing/debugging purposes to avoid a 404.
         const response = await fetch(`${WHINSELF_API_URL}/webhook`, {
             method: 'POST',
             headers: {
@@ -36,7 +33,8 @@ async function sendMessage(jid: string, text: string) {
             throw new Error(`Whinself API responded with status ${response.status}: ${errorBody}`);
         }
         
-        return await response.json();
+        // The interceptor returns a simple "OK" text response, not JSON.
+        return await response.text();
 
     } catch (error) {
         console.error("Failed to send message via Whinself:", error);
@@ -49,15 +47,9 @@ async function sendMessage(jid: string, text: string) {
 
 
 export async function sendTextMessage(to: string, text: string) {
-    // The 'to' parameter is the user ID, e.g., '0036308548589'
-    // We format it into the jid that the Whinself API expects.
     const jid = `${to}@s.whatsapp.net`;
     return sendMessage(jid, text);
 }
-
-// The following functions are kept for structural consistency but are simplified
-// as the new API seems to only support text messages based on the provided curl.
-// If image/video sending is needed, the payload structure would need to be confirmed.
 
 export async function sendImageMessage(to: string, url: string, caption: string = '') {
     const messageText = caption ? `${caption}\n${url}` : url;
