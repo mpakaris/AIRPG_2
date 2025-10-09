@@ -296,7 +296,11 @@ export const game: Game = {
                     url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759604054/cafe_manager_punwhs.png',
                     description: 'Portrait of the cafe manager.',
                     hint: 'female manager'
-                }
+                },
+                cannedResponses: [
+                    { topic: 'greeting', response: "Hello there! Isn't it a lovely day for a coffee?"},
+                    { topic: 'default', response: "I'm sorry, I'm not sure I can help with that. Can I get you a pastry?" }
+                ]
             }
         }
     }
