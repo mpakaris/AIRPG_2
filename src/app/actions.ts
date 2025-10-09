@@ -9,7 +9,7 @@ import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC
 import { initializeFirebase } from '@/firebase';
 import { doc, setDoc, getDoc, collection, query, where, getDocs, addDoc } from 'firebase/firestore';
 import { getInitialState } from '@/lib/game-state';
-import { dispatchMessage } from '@/lib/whinself-service';
+import { dispatchMessage, sendTextMessage } from '@/lib/whinself-service';
 
 
 // --- Utility Functions ---
@@ -869,6 +869,15 @@ export async function processCommand(
             break;
     }
     
+    // --- Message Dispatching for Dev Mode ---
+    if (process.env.NODE_ENV === 'development') {
+        for (const message of result.messages) {
+            // We don't wait for the promise to resolve to prevent blocking the game loop
+            dispatchMessage(userId, message);
+        }
+    }
+
+
     if (!result.newState) {
         return { newState: null, messages: result.messages };
     }
@@ -936,15 +945,8 @@ export async function logAndSave(
 
 export async function sendWhinselfTestMessage(userId: string, message: string): Promise<void> {
     try {
-        const messageObject: Message = {
-            id: crypto.randomUUID(),
-            sender: 'system',
-            senderName: 'System',
-            type: 'text',
-            content: message,
-            timestamp: Date.now(),
-        };
-        await dispatchMessage(userId, messageObject);
+        const jid = `${userId}@s.whatsapp.net`;
+        await sendTextMessage(jid, message);
     } catch (error) {
         console.error("Failed to send Whinself test message:", error);
         // We re-throw the error so the client-side can catch it and display a toast.
