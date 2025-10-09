@@ -23,7 +23,6 @@ async function sendMessage(payload: WhinselfPayload) {
         throw new Error("WHINSELF_API_URL is not configured.");
     }
     
-    // The interceptor listens on /wspout for outbound messages
     const endpoint = `${WHINSELF_API_URL}/wspout`;
 
     try {
@@ -41,7 +40,6 @@ async function sendMessage(payload: WhinselfPayload) {
             throw new Error(`Whinself API responded with status ${response.status}: ${errorBody}`);
         }
         
-        // The interceptor returns a simple "OK" text response, not JSON.
         return await response.text();
 
     } catch (error) {
@@ -97,67 +95,66 @@ export async function sendDocumentMessage(toJid: string, url: string, filename: 
  */
 export async function dispatchMessage(toUserId: string, message: Message) {
     const toJid = `${toUserId}@s.whatsapp.net`;
-    const { type, content, image } = message;
+    const { type, content, image, senderName, sender } = message;
 
     try {
+        const senderPrefix = (sender === 'narrator' || sender === 'agent' || (sender !== 'player' && sender !== 'system')) ? `*${senderName}:*\n` : '';
+
         switch (type) {
             case 'text':
             case 'system':
             case 'agent':
             case 'player':
-                 // For narrator and agent, we might want to prepend the sender name
-                const prefix = (message.sender === 'narrator' || message.sender === 'agent') ? `*${message.senderName}:*\n` : '';
-                await sendTextMessage(toJid, `${prefix}${content}`);
+                await sendTextMessage(toJid, `${senderPrefix}${content}`);
                 break;
             
             case 'image':
                 if (image?.url) {
-                    await sendImageMessage(toJid, image.url, content);
+                    await sendImageMessage(toJid, image.url, `${senderPrefix}${content}`);
                 } else {
-                    await sendTextMessage(toJid, `[Image]: ${content}`);
+                    await sendTextMessage(toJid, `${senderPrefix}[Image]: ${content}`);
                 }
                 break;
             
             case 'article':
                  if (image?.url) {
-                    await sendImageMessage(toJid, image.url, `*${content}*`);
+                    await sendImageMessage(toJid, image.url, `${senderPrefix}*${content}*`);
                 } else {
-                    await sendTextMessage(toJid, `[Article]: ${content}`);
+                    await sendTextMessage(toJid, `${senderPrefix}[Article]: ${content}`);
                 }
                 break;
             
             case 'video':
-                // The URL is in the content for video messages
-                await sendVideoMessage(toJid, content);
+                // For 'video' type, the URL is in the 'content' field.
+                // Any accompanying text would need a different structure, but here we assume content IS the URL.
+                // A caption can be added if there's text content.
+                await sendVideoMessage(toJid, content, senderPrefix.trim());
                 break;
 
             case 'audio':
-                // Whinself docs mention audio but not a specific format, sending as text link for now
-                await sendTextMessage(toJid, `[Audio]: ${content}`);
+                // The URL is in the 'content' field.
+                await sendTextMessage(toJid, `${senderPrefix}[Audio]: ${content}`);
                 break;
 
             case 'document':
                  if (image?.url) {
-                     // Assuming the 'image' field can hold document URL and the content holds the filename for this type.
-                    await sendDocumentMessage(toJid, image.url, content);
+                    // Assuming the 'image' field can hold document URL and the content holds the filename for this type.
+                    await sendDocumentMessage(toJid, image.url, content, senderPrefix);
                  } else {
-                     await sendTextMessage(toJid, `[Document]: ${content}`);
+                     await sendTextMessage(toJid, `${senderPrefix}[Document]: ${content}`);
                  }
                 break;
 
             default:
-                // Handle NPC messages or any other custom types
-                const npcPrefix = `*${message.senderName}:*\n`;
+                // This handles custom types which are assumed to be NPC messages.
                 if(image?.url) {
-                    await sendImageMessage(toJid, image.url, `${npcPrefix}${content}`);
+                    await sendImageMessage(toJid, image.url, `${senderPrefix}${content}`);
                 } else {
-                    await sendTextMessage(toJid, `${npcPrefix}${content}`);
+                    await sendTextMessage(toJid, `${senderPrefix}${content}`);
                 }
                 break;
         }
     } catch (error) {
         console.error(`Failed to dispatch message ID ${message.id} to ${toUserId}:`, error);
-        // We don't re-throw here to prevent one failed message from stopping the whole game loop.
-        // The error is already logged in the `sendMessage` function.
     }
 }
