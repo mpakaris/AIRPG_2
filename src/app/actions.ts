@@ -877,7 +877,6 @@ export async function processCommand(
         }
     }
 
-
     if (!result.newState) {
         return { newState: null, messages: result.messages };
     }
@@ -945,8 +944,7 @@ export async function logAndSave(
 
 export async function sendWhinselfTestMessage(userId: string, message: string): Promise<void> {
     try {
-        const jid = `${userId}@s.whatsapp.net`;
-        await sendTextMessage(jid, message);
+        await sendTextMessage(userId, message);
     } catch (error) {
         console.error("Failed to send Whinself test message:", error);
         // We re-throw the error so the client-side can catch it and display a toast.

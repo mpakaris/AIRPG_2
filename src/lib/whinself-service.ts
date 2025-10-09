@@ -1,5 +1,7 @@
 
-import type { Message, ImageDetails } from './game/types';
+'use server';
+
+import type { Message } from './game/types';
 
 const WHINSELF_API_URL = process.env.WHINSELF_API_URL || 'https://carroll-orangy-maladroitly.ngrok-free.dev';
 
@@ -7,41 +9,67 @@ if (!WHINSELF_API_URL) {
     console.warn("WHINSELF_API_URL is not set. The Whinself messaging service will not be available.");
 }
 
-type WhinselfPayload = {
+// --- Internal Core Functions ---
+
+/**
+ * Normalizes a phone number to the required JID format.
+ * e.g., "+49123..." or "0049123..." becomes "49123..._at_s.whatsapp.net"
+ */
+function normalizeJid(jid: string): string {
+    const digits = jid.replace(/^\++|^00+/, '');
+    return `${digits}@s.whatsapp.net`;
+}
+
+/**
+ * Transforms a Cloudinary .mov video URL to a WhatsApp-compatible .mp4 URL.
+ */
+function normalizeCloudinaryVideoUrl(videoUrl: string): string {
+    if (videoUrl.includes('/video/upload/') && videoUrl.toLowerCase().endsWith('.mov')) {
+        const newUrl = videoUrl.replace('/video/upload/', '/video/upload/f_mp4,vc_h264,ac_aac/');
+        // Ensure the extension is .mp4
+        return newUrl.replace(/\.mov$/i, '.mp4');
+    }
+    return videoUrl;
+}
+
+type SendWhatsAppOptions = {
     jid: string;
     text?: string;
-    image?: { url: string };
-    video?: { url: string };
-    document?: { url: string; fileName: string };
+    imageUrl?: string;
+    videoUrl?: string;
+    documentUrl?: string;
+    documentFileName?: string;
     caption?: string;
 };
 
-
-async function sendMessage(payload: WhinselfPayload) {
+/**
+ * Sends a raw JSON payload to the Whinself interceptor endpoint.
+ */
+async function sendMessage(payload: object) {
     if (!WHINSELF_API_URL) {
         console.error("Cannot send message: WHINSELF_API_URL is not configured.");
         throw new Error("WHINSELF_API_URL is not configured.");
     }
     
     const endpoint = `${WHINSELF_API_URL}/wspout`;
+    console.log('Sending payload to Whinself:', JSON.stringify(payload, null, 2));
 
     try {
         const response = await fetch(endpoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'ngrok-skip-browser-warning': 'true'
             },
             body: JSON.stringify(payload),
         });
 
         if (!response.ok) {
             const errorBody = await response.text();
-            console.error(`Whinself API error: ${response.status} ${response.statusText}`, errorBody);
             throw new Error(`Whinself API responded with status ${response.status}: ${errorBody}`);
         }
         
         const responseBody = await response.text();
-        console.log('Successfully sent message to Whinself:', responseBody);
         return responseBody;
 
     } catch (error) {
@@ -54,111 +82,139 @@ async function sendMessage(payload: WhinselfPayload) {
 }
 
 
-export async function sendTextMessage(toJid: string, text: string) {
-    const payload: WhinselfPayload = {
-        jid: toJid,
-        text: text,
-    };
+/**
+ * The core function to prepare and send a message via WhatsApp.
+ * It handles JID and URL normalization, and shapes the payload correctly.
+ */
+async function sendWhatsApp(opts: SendWhatsAppOptions): Promise<any> {
+    const { jid, text, imageUrl, videoUrl, documentUrl, documentFileName, caption } = opts;
+
+    if (!jid) {
+        throw new Error("JID is required to send a WhatsApp message.");
+    }
+    if (!text && !imageUrl && !videoUrl && !documentUrl) {
+        throw new Error("Cannot send an empty message. At least one of text, imageUrl, videoUrl, or documentUrl must be provided.");
+    }
+
+    const normalizedJid = normalizeJid(jid);
+    const finalCaption = caption || text || '';
+
+    let payload: object;
+
+    if (videoUrl) {
+        const normalizedVideoUrl = normalizeCloudinaryVideoUrl(videoUrl);
+        payload = {
+            jid: normalizedJid,
+            video: { url: normalizedVideoUrl },
+            caption: finalCaption
+        };
+    } else if (imageUrl) {
+        payload = {
+            jid: normalizedJid,
+            image: { url: imageUrl },
+            caption: finalCaption
+        };
+    } else if (documentUrl) {
+        payload = {
+            jid: normalizedJid,
+            document: { url: documentUrl, fileName: documentFileName || 'document' },
+            caption: finalCaption
+        };
+    } else if (text) {
+        payload = {
+            jid: normalizedJid,
+            text: text
+        };
+    } else {
+         throw new Error("Invalid message options provided.");
+    }
+
     return sendMessage(payload);
+}
+
+
+// --- Public API ---
+
+export async function sendTextMessage(toJid: string, text: string) {
+    return sendWhatsApp({ jid: toJid, text });
 }
 
 export async function sendImageMessage(toJid: string, url: string, caption: string = '') {
-    const payload: WhinselfPayload = {
-        jid: toJid,
-        image: { url: url },
-        caption: caption,
-    };
-    return sendMessage(payload);
+    return sendWhatsApp({ jid: toJid, imageUrl: url, caption });
 }
 
 export async function sendVideoMessage(toJid: string, url: string, caption: string = '') {
-    const payload: WhinselfPayload = {
-        jid: toJid,
-        video: { url: url },
-        caption: caption,
-    };
-    return sendMessage(payload);
+    return sendWhatsApp({ jid: toJid, videoUrl: url, caption });
 }
 
 export async function sendDocumentMessage(toJid: string, url: string, filename: string, caption: string = '') {
-     const payload: WhinselfPayload = {
-        jid: toJid,
-        document: { url: url, fileName: filename },
-        caption: caption,
-    };
-    return sendMessage(payload);
+     return sendWhatsApp({ jid: toJid, documentUrl: url, documentFileName: filename, caption });
 }
+
 
 /**
  * Dispatches a game message to the user via the Whinself service.
  * This function routes the internal Message type to the correct Whinself API format.
- * @param toUserId The recipient's user ID (e.g. '36308548589').
- * @param message The game message object to send.
  */
 export async function dispatchMessage(toUserId: string, message: Message) {
-    const toJid = `${toUserId}@s.whatsapp.net`;
-    const { type, content, image, senderName, sender } = message;
+    const { type, content, image, sender, senderName } = message;
 
     try {
-        const senderPrefix = (sender === 'narrator' || sender === 'agent' || (sender !== 'player' && sender !== 'system')) ? `*${senderName}:*\n` : '';
+        const isMediaMessage = ['image', 'video', 'article', 'document'].includes(type);
+        const hasCustomSender = sender !== 'player' && sender !== 'system';
+        const senderPrefix = hasCustomSender ? `*${senderName}:*\n` : '';
+
+        const options: SendWhatsAppOptions = {
+            jid: toUserId,
+        };
 
         switch (type) {
-            case 'text':
-            case 'system':
-            case 'agent':
-            case 'player':
-                 // For simple text messages, the content is the text.
-                await sendTextMessage(toJid, `${senderPrefix}${content}`);
+            case 'video':
+                options.videoUrl = content; // The URL is in the content
+                options.caption = senderPrefix.trim(); // No other text, just the sender
                 break;
             
             case 'image':
-                // For image messages, the URL is in `image.url` and the text is in `content`.
-                if (image?.url) {
-                    await sendImageMessage(toJid, image.url, `${senderPrefix}${content}`);
-                } else {
-                    await sendTextMessage(toJid, `${senderPrefix}[Image]: ${content}`);
-                }
-                break;
-            
             case 'article':
-                // Articles are sent as images with a caption.
-                 if (image?.url) {
-                    await sendImageMessage(toJid, image.url, `${senderPrefix}*${content}*`);
+                if (image?.url) {
+                    options.imageUrl = image.url;
+                    options.caption = `${senderPrefix}${content}`;
                 } else {
-                    await sendTextMessage(toJid, `${senderPrefix}[Article]: ${content}`);
+                    options.text = `${senderPrefix}[Image]: ${content}`;
                 }
                 break;
-            
-            case 'video':
-                // For video messages, the URL is in `content` and there's no separate text.
-                // The sender prefix serves as the caption.
-                await sendVideoMessage(toJid, content, senderPrefix.trim());
-                break;
-
-            case 'audio':
-                // Audio is sent as a text message with a link.
-                await sendTextMessage(toJid, `${senderPrefix}[Audio]: ${content}`);
-                break;
-
+                
             case 'document':
-                // For documents, we assume the URL is in `image.url` and filename in `content`.
                  if (image?.url) {
-                    await sendDocumentMessage(toJid, image.url, content, senderPrefix.trim());
+                    options.documentUrl = image.url;
+                    options.documentFileName = content;
+                    options.caption = senderPrefix.trim();
                  } else {
-                     await sendTextMessage(toJid, `${senderPrefix}[Document]: ${content}`);
+                     options.text = `${senderPrefix}[Document]: ${content}`;
                  }
                 break;
 
-            default:
-                // This handles custom NPC messages or other unhandled types.
-                // It checks for an image and sends it, otherwise sends as text.
-                if(image?.url) {
-                    await sendImageMessage(toJid, image.url, `${senderPrefix}${content}`);
+            case 'audio':
+                // Audio is not a media type in Whinself, send as a text link
+                options.text = `${senderPrefix}[Audio]: ${content}`;
+                break;
+
+            case 'text':
+            case 'system':
+            case 'player':
+            case 'agent':
+            default: // Includes custom NPC messages
+                 if(image?.url) {
+                    options.imageUrl = image.url;
+                    options.caption = `${senderPrefix}${content}`;
                 } else {
-                    await sendTextMessage(toJid, `${senderPrefix}${content}`);
+                    options.text = `${senderPrefix}${content}`;
                 }
                 break;
         }
+
+        await sendWhatsApp(options);
+
     } catch (error) {
         console.error(`Failed to dispatch message ID ${message.id} to ${toUserId}:`, error);
     }
