@@ -8,6 +8,7 @@ import { GameSidebar } from './GameSidebar';
 import { GameScreen } from './GameScreen';
 import { useToast } from '@/hooks/use-toast';
 import { getInitialState } from '@/lib/game-state';
+import { dispatchMessage } from '@/lib/whinself-service';
 
 interface GameClientProps {
   game: Game;
@@ -69,6 +70,14 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initia
         // Wipe the database state and logs for the dev user.
         await logAndSave(DEV_USER_ID, game.id, freshState, freshMessages);
         
+        // --- Dispatch initial messages to interceptor in dev mode ---
+        if (process.env.NODE_ENV === 'development') {
+            for (const message of freshMessages) {
+                // We don't wait for the promise to resolve to prevent blocking the game loop
+                dispatchMessage(DEV_USER_ID, message);
+            }
+        }
+
         toast({
           title: "Game Reset",
           description: "The game state and logs have been reset.",
