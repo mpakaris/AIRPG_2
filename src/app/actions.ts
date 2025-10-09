@@ -766,8 +766,13 @@ export async function processCommand(
   if (currentState.interactingWithObject && (lowerInput === 'exit' || lowerInput === 'close')) {
       return processActions(currentState, [{type: 'END_INTERACTION'}], game);
   }
+  
+  const playerMessage = createMessage('player', 'You', playerInput);
+  
   if (currentState.activeConversationWith && isEndingConversation(lowerInput)) {
-      return await handleConversation(currentState, playerInput, game);
+      const result = await handleConversation(currentState, playerInput, game);
+      result.messages.unshift(playerMessage);
+      return result;
   }
 
   // --- Context-Specific Command Handling ---
@@ -881,7 +886,9 @@ export async function processCommand(
     }
     
     if (process.env.NODE_ENV === 'development') {
-        for (const message of result.messages) {
+        // We add the player's message to the list of messages to be dispatched
+        const allMessagesToDispatch = [playerMessage, ...result.messages];
+        for (const message of allMessagesToDispatch) {
             // We don't wait for the promise to resolve to prevent blocking the game loop
             dispatchMessage(userId, message);
         }
@@ -971,3 +978,4 @@ export async function sendWhinselfTestMessage(userId: string, message: string): 
         throw new Error('An unknown error occurred while sending the message.');
     }
 }
+
