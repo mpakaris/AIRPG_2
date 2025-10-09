@@ -2,14 +2,12 @@
 'use client';
 
 import { useState, useTransition, type FC, useEffect } from 'react';
-import { processCommand, logAndSave } from '@/app/actions';
+import { processCommand, resetGame } from '@/app/actions';
 import type { Game, Message, PlayerState } from '@/lib/game/types';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { GameSidebar } from './GameSidebar';
 import { GameScreen } from './GameScreen';
 import { useToast } from '@/hooks/use-toast';
-import { getInitialState } from '@/lib/game-state';
-import { dispatchMessage } from '@/lib/whinself-service';
 
 interface GameClientProps {
   game: Game;
@@ -22,67 +20,30 @@ const DEV_USER_ID = "36308548589";
 
 export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initialMessages }) => {
   const [playerState, setPlayerState] = useState<PlayerState>(initialGameState);
+  const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [commandInputValue, setCommandInputValue] = useState('');
-  
-  const createInitialMessages = () => {
-    // This function creates the very first messages when a new game starts.
-    const startChapter = game.chapters[initialGameState.currentChapterId];
-    const newInitialMessages: Message[] = [];
-  
-    const welcomeMessage = {
-      id: 'start',
-      sender: 'narrator' as const,
-      senderName: game.narratorName || 'Narrator',
-      type: 'text' as const,
-      content: `Welcome to ${game.title}. Your journey begins.`,
-      timestamp: Date.now(),
-    };
-    newInitialMessages.push(welcomeMessage);
-    
-    if (startChapter.introductionVideo) {
-      newInitialMessages.push({
-        id: 'intro-video',
-        sender: 'narrator' as const,
-        senderName: game.narratorName || 'Narrator',
-        type: 'video' as const,
-        content: startChapter.introductionVideo,
-        timestamp: Date.now() + 1,
-      });
-    }
-  
-    return newInitialMessages;
-  };
-  
-  // Initialize messages. If initialMessages are provided (e.g. from DB), use them. Otherwise, create fresh ones.
-  const [messages, setMessages] = useState<Message[]>(initialMessages.length > 0 ? initialMessages : createInitialMessages());
-
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
 
   const handleResetGame = () => {
     startTransition(async () => {
-        const freshState = getInitialState(game);
-        const freshMessages = createInitialMessages(); // Create the initial welcome messages
-        
-        // Update the client state immediately
-        setPlayerState(freshState);
-        setMessages(freshMessages);
-        
-        // Wipe the database state and logs for the dev user.
-        await logAndSave(DEV_USER_ID, game.id, freshState, freshMessages);
-        
-        // --- Dispatch initial messages to interceptor in dev mode ---
-        if (process.env.NODE_ENV === 'development') {
-            for (const message of freshMessages) {
-                // We don't wait for the promise to resolve to prevent blocking the game loop
-                dispatchMessage(DEV_USER_ID, message);
-            }
+        try {
+            const result = await resetGame(DEV_USER_ID);
+            setPlayerState(result.newState);
+            setMessages(result.messages);
+            toast({
+              title: "Game Reset",
+              description: "The game state and logs have been reset.",
+            });
+        } catch(error) {
+             console.error(error);
+            const errorMessage = error instanceof Error ? error.message : 'Failed to reset game.';
+            toast({
+              variant: 'destructive',
+              title: 'Error',
+              description: errorMessage,
+            });
         }
-
-        toast({
-          title: "Game Reset",
-          description: "The game state and logs have been reset.",
-        });
     });
   };
 
@@ -90,21 +51,17 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initia
     if (!command.trim()) return;
     setCommandInputValue(''); // Clear input after submission
 
-    const isDevCommand = command.startsWith('dev:');
-    let allNewMessages = [...messages];
-
-    if (!isDevCommand) {
-        const playerMessage: Message = {
-            id: crypto.randomUUID(),
-            sender: 'player',
-            senderName: 'You',
-            type: 'text',
-            content: command,
-            timestamp: Date.now(),
-        };
-        allNewMessages = [...allNewMessages, playerMessage];
-        setMessages(allNewMessages);
-    }
+    const playerMessage: Message = {
+        id: crypto.randomUUID(),
+        sender: 'player',
+        senderName: 'You',
+        type: 'text',
+        content: command,
+        timestamp: Date.now(),
+    };
+    
+    // Optimistically update the UI with the player's message
+    setMessages(prev => [...prev, playerMessage]);
 
     startTransition(async () => {
       try {
@@ -115,12 +72,12 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initia
             setPlayerState(result.newState);
         }
 
-        const finalMessages = [...allNewMessages, ...result.messages];
-        setMessages(finalMessages);
-
-        if (result.newState) {
-            await logAndSave(DEV_USER_ID, game.id, result.newState, finalMessages);
-        }
+        // The result.messages already contains the player's input,
+        // so we can replace the optimistic update with the final state.
+        setMessages(prev => {
+            const newMessages = prev.filter(m => m.id !== playerMessage.id);
+            return [...newMessages, playerMessage, ...result.messages]
+        });
 
       } catch (error) {
         console.error(error);
@@ -159,3 +116,5 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initia
     </SidebarProvider>
   );
 };
+
+    

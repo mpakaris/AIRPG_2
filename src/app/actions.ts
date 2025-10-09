@@ -707,6 +707,9 @@ export async function processCommand(
       currentState = stateSnap.data() as PlayerState;
   }
 
+  const playerMessage = createMessage('player', 'You', playerInput);
+  let allNewMessages: Message[] = [playerMessage];
+
 
   const chapter = game.chapters[currentState.currentChapterId];
   const narratorName = game.narratorName || "Narrator";
@@ -767,20 +770,22 @@ export async function processCommand(
       return processActions(currentState, [{type: 'END_INTERACTION'}], game);
   }
   
-  const playerMessage = createMessage('player', 'You', playerInput);
-  
   if (currentState.activeConversationWith && isEndingConversation(lowerInput)) {
       const result = await handleConversation(currentState, playerInput, game);
-      result.messages.unshift(playerMessage);
-      return result;
+      allNewMessages.push(...result.messages);
+      return { newState: result.newState, messages: allNewMessages };
   }
 
   // --- Context-Specific Command Handling ---
   if (currentState.activeConversationWith) {
-      return await handleConversation(currentState, playerInput, game);
+      const result = await handleConversation(currentState, playerInput, game);
+      allNewMessages.push(...result.messages);
+      return { newState: result.newState, messages: allNewMessages };
   }
   if (currentState.interactingWithObject) {
-      return await handleObjectInteraction(currentState, playerInput, game);
+      const result = await handleObjectInteraction(currentState, playerInput, game);
+      allNewMessages.push(...result.messages);
+      return { newState: result.newState, messages: allNewMessages };
   }
 
   // --- Main AI-Driven Command Parsing ---
@@ -885,10 +890,10 @@ export async function processCommand(
             break;
     }
     
+    // --- Message Dispatching ---
+    const messagesToDispatch = [...result.messages];
     if (process.env.NODE_ENV === 'development') {
-        // We add the player's message to the list of messages to be dispatched
-        const allMessagesToDispatch = [playerMessage, ...result.messages];
-        for (const message of allMessagesToDispatch) {
+        for (const message of messagesToDispatch) {
             // We don't wait for the promise to resolve to prevent blocking the game loop
             dispatchMessage(userId, message);
         }
@@ -912,6 +917,12 @@ export async function processCommand(
         finalMessages.unshift(agentMessage);
     }
     
+    // Always include the player's original message in the final returned list for the UI.
+    const finalMessagesForUi = [playerMessage, ...finalMessages];
+
+    // Persist state
+    await logAndSave(userId, gameId, result.newState, finalMessagesForUi);
+    
     return {
         newState: result.newState,
         messages: finalMessages,
@@ -931,6 +942,53 @@ export async function processCommand(
     };
   }
 }
+
+export async function resetGame(userId: string): Promise<{newState: PlayerState, messages: Message[]}> {
+    const game = gameCartridge;
+    const freshState = getInitialState(game);
+    const initialMessages = createInitialMessages();
+
+    await logAndSave(userId, game.id, freshState, initialMessages);
+
+    if (process.env.NODE_ENV === 'development') {
+        for (const message of initialMessages) {
+            await dispatchMessage(userId, message);
+        }
+    }
+
+    return { newState: freshState, messages: initialMessages };
+}
+
+function createInitialMessages(): Message[] {
+    const game = gameCartridge;
+    const initialGameState = getInitialState(game);
+    const startChapter = game.chapters[initialGameState.currentChapterId];
+    const newInitialMessages: Message[] = [];
+  
+    const welcomeMessage = {
+      id: 'start',
+      sender: 'narrator' as const,
+      senderName: game.narratorName || 'Narrator',
+      type: 'text' as const,
+      content: `Welcome to ${game.title}. Your journey begins.`,
+      timestamp: Date.now(),
+    };
+    newInitialMessages.push(welcomeMessage);
+    
+    if (startChapter.introductionVideo) {
+      newInitialMessages.push({
+        id: 'intro-video',
+        sender: 'narrator' as const,
+        senderName: game.narratorName || 'Narrator',
+        type: 'video' as const,
+        content: startChapter.introductionVideo,
+        timestamp: Date.now() + 1,
+      });
+    }
+  
+    return newInitialMessages;
+  };
+
 
 export async function logAndSave(
   userId: string,
@@ -979,3 +1037,4 @@ export async function sendWhinselfTestMessage(userId: string, message: string): 
     }
 }
 
+    

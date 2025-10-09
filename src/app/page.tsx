@@ -27,7 +27,29 @@ async function getInitialData(): Promise<{ playerState: PlayerState, messages: M
     let messages: Message[] = [];
     if (logSnap.exists()) {
         messages = logSnap.data()?.messages || [];
+    } else {
+        // If no logs, create initial messages
+        const startChapter = gameCartridge.chapters[playerState.currentChapterId];
+        messages.push({
+            id: 'start',
+            sender: 'narrator',
+            senderName: gameCartridge.narratorName || 'Narrator',
+            type: 'text',
+            content: `Welcome to ${gameCartridge.title}. Your journey begins.`,
+            timestamp: Date.now(),
+        });
+        if (startChapter.introductionVideo) {
+            messages.push({
+                id: 'intro-video',
+                sender: 'narrator',
+                senderName: gameCartridge.narratorName || 'Narrator',
+                type: 'video',
+                content: startChapter.introductionVideo,
+                timestamp: Date.now() + 1,
+            });
+        }
     }
+
 
     return { playerState, messages };
 }
@@ -38,3 +60,5 @@ export default async function Home() {
 
   return <GameClient game={gameCartridge} initialGameState={playerState} initialMessages={messages} />;
 }
+
+    
