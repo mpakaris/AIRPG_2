@@ -40,7 +40,9 @@ async function sendMessage(payload: WhinselfPayload) {
             throw new Error(`Whinself API responded with status ${response.status}: ${errorBody}`);
         }
         
-        return await response.text();
+        const responseBody = await response.text();
+        console.log('Successfully sent message to Whinself:', responseBody);
+        return responseBody;
 
     } catch (error) {
         console.error("Failed to send message via Whinself:", error);
@@ -105,10 +107,12 @@ export async function dispatchMessage(toUserId: string, message: Message) {
             case 'system':
             case 'agent':
             case 'player':
+                 // For simple text messages, the content is the text.
                 await sendTextMessage(toJid, `${senderPrefix}${content}`);
                 break;
             
             case 'image':
+                // For image messages, the URL is in `image.url` and the text is in `content`.
                 if (image?.url) {
                     await sendImageMessage(toJid, image.url, `${senderPrefix}${content}`);
                 } else {
@@ -117,6 +121,7 @@ export async function dispatchMessage(toUserId: string, message: Message) {
                 break;
             
             case 'article':
+                // Articles are sent as images with a caption.
                  if (image?.url) {
                     await sendImageMessage(toJid, image.url, `${senderPrefix}*${content}*`);
                 } else {
@@ -125,28 +130,28 @@ export async function dispatchMessage(toUserId: string, message: Message) {
                 break;
             
             case 'video':
-                // For 'video' type, the URL is in the 'content' field.
-                // Any accompanying text would need a different structure, but here we assume content IS the URL.
-                // A caption can be added if there's text content.
+                // For video messages, the URL is in `content` and there's no separate text.
+                // The sender prefix serves as the caption.
                 await sendVideoMessage(toJid, content, senderPrefix.trim());
                 break;
 
             case 'audio':
-                // The URL is in the 'content' field.
+                // Audio is sent as a text message with a link.
                 await sendTextMessage(toJid, `${senderPrefix}[Audio]: ${content}`);
                 break;
 
             case 'document':
+                // For documents, we assume the URL is in `image.url` and filename in `content`.
                  if (image?.url) {
-                    // Assuming the 'image' field can hold document URL and the content holds the filename for this type.
-                    await sendDocumentMessage(toJid, image.url, content, senderPrefix);
+                    await sendDocumentMessage(toJid, image.url, content, senderPrefix.trim());
                  } else {
                      await sendTextMessage(toJid, `${senderPrefix}[Document]: ${content}`);
                  }
                 break;
 
             default:
-                // This handles custom types which are assumed to be NPC messages.
+                // This handles custom NPC messages or other unhandled types.
+                // It checks for an image and sends it, otherwise sends as text.
                 if(image?.url) {
                     await sendImageMessage(toJid, image.url, `${senderPrefix}${content}`);
                 } else {
