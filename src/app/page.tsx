@@ -1,7 +1,7 @@
 import { GameClient } from '@/components/game/GameClient';
 import { game as gameCartridge } from '@/lib/game/cartridge';
 import { getInitialState } from '@/lib/game-state';
-import type { PlayerState, Message } from '@/lib/game/types';
+import type { PlayerState, Message, ChapterId } from '@/lib/game/types';
 import { initializeFirebase } from '@/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 
@@ -20,9 +20,22 @@ async function getInitialData(): Promise<{ playerState: PlayerState, messages: M
     let playerState: PlayerState;
     if (stateSnap.exists()) {
         playerState = stateSnap.data() as PlayerState;
+        // Data migration: Correct old chapter ID if it exists in the saved state
+        if (playerState.currentChapterId === ('ch1' as ChapterId)) {
+            console.log("Migrating old chapter ID 'ch1' to 'ch1-the-cafe'");
+            playerState.currentChapterId = 'ch1-the-cafe' as ChapterId;
+        }
+
     } else {
         playerState = getInitialState(gameCartridge);
     }
+
+    // Defensive check: If chapter is still invalid, reset to initial state.
+    if (!gameCartridge.chapters[playerState.currentChapterId]) {
+        console.warn(`Invalid chapter ID '${playerState.currentChapterId}' found in state. Resetting to initial state.`);
+        playerState = getInitialState(gameCartridge);
+    }
+
 
     let messages: Message[] = [];
     if (logSnap.exists()) {
@@ -60,5 +73,3 @@ export default async function Home() {
 
   return <GameClient game={gameCartridge} initialGameState={playerState} initialMessages={messages} />;
 }
-
-    
