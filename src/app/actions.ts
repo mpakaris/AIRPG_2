@@ -14,6 +14,8 @@ import { dispatchMessage } from '@/lib/whinself-service';
 
 // --- Utility Functions ---
 const examinedObjectFlag = (id: GameObjectId | ItemId | NpcId) => `examined_${id}` as Flag;
+const chapterCompletionFlag = (chapterId: ChapterId) => `chapter_${chapterId}_complete` as Flag;
+
 
 function createMessage(
   sender: Message['sender'],
@@ -266,12 +268,6 @@ async function handleObjectInteraction(state: PlayerState, playerInput: string, 
         let result = processActions(state, actions, game);
         
         result.messages.unshift(agentMessage);
-
-        const completion = checkChapterCompletion(result.newState, game);
-        if (completion.isComplete) {
-            result.newState.flags.push(chapterCompletionFlag(result.newState.currentChapterId));
-            result.messages.push(...completion.messages);
-        }
         
         return result;
     } else {
@@ -625,26 +621,18 @@ function processPassword(state: PlayerState, command: string, targetObject: Game
             result.newState.flags.push(examinedObjectFlag(targetObject.id));
         }
         
-        const completion = checkChapterCompletion(result.newState, game);
-        if (completion.isComplete && !result.newState.flags.includes(chapterCompletionFlag(result.newState.currentChapterId))) {
-             result.newState.flags.push(chapterCompletionFlag(result.newState.currentChapterId));
-             result.messages.push(...completion.messages);
-        }
-
         return result;
     } else {
         return { newState: state, messages: [createMessage('narrator', narratorName, targetObject.onUnlock?.failMessage || 'That password doesn\'t work.')] };
     }
 }
 
-
-const chapterCompletionFlag = (chapterId: ChapterId) => `chapter_${chapterId}_complete` as Flag;
-
 function checkChapterCompletion(state: PlayerState, game: Game): { isComplete: boolean; messages: Message[] } {
     const chapter = game.chapters[state.currentChapterId];
+    const isAlreadyComplete = state.flags.includes(chapterCompletionFlag(state.currentChapterId));
 
-    if (!chapter.objectives || chapter.objectives.length === 0) {
-        return { isComplete: true, messages: [] }; 
+    if (isAlreadyComplete || !chapter.objectives || chapter.objectives.length === 0) {
+        return { isComplete: isAlreadyComplete, messages: [] }; 
     }
     
     const allObjectivesMet = chapter.objectives.every(obj => state.flags.includes(obj.flag));
@@ -689,7 +677,7 @@ async function findOrCreateUser(userId: string): Promise<{userRef: any, isNew: b
 export async function processCommand(
   userId: string,
   playerInput: string
-): Promise<CommandResult> {
+): Promise<{newState: PlayerState, messages: Message[]}> {
   const game = gameCartridge;
   const gameId = game.id;
 
@@ -707,51 +695,39 @@ export async function processCommand(
       currentState = stateSnap.data() as PlayerState;
   }
   
-  let finalResult: CommandResult = { newState: currentState, messages: [] };
+  let finalResult: CommandResult;
 
   try {
     const chapter = game.chapters[currentState.currentChapterId];
     const narratorName = game.narratorName || "Narrator";
     const lowerInput = playerInput.toLowerCase().trim();
 
-    // This is the message from the player that initiated the command
     const playerMessage = createMessage('player', 'You', playerInput);
     
-    // This will hold all messages generated during this turn
-    let allNewMessages: Message[] = [playerMessage];
-
-    let result: CommandResult;
+    let commandHandlerResult: CommandResult;
 
     // Dev commands
     if (lowerInput.startsWith('dev:complete_')) {
         const chapterId = lowerInput.replace('dev:complete_', '') as ChapterId;
         const targetChapter = game.chapters[chapterId];
         let messages = [createMessage('system', 'System', `DEV: ${targetChapter.title} flags set to complete.`)];
-
+        let newState = { ...currentState };
         if (targetChapter) {
-            let newState = { ...currentState };
             targetChapter.objectives?.forEach(obj => {
                 if (!newState.flags.includes(obj.flag)) {
                     newState.flags = [...newState.flags, obj.flag];
                 }
             });
-            const completion = checkChapterCompletion(newState, game);
-            if (completion.isComplete) {
-              newState.flags.push(chapterCompletionFlag(chapterId));
-              messages.push(...completion.messages);
-            }
-            result = { newState, messages };
-        } else {
-            result = { newState: currentState, messages: [createMessage('system', 'System', 'Invalid dev command.')]};
         }
+        commandHandlerResult = { newState, messages };
     }
-    // Context-specific commands (conversation, interaction)
+    // Context-specific commands
     else if (currentState.activeConversationWith) {
-        result = await handleConversation(currentState, playerInput, game);
+        commandHandlerResult = await handleConversation(currentState, playerInput, game);
     } else if (currentState.interactingWithObject && (lowerInput === 'exit' || lowerInput === 'close')) {
-        result = processActions(currentState, [{type: 'END_INTERACTION'}], game);
+        commandHandlerResult = processActions(currentState, [{type: 'END_INTERACTION'}], game);
     } else if (currentState.interactingWithObject) {
-        result = await handleObjectInteraction(currentState, playerInput, game);
+        commandHandlerResult = await handleObjectInteraction(currentState, playerInput, game);
     }
     // Main command parsing logic
     else {
@@ -793,8 +769,6 @@ export async function processCommand(
         const commandToExecute = aiResponse.commandToExecute.toLowerCase();
         const [verb, ...args] = commandToExecute.split(' ');
         const restOfCommand = args.join(' ');
-        
-        let commandHandlerResult: CommandResult;
         
         switch (verb) {
             case 'examine':
@@ -863,60 +837,70 @@ export async function processCommand(
         if (verb !== 'invalid' && !hasSystemMessage) {
             commandHandlerResult.messages.unshift(agentMessage);
         }
-        result = commandHandlerResult;
     }
-
-    allNewMessages.push(...result.messages);
-    let finalState = result.newState;
+    
+    // --- Finalization ---
+    let allNewMessages: Message[] = [playerMessage, ...commandHandlerResult.messages];
+    let finalState = commandHandlerResult.newState;
 
     if (finalState) {
-        // Check for chapter completion based on the new state
         const completion = checkChapterCompletion(finalState, game);
-        if (completion.isComplete && !finalState.flags.includes(chapterCompletionFlag(finalState.currentChapterId))) {
-            finalState.flags.push(chapterCompletionFlag(finalState.currentChapterId));
+        const isNewlyComplete = completion.isComplete && !finalState.flags.includes(chapterCompletionFlag(finalState.currentChapterId));
+
+        if (isNewlyComplete) {
+            finalState.flags = [...finalState.flags, chapterCompletionFlag(finalState.currentChapterId)];
             allNewMessages.push(...completion.messages);
         }
 
         await logAndSave(userId, gameId, finalState, allNewMessages);
         
-        // CENTRALIZED MESSAGE DISPATCH
         if (process.env.NODE_ENV === 'development') {
             for (const message of allNewMessages) {
-                // Don't dispatch the player's own message back to them
-                if (message.sender !== 'player') {
+                 if (message.sender !== 'player') {
                     await dispatchMessage(userId, message);
                 }
             }
         }
-    } else {
-        await logAndSave(userId, gameId, currentState, allNewMessages);
+        
+        finalResult = {
+            newState: finalState,
+            messages: allNewMessages.filter(m => m.sender !== 'player'),
+        };
+
+    } else { // Should not happen in normal flow
+        finalState = currentState;
+        await logAndSave(userId, gameId, finalState, allNewMessages);
+        finalResult = {
+            newState: finalState,
+            messages: allNewMessages.filter(m => m.sender !== 'player'),
+        };
     }
-    
-    finalResult = {
-        newState: finalState,
-        messages: allNewMessages.filter(m => m.sender !== 'player'), // Return only new messages for the UI
-    };
     
     return finalResult;
 
   } catch (error) {
     console.error('Error processing command:', error);
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    return {
+    finalResult = {
       newState: currentState,
       messages: [createMessage('system', 'System', `Sorry, an error occurred: ${errorMessage}`)],
     };
+    // Dispatch only the error message
+    if (process.env.NODE_ENV === 'development') {
+        await dispatchMessage(userId, finalResult.messages[0]);
+    }
+    return finalResult;
   }
 }
 
 export async function resetGame(userId: string): Promise<{newState: PlayerState, messages: Message[]}> {
     const game = gameCartridge;
+    const gameId = game.id;
     const freshState = getInitialState(game);
     const initialMessages = createInitialMessages();
 
-    await logAndSave(userId, game.id, freshState, initialMessages);
+    await logAndSave(userId, gameId, freshState, initialMessages);
 
-    // CENTRALIZED MESSAGE DISPATCH
     if (process.env.NODE_ENV === 'development') {
         for (const message of initialMessages) {
             await dispatchMessage(userId, message);
@@ -941,7 +925,7 @@ function createInitialMessages(): Message[] {
       timestamp: Date.now(),
     };
     newInitialMessages.push(welcomeMessage);
-    
+
     if (startChapter.introductionVideo) {
       newInitialMessages.push({
         id: 'intro-video',
@@ -1006,3 +990,5 @@ export async function sendWhinselfTestMessage(userId: string, message: string): 
         throw new Error('An unknown error occurred while sending the message.');
     }
 }
+
+    
