@@ -689,13 +689,24 @@ export async function processCommand(
   
   let currentState: PlayerState;
   
-  if (!stateSnap.exists()) {
-      currentState = getInitialState(game);
-  } else {
+  if (stateSnap.exists()) {
       currentState = stateSnap.data() as PlayerState;
+      // Data migration: Correct old chapter ID if it exists in the saved state
+      if (currentState.currentChapterId === ('ch1' as ChapterId)) {
+          console.log("Migrating old chapter ID 'ch1' to 'ch1-the-cafe' in processCommand");
+          currentState.currentChapterId = 'ch1-the-cafe' as ChapterId;
+      }
+  } else {
+      currentState = getInitialState(game);
+  }
+
+  // Defensive check: If chapter is still invalid, reset.
+  if (!game.chapters[currentState.currentChapterId]) {
+      console.warn(`Invalid chapter ID '${currentState.currentChapterId}' found in processCommand. Resetting to initial state.`);
+      currentState = getInitialState(game);
   }
   
-  let finalResult: CommandResult;
+  let finalResult: {newState: PlayerState, messages: Message[]};
 
   try {
     const chapter = game.chapters[currentState.currentChapterId];
@@ -851,29 +862,21 @@ export async function processCommand(
             finalState.flags = [...finalState.flags, chapterCompletionFlag(finalState.currentChapterId)];
             allNewMessages.push(...completion.messages);
         }
-
-        await logAndSave(userId, gameId, finalState, allNewMessages);
-        
-        if (process.env.NODE_ENV === 'development') {
-            for (const message of allNewMessages) {
-                 if (message.sender !== 'player') {
-                    await dispatchMessage(userId, message);
-                }
+    }
+    
+    finalResult = {
+        newState: finalState || currentState,
+        messages: allNewMessages,
+    };
+    
+    await logAndSave(userId, gameId, finalResult.newState, finalResult.messages);
+    
+    if (process.env.NODE_ENV === 'development') {
+        for (const message of finalResult.messages) {
+             if (message.sender !== 'player') {
+                await dispatchMessage(userId, message);
             }
         }
-        
-        finalResult = {
-            newState: finalState,
-            messages: allNewMessages.filter(m => m.sender !== 'player'),
-        };
-
-    } else { // Should not happen in normal flow
-        finalState = currentState;
-        await logAndSave(userId, gameId, finalState, allNewMessages);
-        finalResult = {
-            newState: finalState,
-            messages: allNewMessages.filter(m => m.sender !== 'player'),
-        };
     }
     
     return finalResult;
@@ -885,11 +888,13 @@ export async function processCommand(
       newState: currentState,
       messages: [createMessage('system', 'System', `Sorry, an error occurred: ${errorMessage}`)],
     };
-    // Dispatch only the error message
+    // We only need to save and dispatch the error message
+    await logAndSave(userId, gameId, currentState, finalResult.messages);
     if (process.env.NODE_ENV === 'development') {
         await dispatchMessage(userId, finalResult.messages[0]);
     }
-    return finalResult;
+    // We are not returning the player message here, so the UI will show only the error.
+    return { newState: currentState, messages: finalResult.messages };
   }
 }
 
@@ -990,5 +995,3 @@ export async function sendWhinselfTestMessage(userId: string, message: string): 
         throw new Error('An unknown error occurred while sending the message.');
     }
 }
-
-    
