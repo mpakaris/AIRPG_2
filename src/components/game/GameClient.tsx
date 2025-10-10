@@ -49,7 +49,6 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initia
 
   const handleCommandSubmit = (command: string) => {
     if (!command.trim()) return;
-    setCommandInputValue(''); // Clear input after submission
 
     const playerMessage: Message = {
         id: crypto.randomUUID(),
@@ -60,20 +59,18 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initia
         timestamp: Date.now(),
     };
     
-    // Optimistically update the UI with the player's message
     setMessages(prev => [...prev, playerMessage]);
+    setCommandInputValue(''); // Clear input after submission
+
 
     startTransition(async () => {
       try {
-        // We use the DEV_USER_ID when submitting commands from the web UI.
         const result = await processCommand(DEV_USER_ID, command);
         
         if (result.newState) {
             setPlayerState(result.newState);
         }
 
-        // The processCommand action now returns only the new messages from the game engine.
-        // We append these to the player's message we already added optimistically.
         if (result.messages) {
             setMessages(prev => [...prev, ...result.messages]);
         }
@@ -86,7 +83,6 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initia
           title: 'Error',
           description: errorMessage,
         });
-         // Rollback optimistic update on error
         setMessages(prev => prev.filter(m => m.id !== playerMessage.id));
       }
     });
@@ -117,5 +113,3 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initia
     </SidebarProvider>
   );
 };
-
-    

@@ -97,29 +97,38 @@ async function sendWhatsApp(opts: SendWhatsAppOptions): Promise<any> {
     }
 
     const normalizedJid = normalizeJid(jid);
-    const finalCaption = caption || text || '';
-
     let payload: object;
 
+    // The order of checks is important: video, image, document, then text.
     if (videoUrl) {
         const normalizedVideoUrl = normalizeCloudinaryVideoUrl(videoUrl);
         payload = {
             jid: normalizedJid,
             video: { url: normalizedVideoUrl },
-            caption: caption || '' // Use provided caption or empty string
+            caption: caption || text || ''
         };
+         // Send text separately if it exists
+        if(text) {
+             await sendMessage({ jid: normalizedJid, text: text });
+             payload = { jid: normalizedJid, video: { url: normalizedVideoUrl }, caption: caption || '' };
+        } else {
+            payload = { jid: normalizedJid, video: { url: normalizedVideoUrl }, caption: caption || '' };
+        }
+
     } else if (imageUrl) {
-        payload = {
-            jid: normalizedJid,
-            image: { url: imageUrl },
-            caption: caption || ''
-        };
+        if(text) {
+            await sendMessage({ jid: normalizedJid, text: text });
+            payload = { jid: normalizedJid, image: { url: imageUrl }, caption: caption || '' };
+        } else {
+             payload = { jid: normalizedJid, image: { url: imageUrl }, caption: caption || '' };
+        }
     } else if (documentUrl) {
-        payload = {
-            jid: normalizedJid,
-            document: { url: documentUrl, fileName: documentFileName || 'document' },
-            caption: caption || ''
-        };
+        if(text){
+            await sendMessage({ jid: normalizedJid, text: text });
+            payload = { jid: normalizedJid, document: { url: documentUrl, fileName: documentFileName || 'document' }, caption: caption || '' };
+        } else {
+            payload = { jid: normalizedJid, document: { url: documentUrl, fileName: documentFileName || 'document' }, caption: caption || '' };
+        }
     } else if (text) {
         payload = {
             jid: normalizedJid,
@@ -133,29 +142,11 @@ async function sendWhatsApp(opts: SendWhatsAppOptions): Promise<any> {
 }
 
 
-// --- Public API ---
-
-export async function sendTextMessage(toJid: string, text: string) {
-    return sendWhatsApp({ jid: toJid, text });
-}
-
-export async function sendImageMessage(toJid: string, url: string, caption: string = '') {
-    return sendWhatsApp({ jid: toJid, imageUrl: url, caption });
-}
-
-export async function sendVideoMessage(toJid: string, url: string, caption: string = '') {
-    return sendWhatsApp({ jid: toJid, videoUrl: url, caption });
-}
-
-export async function sendDocumentMessage(toJid: string, url: string, filename: string, caption: string = '') {
-     return sendWhatsApp({ jid: toJid, documentUrl: url, documentFileName: filename, caption });
-}
-
-
 /**
- * Dispatches a game message to the user via the Whinself service.
- * This function routes the internal Message type to the correct Whinself API format.
- * If a message contains media, it sends the text content first, then the media in a separate message.
+ * The Central Message Bus.
+ * This function acts as a router, deciding which messaging service to use
+ * based on user preferences or system defaults. For now, it only routes to Whinself (WhatsApp).
+ * It correctly prepares the payload for the sendWhatsApp function.
  */
 export async function dispatchMessage(toUserId: string, message: Message) {
     const { type, content, image, sender, senderName } = message;
@@ -165,30 +156,26 @@ export async function dispatchMessage(toUserId: string, message: Message) {
         const senderPrefix = hasCustomSender ? `*${senderName}:*\n` : '';
         const textContent = `${senderPrefix}${content}`;
 
-        const isMediaMessage = (type === 'video' || (type === 'image' || type === 'article' || type === 'document') && image?.url);
+        let opts: SendWhatsAppOptions = { jid: toUserId };
 
-        // If there is text content to send, send it first.
-        // This applies to all messages, but for media messages, it sends the text separately.
-        if (content && content.trim() && type !== 'video') {
-             await sendWhatsApp({ jid: toUserId, text: textContent });
+        if (type === 'video') {
+            opts.videoUrl = content;
+            opts.text = senderPrefix.trim(); // Send sender name as text, if applicable
+        } else if ((type === 'image' || type === 'article') && image?.url) {
+            opts.imageUrl = image.url;
+            opts.text = textContent;
+        } else if (type === 'document' && image?.url) {
+            opts.documentUrl = image.url;
+            opts.documentFileName = content; // Filename is in content for documents
+            opts.text = senderPrefix.trim();
+        } else {
+            opts.text = textContent;
         }
 
-        // If it's a media message, send the media file in a separate message *without* a caption.
-        if (isMediaMessage) {
-            const mediaOptions: SendWhatsAppOptions = { jid: toUserId, caption: '' };
-
-            if (type === 'video') {
-                mediaOptions.videoUrl = content; // For video, URL is in content
-            } else if (type === 'image' || type === 'article') {
-                mediaOptions.imageUrl = image!.url;
-            } else if (type === 'document') {
-                mediaOptions.documentUrl = image!.url;
-                mediaOptions.documentFileName = content; // For document, filename is in content
-            }
-            await sendWhatsApp(mediaOptions);
-        }
-
+        await sendWhatsApp(opts);
+        
     } catch (error) {
         console.error(`Failed to dispatch message ID ${message.id} to ${toUserId}:`, error);
+        // Do not re-throw here to avoid crashing the main game loop
     }
 }
