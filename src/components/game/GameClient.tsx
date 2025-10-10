@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useTransition, type FC, useEffect } from 'react';
+import { useState, useTransition, type FC } from 'react';
 import { processCommand, resetGame } from '@/app/actions';
 import type { Game, Message, PlayerState } from '@/lib/game/types';
 import { SidebarProvider } from '@/components/ui/sidebar';
@@ -72,12 +72,11 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initia
             setPlayerState(result.newState);
         }
 
-        // The result.messages already contains the player's input,
-        // so we can replace the optimistic update with the final state.
-        setMessages(prev => {
-            const newMessages = prev.filter(m => m.id !== playerMessage.id);
-            return [...newMessages, playerMessage, ...result.messages]
-        });
+        // The processCommand action now returns only the new messages from the game engine.
+        // We append these to the player's message we already added optimistically.
+        if (result.messages) {
+            setMessages(prev => [...prev, ...result.messages]);
+        }
 
       } catch (error) {
         console.error(error);
@@ -87,6 +86,8 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initia
           title: 'Error',
           description: errorMessage,
         });
+         // Rollback optimistic update on error
+        setMessages(prev => prev.filter(m => m.id !== playerMessage.id));
       }
     });
   };
