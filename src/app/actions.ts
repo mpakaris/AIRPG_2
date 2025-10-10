@@ -7,7 +7,7 @@ import { game as gameCartridge } from '@/lib/game/cartridge';
 import { AVAILABLE_COMMANDS } from '@/lib/game/commands';
 import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectId, GameObjectState, ItemId, Flag, Action, Chapter, ChapterId, ImageDetails, GameId, User } from '@/lib/game/types';
 import { initializeFirebase } from '@/firebase';
-import { doc, setDoc, getDoc, collection, query, where, getDocs, addDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { getInitialState } from '@/lib/game-state';
 import { dispatchMessage } from '@/lib/whinself-service';
 
@@ -708,237 +708,223 @@ export async function processCommand(
   }
 
   const playerMessage = createMessage('player', 'You', playerInput);
-  let allNewMessages: Message[] = [playerMessage];
+  let finalResult: CommandResult = { newState: currentState, messages: [] };
 
 
-  const chapter = game.chapters[currentState.currentChapterId];
-  const narratorName = game.narratorName || "Narrator";
-  const lowerInput = playerInput.toLowerCase().trim();
-
-  if (lowerInput.startsWith('dev:complete_')) {
-    const chapterId = lowerInput.replace('dev:complete_', '') as ChapterId;
-    const targetChapter = game.chapters[chapterId];
-
-    if (targetChapter) {
-        let newState = { ...currentState };
-        
-        targetChapter.objectives?.forEach(obj => {
-            if (!newState.flags.includes(obj.flag)) {
-                newState.flags = [...newState.flags, obj.flag];
-            }
-        });
-        
-        const completion = checkChapterCompletion(newState, game);
-        let messages = [createMessage('system', 'System', `DEV: ${targetChapter.title} flags set to complete.`)];
-
-        if (completion.isComplete) {
-          newState.flags.push(chapterCompletionFlag(chapterId));
-          messages.push(...completion.messages);
-        }
-        
-        return { newState, messages };
-    }
-  }
-
-  // Handle global commands that should always work
-  const location = chapter.locations[currentState.currentLocationId];
-  const objectsInLocation = location.objects.map(id => getLiveGameObject(id, currentState, game));
-  const objectNames = objectsInLocation.map(obj => obj.name);
-  const npcNames = location.npcs.map(id => chapter.npcs[id]?.name).filter(Boolean) as string[];
-
-  if (lowerInput === 'look around' || lowerInput === 'look') {
-      let lookAroundSummary = `${location.description}\n\n`;
-      if(objectNames.length > 0) {
-        lookAroundSummary += `You can see the following objects:\n${objectNames.map(name => `• ${name}`).join('\n')}\n`;
-      }
-      if(npcNames.length > 0) {
-        lookAroundSummary += `\nYou see the following people here:\n${npcNames.map(name => `• ${name}`).join('\n')}`;
-      }
-      // If we are in an interaction, we need to end it before looking around.
-      if (currentState.interactingWithObject) {
-          const result = processActions(currentState, [{type: 'END_INTERACTION'}], game);
-          result.messages.push(createMessage('narrator', narratorName, lookAroundSummary));
-          return {newState: result.newState, messages: result.messages};
-      }
-      return { newState: currentState, messages: [createMessage('narrator', narratorName, lookAroundSummary)] };
-  } else if (lowerInput === 'inventory') {
-      return handleInventory(currentState, game);
-  }
-
-  // Handle exiting sub-contexts
-  if (currentState.interactingWithObject && (lowerInput === 'exit' || lowerInput === 'close')) {
-      return processActions(currentState, [{type: 'END_INTERACTION'}], game);
-  }
-  
-  if (currentState.activeConversationWith && isEndingConversation(lowerInput)) {
-      const result = await handleConversation(currentState, playerInput, game);
-      allNewMessages.push(...result.messages);
-      return { newState: result.newState, messages: allNewMessages };
-  }
-
-  // --- Context-Specific Command Handling ---
-  if (currentState.activeConversationWith) {
-      const result = await handleConversation(currentState, playerInput, game);
-      allNewMessages.push(...result.messages);
-      return { newState: result.newState, messages: allNewMessages };
-  }
-  if (currentState.interactingWithObject) {
-      const result = await handleObjectInteraction(currentState, playerInput, game);
-      allNewMessages.push(...result.messages);
-      return { newState: result.newState, messages: allNewMessages };
-  }
-
-  // --- Main AI-Driven Command Parsing ---
   try {
-    const isChapterComplete = checkChapterCompletion(currentState, game).isComplete;
-    
-    let lookAroundSummary = `${location.description}\n\n`;
-    if(objectNames.length > 0) {
-      lookAroundSummary += `You can see the following objects:\n${objectNames.map(name => `• ${name}`).join('\n')}\n`;
-    }
-    if(npcNames.length > 0) {
-      lookAroundSummary += `\nYou see the following people here:\n${npcNames.map(name => `• ${name}`).join('\n')}`;
-    }
-    
-    let gameStateSummaryForAI = `
-      CHAPTER GOAL: ${chapter.goal}.
-      CURRENT LOCATION: ${location.name}.
-      INVENTORY: ${currentState.inventory.map(id => chapter.items[id]?.name).filter(Boolean).join(', ') || 'empty'}.
-      VISIBLE OBJECTS: ${objectNames.join(', ')}.
-      VISIBLE NPCS: ${npcNames.join(', ')}.
-    `;
+    const chapter = game.chapters[currentState.currentChapterId];
+    const narratorName = game.narratorName || "Narrator";
+    const lowerInput = playerInput.toLowerCase().trim();
 
-    if (isChapterComplete && chapter.nextChapter) {
-        gameStateSummaryForAI += `\nCHAPTER COMPLETE. The player is ready to move on to the next chapter: '${chapter.nextChapter.title}'.`
-    }
+    // Dev commands
+    if (lowerInput.startsWith('dev:complete_')) {
+        const chapterId = lowerInput.replace('dev:complete_', '') as ChapterId;
+        const targetChapter = game.chapters[chapterId];
 
-
-    const aiResponse = await guidePlayerWithNarrator({
-        promptContext: game.promptContext || '',
-        gameSpecifications: game.description,
-        gameState: gameStateSummaryForAI,
-        playerCommand: playerInput,
-        availableCommands: AVAILABLE_COMMANDS.join(', '),
-    });
-
-    const agentMessage = createMessage('agent', narratorName, `${aiResponse.agentResponse}`);
-    const commandToExecute = aiResponse.commandToExecute.toLowerCase();
-    const [verb, ...args] = commandToExecute.split(' ');
-    const restOfCommand = args.join(' ');
-    
-    let result: CommandResult;
-    
-    switch (verb) {
-        case 'examine':
-            result = handleExamine(currentState, restOfCommand, game);
-            break;
-        case 'take':
-            result = handleTake(currentState, restOfCommand, game);
-            break;
-        case 'go':
-            result = handleGo(currentState, restOfCommand.replace('to ', ''), game);
-            break;
-        case 'use':
-            const onMatch = restOfCommand.match(/(.*) on (.*)/);
-            if (onMatch) {
-                result = handleUse(currentState, onMatch[1].trim(), onMatch[2].trim(), game);
-            } else {
-                result = { newState: currentState, messages: [createMessage('system', 'System', 'Please specify what to use and what to use it on, e.g., "use key on desk".')] };
-            }
-            break;
-        case 'talk':
-             result = await handleTalk(currentState, restOfCommand.replace('to ', ''), game);
-             break;
-        case 'look':
-             if (restOfCommand.startsWith('around')) {
-                 result = handleLook(currentState, game, lookAroundSummary);
-             } else if (restOfCommand.startsWith('behind')) {
-                 const targetName = restOfCommand.replace('behind ', '').trim();
-                 const targetObject = objectsInLocation.find(obj => obj.name.toLowerCase().includes(targetName));
-                 if (targetObject?.onFailure?.['look behind']) {
-                     result = { newState: currentState, messages: [createMessage('narrator', narratorName, targetObject.onFailure['look behind'])] };
-                 } else if (targetObject) {
-                     result = { newState: currentState, messages: [createMessage('narrator', narratorName, targetObject.onFailure?.default || `You look behind the ${targetObject.name} and see nothing out of the ordinary.`)] };
-                 } else {
-                     result = { newState: currentState, messages: [createMessage('narrator', narratorName, "You don't see that here.")] };
-                 }
-             } else {
-                result = handleExamine(currentState, restOfCommand.replace('at ', ''), game);
-             }
-             break;
-        case 'inventory':
-            // This is already handled by the global command check above, but we keep it here as a fallback.
-            result = handleInventory(currentState, game);
-            break;
-        case 'password':
-            result = handlePassword(currentState, commandToExecute, game);
-            break;
-        case 'invalid':
-             return { newState: currentState, messages: [agentMessage] };
-        default:
-            const targetObject = objectsInLocation.find(obj => restOfCommand.includes(obj.name.toLowerCase()));
-            if (targetObject) {
-                const failureMessage = targetObject.onFailure?.[verb] || targetObject.onFailure?.default;
-                if (failureMessage) {
-                    result = { newState: currentState, messages: [createMessage('narrator', narratorName, failureMessage)] };
-                } else {
-                    result = { newState: currentState, messages: [agentMessage] };
+        if (targetChapter) {
+            let newState = { ...currentState };
+            
+            targetChapter.objectives?.forEach(obj => {
+                if (!newState.flags.includes(obj.flag)) {
+                    newState.flags = [...newState.flags, obj.flag];
                 }
-            } else {
-                result = { newState: currentState, messages: [agentMessage] }; 
+            });
+            
+            const completion = checkChapterCompletion(newState, game);
+            let messages = [createMessage('system', 'System', `DEV: ${targetChapter.title} flags set to complete.`)];
+
+            if (completion.isComplete) {
+              newState.flags.push(chapterCompletionFlag(chapterId));
+              messages.push(...completion.messages);
             }
-            break;
-    }
-    
-    // --- Message Dispatching ---
-    const messagesToDispatch = [...result.messages];
-    if (process.env.NODE_ENV === 'development') {
-        for (const message of messagesToDispatch) {
-            // We don't wait for the promise to resolve to prevent blocking the game loop
-            dispatchMessage(userId, message);
+            
+            finalResult = { newState, messages };
         }
     }
+    // Handle global commands
+    else if (lowerInput === 'look around' || lowerInput === 'look') {
+        const location = chapter.locations[currentState.currentLocationId];
+        const objectsInLocation = location.objects.map(id => getLiveGameObject(id, currentState, game));
+        const objectNames = objectsInLocation.map(obj => obj.name);
+        const npcNames = location.npcs.map(id => chapter.npcs[id]?.name).filter(Boolean) as string[];
+        let lookAroundSummary = `${location.description}\n\n`;
+        if(objectNames.length > 0) {
+            lookAroundSummary += `You can see the following objects:\n${objectNames.map(name => `• ${name}`).join('\n')}\n`;
+        }
+        if(npcNames.length > 0) {
+            lookAroundSummary += `\nYou see the following people here:\n${npcNames.map(name => `• ${name}`).join('\n')}`;
+        }
+        let tempState = currentState;
+        let messages = [];
+        if (currentState.interactingWithObject) {
+            const result = processActions(currentState, [{type: 'END_INTERACTION'}], game);
+            tempState = result.newState;
+            messages.push(...result.messages);
+        }
+        messages.push(createMessage('narrator', narratorName, lookAroundSummary));
+        finalResult = { newState: tempState, messages };
 
-    if (!result.newState) {
-        return { newState: null, messages: result.messages };
+    } else if (lowerInput === 'inventory') {
+        finalResult = handleInventory(currentState, game);
     }
-
-    const completion = checkChapterCompletion(result.newState, game);
-    let finalMessages = [...result.messages];
-
-    if (completion.isComplete && !result.newState.flags.includes(chapterCompletionFlag(result.newState.currentChapterId))) {
-        result.newState.flags.push(chapterCompletionFlag(result.newState.currentChapterId));
-        finalMessages.push(...completion.messages);
+    // Context-specific commands (conversation, interaction)
+    else if (currentState.activeConversationWith) {
+        finalResult = await handleConversation(currentState, playerInput, game);
+    } else if (currentState.interactingWithObject && (lowerInput === 'exit' || lowerInput === 'close')) {
+        finalResult = processActions(currentState, [{type: 'END_INTERACTION'}], game);
+    } else if (currentState.interactingWithObject) {
+        finalResult = await handleObjectInteraction(currentState, playerInput, game);
     }
-    
-    const hasSystemMessage = result.messages.some(m => m.sender === 'system');
+    // Main AI-driven command parsing
+    else {
+        const location = chapter.locations[currentState.currentLocationId];
+        const objectsInLocation = location.objects.map(id => getLiveGameObject(id, currentState, game));
+        const objectNames = objectsInLocation.map(obj => obj.name);
+        const npcNames = location.npcs.map(id => chapter.npcs[id]?.name).filter(Boolean) as string[];
+        const isChapterComplete = checkChapterCompletion(currentState, game).isComplete;
+        
+        let lookAroundSummary = `${location.description}\n\n`;
+        if(objectNames.length > 0) {
+          lookAroundSummary += `You can see the following objects:\n${objectNames.map(name => `• ${name}`).join('\n')}\n`;
+        }
+        if(npcNames.length > 0) {
+          lookAroundSummary += `\nYou see the following people here:\n${npcNames.map(name => `• ${name}`).join('\n')}`;
+        }
+        
+        let gameStateSummaryForAI = `
+          CHAPTER GOAL: ${chapter.goal}.
+          CURRENT LOCATION: ${location.name}.
+          INVENTORY: ${currentState.inventory.map(id => chapter.items[id]?.name).filter(Boolean).join(', ') || 'empty'}.
+          VISIBLE OBJECTS: ${objectNames.join(', ')}.
+          VISIBLE NPCS: ${npcNames.join(', ')}.
+        `;
 
-    if (!hasSystemMessage) {
-        finalMessages.unshift(agentMessage);
+        if (isChapterComplete && chapter.nextChapter) {
+            gameStateSummaryForAI += `\nCHAPTER COMPLETE. The player is ready to move on to the next chapter: '${chapter.nextChapter.title}'.`
+        }
+
+        const aiResponse = await guidePlayerWithNarrator({
+            promptContext: game.promptContext || '',
+            gameSpecifications: game.description,
+            gameState: gameStateSummaryForAI,
+            playerCommand: playerInput,
+            availableCommands: AVAILABLE_COMMANDS.join(', '),
+        });
+
+        const agentMessage = createMessage('agent', narratorName, `${aiResponse.agentResponse}`);
+        const commandToExecute = aiResponse.commandToExecute.toLowerCase();
+        const [verb, ...args] = commandToExecute.split(' ');
+        const restOfCommand = args.join(' ');
+        
+        let result: CommandResult;
+        
+        switch (verb) {
+            case 'examine':
+                result = handleExamine(currentState, restOfCommand, game);
+                break;
+            case 'take':
+                result = handleTake(currentState, restOfCommand, game);
+                break;
+            case 'go':
+                result = handleGo(currentState, restOfCommand.replace('to ', ''), game);
+                break;
+            case 'use':
+                const onMatch = restOfCommand.match(/(.*) on (.*)/);
+                if (onMatch) {
+                    result = handleUse(currentState, onMatch[1].trim(), onMatch[2].trim(), game);
+                } else {
+                    result = { newState: currentState, messages: [createMessage('system', 'System', 'Please specify what to use and what to use it on, e.g., "use key on desk".')] };
+                }
+                break;
+            case 'talk':
+                 result = await handleTalk(currentState, restOfCommand.replace('to ', ''), game);
+                 break;
+            case 'look':
+                 if (restOfCommand.startsWith('around')) {
+                     result = handleLook(currentState, game, lookAroundSummary);
+                 } else if (restOfCommand.startsWith('behind')) {
+                     const targetName = restOfCommand.replace('behind ', '').trim();
+                     const targetObject = objectsInLocation.find(obj => obj.name.toLowerCase().includes(targetName));
+                     if (targetObject?.onFailure?.['look behind']) {
+                         result = { newState: currentState, messages: [createMessage('narrator', narratorName, targetObject.onFailure['look behind'])] };
+                     } else if (targetObject) {
+                         result = { newState: currentState, messages: [createMessage('narrator', narratorName, targetObject.onFailure?.default || `You look behind the ${targetObject.name} and see nothing out of the ordinary.`)] };
+                     } else {
+                         result = { newState: currentState, messages: [createMessage('narrator', narratorName, "You don't see that here.")] };
+                     }
+                 } else {
+                    result = handleExamine(currentState, restOfCommand.replace('at ', ''), game);
+                 }
+                 break;
+            case 'inventory':
+                result = handleInventory(currentState, game);
+                break;
+            case 'password':
+                result = handlePassword(currentState, commandToExecute, game);
+                break;
+            case 'invalid':
+                 result = { newState: currentState, messages: [agentMessage] };
+                 break;
+            default:
+                const targetObject = objectsInLocation.find(obj => restOfCommand.includes(obj.name.toLowerCase()));
+                if (targetObject) {
+                    const failureMessage = targetObject.onFailure?.[verb] || targetObject.onFailure?.default;
+                    if (failureMessage) {
+                        result = { newState: currentState, messages: [createMessage('narrator', narratorName, failureMessage)] };
+                    } else {
+                        result = { newState: currentState, messages: [agentMessage] };
+                    }
+                } else {
+                    result = { newState: currentState, messages: [agentMessage] }; 
+                }
+                break;
+        }
+        
+        const hasSystemMessage = result.messages.some(m => m.sender === 'system');
+
+        if (!hasSystemMessage) {
+            result.messages.unshift(agentMessage);
+        }
+        finalResult = result;
     }
-    
-    // Always include the player's original message in the final returned list for the UI.
-    const finalMessagesForUi = [playerMessage, ...finalMessages];
+  
+    // --- FINAL PROCESSING ---
+    let finalMessagesForUi = [playerMessage, ...finalResult.messages];
+    let finalState = finalResult.newState;
 
-    // Persist state
-    await logAndSave(userId, gameId, result.newState, finalMessagesForUi);
+    if (finalState) {
+        // Check for chapter completion based on the new state
+        const completion = checkChapterCompletion(finalState, game);
+        if (completion.isComplete && !finalState.flags.includes(chapterCompletionFlag(finalState.currentChapterId))) {
+            finalState.flags.push(chapterCompletionFlag(finalState.currentChapterId));
+            finalMessagesForUi.push(...completion.messages);
+        }
+
+        // Persist state and logs
+        await logAndSave(userId, gameId, finalState, finalMessagesForUi);
+
+        // Dispatch messages to external service in dev mode
+        if (process.env.NODE_ENV === 'development') {
+            for (const message of finalMessagesForUi) {
+                await dispatchMessage(userId, message);
+            }
+        }
+    } else {
+        // Handle cases where state is null (should be rare)
+        await logAndSave(userId, gameId, currentState, finalMessagesForUi);
+    }
     
     return {
-        newState: result.newState,
-        messages: finalMessages,
+        newState: finalState,
+        messages: finalResult.messages, // Return only the new messages for the UI
     };
 
   } catch (error) {
     console.error('Error processing command:', error);
-    if (error instanceof Error) {
-        return {
-          newState: currentState,
-          messages: [createMessage('system', 'System', `Sorry, an error occurred while processing your command: ${error.message}`)],
-        };
-    }
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
     return {
       newState: currentState,
-      messages: [createMessage('system', 'System', 'Sorry, an unknown error occurred while processing your command.')],
+      messages: [createMessage('system', 'System', `Sorry, an error occurred: ${errorMessage}`)],
     };
   }
 }
