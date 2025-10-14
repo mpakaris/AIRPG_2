@@ -209,7 +209,7 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
         <h2 className="font-headline text-2xl font-bold text-primary">
           {game.title}
         </h2>
-        {user && <p className="text-sm text-muted-foreground">Playing as: {user.username}</p>}
+        {user && <p className="text-sm text-muted-foreground">Playing as: {user.id}</p>}
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
