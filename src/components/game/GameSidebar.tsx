@@ -51,8 +51,8 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
   const [user, setUser] = useState<UserType | null>(null);
 
   const currentEnv = process.env.NEXT_PUBLIC_NODE_ENV || 'test';
-  const showDevControls = true;
   const isDevEnvironment = currentEnv === 'development';
+  const showSomeDevControls = true; // Always show the group and Reset button.
 
   const [objectivesVisible, setObjectivesVisible] = useState(isDevEnvironment);
 
@@ -222,7 +222,7 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
         <h2 className="font-headline text-2xl font-bold text-primary">
           {game.title}
         </h2>
-        {user && <p className="text-sm text-muted-foreground">Playing as: {user.id}</p>}
+        {user && <p className="text-sm text-muted-foreground">Playing as: {userId}</p>}
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
@@ -335,7 +335,7 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
             </p>
            )}
         </SidebarGroup>
-        {showDevControls && (
+        {showSomeDevControls && (
             <SidebarGroup>
                 <SidebarGroupLabel className='flex items-center gap-2'>
                     <Code />
@@ -343,17 +343,22 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
                 </SidebarGroupLabel>
                 <div className='flex flex-col gap-2 px-2'>
                     <Button variant="destructive" size="sm" onClick={onResetGame}><RotateCcw className='mr-2 h-4 w-4'/>Reset Game</Button>
-                    <Button variant="secondary" size="sm" onClick={handleFetchWhinself}><MessageSquareShare className='mr-2 h-4 w-4'/>Fetch & Submit Msg</Button>
-                    <Button variant="outline" size="sm" onClick={() => onCommandSubmit('look around')}>Look Around</Button>
-                    <Button variant="outline" size="sm" onClick={() => onCommandSubmit('examine notebook')}>Examine Notebook</Button>
-                    <Button variant="outline" size="sm" onClick={() => onCommandSubmit('password for brown notebook "Justice for Silas Bloom"')}>Unlock Notebook</Button>
-                    <Button variant="outline" size="sm" onClick={() => onCommandSubmit('watch video')}>Watch Video</Button>
-                    <Button variant="outline" size="sm" onClick={() => onCommandSubmit('read article')}>Read Article</Button>
-                    <Button variant="outline" size="sm" onClick={() => onCommandSubmit('talk to barista')}>Talk to Barista</Button>
-                    <Button variant="outline" size="sm" onClick={() => onCommandSubmit('ask about man')}>Ask about man</Button>
-                    <Button variant="outline" size="sm" onClick={() => onCommandSubmit('ask for name')}>Ask for name</Button>
-                    <Button variant="outline" size="sm" onClick={() => handleDevCommand(game.startChapterId)}>Complete Chapter I</Button>
-                    <Button variant="outline" in-memory disabled>Complete Chapter II</Button>
+                    
+                    {isDevEnvironment && (
+                      <>
+                        <Button variant="secondary" size="sm" onClick={handleFetchWhinself}><MessageSquareShare className='mr-2 h-4 w-4'/>Fetch & Submit Msg</Button>
+                        <Button variant="outline" size="sm" onClick={() => onCommandSubmit('look around')}>Look Around</Button>
+                        <Button variant="outline" size="sm" onClick={() => onCommandSubmit('examine notebook')}>Examine Notebook</Button>
+                        <Button variant="outline" size="sm" onClick={() => onCommandSubmit('password for brown notebook "Justice for Silas Bloom"')}>Unlock Notebook</Button>
+                        <Button variant="outline" size="sm" onClick={() => onCommandSubmit('watch video')}>Watch Video</Button>
+                        <Button variant="outline" size="sm" onClick={() => onCommandSubmit('read article')}>Read Article</Button>
+                        <Button variant="outline" size="sm" onClick={() => onCommandSubmit('talk to barista')}>Talk to Barista</Button>
+                        <Button variant="outline" size="sm" onClick={() => onCommandSubmit('ask about man')}>Ask about man</Button>
+                        <Button variant="outline" size="sm" onClick={() => onCommandSubmit('ask for name')}>Ask for name</Button>
+                        <Button variant="outline" size="sm" onClick={() => handleDevCommand(game.startChapterId)}>Complete Chapter I</Button>
+                        <Button variant="outline" in-memory disabled>Complete Chapter II</Button>
+                      </>
+                    )}
                 </div>
             </SidebarGroup>
         )}
