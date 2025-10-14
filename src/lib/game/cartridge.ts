@@ -54,7 +54,7 @@ export const game: Game = {
                         message: "A lock prevents it from being opened without the right password. A mini-game opens on your device.",
                         actions: [
                             { type: 'SET_FLAG', flag: 'has_seen_notebook_url' as Flag },
-                            { type: 'SHOW_MESSAGE', sender: 'narrator', senderName: 'Narrator', content: 'Minigame: https://6000-firebase-studio-1759162726172.cluster-4cmpbiopffe5oqk7tloeb2ltrk.cloudworkstations.dev/games/the-notebook'}
+                            { type: 'SHOW_MESSAGE', sender: 'narrator', senderName: 'Narrator', content: 'Minigame: https://airpg-minigames.vercel.app/games/the-notebook'}
                         ]
                     },
                     unlocked: {
