@@ -2,8 +2,8 @@
 'use client';
 
 import { useState } from 'react';
+import PhoneInput, { isValidPhoneNumber } from 'react-phone-number-input';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { LoaderCircle } from 'lucide-react';
@@ -15,7 +15,7 @@ interface UserRegistrationProps {
 }
 
 export function UserRegistration({ onRegister }: UserRegistrationProps) {
-  const [phone, setPhone] = useState('');
+  const [phone, setPhone] = useState<string | undefined>('');
   const [hasAgreed, setHasAgreed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -30,17 +30,21 @@ export function UserRegistration({ onRegister }: UserRegistrationProps) {
       });
       return;
     }
-    if (!phone.trim()) {
+    if (!phone || !isValidPhoneNumber(phone)) {
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'Phone number cannot be empty.',
+        title: 'Invalid Phone Number',
+        description: 'Please enter a valid phone number including the country code.',
       });
       return;
     }
+
     setIsLoading(true);
-    const result = await onRegister(phone);
+    // Normalize the number: remove the leading '+'
+    const normalizedPhone = phone.replace('+', '');
+    const result = await onRegister(normalizedPhone);
     setIsLoading(false);
+    
     if (!result.success) {
       toast({
         variant: 'destructive',
@@ -61,18 +65,19 @@ export function UserRegistration({ onRegister }: UserRegistrationProps) {
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
-            <Input
-              type="tel"
-              placeholder="e.g., 491234567890"
+            <PhoneInput
+              placeholder="Enter phone number"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={setPhone}
+              international
+              defaultCountry="DE"
+              className="rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background focus-within:ring-2 focus-within:ring-ring"
               disabled={isLoading}
-              required
             />
             <div className="flex items-center space-x-2">
-              <Checkbox id="terms" checked={hasAgreed} onCheckedChange={(checked) => setHasAgreed(checked as boolean)} />
+              <Checkbox id="terms" checked={hasAgreed} onCheckedChange={(checked) => setHasAgreed(checked as boolean)} disabled={isLoading} />
               <Label htmlFor="terms" className="text-sm font-normal text-muted-foreground">
-                I hereby agree that my phone number is being saved in the DB for Test-Reasons. My phone number will only be used for this website and not in any further way.
+                I agree that my phone number may be stored in the database for testing purposes only and used solely within this website.
               </Label>
             </div>
           </CardContent>
