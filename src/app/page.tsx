@@ -9,6 +9,8 @@ import { doc, getDoc } from 'firebase/firestore';
 async function getInitialData(userId: string | null): Promise<{ playerState: PlayerState, messages: Message[] }> {
     const initialGameState = getInitialState(gameCartridge);
     
+    // In test/prod, we always start with a clean slate on the server.
+    // The client will fetch the correct state after authentication.
     if (!userId) {
         return { 
             playerState: initialGameState, 
@@ -16,6 +18,7 @@ async function getInitialData(userId: string | null): Promise<{ playerState: Pla
         };
     }
 
+    // In development, we pre-load the dev user's state on the server.
     const { firestore } = initializeFirebase();
     const gameId = gameCartridge.id;
 
@@ -28,18 +31,12 @@ async function getInitialData(userId: string | null): Promise<{ playerState: Pla
     let playerState: PlayerState;
     if (stateSnap.exists()) {
         playerState = stateSnap.data() as PlayerState;
-        // Data migration: Correct old chapter ID if it exists in the saved state
-        if (playerState.currentChapterId === ('ch1' as ChapterId)) {
-            console.log("Migrating old chapter ID 'ch1' to 'ch1-the-cafe'");
-            playerState.currentChapterId = 'ch1-the-cafe' as ChapterId;
-        }
     } else {
         playerState = initialGameState;
     }
 
-    // Defensive check: If chapter is still invalid, reset to initial state.
     if (!gameCartridge.chapters[playerState.currentChapterId]) {
-        console.warn(`Invalid chapter ID '${playerState.currentChapterId}' found in state. Resetting to initial state.`);
+        console.warn(`Invalid chapter ID '${playerState.currentChapterId}' found in state. Resetting.`);
         playerState = initialGameState;
     }
 
@@ -47,6 +44,7 @@ async function getInitialData(userId: string | null): Promise<{ playerState: Pla
     if (logSnap.exists()) {
         messages = logSnap.data()?.messages || [];
     } else {
+        // If logs don't exist for the dev user, create them.
         messages = createInitialMessages(playerState);
     }
 
@@ -84,10 +82,10 @@ function createInitialMessages(playerState?: PlayerState): Message[] {
 };
 
 
-export default async function Home({ searchParams }: { searchParams: { [key: string]: string | string[] | undefined } }) {
+export default async function Home() {
   // In development, we can pre-load the dev user's state on the server.
-  // In test/prod, the user ID is determined on the client, so we pass null.
-  const initialUserId = process.env.NEXT_PUBLIC_NODE_ENV === 'development'
+  // In test/prod, the user ID is determined on the client, so we pass null and let the client handle it.
+  const initialUserId = process.env.NODE_ENV === 'development'
       ? process.env.NEXT_PUBLIC_DEV_USER_ID || null
       : null;
 
@@ -95,5 +93,3 @@ export default async function Home({ searchParams }: { searchParams: { [key: str
 
   return <GameClient game={gameCartridge} initialGameState={playerState} initialMessages={messages} />;
 }
-
-    

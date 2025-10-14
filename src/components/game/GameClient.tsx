@@ -10,6 +10,7 @@ import { GameScreen } from './GameScreen';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/hooks/use-user';
 import { UserRegistration } from './UserRegistration';
+import { LoaderCircle } from 'lucide-react';
 
 interface GameClientProps {
   game: Game;
@@ -18,24 +19,23 @@ interface GameClientProps {
 }
 
 export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initialMessages }) => {
-  const { userId, isUserLoading, showRegistration, registerUser } = useUser(initialGameState, initialMessages);
+  const { userId, isUserLoading, showRegistration, registerUser, userState } = useUser(initialGameState, initialMessages);
   const [playerState, setPlayerState] = useState<PlayerState>(initialGameState);
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [commandInputValue, setCommandInputValue] = useState('');
-  const [isPending, startTransition] = useTransition();
+  const [isCommandPending, startTransition] = useTransition();
   const { toast } = useToast();
 
-  const currentEnv = process.env.NEXT_PUBLIC_NODE_ENV || 'production';
+  const currentEnv = process.env.NODE_ENV || 'production';
   const showSidebar = currentEnv === 'development' || currentEnv === 'test';
 
-  // Effect to update local state when user changes (e.g., after registration or loading from localStorage)
+  // Effect to update local game state when the user's state is loaded by the hook
   useEffect(() => {
-    if (userId) {
-        // When a user is identified, we might need to fetch their specific state.
-        // For now, we assume the initial data is correct or will be updated on the first command.
-        // A more robust solution could fetch user-specific data here.
+    if (userState) {
+      setPlayerState(userState.playerState);
+      setMessages(userState.messages);
     }
-  }, [userId]);
+  }, [userState]);
 
 
   const handleResetGame = () => {
@@ -80,9 +80,6 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initia
         if (result.newState) {
             setPlayerState(result.newState);
         }
-
-        // The result.messages contains the complete log for the session, including the player's input.
-        // We replace the client-side messages with this authoritative list.
         if (result.messages) {
             setMessages(result.messages);
         }
@@ -99,8 +96,25 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initia
     });
   };
 
+  if (isUserLoading) {
+    return (
+        <div className="flex min-h-screen items-center justify-center bg-background">
+            <LoaderCircle className="h-12 w-12 animate-spin text-primary" />
+        </div>
+    );
+  }
+
   if (showRegistration) {
     return <UserRegistration onRegister={registerUser} />;
+  }
+  
+  if (!userId) {
+    // This state can happen briefly or if something goes wrong.
+     return (
+        <div className="flex min-h-screen items-center justify-center bg-background">
+            <p>Could not identify user. Please refresh the page.</p>
+        </div>
+    );
   }
 
   return (
@@ -120,7 +134,7 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initia
             <GameScreen
             messages={messages}
             onCommandSubmit={handleCommandSubmit}
-            isLoading={isPending || isUserLoading}
+            isLoading={isCommandPending}
             game={game}
             playerState={playerState}
             commandInputValue={commandInputValue}
@@ -131,5 +145,3 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initia
     </SidebarProvider>
   );
 };
-
-    

@@ -2,26 +2,67 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { findOrCreateUser } from '@/app/actions';
-import type { PlayerState, Message } from '@/lib/game/types';
+import { findOrCreateUser, resetGame } from '@/app/actions';
+import type { PlayerState, Message, User as UserType, Game, GameId } from '@/lib/game/types';
+import { initializeFirebase } from '@/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import { getInitialState } from '@/lib/game-state';
+import { game as gameCartridge } from '@/lib/game/cartridge';
 
 const USER_ID_STORAGE_KEY = 'airpg_user_id';
+
+interface UserState {
+    playerState: PlayerState;
+    messages: Message[];
+}
+
+// This function is client-side only.
+async function fetchUserData(userId: string): Promise<UserState | null> {
+    const { firestore } = initializeFirebase();
+    const gameId = gameCartridge.id;
+
+    const stateRef = doc(firestore, 'player_states', `${userId}_${gameId}`);
+    const logRef = doc(firestore, 'logs', `${userId}_${gameId}`);
+
+    try {
+        const [stateSnap, logSnap] = await Promise.all([getDoc(stateRef), getDoc(logRef)]);
+
+        if (stateSnap.exists() && logSnap.exists()) {
+            return {
+                playerState: stateSnap.data() as PlayerState,
+                messages: logSnap.data()?.messages || []
+            };
+        }
+        return null; // Data not found, implies a new user or inconsistent state
+    } catch (error) {
+        console.error("Error fetching user data:", error);
+        return null;
+    }
+}
+
 
 export function useUser(initialGameState: PlayerState, initialMessages: Message[]) {
   const [userId, setUserId] = useState<string | null>(null);
   const [isUserLoading, setIsUserLoading] = useState(true);
   const [showRegistration, setShowRegistration] = useState(false);
+  const [userState, setUserState] = useState<UserState | null>(null);
 
-  const currentEnv = process.env.NEXT_PUBLIC_NODE_ENV || 'production';
+  const currentEnv = process.env.NODE_ENV || 'production';
 
-  const registerUser = useCallback(async (id: string) => {
-    const { user, error } = await findOrCreateUser(id);
+  const registerUser = useCallback(async (id: string): Promise<{ success: boolean; message: string }> => {
+    // findOrCreateUser now handles saving the initial state to DB
+    const { user, error, isNew } = await findOrCreateUser(id);
     if (user) {
       localStorage.setItem(USER_ID_STORAGE_KEY, user.id);
       setUserId(user.id);
       setShowRegistration(false);
-      // Potentially reload game state for this new user
-      window.location.reload(); // Simple way to fetch new state
+      
+      // Fetch the newly created state to sync the client
+      const freshUserState = await fetchUserData(user.id);
+      if (freshUserState) {
+          setUserState(freshUserState);
+      }
+      
       return { success: true, message: 'User registered successfully.' };
     } else {
       return { success: false, message: error || 'An unknown error occurred.' };
@@ -29,39 +70,36 @@ export function useUser(initialGameState: PlayerState, initialMessages: Message[
   }, []);
 
   useEffect(() => {
-    if (currentEnv === 'development') {
-      const devId = process.env.NEXT_PUBLIC_DEV_USER_ID || '36308548589';
-      setUserId(devId);
-      setIsUserLoading(false);
-    } else if (currentEnv === 'test') {
-      const storedId = localStorage.getItem(USER_ID_STORAGE_KEY);
-      if (storedId) {
-        // Verify user exists in DB
-        findOrCreateUser(storedId).then(({ user, error }) => {
-          if (user) {
-            setUserId(user.id);
-          } else {
-            // Stored ID is invalid, clear it and show registration
-            localStorage.removeItem(USER_ID_STORAGE_KEY);
-            setShowRegistration(true);
-          }
-          setIsUserLoading(false);
-        });
-      } else {
-        // No stored ID, show registration
-        setShowRegistration(true);
+    const identifyUser = async () => {
+        if (currentEnv === 'development') {
+            const devId = process.env.NEXT_PUBLIC_DEV_USER_ID || '36308548589';
+            setUserId(devId);
+            // In dev, the initial state is pre-loaded on the server
+            setUserState({ playerState: initialGameState, messages: initialMessages });
+        } else if (currentEnv === 'test') {
+            const storedId = localStorage.getItem(USER_ID_STORAGE_KEY);
+            if (storedId) {
+                const existingUserState = await fetchUserData(storedId);
+                if (existingUserState) {
+                    setUserId(storedId);
+                    setUserState(existingUserState);
+                } else {
+                    // Stored ID is invalid or DB state is missing, force re-registration
+                    localStorage.removeItem(USER_ID_STORAGE_KEY);
+                    setShowRegistration(true);
+                }
+            } else {
+                setShowRegistration(true);
+            }
+        } else {
+             // Production environment (or any other)
+             setShowRegistration(true);
+        }
         setIsUserLoading(false);
-      }
-    } else {
-      // Production: relies on WhatsApp to provide user ID, so we do nothing here.
-      // The user ID will be passed directly to server actions from the API route.
-      // For web UI in prod, you'd need a proper auth flow.
-      setIsUserLoading(false);
-      setShowRegistration(true); // Or show a "play via WhatsApp" message
-    }
-  }, [currentEnv]);
+    };
 
-  return { userId, isUserLoading, showRegistration, registerUser };
+    identifyUser();
+  }, [currentEnv, initialGameState, initialMessages]);
+
+  return { userId, isUserLoading, showRegistration, registerUser, userState };
 }
-
-    
