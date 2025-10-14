@@ -55,7 +55,6 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
 
   const currentEnv = process.env.NEXT_PUBLIC_NODE_ENV || 'test';
   const isDevEnvironment = currentEnv === 'development';
-  const showSomeDevControls = true;
 
   const [objectivesVisible, setObjectivesVisible] = useState(isDevEnvironment);
   
@@ -173,7 +172,7 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
             </SidebarGroup>
         )}
         
-        {isChapterComplete && (
+        {isDevEnvironment && isChapterComplete && (
             <SidebarGroup>
                  <SidebarGroupLabel className='flex items-center gap-2'>
                     <Sparkles />
@@ -242,7 +241,7 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
             </p>
            )}
         </SidebarGroup>
-        {showSomeDevControls && (
+        {isDevEnvironment && (
             <SidebarGroup>
                 <SidebarGroupLabel className='flex items-center gap-2'>
                     <Code />
@@ -254,21 +253,17 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
                     <Button variant="outline" size="sm" onClick={handleGenerateStory} disabled={isPending}>
                       {isPending ? 'Generating...' : 'DEV: Generate Story'}
                     </Button>
-
-                    {isDevEnvironment && (
-                      <>
-                        <Button variant="outline" size="sm" onClick={() => onCommandSubmit('look around')}>Look Around</Button>
-                        <Button variant="outline" size="sm" onClick={() => onCommandSubmit('examine notebook')}>Examine Notebook</Button>
-                        <Button variant="outline" size="sm" onClick={() => onCommandSubmit('password for brown notebook "Justice for Silas Bloom"')}>Unlock Notebook</Button>
-                        <Button variant="outline" size="sm" onClick={() => onCommandSubmit('watch video')}>Watch Video</Button>
-                        <Button variant="outline" size="sm" onClick={() => onCommandSubmit('read article')}>Read Article</Button>
-                        <Button variant="outline" size="sm" onClick={() => onCommandSubmit('talk to barista')}>Talk to Barista</Button>
-                        <Button variant="outline" size="sm" onClick={() => onCommandSubmit('ask about man')}>Ask about man</Button>
-                        <Button variant="outline" size="sm" onClick={() => onCommandSubmit('ask for name')}>Ask for name</Button>
-                        <Button variant="outline" size="sm" onClick={() => handleDevCommand(game.startChapterId)}>Complete Chapter I</Button>
-                        <Button variant="outline" in-memory disabled>Complete Chapter II</Button>
-                      </>
-                    )}
+                    
+                    <Button variant="outline" size="sm" onClick={() => onCommandSubmit('look around')}>Look Around</Button>
+                    <Button variant="outline" size="sm" onClick={() => onCommandSubmit('examine notebook')}>Examine Notebook</Button>
+                    <Button variant="outline" size="sm" onClick={() => onCommandSubmit('password for brown notebook "Justice for Silas Bloom"')}>Unlock Notebook</Button>
+                    <Button variant="outline" size="sm" onClick={() => onCommandSubmit('watch video')}>Watch Video</Button>
+                    <Button variant="outline" size="sm" onClick={() => onCommandSubmit('read article')}>Read Article</Button>
+                    <Button variant="outline" size="sm" onClick={() => onCommandSubmit('talk to barista')}>Talk to Barista</Button>
+                    <Button variant="outline" size="sm" onClick={() => onCommandSubmit('ask about man')}>Ask about man</Button>
+                    <Button variant="outline" size="sm" onClick={() => onCommandSubmit('ask for name')}>Ask for name</Button>
+                    <Button variant="outline" size="sm" onClick={() => handleDevCommand(game.startChapterId)}>Complete Chapter I</Button>
+                    <Button variant="outline" in-memory disabled>Complete Chapter II</Button>
                 </div>
             </SidebarGroup>
         )}
