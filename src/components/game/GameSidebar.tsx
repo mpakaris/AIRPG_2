@@ -55,7 +55,7 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
 
   const currentEnv = process.env.NEXT_PUBLIC_NODE_ENV || 'test';
   const isDevEnvironment = currentEnv === 'development';
-  const showSomeDevControls = true; // Always show the group and Reset button.
+  const showSomeDevControls = true;
 
   const [objectivesVisible, setObjectivesVisible] = useState(isDevEnvironment);
   
@@ -251,6 +251,10 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
                 <div className='flex flex-col gap-2 px-2'>
                     <Button variant="destructive" size="sm" onClick={onResetGame}><RotateCcw className='mr-2 h-4 w-4'/>Reset Game</Button>
                     
+                    <Button variant="outline" size="sm" onClick={handleGenerateStory} disabled={isPending}>
+                      {isPending ? 'Generating...' : 'DEV: Generate Story'}
+                    </Button>
+
                     {isDevEnvironment && (
                       <>
                         <Button variant="outline" size="sm" onClick={() => onCommandSubmit('look around')}>Look Around</Button>
