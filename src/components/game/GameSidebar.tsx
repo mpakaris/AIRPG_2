@@ -292,7 +292,7 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
                     <Button variant="destructive" size="sm" onClick={onResetGame}><RotateCcw className='mr-2 h-4 w-4'/>Reset Game</Button>
                     {isDevEnvironment && (
                       <>
-                        <div className='flex flex-col gap-2'>
+                        {/* <div className='flex flex-col gap-2'>
                             <p className='text-xs font-semibold text-muted-foreground'>Send Test Message</p>
                             <div className="relative flex w-full items-center">
                                 <Input
@@ -315,9 +315,8 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
                                     <span className="sr-only">Send</span>
                                 </Button>
                             </div>
-                        </div>
+                        </div> */}
                         <Button variant="secondary" size="sm" onClick={handleFetchWhinself}><MessageSquareShare className='mr-2 h-4 w-4'/>Fetch & Submit Msg</Button>
-                        <Button variant="secondary" size="sm" onClick={handleGetLastMessage}><Download className='mr-2 h-4 w-4'/>Get Last Message</Button>
                         <Button variant="outline" size="sm" onClick={() => onCommandSubmit('look around')}>Look Around</Button>
                         <Button variant="outline" size="sm" onClick={() => onCommandSubmit('examine notebook')}>Examine Notebook</Button>
                         <Button variant="outline" size="sm" onClick={() => onCommandSubmit('password for brown notebook "Justice for Silas Bloom"')}>Unlock Notebook</Button>
