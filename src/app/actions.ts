@@ -7,7 +7,7 @@ import { game as gameCartridge } from '@/lib/game/cartridge';
 import { AVAILABLE_COMMANDS } from '@/lib/game/commands';
 import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectId, GameObjectState, ItemId, Flag, Action, Chapter, ChapterId, ImageDetails, GameId, User } from '@/lib/game/types';
 import { initializeFirebase } from '@/firebase';
-import { doc, setDoc, getDoc, getDocs, collection } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { getInitialState } from '@/lib/game-state';
 import { dispatchMessage } from '@/lib/whinself-service';
 
@@ -653,22 +653,35 @@ function checkChapterCompletion(state: PlayerState, game: Game): { isComplete: b
 }
 
 // --- User Management ---
-
-async function findOrCreateUser(userId: string): Promise<{userRef: any, isNew: boolean}> {
+export async function findOrCreateUser(userId: string): Promise<{ user: User | null; isNew: boolean; error?: string }> {
+    if (!userId || typeof userId !== 'string' || userId.trim().length < 5) {
+        return { user: null, isNew: false, error: "Invalid User ID provided." };
+    }
+    
     const { firestore } = initializeFirebase();
     const userRef = doc(firestore, 'users', userId);
-    const userSnap = await getDoc(userRef);
+    
+    try {
+        const userSnap = await getDoc(userRef);
 
-    if (!userSnap.exists()) {
-        const newUser: User = {
-            id: userId,
-            username: `Player_${userId.substring(userId.length - 4)}`,
-            purchasedGames: [gameCartridge.id],
-        };
-        await setDoc(userRef, newUser);
-        return { userRef, isNew: true };
+        if (!userSnap.exists()) {
+            const newUser: User = {
+                id: userId,
+                username: `Player_${userId.substring(userId.length - 4)}`,
+                purchasedGames: [gameCartridge.id],
+            };
+            await setDoc(userRef, newUser);
+            console.log(`New user created: ${userId}`);
+            return { user: newUser, isNew: true };
+        } else {
+            console.log(`Existing user found: ${userId}`);
+            return { user: userSnap.data() as User, isNew: false };
+        }
+    } catch (error) {
+        console.error("Error in findOrCreateUser:", error);
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred accessing the database.";
+        return { user: null, isNew: false, error: errorMessage };
     }
-    return { userRef, isNew: false };
 }
 
 
@@ -681,7 +694,12 @@ export async function processCommand(
   const game = gameCartridge;
   const gameId = game.id;
 
-  await findOrCreateUser(userId);
+  if (!userId) {
+    return {
+        newState: getInitialState(game),
+        messages: [createMessage('system', 'System', 'Error: User ID is missing. Cannot process command.')]
+    };
+  }
 
   const { firestore } = initializeFirebase();
   const stateRef = doc(firestore, 'player_states', `${userId}_${gameId}`);
@@ -905,6 +923,9 @@ export async function processCommand(
 }
 
 export async function resetGame(userId: string): Promise<{newState: PlayerState, messages: Message[]}> {
+    if (!userId) {
+        throw new Error("User ID is required to reset the game.");
+    }
     const game = gameCartridge;
     const gameId = game.id;
     const freshState = getInitialState(game);
@@ -1000,3 +1021,5 @@ export async function sendWhinselfTestMessage(userId: string, message: string): 
         throw new Error('An unknown error occurred while sending the message.');
     }
 }
+
+    

@@ -1,13 +1,15 @@
 
 'use client';
 
-import { useState, useTransition, type FC } from 'react';
+import { useState, useTransition, type FC, useEffect } from 'react';
 import { processCommand, resetGame } from '@/app/actions';
 import type { Game, Message, PlayerState } from '@/lib/game/types';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { GameSidebar } from './GameSidebar';
 import { GameScreen } from './GameScreen';
 import { useToast } from '@/hooks/use-toast';
+import { useUser } from '@/hooks/use-user';
+import { UserRegistration } from './UserRegistration';
 
 interface GameClientProps {
   game: Game;
@@ -15,22 +17,35 @@ interface GameClientProps {
   initialMessages: Message[];
 }
 
-// Hardcoded for dev environment
-const DEV_USER_ID = process.env.NEXT_PUBLIC_DEV_USER_ID || "36308548589";
-
 export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initialMessages }) => {
+  const { userId, isUserLoading, showRegistration, registerUser } = useUser(initialGameState, initialMessages);
   const [playerState, setPlayerState] = useState<PlayerState>(initialGameState);
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [commandInputValue, setCommandInputValue] = useState('');
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
 
-  const showSidebar = process.env.NEXT_PUBLIC_NODE_ENV === 'development' || process.env.NEXT_PUBLIC_NODE_ENV === 'test';
+  const currentEnv = process.env.NEXT_PUBLIC_NODE_ENV || 'production';
+  const showSidebar = currentEnv === 'development' || currentEnv === 'test';
+
+  // Effect to update local state when user changes (e.g., after registration or loading from localStorage)
+  useEffect(() => {
+    if (userId) {
+        // When a user is identified, we might need to fetch their specific state.
+        // For now, we assume the initial data is correct or will be updated on the first command.
+        // A more robust solution could fetch user-specific data here.
+    }
+  }, [userId]);
+
 
   const handleResetGame = () => {
+    if (!userId) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Cannot reset game without a user.' });
+      return;
+    }
     startTransition(async () => {
         try {
-            const result = await resetGame(DEV_USER_ID);
+            const result = await resetGame(userId);
             setPlayerState(result.newState);
             setMessages(result.messages);
             toast({
@@ -51,12 +66,16 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initia
 
   const handleCommandSubmit = (command: string) => {
     if (!command.trim()) return;
+    if (!userId) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Cannot process command without a user.' });
+      return;
+    }
     
     setCommandInputValue(''); // Clear input after submission
 
     startTransition(async () => {
       try {
-        const result = await processCommand(DEV_USER_ID, command);
+        const result = await processCommand(userId, command);
         
         if (result.newState) {
             setPlayerState(result.newState);
@@ -80,6 +99,10 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initia
     });
   };
 
+  if (showRegistration) {
+    return <UserRegistration onRegister={registerUser} />;
+  }
+
   return (
     <SidebarProvider defaultOpen={true}>
       <div className='relative min-h-screen'>
@@ -90,13 +113,14 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initia
               onCommandSubmit={handleCommandSubmit}
               onResetGame={handleResetGame}
               setCommandInputValue={setCommandInputValue}
+              userId={userId}
           />
         )}
         <main className={`transition-all duration-300 ease-in-out ${showSidebar ? 'md:pl-[20rem] group-data-[state=collapsed]/sidebar-wrapper:md:pl-0' : ''}`}>
             <GameScreen
             messages={messages}
             onCommandSubmit={handleCommandSubmit}
-            isLoading={isPending}
+            isLoading={isPending || isUserLoading}
             game={game}
             playerState={playerState}
             commandInputValue={commandInputValue}
@@ -107,3 +131,5 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initia
     </SidebarProvider>
   );
 };
+
+    
