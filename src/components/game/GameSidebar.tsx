@@ -1,3 +1,4 @@
+
 'use client';
 
 import { BookOpen, Box, Compass, ScrollText, Target, User, CheckCircle, Code, RotateCcw, MessageSquareShare, Send, Download } from 'lucide-react';
@@ -38,6 +39,10 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
   const [whinselfMessage, setWhinselfMessage] = useState('');
+
+  const currentEnv = process.env.NEXT_PUBLIC_NODE_ENV;
+  const isDevEnvironment = currentEnv === 'development';
+  const isTestEnvironment = currentEnv === 'test';
 
   const isObjectiveComplete = (flag: Flag): boolean => {
     return playerState.flags.includes(flag);
@@ -277,51 +282,57 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
             </p>
            )}
         </SidebarGroup>
-        <SidebarGroup>
-            <SidebarGroupLabel className='flex items-center gap-2'>
-                <Code />
-                Dev Controls
-            </SidebarGroupLabel>
-            <div className='flex flex-col gap-2 px-2'>
-                <div className='flex flex-col gap-2'>
-                    <p className='text-xs font-semibold text-muted-foreground'>Send Test Message</p>
-                    <div className="relative flex w-full items-center">
-                         <Input
-                            type="text"
-                            placeholder="Enter a message..."
-                            value={whinselfMessage}
-                            onChange={(e) => setWhinselfMessage(e.target.value)}
-                            disabled={isPending}
-                            className="h-9 pr-10"
-                        />
-                        <Button
-                            type="submit"
-                            size="icon"
-                            variant="ghost"
-                            disabled={isPending}
-                            onClick={handleSendWhinself}
-                            className="absolute right-0 h-9 w-9"
-                        >
-                            <Send className="h-4 w-4" />
-                            <span className="sr-only">Send</span>
-                        </Button>
-                    </div>
+        {(isDevEnvironment || isTestEnvironment) && (
+            <SidebarGroup>
+                <SidebarGroupLabel className='flex items-center gap-2'>
+                    <Code />
+                    Dev Controls
+                </SidebarGroupLabel>
+                <div className='flex flex-col gap-2 px-2'>
+                    <Button variant="destructive" size="sm" onClick={onResetGame}><RotateCcw className='mr-2 h-4 w-4'/>Reset Game</Button>
+                    {isDevEnvironment && (
+                      <>
+                        <div className='flex flex-col gap-2'>
+                            <p className='text-xs font-semibold text-muted-foreground'>Send Test Message</p>
+                            <div className="relative flex w-full items-center">
+                                <Input
+                                    type="text"
+                                    placeholder="Enter a message..."
+                                    value={whinselfMessage}
+                                    onChange={(e) => setWhinselfMessage(e.target.value)}
+                                    disabled={isPending}
+                                    className="h-9 pr-10"
+                                />
+                                <Button
+                                    type="submit"
+                                    size="icon"
+                                    variant="ghost"
+                                    disabled={isPending}
+                                    onClick={handleSendWhinself}
+                                    className="absolute right-0 h-9 w-9"
+                                >
+                                    <Send className="h-4 w-4" />
+                                    <span className="sr-only">Send</span>
+                                </Button>
+                            </div>
+                        </div>
+                        <Button variant="secondary" size="sm" onClick={handleFetchWhinself}><MessageSquareShare className='mr-2 h-4 w-4'/>Fetch & Submit Msg</Button>
+                        <Button variant="secondary" size="sm" onClick={handleGetLastMessage}><Download className='mr-2 h-4 w-4'/>Get Last Message</Button>
+                        <Button variant="outline" size="sm" onClick={() => onCommandSubmit('look around')}>Look Around</Button>
+                        <Button variant="outline" size="sm" onClick={() => onCommandSubmit('examine notebook')}>Examine Notebook</Button>
+                        <Button variant="outline" size="sm" onClick={() => onCommandSubmit('password for brown notebook "Justice for Silas Bloom"')}>Unlock Notebook</Button>
+                        <Button variant="outline" size="sm" onClick={() => onCommandSubmit('watch video')}>Watch Video</Button>
+                        <Button variant="outline" size="sm" onClick={() => onCommandSubmit('read article')}>Read Article</Button>
+                        <Button variant="outline" size="sm" onClick={() => onCommandSubmit('talk to barista')}>Talk to Barista</Button>
+                        <Button variant="outline" size="sm" onClick={() => onCommandSubmit('ask about man')}>Ask about man</Button>
+                        <Button variant="outline" size="sm" onClick={() => onCommandSubmit('ask for name')}>Ask for name</Button>
+                        <Button variant="outline" size="sm" onClick={() => handleDevCommand(game.startChapterId)}>Complete Chapter I</Button>
+                        <Button variant="outline" size="sm" disabled>Complete Chapter II</Button>
+                      </>
+                    )}
                 </div>
-                <Button variant="destructive" size="sm" onClick={onResetGame}><RotateCcw className='mr-2 h-4 w-4'/>Reset Game</Button>
-                <Button variant="secondary" size="sm" onClick={handleFetchWhinself}><MessageSquareShare className='mr-2 h-4 w-4'/>Fetch & Submit Msg</Button>
-                <Button variant="secondary" size="sm" onClick={handleGetLastMessage}><Download className='mr-2 h-4 w-4'/>Get Last Message</Button>
-                <Button variant="outline" size="sm" onClick={() => onCommandSubmit('look around')}>Look Around</Button>
-                <Button variant="outline" size="sm" onClick={() => onCommandSubmit('examine notebook')}>Examine Notebook</Button>
-                <Button variant="outline" size="sm" onClick={() => onCommandSubmit('password for brown notebook "Justice for Silas Bloom"')}>Unlock Notebook</Button>
-                <Button variant="outline" size="sm" onClick={() => onCommandSubmit('watch video')}>Watch Video</Button>
-                <Button variant="outline" size="sm" onClick={() => onCommandSubmit('read article')}>Read Article</Button>
-                <Button variant="outline" size="sm" onClick={() => onCommandSubmit('talk to barista')}>Talk to Barista</Button>
-                <Button variant="outline" size="sm" onClick={() => onCommandSubmit('ask about man')}>Ask about man</Button>
-                <Button variant="outline" size="sm" onClick={() => onCommandSubmit('ask for name')}>Ask for name</Button>
-                <Button variant="outline" size="sm" onClick={() => handleDevCommand(game.startChapterId)}>Complete Chapter I</Button>
-                <Button variant="outline" size="sm" disabled>Complete Chapter II</Button>
-            </div>
-        </SidebarGroup>
+            </SidebarGroup>
+        )}
       </SidebarContent>
     </Sidebar>
   );

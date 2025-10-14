@@ -25,6 +25,8 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initia
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
 
+  const showSidebar = process.env.NEXT_PUBLIC_NODE_ENV === 'development' || process.env.NEXT_PUBLIC_NODE_ENV === 'test';
+
   const handleResetGame = () => {
     startTransition(async () => {
         try {
@@ -49,19 +51,8 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initia
 
   const handleCommandSubmit = (command: string) => {
     if (!command.trim()) return;
-
-    const playerMessage: Message = {
-        id: crypto.randomUUID(),
-        sender: 'player',
-        senderName: 'You',
-        type: 'text',
-        content: command,
-        timestamp: Date.now(),
-    };
     
-    setMessages(prev => [...prev, playerMessage]);
     setCommandInputValue(''); // Clear input after submission
-
 
     startTransition(async () => {
       try {
@@ -71,8 +62,10 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initia
             setPlayerState(result.newState);
         }
 
+        // The result.messages contains the complete log for the session, including the player's input.
+        // We replace the client-side messages with this authoritative list.
         if (result.messages) {
-            setMessages(prev => [...prev, ...result.messages]);
+            setMessages(result.messages);
         }
 
       } catch (error) {
@@ -83,7 +76,6 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initia
           title: 'Error',
           description: errorMessage,
         });
-        setMessages(prev => prev.filter(m => m.id !== playerMessage.id));
       }
     });
   };
@@ -91,14 +83,16 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initia
   return (
     <SidebarProvider defaultOpen={true}>
       <div className='relative min-h-screen'>
-        <GameSidebar 
-            game={game} 
-            playerState={playerState} 
-            onCommandSubmit={handleCommandSubmit}
-            onResetGame={handleResetGame}
-            setCommandInputValue={setCommandInputValue}
-        />
-        <main className="transition-all duration-300 ease-in-out md:pl-[20rem] group-data-[state=collapsed]/sidebar-wrapper:md:pl-0">
+        {showSidebar && (
+          <GameSidebar 
+              game={game} 
+              playerState={playerState} 
+              onCommandSubmit={handleCommandSubmit}
+              onResetGame={handleResetGame}
+              setCommandInputValue={setCommandInputValue}
+          />
+        )}
+        <main className={`transition-all duration-300 ease-in-out ${showSidebar ? 'md:pl-[20rem] group-data-[state=collapsed]/sidebar-wrapper:md:pl-0' : ''}`}>
             <GameScreen
             messages={messages}
             onCommandSubmit={handleCommandSubmit}

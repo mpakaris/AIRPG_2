@@ -7,7 +7,7 @@ import { game as gameCartridge } from '@/lib/game/cartridge';
 import { AVAILABLE_COMMANDS } from '@/lib/game/commands';
 import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectId, GameObjectState, ItemId, Flag, Action, Chapter, ChapterId, ImageDetails, GameId, User } from '@/lib/game/types';
 import { initializeFirebase } from '@/firebase';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, getDocs, collection } from 'firebase/firestore';
 import { getInitialState } from '@/lib/game-state';
 import { dispatchMessage } from '@/lib/whinself-service';
 
@@ -685,17 +685,13 @@ export async function processCommand(
 
   const { firestore } = initializeFirebase();
   const stateRef = doc(firestore, 'player_states', `${userId}_${gameId}`);
-  const stateSnap = await getDoc(stateRef);
+  const logRef = doc(firestore, 'logs', `${userId}_${gameId}`);
+
+  const [stateSnap, logSnap] = await Promise.all([getDoc(stateRef), getDoc(logRef)]);
   
   let currentState: PlayerState;
-  
   if (stateSnap.exists()) {
       currentState = stateSnap.data() as PlayerState;
-      // Data migration: Correct old chapter ID if it exists in the saved state
-      if (currentState.currentChapterId === ('ch1' as ChapterId)) {
-          console.log("Migrating old chapter ID 'ch1' to 'ch1-the-cafe' in processCommand");
-          currentState.currentChapterId = 'ch1-the-cafe' as ChapterId;
-      }
   } else {
       currentState = getInitialState(game);
   }
@@ -706,6 +702,13 @@ export async function processCommand(
       currentState = getInitialState(game);
   }
   
+  let allMessagesForSession: Message[] = [];
+  if (logSnap.exists()) {
+      allMessagesForSession = logSnap.data()?.messages || [];
+  } else {
+      allMessagesForSession = createInitialMessages();
+  }
+
   let finalResult: {newState: PlayerState, messages: Message[]};
 
   try {
@@ -714,6 +717,7 @@ export async function processCommand(
     const lowerInput = playerInput.toLowerCase().trim();
 
     const playerMessage = createMessage('player', 'You', playerInput);
+    allMessagesForSession.push(playerMessage);
     
     let commandHandlerResult: CommandResult;
 
@@ -851,7 +855,9 @@ export async function processCommand(
     }
     
     // --- Finalization ---
-    let allNewMessages: Message[] = [playerMessage, ...commandHandlerResult.messages];
+    const newMessagesFromServer = commandHandlerResult.messages;
+    allMessagesForSession.push(...newMessagesFromServer);
+
     let finalState = commandHandlerResult.newState;
 
     if (finalState) {
@@ -860,19 +866,19 @@ export async function processCommand(
 
         if (isNewlyComplete) {
             finalState.flags = [...finalState.flags, chapterCompletionFlag(finalState.currentChapterId)];
-            allNewMessages.push(...completion.messages);
+            allMessagesForSession.push(...completion.messages);
         }
     }
     
     finalResult = {
         newState: finalState || currentState,
-        messages: allNewMessages,
+        messages: allMessagesForSession,
     };
     
     await logAndSave(userId, gameId, finalResult.newState, finalResult.messages);
     
     if (process.env.NODE_ENV === 'development') {
-        for (const message of finalResult.messages) {
+        for (const message of newMessagesFromServer) {
              if (message.sender !== 'player') {
                 await dispatchMessage(userId, message);
             }
@@ -893,8 +899,8 @@ export async function processCommand(
     if (process.env.NODE_ENV === 'development') {
         await dispatchMessage(userId, finalResult.messages[0]);
     }
-    // We are not returning the player message here, so the UI will show only the error.
-    return { newState: currentState, messages: finalResult.messages };
+    
+    return { newState: currentState, messages: allMessagesForSession.concat(finalResult.messages) };
   }
 }
 
@@ -922,7 +928,7 @@ function createInitialMessages(): Message[] {
     const newInitialMessages: Message[] = [];
   
     const welcomeMessage = {
-      id: 'start',
+      id: crypto.randomUUID(),
       sender: 'narrator' as const,
       senderName: game.narratorName || 'Narrator',
       type: 'text' as const,
@@ -933,7 +939,7 @@ function createInitialMessages(): Message[] {
 
     if (startChapter.introductionVideo) {
       newInitialMessages.push({
-        id: 'intro-video',
+        id: crypto.randomUUID(),
         sender: 'narrator' as const,
         senderName: game.narratorName || 'Narrator',
         type: 'video' as const,
@@ -966,10 +972,9 @@ export async function logAndSave(
     if (state) {
         await setDoc(stateRef, state, { merge: false });
     }
-    const fullLogSnap = await getDoc(logRef);
-    const existingMessages = fullLogSnap.exists() ? fullLogSnap.data().messages : [];
-    const updatedMessages = [...existingMessages, ...messages];
-    await setDoc(logRef, { messages: updatedMessages }, { merge: false });
+    
+    // Overwrite the entire log with the full session history
+    await setDoc(logRef, { messages: messages }, { merge: false });
 
   } catch (error) {
     console.error('Failed to save game state or logs:', error);
@@ -995,5 +1000,3 @@ export async function sendWhinselfTestMessage(userId: string, message: string): 
         throw new Error('An unknown error occurred while sending the message.');
     }
 }
-
-    

@@ -1,3 +1,4 @@
+
 import { GameClient } from '@/components/game/GameClient';
 import { game as gameCartridge } from '@/lib/game/cartridge';
 import { getInitialState } from '@/lib/game-state';
@@ -44,7 +45,7 @@ async function getInitialData(): Promise<{ playerState: PlayerState, messages: M
         // If no logs, create initial messages
         const startChapter = gameCartridge.chapters[playerState.currentChapterId];
         messages.push({
-            id: 'start',
+            id: crypto.randomUUID(),
             sender: 'narrator',
             senderName: gameCartridge.narratorName || 'Narrator',
             type: 'text',
@@ -53,7 +54,7 @@ async function getInitialData(): Promise<{ playerState: PlayerState, messages: M
         });
         if (startChapter.introductionVideo) {
             messages.push({
-                id: 'intro-video',
+                id: crypto.randomUUID(),
                 sender: 'narrator',
                 senderName: gameCartridge.narratorName || 'Narrator',
                 type: 'video',
