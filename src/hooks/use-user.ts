@@ -47,7 +47,8 @@ export function useUser(initialGameState: PlayerState, initialMessages: Message[
   const [showRegistration, setShowRegistration] = useState(false);
   const [userState, setUserState] = useState<UserState | null>(null);
 
-  const currentEnv = process.env.NODE_ENV || 'production';
+  // Use NEXT_PUBLIC_NODE_ENV to get the environment consistently.
+  const currentEnv = process.env.NEXT_PUBLIC_NODE_ENV || 'production';
 
   const registerUser = useCallback(async (id: string): Promise<{ success: boolean; message: string }> => {
     // findOrCreateUser now handles saving the initial state to DB
@@ -72,10 +73,15 @@ export function useUser(initialGameState: PlayerState, initialMessages: Message[
   useEffect(() => {
     const identifyUser = async () => {
         if (currentEnv === 'development') {
-            const devId = process.env.NEXT_PUBLIC_DEV_USER_ID || '36308548589';
-            setUserId(devId);
-            // In dev, the initial state is pre-loaded on the server
-            setUserState({ playerState: initialGameState, messages: initialMessages });
+            const devId = process.env.NEXT_PUBLIC_DEV_USER_ID;
+            if (devId) {
+                setUserId(devId);
+                // In dev, the initial state is pre-loaded on the server, so we can use it.
+                setUserState({ playerState: initialGameState, messages: initialMessages });
+            } else {
+                // Handle case where dev ID is not set
+                console.error("NEXT_PUBLIC_DEV_USER_ID is not set in your .env file for development.");
+            }
         } else if (currentEnv === 'test') {
             const storedId = localStorage.getItem(USER_ID_STORAGE_KEY);
             if (storedId) {
