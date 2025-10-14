@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { LoaderCircle, RefreshCw } from 'lucide-react';
-import type { User, Game, PlayerState, Message, Story, ChapterId } from '@/lib/game/types';
+import type { User, Game, PlayerState, Message, Story, ChapterId, TokenUsage } from '@/lib/game/types';
 import { getPlayerState, getPlayerLogs } from './actions';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
@@ -25,6 +25,14 @@ const PRICING = {
     input: 0.30 / 1_000_000,  // $0.30 per 1M tokens
     output: 2.50 / 1_000_000, // $2.50 per 1M tokens
 };
+
+function calculateCostForUsage(usage: TokenUsage): number {
+    if (!usage) return 0;
+    const inputCost = (usage.inputTokens || 0) * PRICING.input;
+    // The output price is based on the total tokens (including "thinking tokens")
+    const outputCost = (usage.totalTokens || 0) * PRICING.output;
+    return inputCost + outputCost;
+}
 
 function calculateStats(logs: Message[], stories: Record<ChapterId, Story>): GameStats {
     let totalMessages = logs.length;
@@ -49,6 +57,7 @@ function calculateStats(logs: Message[], stories: Record<ChapterId, Story>): Gam
     });
 
     const inputCost = totalInputTokens * PRICING.input;
+    // Use totalTokens for output cost calculation as it includes "thinking time"
     const outputCost = totalTokens * PRICING.output;
     const estimatedCost = inputCost + outputCost;
 
@@ -153,7 +162,11 @@ const PlayerDetails = ({ user, game }: { user: User, game: Game | undefined }) =
                                             <div key={story.chapterId} className="mb-4 pb-2 border-b">
                                                 <h4 className="font-bold text-sm mb-1">{story.title}</h4>
                                                 <p className="text-xs whitespace-pre-wrap">{story.content}</p>
-                                                {story.usage && <p className="text-muted-foreground text-right text-xs mt-1">Tokens: {story.usage.totalTokens}</p>}
+                                                {story.usage && (
+                                                    <p className="text-muted-foreground text-right text-xs mt-1">
+                                                        Tokens: {story.usage.totalTokens} (~${calculateCostForUsage(story.usage).toFixed(6)})
+                                                    </p>
+                                                )}
                                             </div>
                                         ))
                                     ) : <p className="text-xs text-muted-foreground">No stories have been generated yet.</p>}
@@ -253,3 +266,5 @@ export function UsersTab({ users, games, isLoading, onRefresh }: { users: User[]
         </Card>
     );
 }
+
+    
