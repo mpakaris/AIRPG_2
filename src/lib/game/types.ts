@@ -47,6 +47,7 @@ export type User = {
     id: string; // This can be a phone number or a dev ID
     username: string;
     purchasedGames: GameId[];
+    createdAt?: number;
 };
 
 export type PlayerState = {

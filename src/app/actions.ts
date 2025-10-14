@@ -669,6 +669,7 @@ export async function findOrCreateUser(userId: string): Promise<{ user: User | n
                 id: userId,
                 username: `Player_${userId.substring(userId.length - 4)}`,
                 purchasedGames: [gameCartridge.id],
+                createdAt: Date.now(),
             };
             await setDoc(userRef, newUser);
             console.log(`New user created: ${userId}`);
