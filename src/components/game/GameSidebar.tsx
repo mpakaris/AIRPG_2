@@ -258,7 +258,7 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
                         <AlertDialogHeader>
                           <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                           <AlertDialogDescription>
-                            Excitement often comes from not knowing everything. Revealing the objectives might spoil some of the fun.
+                            Excitement often comes from not knowing everything.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
