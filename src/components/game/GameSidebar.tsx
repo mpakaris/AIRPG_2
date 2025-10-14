@@ -20,6 +20,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { sendWhinselfTestMessage, findOrCreateUser } from '@/app/actions';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 interface GameSidebarProps {
   game: Game;
@@ -39,6 +50,14 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
   const [whinselfMessage, setWhinselfMessage] = useState('');
   const [user, setUser] = useState<UserType | null>(null);
 
+  const currentEnv = process.env.NEXT_PUBLIC_NODE_ENV || 'production';
+  const isDevEnvironment = currentEnv === 'development';
+  const isTestEnvironment = currentEnv === 'test';
+  const showDevControls = isDevEnvironment || isTestEnvironment;
+
+  const [objectivesVisible, setObjectivesVisible] = useState(isDevEnvironment);
+
+
   useEffect(() => {
     if (userId) {
       findOrCreateUser(userId).then(({ user }) => {
@@ -48,11 +67,6 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
       });
     }
   }, [userId]);
-
-
-  const currentEnv = process.env.NEXT_PUBLIC_NODE_ENV;
-  const isDevEnvironment = currentEnv === 'development';
-  const showDevControls = currentEnv === 'development' || currentEnv === 'test';
 
   const isObjectiveComplete = (flag: Flag): boolean => {
     return playerState.flags.includes(flag);
@@ -233,16 +247,41 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
                     <ScrollText />
                     Chapter Objectives
                 </SidebarGroupLabel>
-                <div className='flex flex-col gap-2 px-2 text-sm text-muted-foreground'>
-                    {chapter.objectives.map((obj) => (
-                        <div key={obj.flag} className='flex items-center gap-2'>
-                            <CheckCircle className={cn('h-4 w-4 text-muted', isObjectiveComplete(obj.flag) && 'text-green-500')} />
-                            <span className={cn(isObjectiveComplete(obj.flag) && 'line-through')}>
-                                {obj.label}
-                            </span>
-                        </div>
-                    ))}
-                </div>
+                
+                {!objectivesVisible && isTestEnvironment ? (
+                  <div className='px-2'>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="outline" size="sm">Show Objectives</Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Excitement often comes from not knowing everything. Revealing the objectives might spoil some of the fun.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => setObjectivesVisible(true)}>
+                            Show
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                ) : (
+                  <div className='flex flex-col gap-2 px-2 text-sm text-muted-foreground'>
+                      {chapter.objectives.map((obj) => (
+                          <div key={obj.flag} className='flex items-center gap-2'>
+                              <CheckCircle className={cn('h-4 w-4 text-muted', isObjectiveComplete(obj.flag) && 'text-green-500')} />
+                              <span className={cn(isObjectiveComplete(obj.flag) && 'line-through')}>
+                                  {obj.label}
+                              </span>
+                          </div>
+                      ))}
+                  </div>
+                )}
             </SidebarGroup>
         )}
 
