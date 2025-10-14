@@ -672,7 +672,13 @@ export async function findOrCreateUser(userId: string): Promise<{ user: User | n
                 createdAt: Date.now(),
             };
             await setDoc(userRef, newUser);
-            console.log(`New user created: ${userId}`);
+            console.log(`New user created: ${userId}. Initializing game state.`);
+            
+            // Immediately create and save initial game state and logs for the new user.
+            const freshState = getInitialState(gameCartridge);
+            const initialMessages = createInitialMessages();
+            await logAndSave(userId, gameCartridge.id, freshState, initialMessages);
+
             return { user: newUser, isNew: true };
         } else {
             console.log(`Existing user found: ${userId}`);
@@ -1022,5 +1028,7 @@ export async function sendWhinselfTestMessage(userId: string, message: string): 
         throw new Error('An unknown error occurred while sending the message.');
     }
 }
+
+    
 
     
