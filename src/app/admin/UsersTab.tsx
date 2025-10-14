@@ -90,7 +90,7 @@ const PlayerDetails = ({ user, game }: { user: User, game: Game | undefined }) =
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-full">
             <div className="lg:col-span-2 grid grid-rows-6 gap-4">
-                <Card className="row-span-1">
+                 <Card className="row-span-1">
                     <CardHeader>
                         <CardTitle>Game Stats: {game.title}</CardTitle>
                     </CardHeader>
@@ -106,23 +106,29 @@ const PlayerDetails = ({ user, game }: { user: User, game: Game | undefined }) =
                     </CardContent>
                 </Card>
                 <Card className="row-span-5">
-                    <CardHeader><CardTitle>Current State</CardTitle></CardHeader>
-                    <CardContent><ScrollArea className="h-[calc(80vh-14rem)]"><pre className="text-xs whitespace-pre-wrap">{JSON.stringify(state, null, 2)}</pre></ScrollArea></CardContent>
+                    <CardHeader><CardTitle>Message Logs</CardTitle></CardHeader>
+                    <CardContent>
+                        <ScrollArea className="h-[calc(80vh-14rem)]">
+                            <div className="space-y-2">
+                                {logs.map(log => (
+                                    <div key={log.id} className="text-xs border-b pb-1">
+                                        <p><span className="font-bold">{log.senderName}</span> ({log.sender}):</p>
+                                        <p className="whitespace-pre-wrap">{log.content}</p>
+                                        {log.usage && (<p className="text-muted-foreground text-right">Tokens: {log.usage.totalTokens}</p>)}
+                                    </div>
+                                ))}
+                            </div>
+                        </ScrollArea>
+                    </CardContent>
                 </Card>
             </div>
             <Card className="lg:col-span-1">
-                <CardHeader><CardTitle>Message Logs</CardTitle></CardHeader>
-                <CardContent><ScrollArea className="h-[calc(80vh-6rem)]">
-                    <div className="space-y-2">
-                        {logs.map(log => (
-                            <div key={log.id} className="text-xs border-b pb-1">
-                                <p><span className="font-bold">{log.senderName}</span> ({log.sender}):</p>
-                                <p className="whitespace-pre-wrap">{log.content}</p>
-                                {log.usage && (<p className="text-muted-foreground text-right">Tokens: {log.usage.totalTokens}</p>)}
-                            </div>
-                        ))}
-                    </div>
-                </ScrollArea></CardContent>
+                <CardHeader><CardTitle>Current State</CardTitle></CardHeader>
+                <CardContent>
+                    <ScrollArea className="h-[calc(80vh-6rem)]">
+                        <pre className="text-xs whitespace-pre-wrap">{JSON.stringify(state, null, 2)}</pre>
+                    </ScrollArea>
+                </CardContent>
             </Card>
         </div>
     );
