@@ -11,6 +11,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import type { TokenUsage } from '@/lib/game/types';
 
 const CannedResponseSchema = z.object({
   topic: z.string().describe('The topic or category of this response (e.g., greeting, mystery, saxophonist, insult, default).'),
@@ -29,7 +30,7 @@ const SelectNpcResponseOutputSchema = z.object({
 });
 export type SelectNpcResponseOutput = z.infer<typeof SelectNpcResponseOutputSchema>;
 
-export async function selectNpcResponse(input: SelectNpcResponseInput): Promise<SelectNpcResponseOutput> {
+export async function selectNpcResponse(input: SelectNpcResponseInput): Promise<{ output: SelectNpcResponseOutput, usage: TokenUsage }> {
   return selectNpcResponseFlow(input);
 }
 
@@ -65,7 +66,6 @@ const selectNpcResponseFlow = ai.defineFlow(
   {
     name: 'selectNpcResponseFlow',
     inputSchema: SelectNpcResponseInputSchema,
-    outputSchema: SelectNpcResponseOutputSchema,
   },
   async input => {
      let attempts = 0;
@@ -74,8 +74,18 @@ const selectNpcResponseFlow = ai.defineFlow(
 
     while (attempts < maxAttempts) {
       try {
-        const {output} = await prompt(input);
-        return output!;
+        const { output, usage } = await prompt(input);
+        if (!output) {
+          throw new Error("AI output was null or undefined.");
+        }
+        return { 
+          output, 
+          usage: {
+            inputTokens: usage.inputTokens,
+            outputTokens: usage.outputTokens,
+            totalTokens: usage.totalTokens,
+          }
+        };
       } catch (error) {
         attempts++;
         if (attempts >= maxAttempts) {

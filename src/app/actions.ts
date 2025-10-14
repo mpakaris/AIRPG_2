@@ -5,7 +5,7 @@ import { guidePlayerWithNarrator } from '@/ai/flows/guide-player-with-narrator';
 import { selectNpcResponse } from '@/ai/flows/select-npc-response';
 import { game as gameCartridge } from '@/lib/game/cartridge';
 import { AVAILABLE_COMMANDS } from '@/lib/game/commands';
-import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectId, GameObjectState, ItemId, Flag, Action, Chapter, ChapterId, ImageDetails, GameId, User } from '@/lib/game/types';
+import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectId, GameObjectState, ItemId, Flag, Action, Chapter, ChapterId, ImageDetails, GameId, User, TokenUsage } from '@/lib/game/types';
 import { initializeFirebase } from '@/firebase';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { getInitialState } from '@/lib/game-state';
@@ -22,7 +22,8 @@ function createMessage(
   senderName: string,
   content: string,
   type: Message['type'] = 'text',
-  imageDetails?: { id: ItemId | NpcId | GameObjectId, game: Game, state: PlayerState, showEvenIfExamined?: boolean }
+  imageDetails?: { id: ItemId | NpcId | GameObjectId, game: Game, state: PlayerState, showEvenIfExamined?: boolean },
+  usage?: TokenUsage
 ): Message {
     let image: ImageDetails | undefined;
     
@@ -68,6 +69,7 @@ function createMessage(
     type,
     image,
     timestamp: Date.now(),
+    usage,
   };
 }
 
@@ -197,7 +199,7 @@ async function handleConversation(state: PlayerState, playerInput: string, game:
 
     const cannedResponsesForAI = npc.cannedResponses.map(r => ({ topic: r.topic, response: r.response }));
 
-    const aiResponse = await selectNpcResponse({
+    const { output: aiResponse, usage } = await selectNpcResponse({
         playerInput: playerInput,
         npcName: npc.name,
         cannedResponses: cannedResponsesForAI,
@@ -215,7 +217,7 @@ async function handleConversation(state: PlayerState, playerInput: string, game:
         };
     }
 
-    const initialMessage = createMessage(npc.id as NpcId, npc.name, `"${selectedResponse.response}"`);
+    const initialMessage = createMessage(npc.id as NpcId, npc.name, `"${selectedResponse.response}"`, 'text', undefined, usage);
     
     const actionsToProcess = selectedResponse.actions || [];
     let actionResult = processActions(state, actionsToProcess, game);
@@ -250,7 +252,7 @@ async function handleObjectInteraction(state: PlayerState, playerInput: string, 
 
     const availableInteractionCommands = Object.keys(currentInteractionState.commands);
 
-    const aiResponse = await guidePlayerWithNarrator({
+    const { output: aiResponse, usage } = await guidePlayerWithNarrator({
         promptContext: `The player is currently examining the ${liveObject.name}. Your job is to map their input to one of the available actions.`,
         gameSpecifications: game.description,
         gameState: `Interacting with: ${liveObject.name}. Current state: ${currentInteractionState.description}`,
@@ -258,7 +260,7 @@ async function handleObjectInteraction(state: PlayerState, playerInput: string, 
         availableCommands: availableInteractionCommands.join(', '),
     });
 
-    const agentMessage = createMessage('agent', narratorName, `${aiResponse.agentResponse}`);
+    const agentMessage = createMessage('agent', narratorName, `${aiResponse.agentResponse}`, 'text', undefined, usage);
     const commandToExecute = aiResponse.commandToExecute.toLowerCase();
     
     const matchingCommand = availableInteractionCommands.find(cmd => cmd.toLowerCase() === commandToExecute);
@@ -797,7 +799,7 @@ export async function processCommand(
             gameStateSummaryForAI += `\nCHAPTER COMPLETE. The player is ready to move on to the next chapter: '${chapter.nextChapter.title}'.`
         }
 
-        const aiResponse = await guidePlayerWithNarrator({
+        const { output: aiResponse, usage } = await guidePlayerWithNarrator({
             promptContext: game.promptContext || '',
             gameSpecifications: game.description,
             gameState: gameStateSummaryForAI,
@@ -805,7 +807,7 @@ export async function processCommand(
             availableCommands: AVAILABLE_COMMANDS.join(', '),
         });
 
-        const agentMessage = createMessage('agent', narratorName, `${aiResponse.agentResponse}`);
+        const agentMessage = createMessage('agent', narratorName, `${aiResponse.agentResponse}`, 'text', undefined, usage);
         const commandToExecute = aiResponse.commandToExecute.toLowerCase();
         const [verb, ...args] = commandToExecute.split(' ');
         const restOfCommand = args.join(' ');

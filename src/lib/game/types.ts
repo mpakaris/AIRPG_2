@@ -16,6 +16,12 @@ export type ImageDetails = {
     hint: string;
 };
 
+export type TokenUsage = {
+    inputTokens: number;
+    outputTokens: number;
+    totalTokens: number;
+};
+
 export type Message = {
   id: string;
   sender: 'narrator' | 'player' | 'system' | 'agent' | NpcId;
@@ -24,6 +30,7 @@ export type Message = {
   content: string;
   image?: ImageDetails;
   timestamp: number;
+  usage?: TokenUsage;
 };
 
 // --- Action System ---
@@ -193,3 +200,4 @@ export type Game = {
   narratorName?: string;
   promptContext?: string;
 };
+

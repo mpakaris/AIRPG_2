@@ -10,6 +10,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { TokenUsage } from '@/lib/game/types';
 
 const GuidePlayerWithNarratorInputSchema = z.object({
   promptContext: z.string().describe('The persona and instructions for the AI narrator.'),
@@ -26,7 +27,7 @@ const GuidePlayerWithNarratorOutputSchema = z.object({
 });
 export type GuidePlayerWithNarratorOutput = z.infer<typeof GuidePlayerWithNarratorOutputSchema>;
 
-export async function guidePlayerWithNarrator(input: GuidePlayerWithNarratorInput): Promise<GuidePlayerWithNarratorOutput> {
+export async function guidePlayerWithNarrator(input: GuidePlayerWithNarratorInput): Promise<{ output: GuidePlayerWithNarratorOutput, usage: TokenUsage }> {
   return guidePlayerWithNarratorFlow(input);
 }
 
@@ -90,7 +91,7 @@ const guidePlayerWithNarratorFlow = ai.defineFlow(
   {
     name: 'guidePlayerWithNarratorFlow',
     inputSchema: GuidePlayerWithNarratorInputSchema,
-    outputSchema: GuidePlayerWithNarratorOutputSchema,
+    // The flow's output will be a composite object including the AI's structured output and usage stats.
   },
   async input => {
     let attempts = 0;
@@ -99,8 +100,18 @@ const guidePlayerWithNarratorFlow = ai.defineFlow(
 
     while (attempts < maxAttempts) {
       try {
-        const {output} = await prompt(input);
-        return output!;
+        const { output, usage } = await prompt(input);
+        if (!output) {
+          throw new Error("AI output was null or undefined.");
+        }
+        return { 
+          output, 
+          usage: {
+            inputTokens: usage.inputTokens,
+            outputTokens: usage.outputTokens,
+            totalTokens: usage.totalTokens,
+          }
+        };
       } catch (error) {
         attempts++;
         if (attempts >= maxAttempts) {
