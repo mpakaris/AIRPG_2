@@ -5,7 +5,8 @@ import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { LoaderCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { LoaderCircle, RefreshCw } from 'lucide-react';
 import type { User, Game, PlayerState, Message } from '@/lib/game/types';
 import { getPlayerState, getPlayerLogs } from './actions';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -134,7 +135,7 @@ const PlayerDetails = ({ user, game }: { user: User, game: Game | undefined }) =
     );
 };
 
-export function UsersTab({ users, games, isLoading }: { users: User[], games: Game[], isLoading: boolean }) {
+export function UsersTab({ users, games, isLoading, onRefresh }: { users: User[], games: Game[], isLoading: boolean, onRefresh: () => void }) {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
@@ -153,9 +154,15 @@ export function UsersTab({ users, games, isLoading }: { users: User[], games: Ga
 
     return (
         <Card>
-            <CardHeader>
-                <CardTitle>Users</CardTitle>
-                <CardDescription>A list of all players. Select a user to see their game data.</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                    <CardTitle>Users</CardTitle>
+                    <CardDescription>A list of all players. Select a user to see their game data.</CardDescription>
+                </div>
+                 <Button onClick={onRefresh} variant="outline" size="sm" disabled={isLoading}>
+                    <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
+                    <span className="ml-2 hidden sm:inline">Update</span>
+                </Button>
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="md:col-span-1 flex flex-col gap-4">

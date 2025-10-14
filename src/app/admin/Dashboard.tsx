@@ -1,10 +1,10 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getUsers, getGames } from './actions';
-import type { User, Game, PlayerState, Message } from '@/lib/game/types';
+import type { User, Game } from '@/lib/game/types';
 import { UsersTab } from './UsersTab';
 import { GamesTab } from './GamesTab';
 
@@ -13,19 +13,20 @@ export function Dashboard() {
   const [games, setGames] = useState<Game[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    async function fetchData() {
-      setIsLoading(true);
-      const [usersData, gamesData] = await Promise.all([
-        getUsers(),
-        getGames(),
-      ]);
-      setUsers(usersData);
-      setGames(gamesData);
-      setIsLoading(false);
-    }
-    fetchData();
+  const fetchAllData = useCallback(async () => {
+    setIsLoading(true);
+    const [usersData, gamesData] = await Promise.all([
+      getUsers(),
+      getGames(),
+    ]);
+    setUsers(usersData);
+    setGames(gamesData);
+    setIsLoading(false);
   }, []);
+
+  useEffect(() => {
+    fetchAllData();
+  }, [fetchAllData]);
 
   return (
     <div className="flex min-h-screen flex-col bg-muted/40">
@@ -39,7 +40,7 @@ export function Dashboard() {
             <TabsTrigger value="games">Games</TabsTrigger>
           </TabsList>
           <TabsContent value="users">
-            <UsersTab users={users} games={games} isLoading={isLoading} />
+            <UsersTab users={users} games={games} isLoading={isLoading} onRefresh={fetchAllData} />
           </TabsContent>
           <TabsContent value="games">
             <GamesTab games={games} isLoading={isLoading} />
