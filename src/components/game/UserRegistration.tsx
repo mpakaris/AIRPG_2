@@ -2,7 +2,8 @@
 'use client';
 
 import { useState } from 'react';
-import PhoneInput, { isValidPhoneNumber } from 'react-phone-number-input';
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/style.css'
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -15,7 +16,7 @@ interface UserRegistrationProps {
 }
 
 export function UserRegistration({ onRegister }: UserRegistrationProps) {
-  const [phone, setPhone] = useState<string | undefined>('');
+  const [phone, setPhone] = useState<string>('');
   const [hasAgreed, setHasAgreed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -30,19 +31,20 @@ export function UserRegistration({ onRegister }: UserRegistrationProps) {
       });
       return;
     }
-    if (!phone || !isValidPhoneNumber(phone)) {
+    
+    // The library returns the number with country code, which is usually > 10 digits
+    if (!phone || phone.length < 10) {
       toast({
         variant: 'destructive',
         title: 'Invalid Phone Number',
-        description: 'Please enter a valid phone number including the country code.',
+        description: 'Please enter a valid phone number.',
       });
       return;
     }
 
     setIsLoading(true);
-    // Normalize the number: remove the leading '+'
-    const normalizedPhone = phone.replace('+', '');
-    const result = await onRegister(normalizedPhone);
+    // The library returns the number without '+', which is what we want.
+    const result = await onRegister(phone);
     setIsLoading(false);
     
     if (!result.success) {
@@ -66,13 +68,20 @@ export function UserRegistration({ onRegister }: UserRegistrationProps) {
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
             <PhoneInput
-              placeholder="Enter phone number"
+              country={'de'} // Default to Germany
               value={phone}
               onChange={setPhone}
-              international
-              defaultCountry="DE"
-              className="rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background focus-within:ring-2 focus-within:ring-ring"
-              disabled={isLoading}
+              inputProps={{
+                name: 'phone',
+                required: true,
+                autoFocus: true,
+                disabled: isLoading,
+              }}
+              // These class names are used to apply Tailwind styles from globals.css
+              containerClass="react-tel-input"
+              inputClass="form-control"
+              dropdownClass="country-list"
+              searchClass="search-field"
             />
             <div className="flex items-center space-x-2">
               <Checkbox id="terms" checked={hasAgreed} onCheckedChange={(checked) => setHasAgreed(checked as boolean)} disabled={isLoading} />

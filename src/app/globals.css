@@ -1,8 +1,31 @@
-@import 'react-phone-number-input/style.css';
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@import 'react-phone-input-2/lib/style.css';
+
+.react-tel-input .form-control {
+    @apply !bg-background !text-foreground !border-input !w-full !h-10 !text-base !rounded-md;
+}
+.react-tel-input .flag-dropdown {
+    @apply !bg-background !border-input !rounded-l-md;
+}
+.react-tel-input .flag-dropdown.open .selected-flag {
+    @apply !bg-accent;
+}
+.react-tel-input .selected-flag:hover {
+    @apply !bg-accent;
+}
+.react-tel-input .country-list {
+     @apply !bg-popover !text-popover-foreground;
+}
+.react-tel-input .country-list .country:hover {
+     @apply !bg-accent;
+}
+.react-tel-input .country-list .country.highlight {
+     @apply !bg-accent;
+}
+
 
 @layer base {
   :root {
@@ -79,13 +102,4 @@
   body {
     @apply bg-background text-foreground;
   }
-}
-
-@layer components {
-    .PhoneInputInput {
-        @apply flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm;
-    }
-    .PhoneInputCountry {
-        @apply bg-background text-foreground;
-    }
 }
