@@ -30,7 +30,7 @@ interface GameSidebarProps {
   setCommandInputValue: (value: string) => void;
 }
 
-const DEV_USER_ID = "36308548589";
+const DEV_USER_ID = process.env.NEXT_PUBLIC_DEV_USER_ID || "36308548589";
 
 export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommandSubmit, onResetGame, setCommandInputValue }) => {
   const chapter = game.chapters[playerState.currentChapterId];

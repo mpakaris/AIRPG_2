@@ -16,7 +16,7 @@ interface GameClientProps {
 }
 
 // Hardcoded for dev environment
-const DEV_USER_ID = "36308548589";
+const DEV_USER_ID = process.env.NEXT_PUBLIC_DEV_USER_ID || "36308548589";
 
 export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initialMessages }) => {
   const [playerState, setPlayerState] = useState<PlayerState>(initialGameState);

@@ -6,7 +6,7 @@ import type { PlayerState, Message, ChapterId } from '@/lib/game/types';
 import { initializeFirebase } from '@/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 
-const DEV_USER_ID = '36308548589';
+const DEV_USER_ID = process.env.NEXT_PUBLIC_DEV_USER_ID || '36308548589';
 
 async function getInitialData(): Promise<{ playerState: PlayerState, messages: Message[] }> {
     const { firestore } = initializeFirebase();

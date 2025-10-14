@@ -1,3 +1,4 @@
+
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { config } from 'dotenv';
@@ -34,7 +35,7 @@ try {
 
 const db = getFirestore();
 
-const DEV_USER_ID = '36308548589';
+const DEV_USER_ID = process.env.NEXT_PUBLIC_DEV_USER_ID || '36308548589';
 
 async function seedDatabase() {
     console.log('Starting database seed...');
