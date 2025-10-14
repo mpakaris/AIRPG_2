@@ -2,9 +2,8 @@
 'use client';
 
 import { BookOpen, Box, Compass, ScrollText, Target, User, CheckCircle, Code, RotateCcw, MessageSquareShare, Send, Download } from 'lucide-react';
-import type { FC } from 'react';
-import { useState, useTransition } from 'react';
-import type { Game, PlayerState, Flag, ChapterId } from '@/lib/game/types';
+import { FC, useState, useTransition, useEffect } from 'react';
+import type { Game, PlayerState, Flag, ChapterId, User as UserType } from '@/lib/game/types';
 import {
   Sidebar,
   SidebarContent,
@@ -20,7 +19,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { sendWhinselfTestMessage } from '@/app/actions';
+import { sendWhinselfTestMessage, findOrCreateUser } from '@/app/actions';
 
 interface GameSidebarProps {
   game: Game;
@@ -38,9 +37,22 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
   const [whinselfMessage, setWhinselfMessage] = useState('');
+  const [user, setUser] = useState<UserType | null>(null);
+
+  useEffect(() => {
+    if (userId) {
+      findOrCreateUser(userId).then(({ user }) => {
+        if (user) {
+          setUser(user);
+        }
+      });
+    }
+  }, [userId]);
+
 
   const currentEnv = process.env.NEXT_PUBLIC_NODE_ENV;
   const isDevEnvironment = currentEnv === 'development';
+  const showDevControls = currentEnv === 'development' || currentEnv === 'test';
 
   const isObjectiveComplete = (flag: Flag): boolean => {
     return playerState.flags.includes(flag);
@@ -197,6 +209,7 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
         <h2 className="font-headline text-2xl font-bold text-primary">
           {game.title}
         </h2>
+        {user && <p className="text-sm text-muted-foreground">Playing as: {user.username}</p>}
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
@@ -284,7 +297,7 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
             </p>
            )}
         </SidebarGroup>
-        {(isDevEnvironment) && (
+        {(showDevControls) && (
             <SidebarGroup>
                 <SidebarGroupLabel className='flex items-center gap-2'>
                     <Code />
@@ -292,7 +305,8 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
                 </SidebarGroupLabel>
                 <div className='flex flex-col gap-2 px-2'>
                     <Button variant="destructive" size="sm" onClick={onResetGame}><RotateCcw className='mr-2 h-4 w-4'/>Reset Game</Button>
-                    <>
+                    {isDevEnvironment && (
+                      <>
                         <Button variant="secondary" size="sm" onClick={handleFetchWhinself}><MessageSquareShare className='mr-2 h-4 w-4'/>Fetch & Submit Msg</Button>
                         <Button variant="outline" size="sm" onClick={() => onCommandSubmit('look around')}>Look Around</Button>
                         <Button variant="outline" size="sm" onClick={() => onCommandSubmit('examine notebook')}>Examine Notebook</Button>
@@ -304,7 +318,8 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
                         <Button variant="outline" size="sm" onClick={() => onCommandSubmit('ask for name')}>Ask for name</Button>
                         <Button variant="outline" size="sm" onClick={() => handleDevCommand(game.startChapterId)}>Complete Chapter I</Button>
                         <Button variant="outline" size="sm" disabled>Complete Chapter II</Button>
-                    </>
+                      </>
+                    )}
                 </div>
             </SidebarGroup>
         )}
@@ -312,5 +327,3 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
     </Sidebar>
   );
 };
-
-    
