@@ -50,7 +50,7 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
   const [whinselfMessage, setWhinselfMessage] = useState('');
   const [user, setUser] = useState<UserType | null>(null);
 
-  const currentEnv = process.env.NEXT_PUBLIC_NODE_ENV || 'production';
+  const currentEnv = process.env.NEXT_PUBLIC_NEXT_PUBLIC_NODE_ENV || 'production';
   const isDevEnvironment = currentEnv === 'development';
   const isTestEnvironment = currentEnv === 'test';
   const showDevControls = isDevEnvironment || isTestEnvironment;

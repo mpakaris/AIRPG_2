@@ -85,7 +85,7 @@ function createInitialMessages(playerState?: PlayerState): Message[] {
 export default async function Home() {
   // In development, we can pre-load the dev user's state on the server.
   // In test/prod, the user ID is determined on the client, so we pass null and let the client handle it.
-  const initialUserId = process.env.NODE_ENV === 'development'
+  const initialUserId = process.env.NEXT_PUBLIC_NODE_ENV === 'development'
       ? process.env.NEXT_PUBLIC_DEV_USER_ID || null
       : null;
 

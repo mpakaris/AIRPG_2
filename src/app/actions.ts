@@ -902,7 +902,7 @@ export async function processCommand(
     
     await logAndSave(userId, gameId, finalResult.newState, finalResult.messages);
     
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NEXT_PUBLIC_NODE_ENV === 'development') {
         for (const message of newMessagesFromServer) {
              if (message.sender !== 'player') {
                 await dispatchMessage(userId, message);
@@ -921,7 +921,7 @@ export async function processCommand(
     };
     // We only need to save and dispatch the error message
     await logAndSave(userId, gameId, currentState, finalResult.messages);
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NEXT_PUBLIC_NODE_ENV === 'development') {
         await dispatchMessage(userId, finalResult.messages[0]);
     }
     
@@ -940,7 +940,7 @@ export async function resetGame(userId: string): Promise<{newState: PlayerState,
 
     await logAndSave(userId, gameId, freshState, initialMessages);
 
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NEXT_PUBLIC_NODE_ENV === 'development') {
         for (const message of initialMessages) {
             await dispatchMessage(userId, message);
         }
