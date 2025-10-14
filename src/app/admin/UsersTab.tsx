@@ -7,14 +7,58 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Eye, LoaderCircle } from 'lucide-react';
-import type { User, Game, GameId, PlayerState, Message } from '@/lib/game/types';
+import type { User, Game, PlayerState, Message } from '@/lib/game/types';
 import { getPlayerState, getPlayerLogs } from './actions';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
+interface GameStats {
+    totalMessages: number;
+    totalInputTokens: number;
+    totalOutputTokens: number;
+    totalTokens: number;
+    estimatedCost: number;
+}
+
+const PRICING = {
+    input: 0.30 / 1_000_000,  // $0.30 per 1M tokens
+    output: 2.50 / 1_000_000, // $2.50 per 1M tokens
+};
+
+function calculateStats(logs: Message[]): GameStats {
+    let totalMessages = logs.length;
+    let totalInputTokens = 0;
+    let totalOutputTokens = 0;
+    let totalTokens = 0;
+
+    logs.forEach(log => {
+        if (log.usage) {
+            totalInputTokens += log.usage.inputTokens || 0;
+            totalOutputTokens += log.usage.outputTokens || 0;
+            // The AI flow currently puts the Gemini total into our totalTokens field
+            totalTokens += log.usage.totalTokens || 0;
+        }
+    });
+
+    // The cost calculation uses input for input cost, and the overall total for output/processing cost.
+    const inputCost = totalInputTokens * PRICING.input;
+    const outputCost = totalTokens * PRICING.output;
+    const estimatedCost = inputCost + outputCost;
+
+    return {
+        totalMessages,
+        totalInputTokens,
+        totalOutputTokens,
+        totalTokens,
+        estimatedCost,
+    };
+}
+
+
 const PlayerDataDialog = ({ user, game }: { user: User; game: Game }) => {
   const [state, setState] = useState<PlayerState | null>(null);
   const [logs, setLogs] = useState<Message[]>([]);
+  const [stats, setStats] = useState<GameStats | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleOpen = async () => {
@@ -25,6 +69,9 @@ const PlayerDataDialog = ({ user, game }: { user: User; game: Game }) => {
     ]);
     setState(stateData);
     setLogs(logsData);
+    if (logsData) {
+        setStats(calculateStats(logsData));
+    }
     setIsLoading(false);
   };
 
@@ -36,33 +83,62 @@ const PlayerDataDialog = ({ user, game }: { user: User; game: Game }) => {
           View Data
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-4xl">
+      <DialogContent className="max-w-6xl">
         <DialogHeader>
-          <DialogTitle>Player Data: {user.username} ({user.id})</DialogTitle>
-          <DialogTitle>Game: {game.title}</DialogTitle>
+          <DialogTitle>Player Data: {user.username} ({user.id}) for {game.title}</DialogTitle>
         </DialogHeader>
         {isLoading ? (
           <div className="flex justify-center items-center h-64">
             <LoaderCircle className="animate-spin h-8 w-8" />
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[70vh]">
-            <Card>
-              <CardHeader>
-                <CardTitle>Current State</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ScrollArea className="h-[50vh]">
-                  <pre className="text-xs whitespace-pre-wrap">{JSON.stringify(state, null, 2)}</pre>
-                </ScrollArea>
-              </CardContent>
-            </Card>
-            <Card>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-h-[70vh]">
+            <div className="md:col-span-2 grid grid-rows-6 gap-4">
+              <Card className="row-span-1">
+                 <CardHeader>
+                    <CardTitle>Game Stats</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {stats ? (
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                            <div>
+                                <p className="font-bold">Total Msgs</p>
+                                <p>{stats.totalMessages}</p>
+                            </div>
+                            <div>
+                                <p className="font-bold">Total Tokens</p>
+                                <p>{stats.totalTokens.toLocaleString()}</p>
+                            </div>
+                            <div>
+                                <p className="font-bold">I/O Tokens</p>
+                                <p>{stats.totalInputTokens.toLocaleString()} / {stats.totalOutputTokens.toLocaleString()}</p>
+                            </div>
+                             <div>
+                                <p className="font-bold">Est. Cost</p>
+                                <p>${stats.estimatedCost.toFixed(6)}</p>
+                            </div>
+                        </div>
+                    ) : <p>No stats available.</p>}
+                </CardContent>
+              </Card>
+              <Card className="row-span-5">
+                <CardHeader>
+                    <CardTitle>Current State</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <ScrollArea className="h-[calc(70vh-12rem)]">
+                        <pre className="text-xs whitespace-pre-wrap">{JSON.stringify(state, null, 2)}</pre>
+                    </ScrollArea>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card className="md:col-span-1">
               <CardHeader>
                 <CardTitle>Message Logs</CardTitle>
               </CardHeader>
               <CardContent>
-                <ScrollArea className="h-[50vh]">
+                <ScrollArea className="h-[calc(70vh-4rem)]">
                     <div className="space-y-2">
                         {logs.map(log => (
                             <div key={log.id} className="text-xs border-b pb-1">
