@@ -19,7 +19,7 @@ interface GameClientProps {
 }
 
 export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initialMessages }) => {
-  const { userId, isUserLoading, showRegistration, registerUser, userState } = useUser(initialGameState, initialMessages);
+  const { userId, isUserLoading, showRegistration, registerUser, userState } = useUser();
   const [playerState, setPlayerState] = useState<PlayerState>(initialGameState);
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [commandInputValue, setCommandInputValue] = useState('');
@@ -94,6 +94,10 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initia
       }
     });
   };
+  
+  const handleStateUpdate = (newState: PlayerState) => {
+      setPlayerState(newState);
+  };
 
   if (isUserLoading) {
     return (
@@ -127,6 +131,7 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initia
               onResetGame={handleResetGame}
               setCommandInputValue={setCommandInputValue}
               userId={userId}
+              onStateUpdate={handleStateUpdate}
           />
         )}
         <main className={`transition-all duration-300 ease-in-out ${showSidebar ? 'md:pl-[20rem] group-data-[state=collapsed]/sidebar-wrapper:md:pl-0' : ''}`}>

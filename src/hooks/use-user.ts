@@ -2,14 +2,11 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { findOrCreateUser, resetGame } from '@/app/actions';
-import type { PlayerState, Message, User as UserType, Game, GameId } from '@/lib/game/types';
+import { findOrCreateUser } from '@/app/actions';
+import type { PlayerState, Message } from '@/lib/game/types';
 import { initializeFirebase } from '@/firebase';
 import { doc, getDoc } from 'firebase/firestore';
-import { getInitialState } from '@/lib/game-state';
 import { game as gameCartridge } from '@/lib/game/cartridge';
-
-const USER_ID_STORAGE_KEY = 'airpg_user_id';
 
 interface UserState {
     playerState: PlayerState;
@@ -40,8 +37,7 @@ async function fetchUserData(userId: string): Promise<UserState | null> {
     }
 }
 
-
-export function useUser(initialGameState: PlayerState, initialMessages: Message[]) {
+export function useUser() {
   const [userId, setUserId] = useState<string | null>(null);
   const [isUserLoading, setIsUserLoading] = useState(true);
   const [showRegistration, setShowRegistration] = useState(false);
@@ -50,20 +46,18 @@ export function useUser(initialGameState: PlayerState, initialMessages: Message[
   const currentEnv = process.env.NEXT_PUBLIC_NODE_ENV || 'test';
 
   const registerUser = useCallback(async (id: string): Promise<{ success: boolean; message: string }> => {
-    // findOrCreateUser now handles saving the initial state to DB
-    const { user, error, isNew } = await findOrCreateUser(id);
+    const { user, error } = await findOrCreateUser(id);
     if (user) {
-      localStorage.setItem(USER_ID_STORAGE_KEY, user.id);
+      // Don't set localStorage anymore, just load the state.
       setUserId(user.id);
       setShowRegistration(false);
       
-      // Fetch the newly created state to sync the client
       const freshUserState = await fetchUserData(user.id);
       if (freshUserState) {
           setUserState(freshUserState);
       }
       
-      return { success: true, message: 'User registered successfully.' };
+      return { success: true, message: 'User session started.' };
     } else {
       return { success: false, message: error || 'An unknown error occurred.' };
     }
@@ -74,34 +68,25 @@ export function useUser(initialGameState: PlayerState, initialMessages: Message[
         if (currentEnv === 'development') {
             const devId = process.env.NEXT_PUBLIC_DEV_USER_ID;
             if (devId) {
-                setUserId(devId);
-                // In dev, the initial state is pre-loaded on the server, so we can use it.
-                setUserState({ playerState: initialGameState, messages: initialMessages });
+                const devUserState = await fetchUserData(devId);
+                if (devUserState) {
+                    setUserId(devId);
+                    setUserState(devUserState);
+                } else {
+                    // If dev user doesn't exist in DB, create it.
+                    await registerUser(devId);
+                }
             } else {
-                // Handle case where dev ID is not set
                 console.error("NEXT_PUBLIC_DEV_USER_ID is not set in your .env file for development.");
             }
         } else { // Handles 'test', 'production', and any other case
-            const storedId = localStorage.getItem(USER_ID_STORAGE_KEY);
-            if (storedId) {
-                const existingUserState = await fetchUserData(storedId);
-                if (existingUserState) {
-                    setUserId(storedId);
-                    setUserState(existingUserState);
-                } else {
-                    // Stored ID is invalid or DB state is missing, force re-registration
-                    localStorage.removeItem(USER_ID_STORAGE_KEY);
-                    setShowRegistration(true);
-                }
-            } else {
-                setShowRegistration(true);
-            }
+            setShowRegistration(true);
         }
         setIsUserLoading(false);
     };
 
     identifyUser();
-  }, [currentEnv, initialGameState, initialMessages]);
+  }, [currentEnv, registerUser]);
 
   return { userId, isUserLoading, showRegistration, registerUser, userState };
 }

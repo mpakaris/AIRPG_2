@@ -1,7 +1,7 @@
 
 'use client';
 
-import { BookOpen, Box, Compass, ScrollText, Target, User, CheckCircle, Code, RotateCcw, MessageSquareShare, Send, Download } from 'lucide-react';
+import { BookOpen, Box, Compass, ScrollText, Target, User, CheckCircle, Code, RotateCcw, MessageSquareShare, Send, Download, Sparkles } from 'lucide-react';
 import { FC, useState, useTransition, useEffect } from 'react';
 import type { Game, PlayerState, Flag, ChapterId, User as UserType } from '@/lib/game/types';
 import {
@@ -19,7 +19,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { sendWhinselfTestMessage, findOrCreateUser } from '@/app/actions';
+import { sendWhinselfTestMessage, findOrCreateUser, generateStoryForChapter } from '@/app/actions';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,15 +39,18 @@ interface GameSidebarProps {
   onResetGame: () => void;
   setCommandInputValue: (value: string) => void;
   userId: string | null;
+  onStateUpdate: (newState: PlayerState) => void;
 }
 
-export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommandSubmit, onResetGame, setCommandInputValue, userId }) => {
+const chapterCompletionFlag = (chapterId: ChapterId) => `chapter_${chapterId}_complete` as Flag;
+
+
+export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommandSubmit, onResetGame, setCommandInputValue, userId, onStateUpdate }) => {
   const chapter = game.chapters[playerState.currentChapterId];
   const location = chapter.locations[playerState.currentLocationId];
   const inventoryItems = playerState.inventory.map(id => chapter.items[id]).filter(Boolean);
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
-  const [whinselfMessage, setWhinselfMessage] = useState('');
   const [user, setUser] = useState<UserType | null>(null);
 
   const currentEnv = process.env.NEXT_PUBLIC_NODE_ENV || 'test';
@@ -55,6 +58,9 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
   const showSomeDevControls = true; // Always show the group and Reset button.
 
   const [objectivesVisible, setObjectivesVisible] = useState(isDevEnvironment);
+  
+  const isChapterComplete = playerState.flags.includes(chapterCompletionFlag(playerState.currentChapterId));
+  const hasStory = !!playerState.stories?.[playerState.currentChapterId];
 
 
   useEffect(() => {
@@ -74,147 +80,30 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
   const handleDevCommand = (chapterId: ChapterId) => {
       onCommandSubmit(`dev:complete_${chapterId}`);
   }
-  
-  const handleSendWhinself = () => {
+
+  const handleGenerateStory = () => {
     if (!userId) {
-        toast({ variant: 'destructive', title: 'Error', description: 'User ID not set.' });
-        return;
-    }
-    if (!whinselfMessage.trim()) {
-        toast({
-            variant: 'destructive',
-            title: 'Error',
-            description: 'Message cannot be empty.',
-        });
-        return;
+      toast({ variant: "destructive", title: "Error", description: "Cannot generate story without a user."});
+      return;
     }
     startTransition(async () => {
-        try {
-            await sendWhinselfTestMessage(userId, whinselfMessage);
-            toast({
-                title: 'Message Sent',
-                description: `Sent "${whinselfMessage}" to ${userId}.`,
-            });
-            setWhinselfMessage('');
-        } catch (error) {
-            console.error('Send Whinself message error:', error);
-            const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
-            toast({
-                variant: 'destructive',
-                title: 'Send Error',
-                description: errorMessage,
-            });
-        }
+      try {
+        toast({ title: "Crafting Your Story...", description: "The AI is weaving your adventure into a narrative. This may take a moment." });
+        const { newState } = await generateStoryForChapter(userId, game.id, playerState.currentChapterId);
+        onStateUpdate(newState);
+        toast({ title: "Story Complete!", description: "Your personalized story for this chapter has been created." });
+      } catch (error) {
+        console.error("Generate Story error:", error);
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        toast({
+          variant: "destructive",
+          title: "Story Generation Failed",
+          description: errorMessage,
+        });
+      }
     });
   };
 
-    const handleGetLastMessage = async () => {
-        toast({
-            title: 'Fetching last message...',
-            description: 'Calling the interceptor to get the last message.',
-        });
-        try {
-            const interceptorUrl = 'https://carroll-orangy-maladroitly.ngrok-free.dev/last';
-
-            const response = await fetch(interceptorUrl, {
-                method: 'GET',
-                mode: 'cors',
-                headers: {
-                    'ngrok-skip-browser-warning': 'true'
-                },
-                cache: 'no-store'
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`Request failed with status ${response.status}. Response: ${errorText}`);
-            }
-            
-            const data = await response.json();
-            console.log('Received data:', data);
-
-            // Correctly access the nested text property
-            const messageText = data?.payload?.event?.Message?.conversation;
-
-            if (messageText) {
-                setCommandInputValue(messageText);
-                toast({
-                    title: 'Message Loaded!',
-                    description: `Input field populated with: "${messageText}"`,
-                });
-            } else if (data.error === 'No messages') {
-                toast({
-                    variant: 'destructive',
-                    title: 'No Messages Found',
-                    description: 'The interceptor has no messages saved.',
-                });
-            } else {
-                throw new Error('Payload received, but it has an unexpected format.');
-            }
-
-        } catch (error) {
-            console.error('Get Last Message error:', error);
-            const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
-            toast({
-                variant: 'destructive',
-                title: 'Fetch Error',
-                description: errorMessage,
-            });
-        }
-    };
-
-
-  const handleFetchWhinself = async () => {
-    toast({
-        title: 'Fetching message...',
-        description: 'Calling the interceptor to get the last message.',
-    });
-    try {
-      const interceptorUrl = 'https://carroll-orangy-maladroitly.ngrok-free.dev/last';
-
-      const response = await fetch(interceptorUrl, {
-        method: 'GET',
-        mode: 'cors',
-        headers: {
-            'ngrok-skip-browser-warning': 'true'
-        },
-        cache: 'no-store'
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Request failed with status ${response.status}. Response: ${errorText}`);
-      }
-
-      const contentType = response.headers.get("content-type");
-      if (contentType && contentType.indexOf("application/json") !== -1) {
-          const data = await response.json();
-          const playerInput = data?.payload?.event?.Message?.conversation;
-
-          if (playerInput) {
-            toast({
-              title: 'Message Received!',
-              description: `Processing: "${playerInput}"`,
-            });
-            onCommandSubmit(playerInput);
-          } else {
-             throw new Error('Payload received, but message content was empty or in the wrong format.');
-          }
-      } else {
-          const errorText = await response.text();
-          throw new Error(`Expected JSON response, but received content-type: ${contentType}. Response: ${errorText}`);
-      }
-      
-    } catch (error) {
-        console.error('Interceptor fetch error:', error);
-        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
-        toast({
-            variant: 'destructive',
-            title: 'Interceptor Error',
-            description: errorMessage,
-        });
-    }
-  }
 
   return (
     <Sidebar>
@@ -283,6 +172,24 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
                 )}
             </SidebarGroup>
         )}
+        
+        {isChapterComplete && (
+            <SidebarGroup>
+                 <SidebarGroupLabel className='flex items-center gap-2'>
+                    <Sparkles />
+                    Chapter Complete
+                </SidebarGroupLabel>
+                <div className='px-2'>
+                    <Button 
+                        onClick={handleGenerateStory} 
+                        disabled={isPending || hasStory}
+                        className="w-full"
+                    >
+                        {isPending ? "Writing..." : (hasStory ? "Story Created" : "Make it a Story!")}
+                    </Button>
+                </div>
+            </SidebarGroup>
+        )}
 
         <SidebarGroup>
           <SidebarGroupLabel className="flex items-center gap-2">
@@ -346,7 +253,6 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
                     
                     {isDevEnvironment && (
                       <>
-                        <Button variant="secondary" size="sm" onClick={handleFetchWhinself}><MessageSquareShare className='mr-2 h-4 w-4'/>Fetch & Submit Msg</Button>
                         <Button variant="outline" size="sm" onClick={() => onCommandSubmit('look around')}>Look Around</Button>
                         <Button variant="outline" size="sm" onClick={() => onCommandSubmit('examine notebook')}>Examine Notebook</Button>
                         <Button variant="outline" size="sm" onClick={() => onCommandSubmit('password for brown notebook "Justice for Silas Bloom"')}>Unlock Notebook</Button>

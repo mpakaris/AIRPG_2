@@ -7,10 +7,11 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { LoaderCircle, RefreshCw } from 'lucide-react';
-import type { User, Game, PlayerState, Message } from '@/lib/game/types';
+import type { User, Game, PlayerState, Message, Story, ChapterId } from '@/lib/game/types';
 import { getPlayerState, getPlayerLogs } from './actions';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 interface GameStats {
     totalMessages: number;
@@ -25,7 +26,7 @@ const PRICING = {
     output: 2.50 / 1_000_000, // $2.50 per 1M tokens
 };
 
-function calculateStats(logs: Message[]): GameStats {
+function calculateStats(logs: Message[], stories: Record<ChapterId, Story>): GameStats {
     let totalMessages = logs.length;
     let totalInputTokens = 0;
     let totalOutputTokens = 0;
@@ -36,6 +37,14 @@ function calculateStats(logs: Message[]): GameStats {
             totalInputTokens += log.usage.inputTokens || 0;
             totalOutputTokens += log.usage.outputTokens || 0;
             totalTokens += log.usage.totalTokens || 0;
+        }
+    });
+
+    Object.values(stories).forEach(story => {
+        if (story.usage) {
+            totalInputTokens += story.usage.inputTokens || 0;
+            totalOutputTokens += story.usage.outputTokens || 0;
+            totalTokens += story.usage.totalTokens || 0;
         }
     });
 
@@ -68,8 +77,8 @@ const PlayerDetails = ({ user, game }: { user: User, game: Game | undefined }) =
             ]);
             setState(stateData);
             setLogs(logsData);
-            if (logsData) {
-                setStats(calculateStats(logsData));
+            if (logsData && stateData) {
+                setStats(calculateStats(logsData, stateData.stories || {}));
             }
             setIsLoading(false);
         }
@@ -87,6 +96,8 @@ const PlayerDetails = ({ user, game }: { user: User, game: Game | undefined }) =
     if (!game) {
         return <p>Game data not found for this user.</p>
     }
+
+    const stories = state?.stories ? Object.values(state.stories) : [];
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-full">
@@ -123,11 +134,32 @@ const PlayerDetails = ({ user, game }: { user: User, game: Game | undefined }) =
                     </CardContent>
                 </Card>
             </div>
-            <Card className="lg:col-span-1">
-                <CardHeader><CardTitle>Current State</CardTitle></CardHeader>
+             <Card className="lg:col-span-1">
+                <CardHeader><CardTitle>Details</CardTitle></CardHeader>
                 <CardContent>
                     <ScrollArea className="h-[calc(80vh-6rem)]">
-                        <pre className="text-xs whitespace-pre-wrap">{JSON.stringify(state, null, 2)}</pre>
+                        <Accordion type="single" collapsible className="w-full">
+                            <AccordionItem value="item-1">
+                                <AccordionTrigger>Current State</AccordionTrigger>
+                                <AccordionContent>
+                                    <pre className="text-xs whitespace-pre-wrap">{JSON.stringify(state, null, 2)}</pre>
+                                </AccordionContent>
+                            </AccordionItem>
+                            <AccordionItem value="item-2">
+                                <AccordionTrigger>Generated Stories ({stories.length})</AccordionTrigger>
+                                <AccordionContent>
+                                    {stories.length > 0 ? (
+                                        stories.map(story => (
+                                            <div key={story.chapterId} className="mb-4 pb-2 border-b">
+                                                <h4 className="font-bold text-sm mb-1">{story.title}</h4>
+                                                <p className="text-xs whitespace-pre-wrap">{story.content}</p>
+                                                {story.usage && <p className="text-muted-foreground text-right text-xs mt-1">Tokens: {story.usage.totalTokens}</p>}
+                                            </div>
+                                        ))
+                                    ) : <p className="text-xs text-muted-foreground">No stories have been generated yet.</p>}
+                                </AccordionContent>
+                            </AccordionItem>
+                        </Accordion>
                     </ScrollArea>
                 </CardContent>
             </Card>

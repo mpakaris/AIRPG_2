@@ -3,9 +3,10 @@
 
 import { guidePlayerWithNarrator } from '@/ai/flows/guide-player-with-narrator';
 import { selectNpcResponse } from '@/ai/flows/select-npc-response';
+import { generateStoryFromLogs } from '@/ai/flows/generate-story-from-logs';
 import { game as gameCartridge } from '@/lib/game/cartridge';
 import { AVAILABLE_COMMANDS } from '@/lib/game/commands';
-import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectId, GameObjectState, ItemId, Flag, Action, Chapter, ChapterId, ImageDetails, GameId, User, TokenUsage } from '@/lib/game/types';
+import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectId, GameObjectState, ItemId, Flag, Action, Chapter, ChapterId, ImageDetails, GameId, User, TokenUsage, Story } from '@/lib/game/types';
 import { initializeFirebase } from '@/firebase';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { getInitialState } from '@/lib/game-state';
@@ -1031,6 +1032,52 @@ export async function sendWhinselfTestMessage(userId: string, message: string): 
     }
 }
 
-    
 
-    
+export async function generateStoryForChapter(userId: string, gameId: GameId, chapterId: ChapterId): Promise<{ newState: PlayerState }> {
+    const { firestore } = initializeFirebase();
+    const stateRef = doc(firestore, 'player_states', `${userId}_${gameId}`);
+    const logRef = doc(firestore, 'logs', `${userId}_${gameId}`);
+
+    const [stateSnap, logSnap] = await Promise.all([getDoc(stateRef), getDoc(logRef)]);
+
+    if (!stateSnap.exists() || !logSnap.exists()) {
+        throw new Error("Player state or logs not found. Cannot generate story.");
+    }
+
+    const playerState = stateSnap.data() as PlayerState;
+    const allMessages = logSnap.data()?.messages as Message[];
+    const game = gameCartridge;
+    const chapter = game.chapters[chapterId];
+
+    if (!chapter) {
+        throw new Error(`Chapter ${chapterId} not found.`);
+    }
+
+    const messageLogsForAI = allMessages.map(m => ({ senderName: m.senderName, content: m.content }));
+
+    const { output: storyOutput, usage: storyUsage } = await generateStoryFromLogs({
+        gameDescription: game.description,
+        chapterTitle: chapter.title,
+        messageLogs: messageLogsForAI,
+    });
+
+    const newStory: Story = {
+        chapterId: chapterId,
+        title: chapter.title,
+        content: storyOutput.story,
+        usage: storyUsage,
+    };
+
+    const newState: PlayerState = {
+        ...playerState,
+        stories: {
+            ...playerState.stories,
+            [chapterId]: newStory,
+        },
+    };
+
+    // Save the updated state with the new story
+    await setDoc(stateRef, newState);
+
+    return { newState };
+}

@@ -1,5 +1,6 @@
 
 
+
 // Branded types for stronger type safety
 export type GameId = string & { readonly __brand: 'GameId' };
 export type ChapterId = string & { readonly __brand: 'ChapterId' };
@@ -43,6 +44,12 @@ export type Action =
   | { type: 'END_INTERACTION' }
   | { type: 'SET_INTERACTION_STATE', state: string };
 
+export type Story = {
+    chapterId: ChapterId;
+    title: string;
+    content: string;
+    usage: TokenUsage;
+};
 
 export type GameObjectState = {
   isLocked?: boolean;
@@ -64,6 +71,7 @@ export type PlayerState = {
   inventory: ItemId[];
   flags: Flag[];
   objectStates: Record<GameObjectId, GameObjectState>;
+  stories: Record<ChapterId, Story>;
   activeConversationWith: NpcId | null;
   interactingWithObject: GameObjectId | null;
 };
@@ -200,4 +208,3 @@ export type Game = {
   narratorName?: string;
   promptContext?: string;
 };
-

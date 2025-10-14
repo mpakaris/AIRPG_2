@@ -37,6 +37,7 @@ export function getInitialState(game: Game): PlayerState {
     inventory: [],
     flags: [],
     objectStates: initialObjectStates,
+    stories: {},
     activeConversationWith: null,
     interactingWithObject: null,
   };
