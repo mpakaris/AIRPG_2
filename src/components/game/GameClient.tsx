@@ -26,8 +26,7 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initia
   const [isCommandPending, startTransition] = useTransition();
   const { toast } = useToast();
 
-  const currentEnv = process.env.NEXT_PUBLIC_NODE_ENV || 'test';
-  const showSidebar = currentEnv === 'development' || currentEnv === 'test';
+  const showSidebar = true;
 
   // Effect to update local game state when the user's state is loaded by the hook
   useEffect(() => {

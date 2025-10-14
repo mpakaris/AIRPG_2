@@ -81,7 +81,7 @@ export function useUser(initialGameState: PlayerState, initialMessages: Message[
                 // Handle case where dev ID is not set
                 console.error("NEXT_PUBLIC_DEV_USER_ID is not set in your .env file for development.");
             }
-        } else if (currentEnv === 'test') {
+        } else { // Handles 'test', 'production', and any other case
             const storedId = localStorage.getItem(USER_ID_STORAGE_KEY);
             if (storedId) {
                 const existingUserState = await fetchUserData(storedId);
@@ -96,9 +96,6 @@ export function useUser(initialGameState: PlayerState, initialMessages: Message[
             } else {
                 setShowRegistration(true);
             }
-        } else {
-             // Production environment (or any other)
-             setShowRegistration(true);
         }
         setIsUserLoading(false);
     };
