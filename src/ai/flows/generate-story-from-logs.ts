@@ -42,9 +42,11 @@ const prompt = ai.definePrompt({
 **Style Guide:**
 - Write in the third person, past tense.
 - Adopt a classic crime noir tone: gritty, descriptive, with a focus on atmosphere and internal thought. The main character is FBI agent Burt Macklin.
-- Do not just list events. Weave them into a cohesive story. Describe the setting, Macklin's observations, his internal monologue, and the flow of conversation.
-- Smooth out the "game-like" elements. Instead of "Burt examined the notebook," write something like, "Macklin's eyes fell upon a worn leather notebook resting on the table. It seemed to pulse with forgotten secrets."
-- Condense and summarize. The log contains every single action. Your job is to pick the important moments and dialogue that drive the plot forward. Omit repetitive actions or dead ends.
+- Aim for a rich, descriptive style. Don't just state what happened; paint a picture. Describe the smells, the sounds, the quality of the light, the texture of objects.
+- Expand on the events in the log. Weave them into a cohesive story. Describe the setting in detail, Macklin's observations, his internal monologue, and the flow of conversation.
+- Smooth out the "game-like" elements. Instead of "Burt examined the notebook," write something like, "Macklin's eyes fell upon a worn leather notebook resting on the table. It seemed to pulse with forgotten secrets, its leather cover softened by decades of handling."
+- Your job is to pick the important moments and dialogue that drive the plot forward and flesh them out. Omit repetitive actions or dead ends, but expand on the crucial scenes.
+- Target a length of approximately 1000-1500 words to create a substantial and immersive chapter.
 - Format the output as a single block of prose. Do not use markdown, titles, or headings within the story itself.
 
 **Game Premise:**
