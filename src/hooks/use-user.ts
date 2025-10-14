@@ -47,7 +47,7 @@ export function useUser(initialGameState: PlayerState, initialMessages: Message[
   const [showRegistration, setShowRegistration] = useState(false);
   const [userState, setUserState] = useState<UserState | null>(null);
 
-  const currentEnv = process.env.NEXT_PUBLIC_NODE_ENV || 'production';
+  const currentEnv = process.env.NEXT_PUBLIC_NODE_ENV || 'test';
 
   const registerUser = useCallback(async (id: string): Promise<{ success: boolean; message: string }> => {
     // findOrCreateUser now handles saving the initial state to DB
