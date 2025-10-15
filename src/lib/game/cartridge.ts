@@ -289,7 +289,7 @@ export const game: Game = {
             'npc_manager': {
                 id: 'npc_manager' as NpcId,
                 name: 'Cafe Manager',
-                description: 'A cheerful, slightly-too-energetic manager.',
+                description: 'A cheerful, slightly-too-energetic female manager.',
                 welcomeMessage: "Welcome! May I interest you in our special today? You get a cheese cake with every Coffee you order!",
                 goodbyeMessage: "Have a great day!",
                 image: {
@@ -306,3 +306,5 @@ export const game: Game = {
     }
   }
 };
+
+    

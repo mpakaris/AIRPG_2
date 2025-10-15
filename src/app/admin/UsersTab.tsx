@@ -1,17 +1,20 @@
 
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useTransition } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { LoaderCircle, RefreshCw } from 'lucide-react';
-import type { User, Game, PlayerState, Message, Story, ChapterId, TokenUsage } from '@/lib/game/types';
+import { LoaderCircle, RefreshCw, Sparkles } from 'lucide-react';
+import type { User, Game, PlayerState, Message, Story, ChapterId, TokenUsage, GameId } from '@/lib/game/types';
 import { getPlayerState, getPlayerLogs } from './actions';
+import { generateStoryForChapter } from '@/app/actions';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { useToast } from '@/hooks/use-toast';
+
 
 interface GameStats {
     totalMessages: number;
@@ -75,24 +78,54 @@ const PlayerDetails = ({ user, game }: { user: User, game: Game | undefined }) =
     const [logs, setLogs] = useState<Message[]>([]);
     const [stats, setStats] = useState<GameStats | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isStoryPending, startStoryTransition] = useTransition();
+    const { toast } = useToast();
+
+    const fetchData = async () => {
+        if (!user || !game) return;
+        setIsLoading(true);
+        const [stateData, logsData] = await Promise.all([
+            getPlayerState(user.id, game.id),
+            getPlayerLogs(user.id, game.id),
+        ]);
+        setState(stateData);
+        setLogs(logsData);
+        if (logsData && stateData) {
+            setStats(calculateStats(logsData, stateData.stories || {}));
+        }
+        setIsLoading(false);
+    };
 
     useEffect(() => {
-        async function fetchData() {
-            if (!user || !game) return;
-            setIsLoading(true);
-            const [stateData, logsData] = await Promise.all([
-                getPlayerState(user.id, game.id),
-                getPlayerLogs(user.id, game.id),
-            ]);
-            setState(stateData);
-            setLogs(logsData);
-            if (logsData && stateData) {
-                setStats(calculateStats(logsData, stateData.stories || {}));
-            }
-            setIsLoading(false);
-        }
         fetchData();
     }, [user, game]);
+
+    const handleGenerateStory = () => {
+        if (!user || !game || !state) {
+          toast({ variant: "destructive", title: "Error", description: "Cannot generate story without user or game data."});
+          return;
+        }
+        startStoryTransition(async () => {
+          try {
+            toast({ title: "Crafting Story...", description: `The AI is writing a story for ${user.username}. This may take a moment.` });
+            const { newState } = await generateStoryForChapter(user.id, game.id, state.currentChapterId);
+            setState(newState); // Update local state
+            if (logs) {
+                setStats(calculateStats(logs, newState.stories || {}));
+            }
+            toast({ title: "Story Complete!", description: `Personalized story for ${user.username} has been created.` });
+          } catch (error) {
+            console.error("Generate Story error:", error);
+            const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+            toast({
+              variant: "destructive",
+              title: "Story Generation Failed",
+              description: errorMessage,
+            });
+          }
+        });
+    };
+
 
     if (isLoading) {
         return (
@@ -102,18 +135,27 @@ const PlayerDetails = ({ user, game }: { user: User, game: Game | undefined }) =
         );
     }
     
-    if (!game) {
-        return <p>Game data not found for this user.</p>
+    if (!game || !state) {
+        return <p>Game data or player state not found for this user.</p>
     }
 
     const stories = state?.stories ? Object.values(state.stories) : [];
+    const hasStoryForCurrentChapter = state?.stories && state.stories[state.currentChapterId];
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-full">
             <div className="lg:col-span-2 grid grid-rows-6 gap-4">
                  <Card className="row-span-1">
-                    <CardHeader>
+                    <CardHeader className="flex flex-row items-center justify-between">
                         <CardTitle>Game Stats: {game.title}</CardTitle>
+                        <Button 
+                            size="sm" 
+                            onClick={handleGenerateStory}
+                            disabled={isStoryPending || !!hasStoryForCurrentChapter}
+                        >
+                            <Sparkles className={cn("mr-2 h-4 w-4", isStoryPending && "animate-spin")} />
+                             {isStoryPending ? 'Generating...' : hasStoryForCurrentChapter ? 'Story Exists' : 'Generate Story'}
+                        </Button>
                     </CardHeader>
                     <CardContent>
                         {stats ? (
@@ -266,5 +308,7 @@ export function UsersTab({ users, games, isLoading, onRefresh }: { users: User[]
         </Card>
     );
 }
+
+    
 
     
