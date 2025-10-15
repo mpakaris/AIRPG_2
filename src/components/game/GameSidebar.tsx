@@ -1,4 +1,3 @@
-
 'use client';
 
 import { BookOpen, Box, Compass, ScrollText, Target, User, CheckCircle, Code, RotateCcw, MessageSquareShare, Send, Download, Sparkles } from 'lucide-react';
@@ -172,24 +171,6 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
             </SidebarGroup>
         )}
         
-        {isDevEnvironment && isChapterComplete && (
-            <SidebarGroup>
-                 <SidebarGroupLabel className='flex items-center gap-2'>
-                    <Sparkles />
-                    Chapter Complete
-                </SidebarGroupLabel>
-                <div className='px-2'>
-                    <Button 
-                        onClick={handleGenerateStory} 
-                        disabled={isPending || hasStory}
-                        className="w-full"
-                    >
-                        {isPending ? "Writing..." : (hasStory ? "Story Created" : "Make it a Story!")}
-                    </Button>
-                </div>
-            </SidebarGroup>
-        )}
-
         <SidebarGroup>
           <SidebarGroupLabel className="flex items-center gap-2">
             <Box />
@@ -258,7 +239,7 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
                     <Button variant="outline" size="sm" onClick={() => onCommandSubmit('ask about man')}>Ask about man</Button>
                     <Button variant="outline" size="sm" onClick={() => onCommandSubmit('ask for name')}>Ask for name</Button>
                     <Button variant="outline" size="sm" onClick={() => handleDevCommand(game.startChapterId)}>Complete Chapter I</Button>
-                    <Button variant="outline" in-memory disabled>Complete Chapter II</Button>
+                    <Button variant="outline" disabled>Complete Chapter II</Button>
                 </div>
             </SidebarGroup>
         )}
