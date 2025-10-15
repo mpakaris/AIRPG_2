@@ -195,6 +195,7 @@ export type Chapter = {
   postChapterMessage?: string;
   completionVideo?: string;
   nextChapter?: NextChapterInfo;
+  storyGenerationDetails?: string;
 };
 
 export type Game = {

@@ -20,6 +20,7 @@ const MessageLogSchema = z.object({
 const GenerateStoryFromLogsInputSchema = z.object({
   gameDescription: z.string().describe("The overall description and premise of the game."),
   chapterTitle: z.string().describe("The title of the chapter the story is for."),
+  storyGenerationDetails: z.string().optional().describe("Specific guidelines or context for generating the story for this particular chapter."),
   messageLogs: z.array(MessageLogSchema).describe("An array of message logs from the player's playthrough of the chapter."),
 });
 export type GenerateStoryFromLogsInput = z.infer<typeof GenerateStoryFromLogsInputSchema>;
@@ -54,6 +55,11 @@ const prompt = ai.definePrompt({
 
 **Chapter Title:**
 {{chapterTitle}}
+
+{{#if storyGenerationDetails}}
+**Chapter-Specific Context:**
+{{storyGenerationDetails}}
+{{/if}}
 
 **Game Log (in order of events):**
 {{#each messageLogs}}

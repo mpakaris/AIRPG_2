@@ -17,6 +17,7 @@ export const game: Game = {
         introductionVideo: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759670681/CH_I_Intro_ccy0og.mov',
         completionVideo: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759678377/CH_I_completion_jqtyme.mp4',
         postChapterMessage: "Burt, it seems we got all the information here. Maybe we should continue elsewhere.",
+        storyGenerationDetails: "The story for this chapter takes place entirely within 'The Cafe', a bustling downtown coffee shop. Key events include Agent Macklin receiving the locked notebook, interacting with the male barista, and unlocking the notebook to discover the initial clues about Silas Bloom.",
         nextChapter: {
             id: 'ch2-the-lounge' as ChapterId,
             title: 'The Midnight Lounge',

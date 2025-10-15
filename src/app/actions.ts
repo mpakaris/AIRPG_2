@@ -1058,6 +1058,7 @@ export async function generateStoryForChapter(userId: string, gameId: GameId, ch
     const { output: storyOutput, usage: storyUsage } = await generateStoryFromLogs({
         gameDescription: game.description,
         chapterTitle: chapter.title,
+        storyGenerationDetails: chapter.storyGenerationDetails,
         messageLogs: messageLogsForAI,
     });
 
