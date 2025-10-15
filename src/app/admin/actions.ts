@@ -2,7 +2,7 @@
 'use server';
 
 import { initializeFirebase } from '@/firebase';
-import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, deleteDoc } from 'firebase/firestore';
 import type { User, PlayerState, Message, Game, GameId } from '@/lib/game/types';
 import { game as gameCartridge } from '@/lib/game/cartridge';
 
@@ -38,4 +38,25 @@ export async function getPlayerLogs(userId: string, gameId: GameId): Promise<Mes
         return logSnap.data()?.messages || [];
     }
     return [];
+}
+
+export async function deleteUser(userId: string): Promise<void> {
+    const { firestore } = initializeFirebase();
+    const gameId = gameCartridge.id;
+
+    const userRef = doc(firestore, 'users', userId);
+    const stateRef = doc(firestore, 'player_states', `${userId}_${gameId}`);
+    const logRef = doc(firestore, 'logs', `${userId}_${gameId}`);
+
+    try {
+        await Promise.all([
+            deleteDoc(userRef),
+            deleteDoc(stateRef),
+            deleteDoc(logRef)
+        ]);
+        console.log(`Successfully deleted all data for user: ${userId}`);
+    } catch (error) {
+        console.error(`Error deleting user ${userId}:`, error);
+        throw new Error(`Failed to delete user data. Please try again.`);
+    }
 }

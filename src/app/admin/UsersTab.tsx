@@ -6,14 +6,25 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { LoaderCircle, RefreshCw, Sparkles } from 'lucide-react';
+import { LoaderCircle, RefreshCw, Sparkles, Trash2 } from 'lucide-react';
 import type { User, Game, PlayerState, Message, Story, ChapterId, TokenUsage, GameId } from '@/lib/game/types';
-import { getPlayerState, getPlayerLogs } from './actions';
+import { getPlayerState, getPlayerLogs, deleteUser } from './actions';
 import { generateStoryForChapter } from '@/app/actions';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 
 interface GameStats {
@@ -144,6 +155,39 @@ const PlayerDetails = ({ user, game }: { user: User, game: Game | undefined }) =
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-full">
+            <Card className="lg:col-span-1">
+                <CardHeader><CardTitle>Details</CardTitle></CardHeader>
+                <CardContent>
+                    <ScrollArea className="h-[calc(80vh-6rem)]">
+                        <Accordion type="single" collapsible className="w-full">
+                            <AccordionItem value="item-1">
+                                <AccordionTrigger>Current State</AccordionTrigger>
+                                <AccordionContent>
+                                    <pre className="text-xs whitespace-pre-wrap">{JSON.stringify(state, null, 2)}</pre>
+                                </AccordionContent>
+                            </AccordionItem>
+                            <AccordionItem value="item-2">
+                                <AccordionTrigger>Generated Stories ({stories.length})</AccordionTrigger>
+                                <AccordionContent>
+                                    {stories.length > 0 ? (
+                                        stories.map(story => (
+                                            <div key={story.chapterId} className="mb-4 pb-2 border-b">
+                                                <h4 className="font-bold text-sm mb-1">{story.title}</h4>
+                                                <p className="text-xs whitespace-pre-wrap">{story.content}</p>
+                                                {story.usage && (
+                                                    <p className="text-muted-foreground text-right text-xs mt-1">
+                                                        Tokens: {story.usage.totalTokens} (~${calculateCostForUsage(story.usage).toFixed(6)})
+                                                    </p>
+                                                )}
+                                            </div>
+                                        ))
+                                    ) : <p className="text-xs text-muted-foreground">No stories have been generated yet.</p>}
+                                </AccordionContent>
+                            </AccordionItem>
+                        </Accordion>
+                    </ScrollArea>
+                </CardContent>
+            </Card>
             <div className="lg:col-span-2 grid grid-rows-6 gap-4">
                  <Card className="row-span-1">
                     <CardHeader className="flex flex-row items-center justify-between">
@@ -185,39 +229,6 @@ const PlayerDetails = ({ user, game }: { user: User, game: Game | undefined }) =
                     </CardContent>
                 </Card>
             </div>
-             <Card className="lg:col-span-1">
-                <CardHeader><CardTitle>Details</CardTitle></CardHeader>
-                <CardContent>
-                    <ScrollArea className="h-[calc(80vh-6rem)]">
-                        <Accordion type="single" collapsible className="w-full">
-                            <AccordionItem value="item-1">
-                                <AccordionTrigger>Current State</AccordionTrigger>
-                                <AccordionContent>
-                                    <pre className="text-xs whitespace-pre-wrap">{JSON.stringify(state, null, 2)}</pre>
-                                </AccordionContent>
-                            </AccordionItem>
-                            <AccordionItem value="item-2">
-                                <AccordionTrigger>Generated Stories ({stories.length})</AccordionTrigger>
-                                <AccordionContent>
-                                    {stories.length > 0 ? (
-                                        stories.map(story => (
-                                            <div key={story.chapterId} className="mb-4 pb-2 border-b">
-                                                <h4 className="font-bold text-sm mb-1">{story.title}</h4>
-                                                <p className="text-xs whitespace-pre-wrap">{story.content}</p>
-                                                {story.usage && (
-                                                    <p className="text-muted-foreground text-right text-xs mt-1">
-                                                        Tokens: {story.usage.totalTokens} (~${calculateCostForUsage(story.usage).toFixed(6)})
-                                                    </p>
-                                                )}
-                                            </div>
-                                        ))
-                                    ) : <p className="text-xs text-muted-foreground">No stories have been generated yet.</p>}
-                                </AccordionContent>
-                            </AccordionItem>
-                        </Accordion>
-                    </ScrollArea>
-                </CardContent>
-            </Card>
         </div>
     );
 };
@@ -225,6 +236,8 @@ const PlayerDetails = ({ user, game }: { user: User, game: Game | undefined }) =
 export function UsersTab({ users, games, isLoading, onRefresh }: { users: User[], games: Game[], isLoading: boolean, onRefresh: () => void }) {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
+    const [isDeleting, startDeleteTransition] = useTransition();
+    const { toast } = useToast();
 
     const filteredUsers = useMemo(() => {
         return users.filter(user =>
@@ -238,6 +251,30 @@ export function UsersTab({ users, games, isLoading, onRefresh }: { users: User[]
         return games.find(g => g.id === selectedUser.purchasedGames[0]);
     }, [selectedUser, games]);
 
+    const handleDeleteUser = (userToDelete: User) => {
+        startDeleteTransition(async () => {
+            try {
+                await deleteUser(userToDelete.id);
+                toast({
+                    title: "User Deleted",
+                    description: `${userToDelete.username} (${userToDelete.id}) has been successfully deleted.`,
+                });
+                if (selectedUser?.id === userToDelete.id) {
+                    setSelectedUser(null);
+                }
+                onRefresh(); // Refresh the user list
+            } catch (error) {
+                console.error("Delete user error:", error);
+                const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+                toast({
+                    variant: "destructive",
+                    title: "Deletion Failed",
+                    description: errorMessage,
+                });
+            }
+        });
+    };
+
 
     return (
         <Card>
@@ -246,8 +283,8 @@ export function UsersTab({ users, games, isLoading, onRefresh }: { users: User[]
                     <CardTitle>Users</CardTitle>
                     <CardDescription>A list of all players. Select a user to see their game data.</CardDescription>
                 </div>
-                 <Button onClick={onRefresh} variant="outline" size="sm" disabled={isLoading}>
-                    <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
+                 <Button onClick={onRefresh} variant="outline" size="sm" disabled={isLoading || isDeleting}>
+                    <RefreshCw className={cn("h-4 w-4", (isLoading || isDeleting) && "animate-spin")} />
                     <span className="ml-2 hidden sm:inline">Update</span>
                 </Button>
             </CardHeader>
@@ -268,6 +305,7 @@ export function UsersTab({ users, games, isLoading, onRefresh }: { users: User[]
                                     <TableRow>
                                         <TableHead>User</TableHead>
                                         <TableHead>Created</TableHead>
+                                        <TableHead className="text-right">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -286,6 +324,38 @@ export function UsersTab({ users, games, isLoading, onRefresh }: { users: User[]
                                             </TableCell>
                                             <TableCell className="text-xs">
                                                 {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                 <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <Button 
+                                                            variant="ghost" 
+                                                            size="icon" 
+                                                            className="h-8 w-8"
+                                                            onClick={(e) => e.stopPropagation()} // Prevent row selection
+                                                            disabled={isDeleting}
+                                                        >
+                                                            <Trash2 className="h-4 w-4 text-destructive" />
+                                                        </Button>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                                            <AlertDialogDescription>
+                                                                This action cannot be undone. This will permanently delete the user <span className="font-bold">{user.username} ({user.id})</span> and all of their associated data (game state, logs).
+                                                            </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                            <AlertDialogAction 
+                                                                onClick={() => handleDeleteUser(user)}
+                                                                className="bg-destructive hover:bg-destructive/90"
+                                                            >
+                                                                Delete
+                                                            </AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
                                             </TableCell>
                                         </TableRow>
                                     ))}
@@ -308,7 +378,3 @@ export function UsersTab({ users, games, isLoading, onRefresh }: { users: User[]
         </Card>
     );
 }
-
-    
-
-    

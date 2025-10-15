@@ -46,7 +46,7 @@ export const game: Game = {
                 id: 'obj_brown_notebook' as GameObjectId,
                 name: 'Brown Notebook',
                 description: 'A worn, leather-bound notebook. It feels heavy with secrets.',
-                items: [],
+                    items: [],
                 isOpenable: true,
                 isLocked: true,
                 unlocksWithPhrase: 'Justice for Silas Bloom',
