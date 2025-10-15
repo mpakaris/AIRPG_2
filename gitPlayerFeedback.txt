@@ -15,3 +15,39 @@ Would you recommend the game to a friend?
 Would you be willing to pay money for such a game, if you can play it on TElegram/WhatsApp? 
     If yes .. how much USD would you be willing to pay? 
     If not ... why not or what would you need extra, so that you d be willing to pay?
+
+1. Story & Immersion
+	•	How did you like the story?
+	•	Did the story make sense and feel consistent?
+	•	Did you feel motivated to continue to the next chapter?
+
+2. Gameplay & Mechanics
+	•	How did you find the game mechanics? (e.g., choices, turns, text flow)
+	•	Were the rules and objectives clear?
+	•	Did you encounter any moments of frustration or confusion?
+	•	Was the pacing of the game (per turn/scene) comfortable?
+
+3. Media Elements (Videos, Images, Audio, Documents)
+	•	How did you like the use of media overall?
+	•	Did the media elements add to or reduce the excitement of the game?
+	•	Were the videos too long, too short, or about right?
+	•	Did you find any videos or sounds annoying or out of place?
+	•	Did the media make the story feel more immersive?
+
+4. Duration & Balance
+	•	Was the playtime for one chapter too long, too short, or about right?
+	•	Did the gameplay feel balanced between reading, choices, and media?
+
+5. Overall Enjoyment
+	•	Did you enjoy playing it?
+	•	Would you like to continue playing the next chapters (approx. 5 total)?
+	•	Would you recommend this game to a friend?
+
+6. Monetization & Platform
+	•	Would you be willing to pay to play such a game on Telegram or WhatsApp?
+	•	If yes, how much (USD)?
+	•	If no, what would need to change for you to consider paying?
+
+7. Suggestions
+	•	What would you prefer to be different or improved?
+	•	Any other comments or feedback?

@@ -249,11 +249,6 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
                 </SidebarGroupLabel>
                 <div className='flex flex-col gap-2 px-2'>
                     <Button variant="destructive" size="sm" onClick={onResetGame}><RotateCcw className='mr-2 h-4 w-4'/>Reset Game</Button>
-                    
-                    <Button variant="outline" size="sm" onClick={handleGenerateStory} disabled={isPending}>
-                      {isPending ? 'Generating...' : 'DEV: Generate Story'}
-                    </Button>
-                    
                     <Button variant="outline" size="sm" onClick={() => onCommandSubmit('look around')}>Look Around</Button>
                     <Button variant="outline" size="sm" onClick={() => onCommandSubmit('examine notebook')}>Examine Notebook</Button>
                     <Button variant="outline" size="sm" onClick={() => onCommandSubmit('password for brown notebook "Justice for Silas Bloom"')}>Unlock Notebook</Button>
