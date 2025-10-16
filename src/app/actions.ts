@@ -737,8 +737,6 @@ export async function processCommand(
       allMessagesForSession = createInitialMessages();
   }
 
-  let finalResult: {newState: PlayerState, messages: Message[]};
-
   try {
     const chapter = game.chapters[currentState.currentChapterId];
     const narratorName = game.narratorName || "Narrator";
@@ -898,7 +896,7 @@ export async function processCommand(
         }
     }
     
-    finalResult = {
+    const finalResult = {
         newState: finalState || currentState,
         messages: allMessagesForSession,
     };
@@ -918,17 +916,20 @@ export async function processCommand(
   } catch (error) {
     console.error('Error processing command:', error);
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    finalResult = {
-      newState: currentState,
-      messages: [createMessage('system', 'System', `Sorry, an error occurred: ${errorMessage}`)],
-    };
-    // We only need to save and dispatch the error message
-    await logAndSave(userId, gameId, currentState, finalResult.messages);
+    const errorResponseMessage = createMessage('system', 'System', `Sorry, an error occurred: ${errorMessage}`);
+    
+    // **FIX**: Append the error message to the existing log instead of creating a new one.
+    const messagesWithEror = [...allMessagesForSession, errorResponseMessage];
+    
+    // Save the full log including the error, but don't change the game state.
+    await logAndSave(userId, gameId, currentState, messagesWithEror);
+    
     if (process.env.NEXT_PUBLIC_NODE_ENV === 'development') {
-        await dispatchMessage(userId, finalResult.messages[0]);
+        await dispatchMessage(userId, errorResponseMessage);
     }
     
-    return { newState: currentState, messages: allMessagesForSession.concat(finalResult.messages) };
+    // Return the full message history including the error to the client.
+    return { newState: currentState, messages: messagesWithEror };
   }
 }
 
