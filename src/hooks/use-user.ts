@@ -53,7 +53,8 @@ export function useUser() {
     if (loadedUserState) {
         setUserState(loadedUserState);
     } else {
-        // If data is missing from DB, force a re-registration to re-seed it.
+        // If data is missing from DB for a user that should exist,
+        // force a re-registration to re-seed their data.
         localStorage.removeItem(USER_ID_STORAGE_KEY);
         setUserId(null);
         setShowRegistration(true);
@@ -62,9 +63,13 @@ export function useUser() {
 
 
   const registerUser = useCallback(async (id: string): Promise<{ success: boolean; message: string }> => {
-    const { user, error, isNew } = await findOrCreateUser(id);
+    // `findOrCreateUser` checks the DB. If user exists, it returns it. If not, it creates it.
+    const { user, error } = await findOrCreateUser(id);
+    
     if (user) {
+      // Whether new or existing, we save the ID to local storage for future sessions.
       localStorage.setItem(USER_ID_STORAGE_KEY, user.id);
+      // We load the user data from the database, which is the source of truth.
       await loadUser(user.id);
       setShowRegistration(false);
       return { success: true, message: 'User session started.' };
@@ -76,20 +81,28 @@ export function useUser() {
 
   useEffect(() => {
     const identifyUser = async () => {
-        if (currentEnv === 'development') {
-            const devId = process.env.NEXT_PUBLIC_DEV_USER_ID;
-            if (devId) {
-                await registerUser(devId); // Use registerUser to ensure dev user exists
-            } else {
-                console.error("NEXT_PUBLIC_DEV_USER_ID is not set in your .env file for development.");
-            }
-        } else { // Handles 'test', 'production', and any other case
+        setIsUserLoading(true);
+        // For non-dev environments, always check local storage first.
+        if (currentEnv !== 'development') {
             const storedUserId = localStorage.getItem(USER_ID_STORAGE_KEY);
             if (storedUserId) {
                 await loadUser(storedUserId);
-            } else {
-                setShowRegistration(true);
+                setIsUserLoading(false);
+                return;
             }
+        }
+        
+        // For dev environment, or if no user in local storage for prod/test
+        if (currentEnv === 'development') {
+            const devId = process.env.NEXT_PUBLIC_DEV_USER_ID;
+            if (devId) {
+                // Use registerUser to ensure the dev user exists and their state is loaded.
+                await registerUser(devId); 
+            } else {
+                console.error("NEXT_PUBLIC_DEV_USER_ID is not set in your .env file for development.");
+            }
+        } else { // Handles 'test', 'production' if local storage was empty
+            setShowRegistration(true);
         }
         setIsUserLoading(false);
     };
