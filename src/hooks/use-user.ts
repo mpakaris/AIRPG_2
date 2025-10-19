@@ -13,6 +13,8 @@ interface UserState {
     messages: Message[];
 }
 
+const USER_ID_STORAGE_KEY = 'textcraft-user-id';
+
 // This function is client-side only.
 async function fetchUserData(userId: string): Promise<UserState | null> {
     const { firestore } = initializeFirebase();
@@ -45,48 +47,55 @@ export function useUser() {
 
   const currentEnv = process.env.NEXT_PUBLIC_NODE_ENV || 'test';
 
+  const loadUser = useCallback(async (id: string) => {
+    setUserId(id);
+    const loadedUserState = await fetchUserData(id);
+    if (loadedUserState) {
+        setUserState(loadedUserState);
+    } else {
+        // If data is missing from DB, force a re-registration to re-seed it.
+        localStorage.removeItem(USER_ID_STORAGE_KEY);
+        setUserId(null);
+        setShowRegistration(true);
+    }
+  }, []);
+
+
   const registerUser = useCallback(async (id: string): Promise<{ success: boolean; message: string }> => {
-    const { user, error } = await findOrCreateUser(id);
+    const { user, error, isNew } = await findOrCreateUser(id);
     if (user) {
-      // Don't set localStorage anymore, just load the state.
-      setUserId(user.id);
+      localStorage.setItem(USER_ID_STORAGE_KEY, user.id);
+      await loadUser(user.id);
       setShowRegistration(false);
-      
-      const freshUserState = await fetchUserData(user.id);
-      if (freshUserState) {
-          setUserState(freshUserState);
-      }
-      
       return { success: true, message: 'User session started.' };
     } else {
       return { success: false, message: error || 'An unknown error occurred.' };
     }
-  }, []);
+  }, [loadUser]);
+
 
   useEffect(() => {
     const identifyUser = async () => {
         if (currentEnv === 'development') {
             const devId = process.env.NEXT_PUBLIC_DEV_USER_ID;
             if (devId) {
-                const devUserState = await fetchUserData(devId);
-                if (devUserState) {
-                    setUserId(devId);
-                    setUserState(devUserState);
-                } else {
-                    // If dev user doesn't exist in DB, create it.
-                    await registerUser(devId);
-                }
+                await registerUser(devId); // Use registerUser to ensure dev user exists
             } else {
                 console.error("NEXT_PUBLIC_DEV_USER_ID is not set in your .env file for development.");
             }
         } else { // Handles 'test', 'production', and any other case
-            setShowRegistration(true);
+            const storedUserId = localStorage.getItem(USER_ID_STORAGE_KEY);
+            if (storedUserId) {
+                await loadUser(storedUserId);
+            } else {
+                setShowRegistration(true);
+            }
         }
         setIsUserLoading(false);
     };
 
     identifyUser();
-  }, [currentEnv, registerUser]);
+  }, [currentEnv, registerUser, loadUser]);
 
   return { userId, isUserLoading, showRegistration, registerUser, userState };
 }
