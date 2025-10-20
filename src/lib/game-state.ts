@@ -40,5 +40,6 @@ export function getInitialState(game: Game): PlayerState {
     stories: {},
     activeConversationWith: null,
     interactingWithObject: null,
+    conversationCounts: {},
   };
 }

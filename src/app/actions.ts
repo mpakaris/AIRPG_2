@@ -3,6 +3,7 @@
 
 import { guidePlayerWithNarrator } from '@/ai/flows/guide-player-with-narrator';
 import { selectNpcResponse } from '@/ai/flows/select-npc-response';
+import { generateNpcChatter } from '@/ai/flows/generate-npc-chatter';
 import { generateStoryFromLogs } from '@/ai/flows/generate-story-from-logs';
 import { game as gameCartridge } from '@/lib/game/cartridge';
 import { AVAILABLE_COMMANDS } from '@/lib/game/commands';
@@ -185,48 +186,76 @@ async function handleConversation(state: PlayerState, playerInput: string, game:
     }
 
     const chapter = game.chapters[state.currentChapterId];
-    const npc = chapter.npcs[state.activeConversationWith];
+    const npcId = state.activeConversationWith;
+    const npc = chapter.npcs[npcId];
+
+    let newState = { ...state, conversationCounts: { ...state.conversationCounts } };
+    newState.conversationCounts[npcId] = (newState.conversationCounts[npcId] || 0) + 1;
 
     if (isEndingConversation(playerInput)) {
-        return processActions(state, [{type: 'END_CONVERSATION'}], game);
+        return processActions(newState, [{type: 'END_CONVERSATION'}], game);
+    }
+    
+    // Handle SCRIPTED NPCs
+    if (npc.dialogueType === 'scripted') {
+        const completionFlag = npc.completionFlag;
+        if (completionFlag && newState.flags.includes(completionFlag) && npc.finalResponse) {
+             return { newState, messages: [createMessage(npcId, npc.name, `"${npc.finalResponse}"`)] };
+        }
+        
+        if (!npc.cannedResponses || npc.cannedResponses.length === 0) {
+            return {
+                newState: newState,
+                messages: [createMessage(npcId, npc.name, `"${npc.goodbyeMessage || 'I have nothing more to say.'}"`)]
+            };
+        }
+
+        const cannedResponsesForAI = npc.cannedResponses.map(r => ({ topic: r.topic, response: r.response, keywords: r.keywords }));
+        const { output: aiResponse, usage } = await selectNpcResponse({
+            playerInput: playerInput,
+            npcName: npc.name,
+            cannedResponses: cannedResponsesForAI,
+        });
+        
+        const chosenTopic = aiResponse.topic;
+        const selectedResponse = npc.cannedResponses.find(r => r.topic === chosenTopic)
+            || npc.cannedResponses.find(r => r.topic === 'default');
+
+        if (!selectedResponse) {
+            return { newState, messages: [createMessage(npcId, npc.name, `"I don't know what to say."`)] };
+        }
+
+        const initialMessage = createMessage(npcId, npc.name, `"${selectedResponse.response}"`, 'text', undefined, usage);
+        const actionsToProcess = selectedResponse.actions || [];
+        let actionResult = processActions(newState, actionsToProcess, game);
+        actionResult.messages.unshift(initialMessage);
+        return actionResult;
     }
 
-    if (!npc.cannedResponses || npc.cannedResponses.length === 0) {
-        return {
-            newState: state,
-            messages: [createMessage(npc.id as NpcId, npc.name, `"${npc.goodbyeMessage || 'I have nothing to say.'}"`)]
-        };
+    // Handle FREEFORM NPCs
+    if (npc.dialogueType === 'freeform') {
+        const interactionCount = newState.conversationCounts[npcId];
+        if (npc.maxInteractions && interactionCount > npc.maxInteractions && npc.interactionLimitResponse) {
+            return { newState, messages: [createMessage(npcId, npc.name, `"${npc.interactionLimitResponse}"`)] };
+        }
+
+        const location = chapter.locations[newState.currentLocationId];
+        const { output: aiResponse, usage } = await generateNpcChatter({
+            playerInput: playerInput,
+            npcName: npc.name,
+            npcPersona: npc.persona || 'A generic townsperson.',
+            locationDescription: location.description
+        });
+        
+        const message = createMessage(npcId, npc.name, `"${aiResponse.npcResponse}"`, 'text', undefined, usage);
+        return { newState, messages: [message] };
     }
 
-    const cannedResponsesForAI = npc.cannedResponses.map(r => ({ topic: r.topic, response: r.response, keywords: r.keywords }));
-
-    const { output: aiResponse, usage } = await selectNpcResponse({
-        playerInput: playerInput,
-        npcName: npc.name,
-        cannedResponses: cannedResponsesForAI,
-    });
-    
-    const chosenTopic = aiResponse.topic;
-    const selectedResponse = npc.cannedResponses.find(r => r.topic === chosenTopic)
-        || npc.cannedResponses.find(r => r.topic === 'default');
-
-    if (!selectedResponse) {
-        // This is a final fallback and should ideally not be reached if a 'default' exists.
-        return {
-            newState: state,
-            messages: [createMessage(npc.id as NpcId, npc.name, `"I don't know what to say."`)]
-        };
-    }
-
-    const initialMessage = createMessage(npc.id as NpcId, npc.name, `"${selectedResponse.response}"`, 'text', undefined, usage);
-    
-    const actionsToProcess = selectedResponse.actions || [];
-    let actionResult = processActions(state, actionsToProcess, game);
-    
-    // Prepend the NPC's own message to the messages generated by the actions. This is CRITICAL.
-    actionResult.messages.unshift(initialMessage);
-
-    return actionResult;
+    // Fallback if dialogueType is not set
+    return {
+        newState: newState,
+        messages: [createMessage(npcId, npc.name, `"${npc.goodbyeMessage || 'I have nothing to say.'}"`)]
+    };
 }
 
 
@@ -585,7 +614,7 @@ function handlePassword(state: PlayerState, command: string, game: Game): Comman
     const commandLower = command.toLowerCase();
 
     // Allow multiple password keywords to be more flexible
-    const passwordKeywords = ['password', 'say', 'enter', 'use phrase'];
+    const passwordKeywords = ['password for', 'password', 'say', 'enter', 'use phrase'];
     const usedKeyword = passwordKeywords.find(kw => commandLower.startsWith(kw));
     
     if (!usedKeyword) {
@@ -732,6 +761,8 @@ export async function processCommand(
 ): Promise<{newState: PlayerState, messages: Message[]}> {
   const game = gameCartridge;
   const gameId = game.id;
+  let allMessagesForSession: Message[] = [];
+  let currentState: PlayerState;
 
   if (!userId) {
     return {
@@ -744,29 +775,27 @@ export async function processCommand(
   const stateRef = doc(firestore, 'player_states', `${userId}_${gameId}`);
   const logRef = doc(firestore, 'logs', `${userId}_${gameId}`);
 
-  const [stateSnap, logSnap] = await Promise.all([getDoc(stateRef), getDoc(logRef)]);
-  
-  let currentState: PlayerState;
-  if (stateSnap.exists()) {
-      currentState = stateSnap.data() as PlayerState;
-  } else {
-      currentState = getInitialState(game);
-  }
-
-  // Defensive check: If chapter is still invalid, reset.
-  if (!game.chapters[currentState.currentChapterId]) {
-      console.warn(`Invalid chapter ID '${currentState.currentChapterId}' found in processCommand. Resetting to initial state.`);
-      currentState = getInitialState(game);
-  }
-  
-  let allMessagesForSession: Message[] = [];
-  if (logSnap.exists()) {
-      allMessagesForSession = logSnap.data()?.messages || [];
-  } else {
-      allMessagesForSession = createInitialMessages();
-  }
-
   try {
+    const [stateSnap, logSnap] = await Promise.all([getDoc(stateRef), getDoc(logRef)]);
+    
+    if (stateSnap.exists()) {
+        currentState = stateSnap.data() as PlayerState;
+    } else {
+        currentState = getInitialState(game);
+    }
+  
+    // Defensive check: If chapter is still invalid, reset.
+    if (!game.chapters[currentState.currentChapterId]) {
+        console.warn(`Invalid chapter ID '${currentState.currentChapterId}' found in processCommand. Resetting to initial state.`);
+        currentState = getInitialState(game);
+    }
+    
+    if (logSnap.exists()) {
+        allMessagesForSession = logSnap.data()?.messages || [];
+    } else {
+        allMessagesForSession = createInitialMessages();
+    }
+
     const chapter = game.chapters[currentState.currentChapterId];
     const narratorName = game.narratorName || "Narrator";
     const lowerInput = playerInput.toLowerCase().trim();
@@ -949,15 +978,21 @@ export async function processCommand(
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
     const errorResponseMessage = createMessage('system', 'System', `Sorry, an error occurred: ${errorMessage}`);
     
+    // Crucially, append the error message to the *existing* log session, don't create a new one.
     const messagesWithError = [...allMessagesForSession, errorResponseMessage];
     
-    await logAndSave(userId, gameId, currentState, messagesWithError);
+    // Get the current state without modification if it exists, otherwise use the initial state.
+    const stateRef = doc(firestore, 'player_states', `${userId}_${gameId}`);
+    const stateSnap = await getDoc(stateRef);
+    const stateToSave = stateSnap.exists() ? stateSnap.data() as PlayerState : getInitialState(game);
+
+    await logAndSave(userId, gameId, stateToSave, messagesWithError);
     
     if (process.env.NEXT_PUBLIC_NODE_ENV === 'development') {
         await dispatchMessage(userId, errorResponseMessage);
     }
     
-    return { newState: currentState, messages: messagesWithError };
+    return { newState: stateToSave, messages: messagesWithError };
   }
 }
 

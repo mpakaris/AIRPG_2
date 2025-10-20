@@ -280,6 +280,8 @@ export const game: Game = {
                 dialogueType: 'scripted',
                 welcomeMessage: 'What can I get for you? Or are you just here to brood? Either is fine.',
                 goodbyeMessage: "Alright, I've got cappuccinos to craft. Good luck with... whatever it is you're doing.",
+                completionFlag: 'has_received_business_card' as Flag,
+                finalResponse: "Look, I told you all I know. I've got work to do.",
                 image: {
                     url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759241505/Cafe_barrista_hpwona.png',
                     description: 'A portrait of the cafe barista.',
@@ -290,7 +292,9 @@ export const game: Game = {
                 ],
                 cannedResponses: [
                     { topic: 'greeting', keywords: "hello, hi, how are you", response: 'Another day, another dollar. What do you need?' },
-                    { topic: 'coffee', keywords: "coffee, drink, menu, order, buy", response: 'The coffee is hot and the pastries are day-old. The menu is on the board. Let me know if you can decipher my handwriting.' },
+                    { topic: 'coffee', keywords: "coffee, drink, menu, order, buy, latte, cappuccino, espresso", response: 'The coffee is hot and the pastries are day-old. The menu is on the board. Let me know if you can decipher my handwriting.' },
+                    { topic: 'prices', keywords: "price, cost, how much", response: 'More than it should be, less than I want to charge. The prices are on the board.' },
+                    { topic: 'recommendation', keywords: "recommend, good, special", response: 'The espresso will wake you up. The scones... well, they exist.' },
                     { topic: 'man_in_black', keywords: "man, regular, customer, guy, who left", response: "The guy in the black coat? Yeah, he's a regular. Comes in, stares at his notebook, doesn't say much. Pays in cash. My favorite kind of customer." },
                     { topic: 'musician', keywords: "musician, saxophone, job, name, background, what does he do", response: "I hear he's a musician. Plays the saxophone out on the corner most days. Keeps to himself, you know?" },
                     { topic: 'his_notebook', keywords: "notebook, book, his, what was he doing", response: "Always scribbling in that old notebook of his. Looked like he was writing the next great American novel, or maybe just his grocery list. Who knows."},
@@ -306,7 +310,7 @@ export const game: Game = {
                             { type: 'END_CONVERSATION' }
                         ]
                     },
-                    { topic: 'insult', keywords: "stupid, idiot, useless, rude", response: "Hey, I get paid to pour coffee, not to be your punching bag. Watch it." },
+                    { topic: 'insult', keywords: "stupid, idiot, useless, rude, dumb", response: "Hey, I get paid to pour coffee, not to be your punching bag. Watch it." },
                     { topic: 'default', keywords: "default", response: "Look, I just work here. I pour coffee, I wipe counters. You're the detective." }
                 ]
             },
@@ -318,6 +322,8 @@ export const game: Game = {
                 persona: "You are Brenda, the relentlessly cheerful and bubbly manager of 'The Daily Grind' cafe. You see the best in everyone and everything. You love talking about your 'Artisan Coffee of the Week', the daily specials, and the local community art you hang on the walls. You are completely oblivious to any crime or mystery. Your job is to be a fountain of pleasant, slightly-vacant small talk. You must not, under any circumstances, talk about the case, murders, or anything negative. Keep your responses short, sweet, and upbeat!",
                 welcomeMessage: "Welcome to The Daily Grind! How can I make your day a little brighter? Can I interest you in a 'Sunshine Muffin'? They're 10% off!",
                 goodbyeMessage: "Have a wonderfully caffeinated day! Come back soon!",
+                maxInteractions: 5,
+                interactionLimitResponse: "It has been so lovely chatting with you, but I really must get back to managing. The muffins won't bake themselves, you know! Have a super day!",
                 image: {
                     url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759604054/cafe_manager_punwhs.png',
                     description: 'Portrait of the cafe manager.',

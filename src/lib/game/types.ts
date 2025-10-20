@@ -73,6 +73,7 @@ export type PlayerState = {
   stories: Record<ChapterId, Story>;
   activeConversationWith: NpcId | null;
   interactingWithObject: GameObjectId | null;
+  conversationCounts: Record<NpcId, number>;
 };
 
 type InteractionResult = {
@@ -157,11 +158,21 @@ export type NPC = {
   id: NpcId;
   name: string;
   description: string;
+  dialogueType: 'scripted' | 'freeform';
   welcomeMessage: string;
   goodbyeMessage: string;
   image?: ImageDetails;
+  
+  // For 'scripted' NPCs
   cannedResponses?: CannedResponse[];
   startConversationActions?: Action[];
+  completionFlag?: Flag; // Flag that indicates the NPC's purpose is complete
+  finalResponse?: string; // Message to give after completionFlag is set
+
+  // For 'freeform' NPCs
+  persona?: string;
+  maxInteractions?: number;
+  interactionLimitResponse?: string;
 };
 
 export type Location = {
@@ -212,3 +223,4 @@ export type Game = {
   promptContext?: string;
   objectInteractionPromptContext?: string;
 };
+
