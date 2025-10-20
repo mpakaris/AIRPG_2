@@ -8,8 +8,8 @@ export const game: Game = {
   setting: "Modern-day USA, 2025",
   gameType: 'Escape Game',
   narratorName: 'Agent Sharma',
-  promptContext: `You are Agent Sharma, the partner of FBI agent Burt Macklin (the player). Your role is to act as a helpful, collaborative partner. You are not a boss, but an equal, sharing thoughts and observations. Your tone is supportive and curious. When the player does something smart, acknowledge it subtly ("Good thinking, Burt."). If they try something illogical, gently steer them back ("I'm not sure that'll work, Macklin. What if we tried...?"). Your responses should feel like a natural conversation between partners on a case.`,
-  objectInteractionPromptContext: `You are Agent Sharma, observing your partner Burt Macklin as he inspects the {{objectName}}. Offer your thoughts collaboratively ("What do you make of that, Burt?"). Interpret his actions and provide guidance as a partner would, maintaining your supportive and curious persona.`,
+  promptContext: `You are Agent Sharma, the partner of FBI agent Burt Macklin (the player). Your role is to act as a helpful, collaborative partner. You are not a boss, but an equal, sharing thoughts and observations. Your tone is supportive and curious. If they try something illogical, gently steer them back ("I'm not sure that'll work, Macklin. What if we tried...?"). Your responses should feel like a natural conversation between partners on a case.`,
+  objectInteractionPromptContext: `You are Agent Sharma, observing your partner Burt Macklin as he inspects the {{objectName}}. Offer your thoughts collaboratively ("What do you make of that, Macklin?"). Interpret his actions and provide guidance as a partner would, maintaining your supportive and curious persona.`,
   startChapterId: 'ch1-the-cafe' as ChapterId,
   chapters: {
     'ch1-the-cafe': {
@@ -119,7 +119,7 @@ export const game: Game = {
                         commands: {
                             'read article': [
                                 { type: 'SHOW_MESSAGE', sender: 'narrator', senderName: 'Narrator', content: 'A newspaper article about Silas Bloom.', messageType: 'article', imageId: 'newspaper_article' },
-                                { type: 'SHOW_MESSAGE', sender: 'agent', senderName: 'Agent Sharma', content: "Wait a second, Burt... the article mentions an Agent Macklin. That can't be a coincidence. Is he related to you? This could be about your own family." },
+                                { type: 'SHOW_MESSAGE', sender: 'agent', senderName: 'Agent Sharma', content: "Wait a second, Macklin... the article mentions an Agent Macklin. That can't be a coincidence. Is he related to you? This could be about your own family." },
                                 { type: 'SET_INTERACTION_STATE', state: 'article_read' },
                                 { type: 'SET_FLAG', flag: 'notebook_article_read' as Flag },
                                 { type: 'SET_FLAG', flag: 'notebook_interaction_complete' as Flag }
@@ -310,7 +310,6 @@ export const game: Game = {
                             { type: 'ADD_ITEM', itemId: 'item_business_card' as ItemId },
                             { type: 'SET_FLAG', flag: 'has_received_business_card' as Flag },
                             { type: 'SHOW_MESSAGE', sender: 'narrator', senderName: 'Narrator', content: "The barista slides a business card across the counter. It's been added to your inventory.", messageType: 'image', imageId: 'item_business_card' },
-                            { type: 'SHOW_MESSAGE', sender: 'agent', senderName: 'Agent Sharma', content: "Good thinking, Burt. This could be the lead we need." },
                             { type: 'END_CONVERSATION' }
                         ]
                     },
