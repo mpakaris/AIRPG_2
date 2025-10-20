@@ -3,6 +3,7 @@
 
 /**
  * @fileOverview Selects an appropriate NPC response from a predefined list based on player input.
+ * This is used for "scripted" NPCs who are critical to the plot.
  *
  * - selectNpcResponse - A function that selects an NPC response.
  * - SelectNpcResponseInput - The input type for the selectNpcResponse function.
@@ -39,26 +40,24 @@ const prompt = ai.definePrompt({
   name: 'selectNpcResponsePrompt',
   input: {schema: SelectNpcResponseInputSchema},
   output: {schema: SelectNpcResponseOutputSchema},
-  prompt: `You are a game master AI. Your job is to select the most appropriate response for an NPC based on the player's input by matching their intent to a specific topic.
+  prompt: `You are a game master AI. Your job is to select the most appropriate response for an NPC based on the player's input by matching their intent to a specific topic. This NPC has a scripted dialogue.
 
 Player Input: "{{playerInput}}"
 
 Available Responses for {{npcName}}:
 {{#each cannedResponses}}
-- Topic: "{{topic}}", Keywords: "{{keywords}}", Response: "{{response}}"
+- Topic: "{{topic}}", Keywords for this topic: "{{keywords}}", NPC's Response: "{{response}}"
 {{/each}}
 
-Analyze the player's input and select the single best response 'topic'.
+Your Task:
+1.  Analyze the player's input to understand their core question or statement (their "intent").
+2.  Review the 'Keywords' for each 'Topic'. The keywords are clues to the topic's theme.
+3.  Choose the 'Topic' whose 'Keywords' most closely match the player's intent. The match should be based on meaning, not just exact word matches.
+4.  If the player's input seems insulting, rude, or inappropriate, always choose the 'insult' topic.
+5.  If the player input is a simple greeting like "hello," "hi," "good morning," or asks "how are you," choose the 'greeting' topic.
+6.  If no other topic is a good match for the player's intent, you MUST choose the 'default' topic. This is your fallback. Do not try to force a fit with an irrelevant topic.
 
-**Your Process:**
-1.  Read the Player Input carefully to understand their core question or statement.
-2.  Review the 'Keywords' for each 'Topic'.
-3.  Choose the 'Topic' whose 'Keywords' most closely match the player's input.
-4.  If the player is being insulting, rude, or inappropriate, always choose the 'insult' topic, regardless of other keywords.
-5.  If the player's input is a simple greeting like "hello" or "hi", choose 'greeting'.
-6.  If no other topic is a good match, you MUST choose the 'default' topic. Do not try to find a "closest" match if it's not relevant.
-
-You must only output the chosen topic.
+Your entire output must be a single, valid JSON object containing only the chosen topic.
 `,
 });
 
