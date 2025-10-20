@@ -225,4 +225,3 @@ export type Game = {
   objectInteractionPromptContext?: string;
 };
 
-
