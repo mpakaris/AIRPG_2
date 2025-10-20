@@ -866,10 +866,7 @@ export async function processCommand(
           VISIBLE NPCS: ${npcNames.join(', ')}.
         `;
 
-        if (currentState.interactingWithObject) {
-            const focusedObject = chapter.gameObjects[currentState.interactingWithObject];
-            gameStateSummaryForAI = `Currently focused on the ${focusedObject.name}. The player is trying to interact with something else.`;
-        } else if (isChapterComplete && chapter.nextChapter) {
+        if (isChapterComplete && chapter.nextChapter) {
             gameStateSummaryForAI += `\nCHAPTER COMPLETE. The player is ready to move on to the next chapter: '${chapter.nextChapter.title}'.`
         }
 
@@ -889,8 +886,16 @@ export async function processCommand(
         // **NEW GUARDRAIL LOGIC**
         // If the AI says the command is invalid AND we are in an interaction, it's because the player is "trapped".
         // We just show the AI's helpful message and stop further processing.
-        if (commandToExecute === 'invalid' && currentState.interactingWithObject) {
-            commandHandlerResult = { newState: currentState, messages: [agentMessage] };
+        if (currentState.interactingWithObject) {
+            const focusedObject = chapter.gameObjects[currentState.interactingWithObject];
+            const isCommandForDifferentObject = !playerInput.toLowerCase().includes(focusedObject.name.toLowerCase()) && (verb === 'examine' || verb === 'look');
+            
+            if (isCommandForDifferentObject) {
+                 const trapMessage = createMessage('agent', narratorName, `Easy there, Macklin. We're focused on the ${focusedObject.name} right now. If you want to do something else, we need to 'exit' this interaction first.`);
+                 commandHandlerResult = { newState: currentState, messages: [trapMessage] };
+            } else {
+                 commandHandlerResult = await handleObjectInteraction(currentState, playerInput, game);
+            }
         } else {
             switch (verb) {
                 case 'examine':
@@ -959,7 +964,7 @@ export async function processCommand(
         
         const hasSystemMessage = commandHandlerResult.messages.some(m => m.sender === 'system');
         // Only add agent message if the command wasn't "invalid" and didn't already produce a system message
-        if (verb !== 'invalid' && !hasSystemMessage) {
+        if (verb !== 'invalid' && !hasSystemMessage && !currentState.interactingWithObject) {
             commandHandlerResult.messages.unshift(agentMessage);
         }
     }

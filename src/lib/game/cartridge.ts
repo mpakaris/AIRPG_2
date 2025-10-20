@@ -90,20 +90,19 @@ export const game: Game = {
                 unlocksWithPhrase: 'Justice for Silas Bloom',
                 onExamine: {
                     locked: {
-                        message: "A lock prevents it from being opened without the right password. A mini-game opens on your device.",
+                        message: "A lock prevents it from being opened without the right password. You'll need to figure out the phrase.",
                         actions: [
-                            { type: 'SET_FLAG', flag: 'has_seen_notebook_url' as Flag },
-                            { type: 'SHOW_MESSAGE', sender: 'narrator', senderName: 'Narrator', content: 'Minigame: https://airpg-minigames.vercel.app/games/the-notebook'}
+                            { type: 'SET_FLAG', flag: 'has_seen_notebook_lock' as Flag },
                         ]
                     },
                     unlocked: {
-                        message: "The notebook is open. Inside, you see a small data chip. You could try to 'watch video'.",
+                        message: "The notebook is open. Inside, you see a small data chip next to a folded newspaper article. You could 'watch video' or 'read article'.",
                         actions: [
                              { type: 'START_INTERACTION', objectId: 'obj_brown_notebook' as GameObjectId, interactionStateId: 'start' }
                         ]
                     },
                     alternate: {
-                        message: "It's the same locked notebook. We still need that password."
+                        message: "It's the notebook we unlocked. Inside is the data chip and the article."
                     }
                 },
                 onUnlock: {
@@ -144,6 +143,13 @@ export const game: Game = {
                                 { type: 'SHOW_MESSAGE', sender: 'narrator', senderName: 'Narrator', content: "Beside the data chip, you see a folded newspaper article." },
                                 { type: 'SET_INTERACTION_STATE', state: 'video_watched' },
                                 { type: 'SET_FLAG', flag: 'notebook_video_watched' as Flag }
+                            ],
+                            'read article': [
+                                { type: 'SHOW_MESSAGE', sender: 'narrator', senderName: 'Narrator', content: 'A newspaper article about Silas Bloom.', messageType: 'article', imageId: 'newspaper_article' },
+                                { type: 'SHOW_MESSAGE', sender: 'agent', senderName: 'Agent Sharma', content: "Wait a second, Macklin... the article mentions an Agent Macklin. That can't be a coincidence. Is he related to you? This could be about your own family." },
+                                { type: 'SET_INTERACTION_STATE', state: 'article_read' },
+                                { type: 'SET_FLAG', flag: 'notebook_article_read' as Flag },
+                                { type: 'SET_FLAG', flag: 'notebook_interaction_complete' as Flag }
                             ],
                             'exit': [{ type: 'END_INTERACTION' }],
                             'close': [{ type: 'END_INTERACTION' }],
