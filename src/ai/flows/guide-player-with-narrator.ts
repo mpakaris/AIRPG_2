@@ -38,7 +38,7 @@ const prompt = ai.definePrompt({
   prompt: `
 {{promptContext}}
 
-**Current Game & Player State:**
+**Game & Player State:**
 {{gameState}}
 
 **Player's Input:**
