@@ -14,17 +14,34 @@ export const game: Game = {
 - Your tone is that of a supportive, intelligent, and sometimes witty colleague. You are equals.
 - Always refer to the player as "Burt" or "Macklin".
 - Your goal is to translate player intent into a valid game action.
-- If the player's input is a clear game action, confirm it with a brief, professional phrase. Use a variety of phrases like: "Alright, checking it out.", "Copy that.", "Good call.", "Smart move.", "On it.", "Let's see."
-- **Interaction Trap Rule:** If the player is focused on an object (the 'gameState' will say "Currently focused on..."), but they try to interact with something *else* in the room (e.g., 'look at bookshelf'), you MUST set 'commandToExecute' to 'invalid' and your 'agentResponse' MUST gently guide them. For example: "Easy there, Burt. We're focused on the notebook right now. If you want to do something else, we need to 'exit' this interaction first."
-- If the input is illogical or not a direct game action (e.g., conversational), you MUST set 'commandToExecute' to "invalid" and provide a helpful, in-character response that guides the player back to the game.
 
 **Your Task:**
 1.  **Analyze Intent:** Understand what your partner, Burt Macklin, is trying to do as a game action.
 2.  **Select Command:** Choose the *best* matching command from the 'Available Game Commands' list.
-    *   Example: "look at the book" -> 'examine brown notebook'.
-    *   Example: "pick up the card" -> 'take business card'.
-    *   Example for passwords: "The password for the notebook is JUSTICE FOR SILAS BLOOM" -> 'password brown notebook JUSTICE FOR SILAS BLOOM'.
+    *   If Macklin says "look at the book," the command is 'examine brown notebook'.
+    *   If Macklin says "pick up the card," the command is 'take business card'.
+    *   If Macklin wants to provide a password with keywords like "password", "say", or "enter", the command MUST be in the format 'password <object> <phrase>'. For example: "The password for the notebook is JUSTICE FOR SILAS BLOOM" becomes 'password brown notebook JUSTICE FOR SILAS BLOOM'. Do NOT include quotes in the final command.
+    *   If Macklin wants to move, the command is 'go <direction or location>'.
+    *   If Macklin says "look" or "look around", the command is 'look around'.
+    *   If Macklin wants to 'look behind' an object, the command is 'look behind <object>'.
+    *   If the chapter is complete and Macklin wants to go to the next location (e.g., "let's go to the jazz club"), the command is 'go next_chapter'.
+    *   **If the input is an illogical action or not a direct attempt to perform a game action, you MUST set the 'commandToExecute' to "invalid".** This includes conversational questions.
 3.  **Provide Guidance:** Write a brief, in-character response (1-2 sentences) as Agent Sharma.
+    *   If the command is **valid**, confirm the action with a neutral, professional phrase. Examples: "Alright, checking it out.", "Copy that.", "Good call.", "Smart move."
+    *   If the command is **invalid due to being illogical**, your response must gently explain why or nudge the player back on track. ("Easy there, Macklin. I don't think vandalism is in our playbook.").
+    *   If the command is **invalid due to being conversational** (e.g., "what now?", "who are you?", "what's the date?"), answer the question briefly if it's simple (like your name is Sharma, the location name is in the game state), then gently pivot back to the case by asking a question about the investigation.
+
+**Example 1 (Valid Command):**
+*Player Input:* "I want to see what that newspaper says."
+*Your Response:* { "agentResponse": "Good call. Let's see what the paper says.", "commandToExecute": "examine newspaper" }
+
+**Example 2 (Interaction Trap):**
+*Player Input:* "examine bookshelf" (while interacting with the notebook)
+*Your Response:* { "agentResponse": "We're focused on the notebook right now, Macklin. If you want to check the bookshelf, we should 'exit' this first.", "commandToExecute": "invalid" }
+
+**Example 3 (Password):**
+*Player Input:* "I say to the notebook: JUSTICE FOR SILAS BLOOM"
+*Your Response:* { "agentResponse": "Let's see if that phrase does anything.", "commandToExecute": "password brown notebook JUSTICE FOR SILAS BLOOM" }
 `,
   objectInteractionPromptContext: `You are Agent Sharma, observing your partner Burt as he inspects the {{objectName}}. Your job is to map his input to one of the available actions, while maintaining your persona as a supportive and curious colleague. Ask questions to guide him. Example: "What do you make of that, Burt?"`,
   storyStyleGuide: `You are a master storyteller and a brilliant editor. Your task is to transform a raw log of a text-based RPG into a captivating, well-written narrative chapter for a crime noir book.
@@ -86,12 +103,14 @@ export const game: Game = {
                         message: "A lock prevents it from being opened without the right password. You'll need to figure out the phrase.",
                         actions: [
                             { type: 'SET_FLAG', flag: 'has_seen_notebook_lock' as Flag },
+                            { type: 'START_INTERACTION', objectId: 'obj_brown_notebook' as GameObjectId, interactionStateId: 'locked' }
                         ]
                     },
                     unlocked: {
                         message: "The notebook is open. Inside, you see a small data chip next to a folded newspaper article. You can use 'watch video' or 'read article' to examine the contents.",
                         actions: [
-                            { type: 'SET_FLAG', flag: 'notebook_is_open' as Flag }
+                            { type: 'SET_FLAG', flag: 'notebook_is_open' as Flag },
+                             { type: 'START_INTERACTION', objectId: 'obj_brown_notebook' as GameObjectId, interactionStateId: 'unlocked' }
                         ]
                     },
                     alternate: {
@@ -103,7 +122,8 @@ export const game: Game = {
                     failMessage: "That password doesn't work. The lock remains stubbornly shut.",
                     actions: [
                          { type: 'SET_FLAG', flag: 'has_unlocked_notebook' as Flag },
-                         { type: 'SET_FLAG', flag: 'notebook_is_open' as Flag }
+                         { type: 'SET_FLAG', flag: 'notebook_is_open' as Flag },
+                         { type: 'SET_INTERACTION_STATE', state: 'unlocked' }
                     ]
                 },
                 onFailure: {
@@ -123,6 +143,36 @@ export const game: Game = {
                     url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759242346/Notebook_unlocked_fpxqgl.jpg',
                     description: 'An unlocked notebook.',
                     hint: 'unlocked notebook'
+                },
+                interactionStates: {
+                    'locked': {
+                        id: 'locked',
+                        description: 'The notebook is locked. The player might try a password.',
+                        commands: {
+                            'password': [], // This is handled by the global password command
+                            'exit': [{ type: 'END_INTERACTION' }]
+                        }
+                    },
+                    'unlocked': {
+                        id: 'unlocked',
+                        description: 'The notebook is open, showing a data chip and an article.',
+                        commands: {
+                            'watch video': [
+                                { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759241547/0930_eit8he.mov', messageType: 'video'},
+                                { type: 'SHOW_MESSAGE', sender: 'agent', content: "Silas Bloom... I've never heard that name before. He seemed like a talented musician. And that song for Rose... sounds like they were deeply in love." },
+                                { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'Beside the data chip, you see a folded newspaper article.' },
+                                { type: 'SET_FLAG', flag: 'notebook_video_watched' as Flag }
+                            ],
+                            'read article': [
+                                { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'A newspaper article about Silas Bloom.', messageType: 'article', imageId: 'newspaper_article' },
+                                { type: 'SHOW_MESSAGE', sender: 'agent', content: "Wait a second, Burt... the article mentions an Agent Mackling. That can't be a coincidence. Is he related to you? This could be about your own family." },
+                                { type: 'SET_FLAG', flag: 'notebook_article_read' as Flag },
+                                { type: 'SET_FLAG', flag: 'notebook_interaction_complete' as Flag },
+                                { type: 'END_INTERACTION' }
+                            ],
+                            'exit': [{ type: 'END_INTERACTION' }]
+                        }
+                    }
                 }
             },
             'obj_chalkboard_menu': {
@@ -312,4 +362,5 @@ export const game: Game = {
   }
 };
 
+    
     
