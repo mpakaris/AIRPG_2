@@ -297,11 +297,11 @@ export const game: Game = {
                     { topic: 'prices', keywords: "price, cost, how much", response: 'More than it should be, less than I want to charge. The prices are on the board.' },
                     { topic: 'recommendation', keywords: "recommend, good, special", response: 'The espresso will wake you up. The scones... well, they exist.' },
                     { topic: 'man_in_black', keywords: "man, regular, customer, guy, who left", response: "The guy in the black coat? Yeah, he's a regular. Comes in, stares at his notebook, doesn't say much. Pays in cash. My favorite kind of customer." },
-                    { topic: 'musician', keywords: "musician, saxophone, job, name, background, what does he do", response: "I hear he's a musician. Plays the saxophone out on the corner most days. Keeps to himself, you know?" },
+                    { topic: 'musician', keywords: "musician, saxophone, job, background, what does he do", response: "I hear he's a musician. Plays the saxophone out on the corner most days. Keeps to himself, you know?" },
                     { topic: 'his_notebook', keywords: "notebook, book, his, what was he doing", response: "Always scribbling in that old notebook of his. Looked like he was writing the next great American novel, or maybe just his grocery list. Who knows."},
                     {
                         topic: 'give_business_card',
-                        keywords: "business card, left, note, anything else, what did he leave",
+                        keywords: "business card, left, name, note, anything else, what did he leave",
                         response: "You know, he left this here the other day. Said I could have it. Some business card. If you're that interested, you can take it. It's just collecting dust.",
                         actions: [
                             { type: 'ADD_ITEM', itemId: 'item_business_card' as ItemId },
