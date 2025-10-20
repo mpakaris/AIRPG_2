@@ -198,7 +198,7 @@ async function handleConversation(state: PlayerState, playerInput: string, game:
         };
     }
 
-    const cannedResponsesForAI = npc.cannedResponses.map(r => ({ topic: r.topic, response: r.response }));
+    const cannedResponsesForAI = npc.cannedResponses.map(r => ({ topic: r.topic, response: r.response, keywords: r.keywords }));
 
     const { output: aiResponse, usage } = await selectNpcResponse({
         playerInput: playerInput,
@@ -252,9 +252,14 @@ async function handleObjectInteraction(state: PlayerState, playerInput: string, 
     }
 
     const availableInteractionCommands = Object.keys(currentInteractionState.commands);
+    
+    const promptContext = game.objectInteractionPromptContext 
+        ? game.objectInteractionPromptContext.replace('{{objectName}}', liveObject.name)
+        : `The player is currently examining the ${liveObject.name}. Your job is to map their input to one of the available actions.`;
+
 
     const { output: aiResponse, usage } = await guidePlayerWithNarrator({
-        promptContext: `The player is currently examining the ${liveObject.name}. Your job is to map their input to one of the available actions.`,
+        promptContext: promptContext,
         gameSpecifications: game.description,
         gameState: `Interacting with: ${liveObject.name}. Current state: ${currentInteractionState.description}`,
         playerCommand: playerInput,
@@ -274,7 +279,8 @@ async function handleObjectInteraction(state: PlayerState, playerInput: string, 
         
         return result;
     } else {
-        return { newState: state, messages: [agentMessage, createMessage('narrator', narratorName, currentInteractionState.description)] };
+        // If the command is invalid but the AI gave a characterful response, show it.
+        return { newState: state, messages: [agentMessage] };
     }
 }
 
@@ -296,10 +302,14 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
         const flag = examinedObjectFlag(itemInInventory.id);
         const isAlreadyExamined = newState.flags.includes(flag);
         
+        const messageText = isAlreadyExamined && itemInInventory.alternateDescription
+            ? itemInInventory.alternateDescription
+            : itemInInventory.description;
+
         const message = createMessage(
             'narrator', 
             narratorName, 
-            itemInInventory.description,
+            messageText,
             'image',
             { id: itemInInventory.id, game, state: newState, showEvenIfExamined: isAlreadyExamined ? false : true }
         );
@@ -325,7 +335,10 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
         
         const onExamine = liveObject.onExamine;
 
-        if (liveObject.isLocked && onExamine?.locked) {
+        if (isAlreadyExamined && onExamine?.alternate) {
+            messageContent = onExamine.alternate.message;
+            actions.push(...(onExamine.alternate.actions || []));
+        } else if (liveObject.isLocked && onExamine?.locked) {
             messageContent = onExamine.locked.message;
             actions.push(...(onExamine.locked.actions || []));
         } else if (!liveObject.isLocked && onExamine?.unlocked) {
@@ -571,22 +584,33 @@ function handlePassword(state: PlayerState, command: string, game: Game): Comman
     
     const commandLower = command.toLowerCase();
 
-    const targetObject = objectsInLocation.find(obj => {
+    // Allow multiple password keywords to be more flexible
+    const passwordKeywords = ['password', 'say', 'enter', 'use phrase'];
+    const usedKeyword = passwordKeywords.find(kw => commandLower.startsWith(kw));
+    
+    if (!usedKeyword) {
+         // This case should be rare if the AI is working, but it's a good fallback.
+         return { newState: state, messages: [createMessage('system', 'System', 'Invalid password command format.')] };
+    }
+
+    // Try to find the target object mentioned in the command
+    let targetObject = objectsInLocation.find(obj => {
         if (!obj.unlocksWithPhrase) return false;
         // Check if the object's name is in the command
         return commandLower.includes(obj.name.toLowerCase());
     });
 
-    if (!targetObject || !targetObject.unlocksWithPhrase) {
-        // Fallback for when the AI might just send the password without the object
-        const fallbackObject = objectsInLocation.find(obj => obj.isLocked && obj.unlocksWithPhrase);
-        if (fallbackObject) {
-            return processPassword(state, command, fallbackObject, game);
-        }
-        return { newState: state, messages: [createMessage('system', 'System', 'You can\'t use a password on anything here, or you need to be more specific.')] };
+    if (targetObject) {
+        return processPassword(state, command, targetObject, game);
+    }
+
+    // If no object is mentioned, but there's a unique object that takes a password, use that.
+    const passwordObjects = objectsInLocation.filter(obj => obj.isLocked && obj.unlocksWithPhrase);
+    if (passwordObjects.length === 1) {
+        return processPassword(state, command, passwordObjects[0], game);
     }
     
-    return processPassword(state, command, targetObject, game);
+    return { newState: state, messages: [createMessage('system', 'System', 'You need to be more specific about what you are using the password on.')] };
 }
 
 function processPassword(state: PlayerState, command: string, targetObject: GameObject & GameObjectState, game: Game): CommandResult {
@@ -594,8 +618,13 @@ function processPassword(state: PlayerState, command: string, targetObject: Game
     const commandLower = command.toLowerCase();
     const objectNameLower = targetObject.name.toLowerCase();
     
-    // Extract the phrase by removing the verb and object name from the command
-    let phrase = commandLower.replace("password", "").replace(objectNameLower, "").trim();
+    // Extract the phrase by removing keywords and object name from the command
+    const passwordKeywords = ['password for', 'password', 'say', 'enter', 'use phrase'];
+    let phrase = commandLower;
+    passwordKeywords.forEach(kw => {
+        phrase = phrase.replace(kw, '');
+    });
+    phrase = phrase.replace(objectNameLower, "").trim();
     phrase = phrase.replace(/^"|"$/g, '').replace(/^for |^is /,'').trim();
 
     if (!phrase) {
@@ -813,8 +842,25 @@ export async function processCommand(
         
         switch (verb) {
             case 'examine':
-                commandHandlerResult = handleExamine(currentState, restOfCommand, game);
-                break;
+            case 'look':
+                 if (restOfCommand.startsWith('at ')) {
+                     commandHandlerResult = handleExamine(currentState, restOfCommand.replace('at ', ''), game);
+                 } else if (restOfCommand.startsWith('around')) {
+                     commandHandlerResult = handleLook(currentState, game, lookAroundSummary);
+                 } else if (restOfCommand.startsWith('behind')) {
+                     const targetName = restOfCommand.replace('behind ', '').trim();
+                     const targetObject = objectsInLocation.find(obj => obj.name.toLowerCase().includes(targetName));
+                     if (targetObject?.onFailure?.['look behind']) {
+                         commandHandlerResult = { newState: currentState, messages: [createMessage('narrator', narratorName, targetObject.onFailure['look behind'])] };
+                     } else if (targetObject) {
+                         commandHandlerResult = { newState: currentState, messages: [createMessage('narrator', narratorName, targetObject.onFailure?.default || `You look behind the ${targetObject.name} and see nothing out of the ordinary.`)] };
+                     } else {
+                         commandHandlerResult = { newState: currentState, messages: [createMessage('narrator', narratorName, "You don't see that here.")] };
+                     }
+                 } else {
+                    commandHandlerResult = handleExamine(currentState, restOfCommand, game);
+                 }
+                 break;
             case 'take':
                 commandHandlerResult = handleTake(currentState, restOfCommand, game);
                 break;
@@ -832,27 +878,12 @@ export async function processCommand(
             case 'talk':
                  commandHandlerResult = await handleTalk(currentState, restOfCommand.replace('to ', ''), game);
                  break;
-            case 'look':
-                 if (restOfCommand.startsWith('around')) {
-                     commandHandlerResult = handleLook(currentState, game, lookAroundSummary);
-                 } else if (restOfCommand.startsWith('behind')) {
-                     const targetName = restOfCommand.replace('behind ', '').trim();
-                     const targetObject = objectsInLocation.find(obj => obj.name.toLowerCase().includes(targetName));
-                     if (targetObject?.onFailure?.['look behind']) {
-                         commandHandlerResult = { newState: currentState, messages: [createMessage('narrator', narratorName, targetObject.onFailure['look behind'])] };
-                     } else if (targetObject) {
-                         commandHandlerResult = { newState: currentState, messages: [createMessage('narrator', narratorName, targetObject.onFailure?.default || `You look behind the ${targetObject.name} and see nothing out of the ordinary.`)] };
-                     } else {
-                         commandHandlerResult = { newState: currentState, messages: [createMessage('narrator', narratorName, "You don't see that here.")] };
-                     }
-                 } else {
-                    commandHandlerResult = handleExamine(currentState, restOfCommand.replace('at ', ''), game);
-                 }
-                 break;
             case 'inventory':
                 commandHandlerResult = handleInventory(currentState, game);
                 break;
             case 'password':
+            case 'say':
+            case 'enter':
                 commandHandlerResult = handlePassword(currentState, commandToExecute, game);
                 break;
             case 'invalid':
@@ -918,18 +949,15 @@ export async function processCommand(
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
     const errorResponseMessage = createMessage('system', 'System', `Sorry, an error occurred: ${errorMessage}`);
     
-    // **FIX**: Append the error message to the existing log instead of creating a new one.
-    const messagesWithEror = [...allMessagesForSession, errorResponseMessage];
+    const messagesWithError = [...allMessagesForSession, errorResponseMessage];
     
-    // Save the full log including the error, but don't change the game state.
-    await logAndSave(userId, gameId, currentState, messagesWithEror);
+    await logAndSave(userId, gameId, currentState, messagesWithError);
     
     if (process.env.NEXT_PUBLIC_NODE_ENV === 'development') {
         await dispatchMessage(userId, errorResponseMessage);
     }
     
-    // Return the full message history including the error to the client.
-    return { newState: currentState, messages: messagesWithEror };
+    return { newState: currentState, messages: messagesWithError };
   }
 }
 

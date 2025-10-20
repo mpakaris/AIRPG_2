@@ -84,6 +84,7 @@ export type Item = {
   id: ItemId;
   name: string;
   description: string;
+  alternateDescription?: string;
   image?: ImageDetails;
   isTakable?: boolean;
   onTake?: {
@@ -116,6 +117,7 @@ export type GameObject = {
       default?: InteractionResult;
       locked?: InteractionResult;
       unlocked?: InteractionResult;
+      alternate?: InteractionResult;
   };
   
   isOpenable?: boolean;
@@ -145,7 +147,8 @@ export type GameObject = {
 };
 
 export type CannedResponse = {
-    topic: string; // greeting, mystery, etc. No longer a strict type.
+    topic: string;
+    keywords?: string; // comma-separated
     response: string;
     actions?: Action[];
 }
@@ -207,4 +210,5 @@ export type Game = {
   startChapterId: ChapterId;
   narratorName?: string;
   promptContext?: string;
+  objectInteractionPromptContext?: string;
 };

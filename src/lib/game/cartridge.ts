@@ -8,6 +8,7 @@ export const game: Game = {
   gameType: 'Escape Game',
   narratorName: 'Agent Sharma',
   promptContext: `You are Agent Sharma, the partner and "good conscience" of FBI agent Burt Macklin (the player). Your role is to act as a helpful Game Master, providing hints and keeping him on track towards the main goal. You are conversational and supportive. Your response MUST be enclosed in quotation marks. Do not use any markdown formatting like italics or bold.`,
+  objectInteractionPromptContext: `You are Agent Sharma, guiding your partner Burt Macklin, who is inspecting the {{objectName}}. Interpret his actions, offer encouragement, and provide in-character guidance based on the available commands. Keep your responses brief and helpful, maintaining your persona.`,
   startChapterId: 'ch1-the-cafe' as ChapterId,
   chapters: {
     'ch1-the-cafe': {
@@ -63,6 +64,9 @@ export const game: Game = {
                         actions: [
                              { type: 'START_INTERACTION', objectId: 'obj_brown_notebook' as GameObjectId, interactionStateId: 'start' }
                         ]
+                    },
+                    alternate: {
+                        message: "It's the same locked notebook. We still need that password."
                     }
                 },
                 onUnlock: {
@@ -152,7 +156,8 @@ export const game: Game = {
                 description: "A simple chalkboard menu.",
                 items: [],
                 onExamine: {
-                   default: { message: "Today's special is three scones for the price of two. A deal almost as sweet as justice." }
+                   default: { message: "Today's special is three scones for the price of two. A deal almost as sweet as justice." },
+                   alternate: { message: "The menu hasn't changed. The special is still about 'justice'."}
                 },
                 onFailure: {
                     default: "Probably best to leave the menu alone. It's not part of the case.",
@@ -173,7 +178,8 @@ export const game: Game = {
                 description: "A discarded local newspaper.",
                 items: [],
                  onExamine: {
-                   default: { message: "It's a copy of today's local paper. The main headlines discuss the current series of murders. The usual crazyness of a Metropolis." }
+                   default: { message: "It's a copy of today's local paper. The main headlines discuss the current series of murders. The usual crazyness of a Metropolis." },
+                   alternate: { message: "It's just today's paper. Nothing new here." }
                 },
                 onFailure: {
                     default: "The newspaper is old news. Let's stick to the facts of our case.",
@@ -192,11 +198,13 @@ export const game: Game = {
                 description: 'A small bookshelf in a reading corner.',
                 items: [],
                  onExamine: {
-                   default: { message: "A small bookshelf filled with used paperbacks. You scan the titles: 'The Art of the Deal', 'A Brief History of Time', 'How to Win Friends and Influence People', and a romance novel titled 'Justice for My Love'." }
+                   default: { message: "A small bookshelf filled with used paperbacks. You scan the titles: 'The Art of the Deal', 'A Brief History of Time', 'How to Win Friends and Influence People', and a romance novel titled 'Justice for My Love'. The word 'Justice' rings a bell..." },
+                   alternate: { message: "The bookshelf still has that romance novel, 'Justice for My Love'. That seems important."}
                 },
                 onFailure: {
                     default: "It's just a bookshelf. Let's not get sidetracked.",
                     take: "You can't take the whole bookshelf, Burt.",
+                    "take book": "That book seems important, but you can't take it. Maybe the title is the clue.",
                     move: "It's too heavy to move by yourself."
                 },
                 image: {
@@ -211,7 +219,8 @@ export const game: Game = {
                 description: "A colorful abstract painting.",
                 items: [],
                 onExamine: {
-                   default: { message: "An abstract painting hangs on the wall, its swirls of color adding a touch of modern art to the cafe's cozy atmosphere. It seems to be signed 'S.B.'" }
+                   default: { message: "An abstract painting hangs on the wall, its swirls of color adding a touch of modern art to the cafe's cozy atmosphere. It seems to be signed 'S.B.'" },
+                   alternate: { message: "It's the same abstract painting signed 'S.B.'." }
                 },
                 onFailure: {
                     default: "The painting is nice, but it's not a clue.",
@@ -230,6 +239,7 @@ export const game: Game = {
                 id: 'item_business_card' as ItemId,
                 name: 'Business Card',
                 description: 'A simple business card for a musician. It reads: "S A X O - The World\'s Best Sax Player". A phone number is listed, along with a handwritten number "1943" and the name "ROSE".',
+                alternateDescription: "The musician's business card. That name, 'ROSE', and the number '1943' seem significant.",
                 isTakable: true,
                 onTake: {
                     successMessage: "You pick up the business card.",
@@ -269,11 +279,12 @@ export const game: Game = {
                     { type: 'SET_FLAG', flag: 'has_talked_to_barista' as Flag }
                 ],
                 cannedResponses: [
-                    { topic: 'greeting', response: 'Just coffee today, or can I help with something else?' },
-                    { topic: 'mystery', response: "The man who just left? Ah, him. He's a regular. Comes in, gets his coffee, doesn't say much." },
-                    { topic: 'saxophonist', response: "He's a musician. Plays the saxophone out on the corner most days. Pretty good, too." },
+                    { topic: 'greeting', keywords: "hello, hi, how are you, coffee", response: 'Just coffee today, or can I help with something else?' },
+                    { topic: 'mystery', keywords: "man, regular, customer, guy, who left", response: "The man who just left? Ah, him. He's a regular. Comes in, gets his coffee, doesn't say much." },
+                    { topic: 'saxophonist', keywords: "musician, saxophone, job, name, background, what does he do", response: "He's a musician. Plays the saxophone out on the corner most days. Pretty good, too." },
                     {
                         topic: 'clue',
+                        keywords: "business card, left, note, anything else",
                         response: "You know, he left his business card here once. Said I could have it. If you're that interested, you can take it.",
                         actions: [
                             { type: 'ADD_ITEM', itemId: 'item_business_card' as ItemId },
@@ -283,8 +294,8 @@ export const game: Game = {
                             { type: 'END_CONVERSATION' }
                         ]
                     },
-                    { topic: 'insult', response: "Hey, watch your tone. I'm just here to pour coffee, not take abuse." },
-                    { topic: 'default', response: "Sorry, I'm just a barista. I wouldn't know anything about that." }
+                    { topic: 'insult', keywords: "stupid, idiot, useless", response: "Hey, watch your tone. I'm just here to pour coffee, not take abuse." },
+                    { topic: 'default', keywords: "default", response: "Sorry, I'm just a barista. I wouldn't know anything about that." }
                 ]
             },
             'npc_manager': {
@@ -299,13 +310,11 @@ export const game: Game = {
                     hint: 'female manager'
                 },
                 cannedResponses: [
-                    { topic: 'greeting', response: "Hello there! Isn't it a lovely day for a coffee?"},
-                    { topic: 'default', response: "I'm sorry, I'm not sure I can help with that. Can I get you a pastry?" }
+                    { topic: 'greeting', keywords: "hello, hi", response: "Hello there! Isn't it a lovely day for a coffee?"},
+                    { topic: 'default', keywords: "default", response: "I'm sorry, I'm not sure I can help with that. Can I get you a pastry?" }
                 ]
             }
         }
     }
   }
 };
-
-    

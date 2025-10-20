@@ -16,6 +16,7 @@ import type { TokenUsage } from '@/lib/game/types';
 const CannedResponseSchema = z.object({
   topic: z.string().describe('The topic or category of this response (e.g., greeting, mystery, saxophonist, insult, default).'),
   response: z.string().describe('The pre-written response text for this topic.'),
+  keywords: z.string().optional().describe('A comma-separated list of keywords that trigger this response.'),
 });
 
 const SelectNpcResponseInputSchema = z.object({
@@ -38,25 +39,24 @@ const prompt = ai.definePrompt({
   name: 'selectNpcResponsePrompt',
   input: {schema: SelectNpcResponseInputSchema},
   output: {schema: SelectNpcResponseOutputSchema},
-  prompt: `You are a game master AI. Your job is to select the most appropriate response for an NPC based on the player's input.
-
-You will be given the player's input and a list of available responses, each with a 'topic'. You must choose the topic that best fits the player's input.
+  prompt: `You are a game master AI. Your job is to select the most appropriate response for an NPC based on the player's input by matching their intent to a specific topic.
 
 Player Input: "{{playerInput}}"
 
 Available Responses for {{npcName}}:
 {{#each cannedResponses}}
-- Topic: "{{topic}}", Response: "{{response}}"
+- Topic: "{{topic}}", Keywords: "{{keywords}}", Response: "{{response}}"
 {{/each}}
 
 Analyze the player's input and select the single best response 'topic'.
 
-- If the player is being insulting, rude, or inappropriate, choose the 'insult' topic.
-- If the player is asking about the man who just left or a mystery, choose 'mystery'.
-- If the player asks about music, a musician, or a saxophone, choose 'saxophonist'.
-- If the player's input is vague or doesn't match any other topic, choose 'default'.
-- If the player asks a question that leads to the main clue, choose 'clue'.
-- If the player says hello or asks a simple question, choose 'greeting'.
+**Your Process:**
+1.  Read the Player Input carefully to understand their core question or statement.
+2.  Review the 'Keywords' for each 'Topic'.
+3.  Choose the 'Topic' whose 'Keywords' most closely match the player's input.
+4.  If the player is being insulting, rude, or inappropriate, always choose the 'insult' topic, regardless of other keywords.
+5.  If the player's input is a simple greeting like "hello" or "hi", choose 'greeting'.
+6.  If no other topic is a good match, you MUST choose the 'default' topic. Do not try to find a "closest" match if it's not relevant.
 
 You must only output the chosen topic.
 `,
