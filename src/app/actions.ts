@@ -1,10 +1,12 @@
 
 'use server';
 
-import { guidePlayerWithNarrator } from '@/ai/flows/guide-player-with-narrator';
-import { selectNpcResponse } from '@/ai/flows/select-npc-response';
-import { generateNpcChatter } from '@/ai/flows/generate-npc-chatter';
-import { generateStoryFromLogs } from '@/ai/flows/generate-story-from-logs';
+import { 
+  guidePlayerWithNarrator,
+  selectNpcResponse,
+  generateNpcChatter,
+  generateStoryFromLogs
+} from '@/ai';
 import { game as gameCartridge } from '@/lib/game/cartridge';
 import { AVAILABLE_COMMANDS } from '@/lib/game/commands';
 import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectId, GameObjectState, ItemId, Flag, Action, Chapter, ChapterId, ImageDetails, GameId, User, TokenUsage, Story } from '@/lib/game/types';
@@ -136,8 +138,6 @@ function processActions(initialState: PlayerState, actions: Action[], game: Game
                     newState.activeConversationWith = null;
                 }
                 break;
-            // START_INTERACTION and END_INTERACTION are now simplified.
-            // No more complex multi-step interactions for now.
             case 'START_INTERACTION':
                 newState.interactingWithObject = action.objectId;
                 break;
@@ -149,7 +149,6 @@ function processActions(initialState: PlayerState, actions: Action[], game: Game
                 }
                 break;
             case 'SET_INTERACTION_STATE':
-                 // This is kept for potential future use, but is not currently part of the main loop.
                  if(newState.interactingWithObject) {
                     newState.objectStates[newState.interactingWithObject] = {
                         ...newState.objectStates[newState.interactingWithObject],
@@ -742,7 +741,7 @@ export async function processCommand(
     const playerMessage = createMessage('player', 'You', playerInput);
     allMessagesForSession.push(playerMessage);
     
-    let commandHandlerResult: CommandResult;
+    let commandHandlerResult: CommandResult | null = null;
 
     // Dev commands
     if (lowerInput.startsWith('dev:complete_')) {
@@ -762,15 +761,10 @@ export async function processCommand(
     // Conversation commands
     else if (currentState.activeConversationWith) {
         commandHandlerResult = await handleConversation(currentState, playerInput, game);
-    } 
-    // Simplified interaction exit
-    else if (currentState.interactingWithObject && (lowerInput === 'exit' || lowerInput === 'close')) {
-        commandHandlerResult = processActions(currentState, [{type: 'END_INTERACTION'}], game);
     }
     // Interaction Trap Guardrail
     else if (currentState.interactingWithObject) {
         const interactingWith = chapter.gameObjects[currentState.interactingWithObject];
-        // Check if player's input mentions another object in the location
         const mentionsAnotherObject = Object.values(chapter.gameObjects).some(obj => 
             obj.id !== interactingWith.id && lowerInput.includes(obj.name.toLowerCase())
         );
@@ -781,6 +775,7 @@ export async function processCommand(
                 narratorName, 
                 `Whoa there, Burt. We're zeroed in on the ${interactingWith.name} right now. If you want to check something else, we need to 'exit' this first.`
             );
+            // This is a special case: we just return the message and don't change state.
             return { newState: currentState, messages: [playerMessage, trapMessage] };
         }
     }
@@ -896,6 +891,14 @@ export async function processCommand(
             case 'enter':
                 commandHandlerResult = processPassword(currentState, commandToExecute, game);
                 break;
+            case 'close':
+            case 'exit':
+                if (currentState.interactingWithObject) {
+                    commandHandlerResult = processActions(currentState, [{type: 'END_INTERACTION'}], game);
+                } else {
+                    commandHandlerResult = { newState: currentState, messages: [agentMessage] };
+                }
+                break;
             case 'invalid':
                  commandHandlerResult = { newState: currentState, messages: [agentMessage] };
                  break;
@@ -913,7 +916,6 @@ export async function processCommand(
                 }
                 break;
         }
-        
         
         const hasSystemMessage = commandHandlerResult.messages.some(m => m.sender === 'system');
         // Only add agent message if the command wasn't "invalid" and didn't already produce a system message
