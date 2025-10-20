@@ -487,7 +487,7 @@ function handleGo(state: PlayerState, targetName: string, game: Game): CommandRe
                  return { newState: state, messages: [createMessage('system', 'System', `There is no next chapter defined.`)] };
             }
         } else {
-            return { newState: state, messages: [createMessage('agent', narratorName, `Hold on, Burt. We still need to ${chapter.goal.toLowerCase()} here in ${currentLocation.name}. We can't move on until we've figured that out.`)] };
+            return { newState: state, messages: [createMessage('agent', narratorName, `Hold on, Macklin. We still need to ${chapter.goal.toLowerCase()} here in ${currentLocation.name}. We can't move on until we've figured that out.`)] };
         }
     }
 
