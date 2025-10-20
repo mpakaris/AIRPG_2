@@ -27,7 +27,6 @@ export const game: Game = {
         objectives: [
             { flag: 'has_talked_to_barista' as Flag, label: 'Talk to the Barista' },
             { flag: 'has_received_business_card' as Flag, label: 'Get the Business Card' },
-            { flag: 'has_seen_notebook_url' as Flag, label: 'Find the Notebook Minigame' },
             { flag: 'has_unlocked_notebook' as Flag, label: 'Unlock the Notebook' },
             { flag: 'notebook_interaction_complete' as Flag, label: 'View the Notebook Contents' },
         ],
@@ -47,7 +46,8 @@ export const game: Game = {
                 id: 'obj_brown_notebook' as GameObjectId,
                 name: 'Brown Notebook',
                 description: 'A worn, leather-bound notebook. It feels heavy with secrets.',
-                    items: [],
+                alternateDescription: "It's the same locked notebook. We still need that password.",
+                items: [],
                 isOpenable: true,
                 isLocked: true,
                 unlocksWithPhrase: 'Justice for Silas Bloom',
@@ -154,6 +154,7 @@ export const game: Game = {
                 id: 'obj_chalkboard_menu' as GameObjectId,
                 name: 'Chalkboard Menu',
                 description: "A simple chalkboard menu.",
+                alternateDescription: "The menu hasn't changed. The special is still about 'justice'.",
                 items: [],
                 onExamine: {
                    default: { message: "Today's special is three scones for the price of two. A deal almost as sweet as justice." },
@@ -176,6 +177,7 @@ export const game: Game = {
                 id: 'obj_newspaper' as GameObjectId,
                 name: 'Newspaper',
                 description: "A discarded local newspaper.",
+                alternateDescription: "It's just today's paper. Nothing new here.",
                 items: [],
                  onExamine: {
                    default: { message: "It's a copy of today's local paper. The main headlines discuss the current series of murders. The usual crazyness of a Metropolis." },
@@ -196,9 +198,15 @@ export const game: Game = {
                 id: 'obj_bookshelf' as GameObjectId,
                 name: 'Bookshelf',
                 description: 'A small bookshelf in a reading corner.',
+                alternateDescription: "The bookshelf still has that romance novel, 'Justice for My Love'. That seems important.",
                 items: [],
                  onExamine: {
-                   default: { message: "A small bookshelf filled with used paperbacks. You scan the titles: 'The Art of the Deal', 'A Brief History of Time', 'How to Win Friends and Influence People', and a romance novel titled 'Justice for My Love'. The word 'Justice' rings a bell..." },
+                   default: { 
+                        message: "A small bookshelf filled with used paperbacks. You scan the titles: 'The Art of the Deal', 'A Brief History of Time', 'How to Win Friends and Influence People', and a romance novel titled 'Justice for My Love'. The word 'Justice' rings a bell..." ,
+                        actions: [
+                            { type: 'SET_FLAG', flag: 'has_seen_justice_book' as Flag }
+                        ]
+                    },
                    alternate: { message: "The bookshelf still has that romance novel, 'Justice for My Love'. That seems important."}
                 },
                 onFailure: {
@@ -217,6 +225,7 @@ export const game: Game = {
                 id: 'obj_painting' as GameObjectId,
                 name: 'Painting on the wall',
                 description: "A colorful abstract painting.",
+                alternateDescription: "It's the same abstract painting signed 'S.B.'.",
                 items: [],
                 onExamine: {
                    default: { message: "An abstract painting hangs on the wall, its swirls of color adding a touch of modern art to the cafe's cozy atmosphere. It seems to be signed 'S.B.'" },
@@ -267,9 +276,10 @@ export const game: Game = {
             'npc_barista': {
                 id: 'npc_barista' as NpcId,
                 name: 'Barista',
-                description: 'A tired-looking male barista. He seems to have seen a lot in this cafe and is not easily impressed.',
-                welcomeMessage: 'Good Morning Sir, how can I help you? Would you like to try our Specialty Coffee today?',
-                goodbyeMessage: "I'm sorry, mister. But I do have to return to my work. I wish you all the best.",
+                description: 'A tired-looking man in his late 20s, with faded tattoos and a cynical arch to his eyebrow. He seems to have seen a thousand stories like yours and is not easily impressed.',
+                dialogueType: 'scripted',
+                welcomeMessage: 'What can I get for you? Or are you just here to brood? Either is fine.',
+                goodbyeMessage: "Alright, I've got cappuccinos to craft. Good luck with... whatever it is you're doing.",
                 image: {
                     url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759241505/Cafe_barrista_hpwona.png',
                     description: 'A portrait of the cafe barista.',
@@ -279,40 +289,40 @@ export const game: Game = {
                     { type: 'SET_FLAG', flag: 'has_talked_to_barista' as Flag }
                 ],
                 cannedResponses: [
-                    { topic: 'greeting', keywords: "hello, hi, how are you, coffee", response: 'Just coffee today, or can I help with something else?' },
-                    { topic: 'mystery', keywords: "man, regular, customer, guy, who left", response: "The man who just left? Ah, him. He's a regular. Comes in, gets his coffee, doesn't say much." },
-                    { topic: 'saxophonist', keywords: "musician, saxophone, job, name, background, what does he do", response: "He's a musician. Plays the saxophone out on the corner most days. Pretty good, too." },
+                    { topic: 'greeting', keywords: "hello, hi, how are you", response: 'Another day, another dollar. What do you need?' },
+                    { topic: 'coffee', keywords: "coffee, drink, menu, order, buy", response: 'The coffee is hot and the pastries are day-old. The menu is on the board. Let me know if you can decipher my handwriting.' },
+                    { topic: 'man_in_black', keywords: "man, regular, customer, guy, who left", response: "The guy in the black coat? Yeah, he's a regular. Comes in, stares at his notebook, doesn't say much. Pays in cash. My favorite kind of customer." },
+                    { topic: 'musician', keywords: "musician, saxophone, job, name, background, what does he do", response: "I hear he's a musician. Plays the saxophone out on the corner most days. Keeps to himself, you know?" },
+                    { topic: 'his_notebook', keywords: "notebook, book, his, what was he doing", response: "Always scribbling in that old notebook of his. Looked like he was writing the next great American novel, or maybe just his grocery list. Who knows."},
                     {
-                        topic: 'clue',
-                        keywords: "business card, left, note, anything else",
-                        response: "You know, he left his business card here once. Said I could have it. If you're that interested, you can take it.",
+                        topic: 'give_business_card',
+                        keywords: "business card, left, note, anything else, what did he leave",
+                        response: "You know, he left this here the other day. Said I could have it. Some business card. If you're that interested, you can take it. It's just collecting dust.",
                         actions: [
                             { type: 'ADD_ITEM', itemId: 'item_business_card' as ItemId },
                             { type: 'SET_FLAG', flag: 'has_received_business_card' as Flag },
-                            { type: 'SHOW_MESSAGE', sender: 'narrator', senderName: 'Narrator', content: "The barista hands you a business card. It's been added to your inventory.", messageType: 'image', imageId: 'item_business_card' },
-                            { type: 'SHOW_MESSAGE', sender: 'agent', senderName: 'Agent Sharma', content: "Oh Burt you genious! Your instincts won, one more time! Maybe that is the key to open that Notebook!" },
+                            { type: 'SHOW_MESSAGE', sender: 'narrator', senderName: 'Narrator', content: "The barista slides a business card across the counter. It's been added to your inventory.", messageType: 'image', imageId: 'item_business_card' },
+                            { type: 'SHOW_MESSAGE', sender: 'agent', senderName: 'Agent Sharma', content: "Good work, Burt. This could be the lead we need." },
                             { type: 'END_CONVERSATION' }
                         ]
                     },
-                    { topic: 'insult', keywords: "stupid, idiot, useless", response: "Hey, watch your tone. I'm just here to pour coffee, not take abuse." },
-                    { topic: 'default', keywords: "default", response: "Sorry, I'm just a barista. I wouldn't know anything about that." }
+                    { topic: 'insult', keywords: "stupid, idiot, useless, rude", response: "Hey, I get paid to pour coffee, not to be your punching bag. Watch it." },
+                    { topic: 'default', keywords: "default", response: "Look, I just work here. I pour coffee, I wipe counters. You're the detective." }
                 ]
             },
             'npc_manager': {
                 id: 'npc_manager' as NpcId,
                 name: 'Cafe Manager',
-                description: 'A cheerful, slightly-too-energetic female manager.',
-                welcomeMessage: "Welcome! May I interest you in our special today? You get a cheese cake with every Coffee you order!",
-                goodbyeMessage: "Have a great day!",
+                description: 'A cheerful woman in her late 40s, with a permanent, slightly-too-wide smile. She radiates a relentless positivity that feels slightly out of place in the grim city.',
+                dialogueType: 'freeform',
+                persona: "You are Brenda, the relentlessly cheerful and bubbly manager of 'The Daily Grind' cafe. You see the best in everyone and everything. You love talking about your 'Artisan Coffee of the Week', the daily specials, and the local community art you hang on the walls. You are completely oblivious to any crime or mystery. Your job is to be a fountain of pleasant, slightly-vacant small talk. You must not, under any circumstances, talk about the case, murders, or anything negative. Keep your responses short, sweet, and upbeat!",
+                welcomeMessage: "Welcome to The Daily Grind! How can I make your day a little brighter? Can I interest you in a 'Sunshine Muffin'? They're 10% off!",
+                goodbyeMessage: "Have a wonderfully caffeinated day! Come back soon!",
                 image: {
                     url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759604054/cafe_manager_punwhs.png',
                     description: 'Portrait of the cafe manager.',
                     hint: 'female manager'
-                },
-                cannedResponses: [
-                    { topic: 'greeting', keywords: "hello, hi", response: "Hello there! Isn't it a lovely day for a coffee?"},
-                    { topic: 'default', keywords: "default", response: "I'm sorry, I'm not sure I can help with that. Can I get you a pastry?" }
-                ]
+                }
             }
         }
     }
