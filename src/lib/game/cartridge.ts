@@ -8,12 +8,13 @@ export const game: Game = {
   setting: "Modern-day USA, 2025",
   gameType: 'Escape Game',
   narratorName: 'Agent Sharma',
-  promptContext: `You are the AI narrator, Agent Sharma. Your primary job is to interpret your partner's (Burt Macklin's) raw text input and map it to a valid game command. You must also provide a helpful, in-character response as a collaborative partner.
+  promptContext: `You are the AI narrator, Agent Sharma. Your primary job is to interpret your partner's (Burt's) raw text input and map it to a valid game command. You must also provide a helpful, in-character response as a collaborative partner.
 
 **CRITICAL RULES:**
 - Your tone is that of a supportive, intelligent, and sometimes witty colleague. You are equals.
 - Always refer to the player as "Burt".
 - Your goal is to translate player intent into a valid game action.
+- When the player is in an interaction (e.g., examining an object closely) and tries to interact with a *different* object, your response MUST be: "Whoa there, Burt. We're zeroed in on the [current object] right now. If you want to check something else, we need to 'exit' this first." and the command MUST be 'invalid'.
 
 **Your Task:**
 1.  **Analyze Intent:** Understand what your partner, Burt, is trying to do as a game action.
@@ -27,17 +28,17 @@ export const game: Game = {
     *   If the chapter is complete and Burt wants to go to the next location (e.g., "let's go to the jazz club"), the command is 'go next_chapter'.
     *   **If the input is an illogical action or not a direct attempt to perform a game action, you MUST set the 'commandToExecute' to "invalid".** This includes conversational questions.
 3.  **Provide Guidance:** Write a brief, in-character response (1-2 sentences) as Agent Sharma.
-    *   If the command is **valid**, confirm the action with a neutral, professional phrase. Examples: "Alright, checking it out.", "Copy that.", "Good call.", "Smart move."
+    *   If the command is **valid**, confirm the action with a neutral, professional phrase. Examples: "Alright, checking it out.", "Copy that.", "Let's see.", "Makes sense."
     *   If the command is **invalid due to being illogical**, your response must gently explain why or nudge the player back on track. ("Easy there, Burt. I don't think vandalism is in our playbook.").
     *   If the command is **invalid due to being conversational** (e.g., "what now?", "who are you?", "what's the date?"), answer the question briefly if it's simple (like your name is Sharma, the location name is in the game state), then gently pivot back to the case by asking a question about the investigation.
 
 **Example 1 (Valid Command):**
 *Player Input:* "I want to see what that newspaper says."
-*Your Response:* { "agentResponse": "Good call. Let's see what the paper says.", "commandToExecute": "examine newspaper" }
+*Your Response:* { "agentResponse": "Alright. Let's see what the paper says.", "commandToExecute": "examine newspaper" }
 
 **Example 2 (Interaction Trap):**
 *Player Input:* "examine bookshelf" (while interacting with the notebook)
-*Your Response:* { "agentResponse": "We're focused on the notebook right now, Burt. If you want to check the bookshelf, we should 'exit' this first.", "commandToExecute": "invalid" }
+*Your Response:* { "agentResponse": "Whoa there, Burt. We're zeroed in on the notebook right now. If you want to check the bookshelf, we should 'exit' this first.", "commandToExecute": "invalid" }
 
 **Example 3 (Password):**
 *Player Input:* "I say to the notebook: JUSTICE FOR SILAS BLOOM"
@@ -100,18 +101,10 @@ export const game: Game = {
                 unlocksWithPhrase: 'Justice for Silas Bloom',
                 onExamine: {
                     locked: {
-                        message: "A lock prevents it from being opened without the right password. You'll need to figure out the phrase.",
-                        actions: [
-                            { type: 'SET_FLAG', flag: 'has_seen_notebook_lock' as Flag },
-                            { type: 'START_INTERACTION', objectId: 'obj_brown_notebook' as GameObjectId, interactionStateId: 'locked' }
-                        ]
+                        message: "A lock prevents it from being opened without the right password. You'll need to figure out the phrase."
                     },
                     unlocked: {
-                        message: "The notebook is open. Inside, you see a small data chip next to a folded newspaper article. You can use 'watch video' or 'read article' to examine the contents.",
-                        actions: [
-                            { type: 'SET_FLAG', flag: 'notebook_is_open' as Flag },
-                             { type: 'START_INTERACTION', objectId: 'obj_brown_notebook' as GameObjectId, interactionStateId: 'unlocked' }
-                        ]
+                        message: "The notebook is open. Inside, you see a small data chip next to a folded newspaper article. You can use 'watch video' or 'read article' to examine the contents."
                     },
                     alternate: {
                         message: "It's the notebook we unlocked. Inside is the data chip and the article. You can use 'watch video' or 'read article' to examine the contents."
@@ -122,8 +115,7 @@ export const game: Game = {
                     failMessage: "That password doesn't work. The lock remains stubbornly shut.",
                     actions: [
                          { type: 'SET_FLAG', flag: 'has_unlocked_notebook' as Flag },
-                         { type: 'SET_FLAG', flag: 'notebook_is_open' as Flag },
-                         { type: 'SET_INTERACTION_STATE', state: 'unlocked' }
+                         { type: 'SET_FLAG', flag: 'notebook_is_open' as Flag }
                     ]
                 },
                 onFailure: {
@@ -143,36 +135,6 @@ export const game: Game = {
                     url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759242346/Notebook_unlocked_fpxqgl.jpg',
                     description: 'An unlocked notebook.',
                     hint: 'unlocked notebook'
-                },
-                interactionStates: {
-                    'locked': {
-                        id: 'locked',
-                        description: 'The notebook is locked. The player might try a password.',
-                        commands: {
-                            'password': [], // This is handled by the global password command
-                            'exit': [{ type: 'END_INTERACTION' }]
-                        }
-                    },
-                    'unlocked': {
-                        id: 'unlocked',
-                        description: 'The notebook is open, showing a data chip and an article.',
-                        commands: {
-                            'watch video': [
-                                { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759241547/0930_eit8he.mov', messageType: 'video'},
-                                { type: 'SHOW_MESSAGE', sender: 'agent', content: "Silas Bloom... I've never heard that name before. He seemed like a talented musician. And that song for Rose... sounds like they were deeply in love." },
-                                { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'Beside the data chip, you see a folded newspaper article.' },
-                                { type: 'SET_FLAG', flag: 'notebook_video_watched' as Flag }
-                            ],
-                            'read article': [
-                                { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'A newspaper article about Silas Bloom.', messageType: 'article', imageId: 'newspaper_article' },
-                                { type: 'SHOW_MESSAGE', sender: 'agent', content: "Wait a second, Burt... the article mentions an Agent Macklin. That can't be a coincidence. Is he related to you? This could be about your own family." },
-                                { type: 'SET_FLAG', flag: 'notebook_article_read' as Flag },
-                                { type: 'SET_FLAG', flag: 'notebook_interaction_complete' as Flag },
-                                { type: 'END_INTERACTION' }
-                            ],
-                            'exit': [{ type: 'END_INTERACTION' }]
-                        }
-                    }
                 }
             },
             'obj_chalkboard_menu': {
@@ -334,6 +296,7 @@ export const game: Game = {
                             { type: 'ADD_ITEM', itemId: 'item_business_card' as ItemId },
                             { type: 'SET_FLAG', flag: 'has_received_business_card' as Flag },
                             { type: 'SHOW_MESSAGE', sender: 'narrator', senderName: 'Narrator', content: "The barista slides a business card across the counter. It's been added to your inventory.", messageType: 'image', imageId: 'item_business_card' },
+                            { type: 'SHOW_MESSAGE', sender: 'agent', content: "Good work, Burt. This could be the lead we need."},
                             { type: 'END_CONVERSATION' }
                         ]
                     },
@@ -346,7 +309,7 @@ export const game: Game = {
                 name: 'Cafe Manager',
                 description: 'A cheerful woman in her late 40s, with a permanent, slightly-too-wide smile. She radiates a relentless positivity that feels slightly out of place in the grim city.',
                 dialogueType: 'freeform',
-                persona: "You are Brenda, the relentlessly cheerful and bubbly manager of 'The Daily Grind' cafe. You see the best in everyone and everything. You love talking about your 'Artisan Coffee of the Week', the daily specials, and the local community art you hang on the walls. You are completely oblivious to any crime or mystery. Your job is to be a fountain of pleasant, slightly-vacant small talk. You must not, under any circumstances, talk about the case, murders, or anything negative. Keep your responses short, sweet, and upbeat! Use modern currency like dollars and cents.",
+                persona: "You are Brenda, the relentlessly cheerful and bubbly manager of 'The Daily Grind' cafe. You see the best in everyone and everything. You love talking about your 'Artisan Coffee of the Week', the daily specials, and the local community art you hang on the walls. You are completely oblivious to any crime or mystery. Your job is to be a fountain of pleasant, slightly-vacant small talk. Keep your responses short, sweet, and upbeat! Use modern currency like dollars and cents.",
                 welcomeMessage: "Welcome to The Daily Grind! How can I make your day a little brighter? Can I interest you in a 'Sunshine Muffin'? They're 10% off!",
                 goodbyeMessage: "Have a wonderfully caffeinated day! Come back soon!",
                 maxInteractions: 10,
@@ -361,8 +324,3 @@ export const game: Game = {
     }
   }
 };
-
-    
-    
-
-    
