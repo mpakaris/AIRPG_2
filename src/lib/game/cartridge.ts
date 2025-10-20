@@ -283,6 +283,7 @@ export const game: Game = {
                 goodbyeMessage: "Alright, I've got cappuccinos to craft. Good luck with... whatever it is you're doing.",
                 completionFlag: 'has_received_business_card' as Flag,
                 finalResponse: "Look, I told you all I know. I've got work to do.",
+                persona: "You are a tired, cynical barista in a downtown cafe. You've seen it all and are not impressed by much. Your primary focus is on making coffee and dealing with customers as efficiently as possible. You will not discuss the case or any past events further, deflecting any questions with short, dismissive, but not overly rude answers. You just want to do your job.",
                 image: {
                     url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759241505/Cafe_barrista_hpwona.png',
                     description: 'A portrait of the cafe barista.',
@@ -335,3 +336,5 @@ export const game: Game = {
     }
   }
 };
+
+    

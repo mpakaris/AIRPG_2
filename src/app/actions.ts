@@ -179,6 +179,29 @@ function isEndingConversation(input: string): boolean {
     });
 }
 
+async function handleFreeformChat(npc: NPC, state: PlayerState, playerInput: string, game: Game): Promise<CommandResult> {
+    const chapter = game.chapters[state.currentChapterId];
+    let newState = { ...state, conversationCounts: { ...state.conversationCounts } };
+    newState.conversationCounts[npc.id] = (newState.conversationCounts[npc.id] || 0) + 1;
+
+    const interactionCount = newState.conversationCounts[npc.id];
+    if (npc.maxInteractions && interactionCount > npc.maxInteractions && npc.interactionLimitResponse) {
+        return { newState, messages: [createMessage(npc.id, npc.name, `"${npc.interactionLimitResponse}"`)] };
+    }
+
+    const location = chapter.locations[newState.currentLocationId];
+    const { output: aiResponse, usage } = await generateNpcChatter({
+        playerInput: playerInput,
+        npcName: npc.name,
+        npcPersona: npc.persona || 'A generic townsperson.',
+        locationDescription: location.description,
+        gameSetting: game.setting || 'Modern-day USA, 2025'
+    });
+    
+    const message = createMessage(npc.id, npc.name, `"${aiResponse.npcResponse}"`, 'text', undefined, usage);
+    return { newState, messages: [message] };
+}
+
 
 async function handleConversation(state: PlayerState, playerInput: string, game: Game): Promise<CommandResult> {
     if (!state.activeConversationWith) {
@@ -188,18 +211,23 @@ async function handleConversation(state: PlayerState, playerInput: string, game:
     const chapter = game.chapters[state.currentChapterId];
     const npcId = state.activeConversationWith;
     const npc = chapter.npcs[npcId];
-
-    let newState = { ...state, conversationCounts: { ...state.conversationCounts } };
-    newState.conversationCounts[npcId] = (newState.conversationCounts[npcId] || 0) + 1;
+    let newState = { ...state };
 
     if (isEndingConversation(playerInput)) {
         return processActions(newState, [{type: 'END_CONVERSATION'}], game);
     }
     
-    // Handle SCRIPTED NPCs
+    const completionFlag = npc.completionFlag;
+    const isQuestComplete = completionFlag && newState.flags.includes(completionFlag);
+
+    // If the NPC's quest is complete AND they have a persona, they become a freeform chatterer.
+    if (isQuestComplete && npc.dialogueType === 'scripted' && npc.persona) {
+        return handleFreeformChat(npc, newState, playerInput, game);
+    }
+
+    // Handle SCRIPTED NPCs (or completed ones without a persona)
     if (npc.dialogueType === 'scripted') {
-        const completionFlag = npc.completionFlag;
-        if (completionFlag && newState.flags.includes(completionFlag) && npc.finalResponse) {
+        if (isQuestComplete && npc.finalResponse) {
              return { newState, messages: [createMessage(npcId, npc.name, `"${npc.finalResponse}"`)] };
         }
         
@@ -234,22 +262,7 @@ async function handleConversation(state: PlayerState, playerInput: string, game:
 
     // Handle FREEFORM NPCs
     if (npc.dialogueType === 'freeform') {
-        const interactionCount = newState.conversationCounts[npcId];
-        if (npc.maxInteractions && interactionCount > npc.maxInteractions && npc.interactionLimitResponse) {
-            return { newState, messages: [createMessage(npcId, npc.name, `"${npc.interactionLimitResponse}"`)] };
-        }
-
-        const location = chapter.locations[newState.currentLocationId];
-        const { output: aiResponse, usage } = await generateNpcChatter({
-            playerInput: playerInput,
-            npcName: npc.name,
-            npcPersona: npc.persona || 'A generic townsperson.',
-            locationDescription: location.description,
-            gameSetting: game.setting || 'Modern-day USA, 2025'
-        });
-        
-        const message = createMessage(npcId, npc.name, `"${aiResponse.npcResponse}"`, 'text', undefined, usage);
-        return { newState, messages: [message] };
+        return handleFreeformChat(npc, newState, playerInput, game);
     }
 
     // Fallback if dialogueType is not set
