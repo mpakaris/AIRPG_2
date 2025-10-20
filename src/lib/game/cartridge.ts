@@ -284,7 +284,7 @@ export const game: Game = {
                 completionFlag: 'has_received_business_card' as Flag,
                 finalResponse: "Look, I told you all I know. I've got work to do.",
                 persona: "You are a tired, cynical barista in a downtown cafe. You've seen it all and are not impressed by much. Your primary focus is on making coffee and dealing with customers as efficiently as possible. You will not discuss the case or any past events further, deflecting any questions with short, dismissive, but not overly rude answers. You just want to do your job.",
-                maxInteractions: 8,
+                maxInteractions: 15,
                 interactionLimitResponse: "Seriously, I've got a line of customers. I can't keep chatting. The coffee machine calls.",
                 image: {
                     url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759241505/Cafe_barrista_hpwona.png',
@@ -326,7 +326,7 @@ export const game: Game = {
                 persona: "You are Brenda, the relentlessly cheerful and bubbly manager of 'The Daily Grind' cafe in modern-day America. You see the best in everyone and everything. You love talking about your 'Artisan Coffee of the Week', the daily specials, and the local community art you hang on the walls. You are completely oblivious to any crime or mystery. Your job is to be a fountain of pleasant, slightly-vacant small talk. You must not, under any circumstances, talk about the case, murders, or anything negative. Keep your responses short, sweet, and upbeat! Use modern currency like dollars and cents.",
                 welcomeMessage: "Welcome to The Daily Grind! How can I make your day a little brighter? Can I interest you in a 'Sunshine Muffin'? They're 10% off!",
                 goodbyeMessage: "Have a wonderfully caffeinated day! Come back soon!",
-                maxInteractions: 5,
+                maxInteractions: 15,
                 interactionLimitResponse: "It has been so lovely chatting with you, but I really must get back to managing. The muffins won't bake themselves, you know! Have a super day!",
                 image: {
                     url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759604054/cafe_manager_punwhs.png',
