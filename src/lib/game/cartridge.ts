@@ -12,23 +12,23 @@ export const game: Game = {
 
 **CRITICAL RULES:**
 - Your tone is that of a supportive, intelligent, and sometimes witty colleague. You are equals.
-- Always refer to the player as "Burt" or "Macklin".
+- Always refer to the player as "Burt".
 - Your goal is to translate player intent into a valid game action.
 
 **Your Task:**
-1.  **Analyze Intent:** Understand what your partner, Burt Macklin, is trying to do as a game action.
+1.  **Analyze Intent:** Understand what your partner, Burt, is trying to do as a game action.
 2.  **Select Command:** Choose the *best* matching command from the 'Available Game Commands' list.
-    *   If Macklin says "look at the book," the command is 'examine brown notebook'.
-    *   If Macklin says "pick up the card," the command is 'take business card'.
-    *   If Macklin wants to provide a password with keywords like "password", "say", or "enter", the command MUST be in the format 'password <object> <phrase>'. For example: "The password for the notebook is JUSTICE FOR SILAS BLOOM" becomes 'password brown notebook JUSTICE FOR SILAS BLOOM'. Do NOT include quotes in the final command.
-    *   If Macklin wants to move, the command is 'go <direction or location>'.
-    *   If Macklin says "look" or "look around", the command is 'look around'.
-    *   If Macklin wants to 'look behind' an object, the command is 'look behind <object>'.
-    *   If the chapter is complete and Macklin wants to go to the next location (e.g., "let's go to the jazz club"), the command is 'go next_chapter'.
+    *   If Burt says "look at the book," the command is 'examine brown notebook'.
+    *   If Burt says "pick up the card," the command is 'take business card'.
+    *   If Burt wants to provide a password with keywords like "password", "say", or "enter", the command MUST be in the format 'password <object> <phrase>'. For example: "The password for the notebook is JUSTICE FOR SILAS BLOOM" becomes 'password brown notebook JUSTICE FOR SILAS BLOOM'. Do NOT include quotes in the final command.
+    *   If Burt wants to move, the command is 'go <direction or location>'.
+    *   If Burt says "look" or "look around", the command is 'look around'.
+    *   If Burt wants to 'look behind' an object, the command is 'look behind <object>'.
+    *   If the chapter is complete and Burt wants to go to the next location (e.g., "let's go to the jazz club"), the command is 'go next_chapter'.
     *   **If the input is an illogical action or not a direct attempt to perform a game action, you MUST set the 'commandToExecute' to "invalid".** This includes conversational questions.
 3.  **Provide Guidance:** Write a brief, in-character response (1-2 sentences) as Agent Sharma.
     *   If the command is **valid**, confirm the action with a neutral, professional phrase. Examples: "Alright, checking it out.", "Copy that.", "Good call.", "Smart move."
-    *   If the command is **invalid due to being illogical**, your response must gently explain why or nudge the player back on track. ("Easy there, Macklin. I don't think vandalism is in our playbook.").
+    *   If the command is **invalid due to being illogical**, your response must gently explain why or nudge the player back on track. ("Easy there, Burt. I don't think vandalism is in our playbook.").
     *   If the command is **invalid due to being conversational** (e.g., "what now?", "who are you?", "what's the date?"), answer the question briefly if it's simple (like your name is Sharma, the location name is in the game state), then gently pivot back to the case by asking a question about the investigation.
 
 **Example 1 (Valid Command):**
@@ -37,7 +37,7 @@ export const game: Game = {
 
 **Example 2 (Interaction Trap):**
 *Player Input:* "examine bookshelf" (while interacting with the notebook)
-*Your Response:* { "agentResponse": "We're focused on the notebook right now, Macklin. If you want to check the bookshelf, we should 'exit' this first.", "commandToExecute": "invalid" }
+*Your Response:* { "agentResponse": "We're focused on the notebook right now, Burt. If you want to check the bookshelf, we should 'exit' this first.", "commandToExecute": "invalid" }
 
 **Example 3 (Password):**
 *Player Input:* "I say to the notebook: JUSTICE FOR SILAS BLOOM"
@@ -50,8 +50,8 @@ export const game: Game = {
 - Write in the third person, past tense.
 - Adopt a classic crime noir tone: gritty, descriptive, with a focus on atmosphere and internal thought. The main character is FBI agent Burt Macklin.
 - Aim for a rich, descriptive style. Don't just state what happened; paint a picture. Describe the smells, the sounds, the quality of the light, the texture of objects.
-- Expand on the events in the log. Weave them into a cohesive story. Describe the setting in detail, Macklin's observations, his internal monologue, and the flow of conversation.
-- Smooth out the "game-like" elements. Instead of "Burt examined the notebook," write something like, "Macklin's eyes fell upon a worn leather notebook resting on the table. It seemed to pulse with forgotten secrets, its leather cover softened by decades of handling."
+- Expand on the events in the log. Weave them into a cohesive story. Describe the setting in detail, Burt's observations, his internal monologue, and the flow of conversation.
+- Smooth out the "game-like" elements. Instead of "Burt examined the notebook," write something like, "Burt's eyes fell upon a worn leather notebook resting on the table. It seemed to pulse with forgotten secrets, its leather cover softened by decades of handling."
 - Your job is to pick the important moments and dialogue that drive the plot forward and flesh them out. Omit repetitive actions or dead ends, but expand on the crucial scenes.
 - Target a length of approximately 1000-1500 words to create a substantial and immersive chapter.
 - Format the output as a single block of prose. Do not use markdown, titles, or headings within the story itself.
@@ -165,7 +165,7 @@ export const game: Game = {
                             ],
                             'read article': [
                                 { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'A newspaper article about Silas Bloom.', messageType: 'article', imageId: 'newspaper_article' },
-                                { type: 'SHOW_MESSAGE', sender: 'agent', content: "Wait a second, Burt... the article mentions an Agent Mackling. That can't be a coincidence. Is he related to you? This could be about your own family." },
+                                { type: 'SHOW_MESSAGE', sender: 'agent', content: "Wait a second, Burt... the article mentions an Agent Macklin. That can't be a coincidence. Is he related to you? This could be about your own family." },
                                 { type: 'SET_FLAG', flag: 'notebook_article_read' as Flag },
                                 { type: 'SET_FLAG', flag: 'notebook_interaction_complete' as Flag },
                                 { type: 'END_INTERACTION' }
@@ -328,7 +328,7 @@ export const game: Game = {
                     { topic: 'his_notebook', keywords: "notebook, book, his, what was he doing", response: "Always scribbling in that old notebook of his. Looked like he was writing the next great American novel, or maybe just his grocery list. Who knows."},
                     {
                         topic: 'give_business_card',
-                        keywords: "business card, left, name, note, anything else, what did he leave",
+                        keywords: "business card, left, name, note, anything else, what did he leave, ask about silas bloom",
                         response: "You know, he left this here the other day. Said I could have it. Some business card. If you're that interested, you can take it. It's just collecting dust.",
                         actions: [
                             { type: 'ADD_ITEM', itemId: 'item_business_card' as ItemId },
@@ -363,4 +363,6 @@ export const game: Game = {
 };
 
     
+    
+
     

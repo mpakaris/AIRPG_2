@@ -285,21 +285,13 @@ async function handleObjectInteraction(state: PlayerState, playerInput: string, 
 
     // GUARDRAIL: Check if the player is trying to interact with a DIFFERENT object.
     const chapter = game.chapters[state.currentChapterId];
-    const isExamineAction = playerInput.toLowerCase().includes('examine') || playerInput.toLowerCase().includes('look at');
-    
-    if (isExamineAction) {
-        const otherObjectName = playerInput.replace(/examine|look at/i, '').trim();
-        const location = chapter.locations[state.currentLocationId];
-        
-        const isTargetingOtherObject = location.objects.some(objId => {
-            const obj = chapter.gameObjects[objId];
-            return obj && obj.id !== objectId && obj.name.toLowerCase().includes(otherObjectName.toLowerCase());
-        });
+    const isTargetingOtherObject = chapter.gameObjects && Object.values(chapter.gameObjects).some(obj => {
+        return obj.id !== objectId && playerInput.toLowerCase().includes(obj.name.toLowerCase());
+    });
 
-        if (isTargetingOtherObject) {
-            const trapMessage = createMessage('agent', narratorName, `Easy there, Burt. We're focused on the ${liveObject.name} right now. If you want to do something else, we need to 'exit' this interaction first.`);
-            return { newState: state, messages: [trapMessage] };
-        }
+    if (isTargetingOtherObject) {
+        const trapMessage = createMessage('agent', narratorName, `We're focused on the ${liveObject.name} right now, Burt. If you want to do something else, we need to 'exit' this interaction first.`);
+        return { newState: state, messages: [trapMessage] };
     }
 
 
@@ -318,7 +310,7 @@ async function handleObjectInteraction(state: PlayerState, playerInput: string, 
     
     const promptContext = game.objectInteractionPromptContext 
         ? game.objectInteractionPromptContext.replace('{{objectName}}', liveObject.name)
-        : `The player is currently examining the ${liveObject.name}. Your job is to map their input to one of the available actions.`;
+        : `The player is currently examining the {{objectName}}. Your job is to map their input to one of the available actions.`;
 
 
     const { output: aiResponse, usage } = await guidePlayerWithNarrator({
@@ -1216,5 +1208,7 @@ export async function generateStoryForChapter(userId: string, gameId: GameId, ch
 
     return { newState };
 }
+
+    
 
     

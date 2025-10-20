@@ -1,3 +1,4 @@
+
 'use client';
 
 import { BookOpen, Box, Compass, ScrollText, Target, User, CheckCircle, Code, RotateCcw, MessageSquareShare, Send, Download, Sparkles } from 'lucide-react';
@@ -247,3 +248,6 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
     </Sidebar>
   );
 };
+
+
+    
