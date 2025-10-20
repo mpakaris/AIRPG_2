@@ -244,7 +244,8 @@ async function handleConversation(state: PlayerState, playerInput: string, game:
             playerInput: playerInput,
             npcName: npc.name,
             npcPersona: npc.persona || 'A generic townsperson.',
-            locationDescription: location.description
+            locationDescription: location.description,
+            gameSetting: game.setting || 'Modern-day USA, 2025'
         });
         
         const message = createMessage(npcId, npc.name, `"${aiResponse.npcResponse}"`, 'text', undefined, usage);

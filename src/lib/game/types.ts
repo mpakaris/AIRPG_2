@@ -216,6 +216,7 @@ export type Game = {
   id: GameId;
   title: string;
   description: string;
+  setting?: string;
   gameType: GameType;
   chapters: Record<ChapterId, Chapter>;
   startChapterId: ChapterId;
@@ -223,4 +224,5 @@ export type Game = {
   promptContext?: string;
   objectInteractionPromptContext?: string;
 };
+
 

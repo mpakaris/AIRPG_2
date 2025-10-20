@@ -19,6 +19,7 @@ const GenerateNpcChatterInputSchema = z.object({
   npcName: z.string().describe('The name of the NPC.'),
   npcPersona: z.string().describe('A detailed description of the NPC, including their personality, job, mood, and any quirks. This defines how they should talk.'),
   locationDescription: z.string().describe('The description of the current location to provide context.'),
+  gameSetting: z.string().describe("The time and place the game is set in (e.g., 'Modern-day New York City, 2025')."),
 });
 export type GenerateNpcChatterInput = z.infer<typeof GenerateNpcChatterInputSchema>;
 
@@ -42,7 +43,11 @@ const prompt = ai.definePrompt({
 - **DO NOT** suggest actions, quests, or objectives.
 - Your ONLY job is to engage in brief, in-character small talk.
 - Keep your response to 1-2 sentences.
-- Base your response *entirely* on the provided persona.
+- Base your response *entirely* on the provided persona and setting.
+- Use language and references appropriate for the setting (e.g., use 'dollars', not 'gold'; 'cars', not 'carriages').
+
+**Game Setting:**
+{{gameSetting}}
 
 **Character Brief:**
 - Name: {{npcName}}
@@ -52,7 +57,7 @@ const prompt = ai.definePrompt({
 **Player says to your character:**
 "{{playerInput}}"
 
-Now, as {{npcName}}, give a short, improvised response based on your persona.
+Now, as {{npcName}}, give a short, improvised response based on your persona and the game setting.
 `,
 });
 
