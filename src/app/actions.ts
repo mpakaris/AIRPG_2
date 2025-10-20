@@ -283,6 +283,26 @@ async function handleObjectInteraction(state: PlayerState, playerInput: string, 
     const objectId = state.interactingWithObject;
     const liveObject = getLiveGameObject(objectId, state, game);
 
+    // GUARDRAIL: Check if the player is trying to interact with a DIFFERENT object.
+    const chapter = game.chapters[state.currentChapterId];
+    const isExamineAction = playerInput.toLowerCase().includes('examine') || playerInput.toLowerCase().includes('look at');
+    
+    if (isExamineAction) {
+        const otherObjectName = playerInput.replace(/examine|look at/i, '').trim();
+        const location = chapter.locations[state.currentLocationId];
+        
+        const isTargetingOtherObject = location.objects.some(objId => {
+            const obj = chapter.gameObjects[objId];
+            return obj && obj.id !== objectId && obj.name.toLowerCase().includes(otherObjectName.toLowerCase());
+        });
+
+        if (isTargetingOtherObject) {
+            const trapMessage = createMessage('agent', narratorName, `Easy there, Burt. We're focused on the ${liveObject.name} right now. If you want to do something else, we need to 'exit' this interaction first.`);
+            return { newState: state, messages: [trapMessage] };
+        }
+    }
+
+
     if (!liveObject.interactionStates) {
         return { newState: state, messages: [createMessage('system', 'System', `You can't interact with the ${liveObject.name} in this way.`)] };
     }
@@ -487,7 +507,7 @@ function handleGo(state: PlayerState, targetName: string, game: Game): CommandRe
                  return { newState: state, messages: [createMessage('system', 'System', `There is no next chapter defined.`)] };
             }
         } else {
-            return { newState: state, messages: [createMessage('agent', narratorName, `Hold on, Macklin. We still need to ${chapter.goal.toLowerCase()} here in ${currentLocation.name}. We can't move on until we've figured that out.`)] };
+            return { newState: state, messages: [createMessage('agent', narratorName, `Wait a second. We still need to ${chapter.goal.toLowerCase()} here in ${currentLocation.name}. We can't move on until we've figured that out.`)] };
         }
     }
 
@@ -840,21 +860,7 @@ export async function processCommand(
     } else if (currentState.interactingWithObject && (lowerInput === 'exit' || lowerInput === 'close')) {
         commandHandlerResult = processActions(currentState, [{type: 'END_INTERACTION'}], game);
     } else if (currentState.interactingWithObject) {
-         // **NEW GUARDRAIL LOGIC V2**
-        const focusedObject = chapter.gameObjects[currentState.interactingWithObject];
-        // Does the player input contain a verb that suggests examining something?
-        const isExamineAction = lowerInput.includes('examine') || lowerInput.includes('look at');
-        // Does the input NOT refer to the object they are currently focused on?
-        const isDifferentObject = !lowerInput.includes(focusedObject.name.toLowerCase());
-
-        if (isExamineAction && isDifferentObject) {
-            // Player is in the trap! Provide the guidance message without changing state.
-            const trapMessage = createMessage('agent', narratorName, `Easy there, Macklin. We're focused on the ${focusedObject.name} right now. If you want to do something else, we need to 'exit' this interaction first.`);
-            commandHandlerResult = { newState: currentState, messages: [trapMessage] };
-        } else {
-            // Player's command is relevant to the current interaction, process it normally.
-            commandHandlerResult = await handleObjectInteraction(currentState, playerInput, game);
-        }
+         commandHandlerResult = await handleObjectInteraction(currentState, playerInput, game);
     }
     // Main command parsing logic
     else {
@@ -898,6 +904,40 @@ export async function processCommand(
         const restOfCommand = args.join(' ');
         
         switch (verb) {
+            case 'watch':
+                if (restOfCommand.includes('video') && currentState.flags.includes('notebook_is_open' as Flag)) {
+                    commandHandlerResult = {
+                        newState: currentState,
+                        messages: [
+                            createMessage('narrator', narratorName, 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759241547/0930_eit8he.mov', 'video'),
+                            createMessage('agent', narratorName, "Silas Bloom... I've never heard that name before. He seemed like a talented musician. And that song for Rose... sounds like they were deeply in love."),
+                            createMessage('narrator', narratorName, "Beside the data chip, you see a folded newspaper article."),
+                        ]
+                    };
+                    const actionResult = processActions(currentState, [{type: 'SET_FLAG', flag: 'notebook_video_watched' as Flag}], game);
+                    commandHandlerResult.newState = actionResult.newState;
+                } else {
+                    commandHandlerResult = { newState: currentState, messages: [createMessage('narrator', narratorName, "You can't watch that right now.")] };
+                }
+                break;
+            case 'read':
+                 if (restOfCommand.includes('article') && currentState.flags.includes('notebook_is_open' as Flag)) {
+                    commandHandlerResult = {
+                        newState: currentState,
+                        messages: [
+                            createMessage('narrator', narratorName, 'A newspaper article about Silas Bloom.', 'article', {id: 'newspaper_article', game, state: currentState}),
+                            createMessage('agent', narratorName, "Wait a second, Burt... the article mentions an Agent Mackling. That can't be a coincidence. Is he related to you? This could be about your own family."),
+                        ]
+                    };
+                    const actionResult = processActions(currentState, [
+                        {type: 'SET_FLAG', flag: 'notebook_article_read' as Flag},
+                        {type: 'SET_FLAG', flag: 'notebook_interaction_complete' as Flag}
+                    ], game);
+                    commandHandlerResult.newState = actionResult.newState;
+                } else {
+                    commandHandlerResult = { newState: currentState, messages: [createMessage('narrator', narratorName, "You can't read that right now.")] };
+                }
+                break;
             case 'examine':
             case 'look':
                  if (restOfCommand.startsWith('at ')) {
@@ -1149,6 +1189,7 @@ export async function generateStoryForChapter(userId: string, gameId: GameId, ch
     const messageLogsForAI = allMessages.map(m => ({ senderName: m.senderName, content: m.content }));
 
     const { output: storyOutput, usage: storyUsage } = await generateStoryFromLogs({
+        storyStyleGuide: game.storyStyleGuide || 'You are a master storyteller. Turn the following log into a story.',
         gameDescription: game.description,
         chapterTitle: chapter.title,
         storyGenerationDetails: chapter.storyGenerationDetails,

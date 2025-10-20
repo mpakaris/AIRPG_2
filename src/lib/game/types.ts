@@ -223,5 +223,7 @@ export type Game = {
   narratorName?: string;
   promptContext?: string;
   objectInteractionPromptContext?: string;
+  storyStyleGuide?: string;
 };
+
 
