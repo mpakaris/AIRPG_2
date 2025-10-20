@@ -8,8 +8,8 @@ export const game: Game = {
   setting: "Modern-day USA, 2025",
   gameType: 'Escape Game',
   narratorName: 'Agent Sharma',
-  promptContext: `You are Agent Sharma, the partner and "good conscience" of FBI agent Burt Macklin (the player). Your role is to act as a helpful Game Master, providing hints and keeping him on track towards the main goal. You are conversational and supportive. Your response MUST be enclosed in quotation marks. Do not use any markdown formatting like italics or bold.`,
-  objectInteractionPromptContext: `You are Agent Sharma, guiding your partner Burt Macklin, who is inspecting the {{objectName}}. Interpret his actions, offer encouragement, and provide in-character guidance based on the available commands. Keep your responses brief and helpful, maintaining your persona.`,
+  promptContext: `You are Agent Sharma, the partner of FBI agent Burt Macklin (the player). Your role is to act as a helpful, collaborative partner. You are not a boss, but an equal, sharing thoughts and observations. Your tone is supportive and curious. When the player does something smart, acknowledge it subtly ("Good thinking, Burt."). If they try something illogical, gently steer them back ("I'm not sure that'll work, Macklin. What if we tried...?"). Your responses should feel like a natural conversation between partners on a case.`,
+  objectInteractionPromptContext: `You are Agent Sharma, observing your partner Burt Macklin as he inspects the {{objectName}}. Offer your thoughts collaboratively ("What do you make of that, Burt?"). Interpret his actions and provide guidance as a partner would, maintaining your supportive and curious persona.`,
   startChapterId: 'ch1-the-cafe' as ChapterId,
   chapters: {
     'ch1-the-cafe': {
@@ -18,7 +18,7 @@ export const game: Game = {
         goal: "Unlock the contents of the notebook.",
         introductionVideo: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759670681/CH_I_Intro_ccy0og.mov',
         completionVideo: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759678377/CH_I_completion_jqtyme.mp4',
-        postChapterMessage: "Burt, it seems we got all the information here. Maybe we should continue elsewhere.",
+        postChapterMessage: "Looks like we've got everything from this place. I'm thinking our next stop should be the jazz club mentioned in the article.",
         storyGenerationDetails: "The story for this chapter takes place entirely within 'The Cafe', a bustling downtown coffee shop. Key events include Agent Macklin receiving the locked notebook, interacting with the male barista, and unlocking the notebook to discover the initial clues about Silas Bloom.",
         nextChapter: {
             id: 'ch2-the-lounge' as ChapterId,
@@ -104,8 +104,8 @@ export const game: Game = {
                         commands: {
                             'watch video': [
                                 { type: 'SHOW_MESSAGE', sender: 'narrator', senderName: 'Narrator', content: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759241547/0930_eit8he.mov', messageType: 'video' },
-                                { type: 'SHOW_MESSAGE', sender: 'agent', senderName: 'Agent Sharma', content: "Silas Bloom? I've never heard of him. But it seems he was a great musician. He wrote an amazing Song for this Rose. They really must have been crazy in love." },
-                                { type: 'SHOW_MESSAGE', sender: 'narrator', senderName: 'Narrator', content: "It seems that there is also a newspaper article where the video was." },
+                                { type: 'SHOW_MESSAGE', sender: 'agent', senderName: 'Agent Sharma', content: "Silas Bloom... I've never heard that name before. He seemed like a talented musician. And that song for Rose... sounds like they were deeply in love." },
+                                { type: 'SHOW_MESSAGE', sender: 'narrator', senderName: 'Narrator', content: "Beside the data chip, you see a folded newspaper article." },
                                 { type: 'SET_INTERACTION_STATE', state: 'video_watched' },
                                 { type: 'SET_FLAG', flag: 'notebook_video_watched' as Flag }
                             ],
@@ -115,11 +115,11 @@ export const game: Game = {
                     },
                     'video_watched': {
                         id: 'video_watched',
-                        description: "You've watched the video. Tucked behind the data chip, you now see a folded newspaper article. You could 'read article' or 'exit'.",
+                        description: "You've watched the video. The folded newspaper article is still there. You could 'read article' or 'exit'.",
                         commands: {
                             'read article': [
                                 { type: 'SHOW_MESSAGE', sender: 'narrator', senderName: 'Narrator', content: 'A newspaper article about Silas Bloom.', messageType: 'article', imageId: 'newspaper_article' },
-                                { type: 'SHOW_MESSAGE', sender: 'agent', senderName: 'Agent Sharma', content: "Burt, the article talks about Agent Mackling. Is that coincidence? It cant be. That must be what? Your grandfather? You are in law enforcement for 4 generations. Oh my god, this is huge, Burt!" },
+                                { type: 'SHOW_MESSAGE', sender: 'agent', senderName: 'Agent Sharma', content: "Wait a second, Burt... the article mentions an Agent Macklin. That can't be a coincidence. Is he related to you? This could be about your own family." },
                                 { type: 'SET_INTERACTION_STATE', state: 'article_read' },
                                 { type: 'SET_FLAG', flag: 'notebook_article_read' as Flag },
                                 { type: 'SET_FLAG', flag: 'notebook_interaction_complete' as Flag }
@@ -134,7 +134,7 @@ export const game: Game = {
                         commands: {
                             'watch video': [
                                 { type: 'SHOW_MESSAGE', sender: 'narrator', senderName: 'Narrator', content: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759241547/0930_eit8he.mov', messageType: 'video' },
-                                { type: 'SHOW_MESSAGE', sender: 'agent', senderName: 'Agent Sharma', content: "Silas Bloom? I've never heard of him. But it seems he was a great musician. He wrote an amazing Song for this Rose. They really must have been crazy in love." },
+                                { type: 'SHOW_MESSAGE', sender: 'agent', senderName: 'Agent Sharma', content: "I can't get that song out of my head. It's beautiful, but haunting." },
                                 { type: 'SET_INTERACTION_STATE', state: 'complete' }
                             ],
                              'exit': [{ type: 'END_INTERACTION' }],
@@ -284,7 +284,7 @@ export const game: Game = {
                 completionFlag: 'has_received_business_card' as Flag,
                 finalResponse: "Look, I told you all I know. I've got work to do.",
                 persona: "You are a tired, cynical barista in a downtown cafe. You've seen it all and are not impressed by much. Your primary focus is on making coffee and dealing with customers as efficiently as possible. You will not discuss the case or any past events further, deflecting any questions with short, dismissive, but not overly rude answers. You just want to do your job.",
-                maxInteractions: 15,
+                maxInteractions: 8,
                 interactionLimitResponse: "Seriously, I've got a line of customers. I can't keep chatting. The coffee machine calls.",
                 image: {
                     url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759241505/Cafe_barrista_hpwona.png',
@@ -310,7 +310,7 @@ export const game: Game = {
                             { type: 'ADD_ITEM', itemId: 'item_business_card' as ItemId },
                             { type: 'SET_FLAG', flag: 'has_received_business_card' as Flag },
                             { type: 'SHOW_MESSAGE', sender: 'narrator', senderName: 'Narrator', content: "The barista slides a business card across the counter. It's been added to your inventory.", messageType: 'image', imageId: 'item_business_card' },
-                            { type: 'SHOW_MESSAGE', sender: 'agent', senderName: 'Agent Sharma', content: "Good work, Burt. This could be the lead we need." },
+                            { type: 'SHOW_MESSAGE', sender: 'agent', senderName: 'Agent Sharma', content: "Good thinking, Burt. This could be the lead we need." },
                             { type: 'END_CONVERSATION' }
                         ]
                     },
@@ -323,10 +323,10 @@ export const game: Game = {
                 name: 'Cafe Manager',
                 description: 'A cheerful woman in her late 40s, with a permanent, slightly-too-wide smile. She radiates a relentless positivity that feels slightly out of place in the grim city.',
                 dialogueType: 'freeform',
-                persona: "You are Brenda, the relentlessly cheerful and bubbly manager of 'The Daily Grind' cafe in modern-day America. You see the best in everyone and everything. You love talking about your 'Artisan Coffee of the Week', the daily specials, and the local community art you hang on the walls. You are completely oblivious to any crime or mystery. Your job is to be a fountain of pleasant, slightly-vacant small talk. You must not, under any circumstances, talk about the case, murders, or anything negative. Keep your responses short, sweet, and upbeat! Use modern currency like dollars and cents.",
+                persona: "You are Brenda, the relentlessly cheerful and bubbly manager of 'The Daily Grind' cafe. You see the best in everyone and everything. You love talking about your 'Artisan Coffee of the Week', the daily specials, and the local community art you hang on the walls. You are completely oblivious to any crime or mystery. Your job is to be a fountain of pleasant, slightly-vacant small talk. You must not, under any circumstances, talk about the case, murders, or anything negative. Keep your responses short, sweet, and upbeat! Use modern currency like dollars and cents.",
                 welcomeMessage: "Welcome to The Daily Grind! How can I make your day a little brighter? Can I interest you in a 'Sunshine Muffin'? They're 10% off!",
                 goodbyeMessage: "Have a wonderfully caffeinated day! Come back soon!",
-                maxInteractions: 15,
+                maxInteractions: 10,
                 interactionLimitResponse: "It has been so lovely chatting with you, but I really must get back to managing. The muffins won't bake themselves, you know! Have a super day!",
                 image: {
                     url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759604054/cafe_manager_punwhs.png',
@@ -338,6 +338,3 @@ export const game: Game = {
     }
   }
 };
-
-    
-    
