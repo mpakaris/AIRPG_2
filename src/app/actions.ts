@@ -840,7 +840,21 @@ export async function processCommand(
     } else if (currentState.interactingWithObject && (lowerInput === 'exit' || lowerInput === 'close')) {
         commandHandlerResult = processActions(currentState, [{type: 'END_INTERACTION'}], game);
     } else if (currentState.interactingWithObject) {
-        commandHandlerResult = await handleObjectInteraction(currentState, playerInput, game);
+         // **NEW GUARDRAIL LOGIC V2**
+        const focusedObject = chapter.gameObjects[currentState.interactingWithObject];
+        // Does the player input contain a verb that suggests examining something?
+        const isExamineAction = lowerInput.includes('examine') || lowerInput.includes('look at');
+        // Does the input NOT refer to the object they are currently focused on?
+        const isDifferentObject = !lowerInput.includes(focusedObject.name.toLowerCase());
+
+        if (isExamineAction && isDifferentObject) {
+            // Player is in the trap! Provide the guidance message without changing state.
+            const trapMessage = createMessage('agent', narratorName, `Easy there, Macklin. We're focused on the ${focusedObject.name} right now. If you want to do something else, we need to 'exit' this interaction first.`);
+            commandHandlerResult = { newState: currentState, messages: [trapMessage] };
+        } else {
+            // Player's command is relevant to the current interaction, process it normally.
+            commandHandlerResult = await handleObjectInteraction(currentState, playerInput, game);
+        }
     }
     // Main command parsing logic
     else {
@@ -883,88 +897,74 @@ export async function processCommand(
         const [verb, ...args] = commandToExecute.split(' ');
         const restOfCommand = args.join(' ');
         
-        // **NEW GUARDRAIL LOGIC**
-        // If the AI says the command is invalid AND we are in an interaction, it's because the player is "trapped".
-        // We just show the AI's helpful message and stop further processing.
-        if (currentState.interactingWithObject) {
-            const focusedObject = chapter.gameObjects[currentState.interactingWithObject];
-            const isCommandForDifferentObject = !playerInput.toLowerCase().includes(focusedObject.name.toLowerCase()) && (verb === 'examine' || verb === 'look');
-            
-            if (isCommandForDifferentObject) {
-                 const trapMessage = createMessage('agent', narratorName, `Easy there, Macklin. We're focused on the ${focusedObject.name} right now. If you want to do something else, we need to 'exit' this interaction first.`);
-                 commandHandlerResult = { newState: currentState, messages: [trapMessage] };
-            } else {
-                 commandHandlerResult = await handleObjectInteraction(currentState, playerInput, game);
-            }
-        } else {
-            switch (verb) {
-                case 'examine':
-                case 'look':
-                     if (restOfCommand.startsWith('at ')) {
-                         commandHandlerResult = handleExamine(currentState, restOfCommand.replace('at ', ''), game);
-                     } else if (restOfCommand.startsWith('around')) {
-                         commandHandlerResult = handleLook(currentState, game, lookAroundSummary);
-                     } else if (restOfCommand.startsWith('behind')) {
-                         const targetName = restOfCommand.replace('behind ', '').trim();
-                         const targetObject = objectsInLocation.find(obj => obj.name.toLowerCase().includes(targetName));
-                         if (targetObject?.onFailure?.['look behind']) {
-                             commandHandlerResult = { newState: currentState, messages: [createMessage('narrator', narratorName, targetObject.onFailure['look behind'])] };
-                         } else if (targetObject) {
-                             commandHandlerResult = { newState: currentState, messages: [createMessage('narrator', narratorName, targetObject.onFailure?.default || `You look behind the ${targetObject.name} and see nothing out of the ordinary.`)] };
-                         } else {
-                             commandHandlerResult = { newState: currentState, messages: [createMessage('narrator', narratorName, "You don't see that here.")] };
-                         }
+        switch (verb) {
+            case 'examine':
+            case 'look':
+                 if (restOfCommand.startsWith('at ')) {
+                     commandHandlerResult = handleExamine(currentState, restOfCommand.replace('at ', ''), game);
+                 } else if (restOfCommand.startsWith('around')) {
+                     commandHandlerResult = handleLook(currentState, game, lookAroundSummary);
+                 } else if (restOfCommand.startsWith('behind')) {
+                     const targetName = restOfCommand.replace('behind ', '').trim();
+                     const targetObject = objectsInLocation.find(obj => obj.name.toLowerCase().includes(targetName));
+                     if (targetObject?.onFailure?.['look behind']) {
+                         commandHandlerResult = { newState: currentState, messages: [createMessage('narrator', narratorName, targetObject.onFailure['look behind'])] };
+                     } else if (targetObject) {
+                         commandHandlerResult = { newState: currentState, messages: [createMessage('narrator', narratorName, targetObject.onFailure?.default || `You look behind the ${targetObject.name} and see nothing out of the ordinary.`)] };
                      } else {
-                        commandHandlerResult = handleExamine(currentState, restOfCommand, game);
+                         commandHandlerResult = { newState: currentState, messages: [createMessage('narrator', narratorName, "You don't see that here.")] };
                      }
-                     break;
-                case 'take':
-                    commandHandlerResult = handleTake(currentState, restOfCommand, game);
-                    break;
-                case 'go':
-                    commandHandlerResult = handleGo(currentState, restOfCommand.replace('to ', ''), game);
-                    break;
-                case 'use':
-                    const onMatch = restOfCommand.match(/(.*) on (.*)/);
-                    if (onMatch) {
-                        commandHandlerResult = handleUse(currentState, onMatch[1].trim(), onMatch[2].trim(), game);
+                 } else {
+                    commandHandlerResult = handleExamine(currentState, restOfCommand, game);
+                 }
+                 break;
+            case 'take':
+                commandHandlerResult = handleTake(currentState, restOfCommand, game);
+                break;
+            case 'go':
+                commandHandlerResult = handleGo(currentState, restOfCommand.replace('to ', ''), game);
+                break;
+            case 'use':
+                const onMatch = restOfCommand.match(/(.*) on (.*)/);
+                if (onMatch) {
+                    commandHandlerResult = handleUse(currentState, onMatch[1].trim(), onMatch[2].trim(), game);
+                } else {
+                    commandHandlerResult = { newState: currentState, messages: [createMessage('system', 'System', 'Please specify what to use and what to use it on, e.g., "use key on desk".')] };
+                }
+                break;
+            case 'talk':
+                 commandHandlerResult = await handleTalk(currentState, restOfCommand.replace('to ', ''), game);
+                 break;
+            case 'inventory':
+                commandHandlerResult = handleInventory(currentState, game);
+                break;
+            case 'password':
+            case 'say':
+            case 'enter':
+                commandHandlerResult = handlePassword(currentState, commandToExecute, game);
+                break;
+            case 'invalid':
+                 commandHandlerResult = { newState: currentState, messages: [agentMessage] };
+                 break;
+            default:
+                const targetObject = objectsInLocation.find(obj => restOfCommand.includes(obj.name.toLowerCase()));
+                if (targetObject) {
+                    const failureMessage = targetObject.onFailure?.[verb] || targetObject.onFailure?.default;
+                    if (failureMessage) {
+                        commandHandlerResult = { newState: currentState, messages: [createMessage('narrator', narratorName, failureMessage)] };
                     } else {
-                        commandHandlerResult = { newState: currentState, messages: [createMessage('system', 'System', 'Please specify what to use and what to use it on, e.g., "use key on desk".')] };
+                        commandHandlerResult = { newState: currentState, messages: [agentMessage] };
                     }
-                    break;
-                case 'talk':
-                     commandHandlerResult = await handleTalk(currentState, restOfCommand.replace('to ', ''), game);
-                     break;
-                case 'inventory':
-                    commandHandlerResult = handleInventory(currentState, game);
-                    break;
-                case 'password':
-                case 'say':
-                case 'enter':
-                    commandHandlerResult = handlePassword(currentState, commandToExecute, game);
-                    break;
-                case 'invalid':
-                     commandHandlerResult = { newState: currentState, messages: [agentMessage] };
-                     break;
-                default:
-                    const targetObject = objectsInLocation.find(obj => restOfCommand.includes(obj.name.toLowerCase()));
-                    if (targetObject) {
-                        const failureMessage = targetObject.onFailure?.[verb] || targetObject.onFailure?.default;
-                        if (failureMessage) {
-                            commandHandlerResult = { newState: currentState, messages: [createMessage('narrator', narratorName, failureMessage)] };
-                        } else {
-                            commandHandlerResult = { newState: currentState, messages: [agentMessage] };
-                        }
-                    } else {
-                        commandHandlerResult = { newState: currentState, messages: [agentMessage] }; 
-                    }
-                    break;
-            }
+                } else {
+                    commandHandlerResult = { newState: currentState, messages: [agentMessage] }; 
+                }
+                break;
         }
+        
         
         const hasSystemMessage = commandHandlerResult.messages.some(m => m.sender === 'system');
         // Only add agent message if the command wasn't "invalid" and didn't already produce a system message
-        if (verb !== 'invalid' && !hasSystemMessage && !currentState.interactingWithObject) {
+        if (verb !== 'invalid' && !hasSystemMessage) {
             commandHandlerResult.messages.unshift(agentMessage);
         }
     }
