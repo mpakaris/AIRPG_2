@@ -280,10 +280,12 @@ export const game: Game = {
                 description: 'A tired-looking man in his late 20s, with faded tattoos and a cynical arch to his eyebrow. He seems to have seen a thousand stories like yours and is not easily impressed.',
                 dialogueType: 'scripted',
                 welcomeMessage: 'What can I get for you? Or are you just here to brood? Either is fine.',
-                goodbyeMessage: "Alright, I've got cappuccinos to craft. Good luck with... whatever it is you're doing.",
+                goodbyeMessage: "Alright, I've got Pumpkin spice lattes to craft. Good luck with... whatever it is you're doing.",
                 completionFlag: 'has_received_business_card' as Flag,
                 finalResponse: "Look, I told you all I know. I've got work to do.",
                 persona: "You are a tired, cynical barista in a downtown cafe. You've seen it all and are not impressed by much. Your primary focus is on making coffee and dealing with customers as efficiently as possible. You will not discuss the case or any past events further, deflecting any questions with short, dismissive, but not overly rude answers. You just want to do your job.",
+                maxInteractions: 8,
+                interactionLimitResponse: "Seriously, I've got a line of customers. I can't keep chatting. The coffee machine calls.",
                 image: {
                     url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759241505/Cafe_barrista_hpwona.png',
                     description: 'A portrait of the cafe barista.',
@@ -337,4 +339,5 @@ export const game: Game = {
   }
 };
 
+    
     
