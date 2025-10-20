@@ -107,7 +107,7 @@ export const game: Game = {
                         message: "The notebook is open. Inside, you see a small data chip next to a folded newspaper article. You can use 'watch video' or 'read article' to examine the contents."
                     },
                     alternate: {
-                        message: "It's the notebook we unlocked. Inside is the data chip and the article. You can use 'watch video' or 'read article' to examine the contents."
+                        message: "Inside is the data chip and the article. You can use *watch video* or *read article* to examine the contents."
                     }
                 },
                 onUnlock: {
