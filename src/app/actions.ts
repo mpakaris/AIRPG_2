@@ -130,6 +130,8 @@ function findItemInContext(state: PlayerState, game: Game, targetName: string): 
 type CommandResult = {
   newState: PlayerState | null;
   messages: Message[];
+  resultType?: 'ALREADY_UNLOCKED';
+  targetObjectName?: string;
 };
 
 
@@ -319,9 +321,11 @@ function processPassword(state: PlayerState, command: string, game: Game): Comma
     // Find the target object
     let targetObjectResult = objectsInLocation.find(obj => {
         if (!obj.gameLogic.unlocksWithPhrase) return false;
+        // Prioritize object names that appear in the command
         return commandLower.includes(obj.gameLogic.name.toLowerCase());
     });
 
+    // If no object is explicitly mentioned, find the single, implicitly targeted object
     if (!targetObjectResult) {
         const passwordObjects = objectsInLocation.filter(obj => obj.state.isLocked && obj.gameLogic.unlocksWithPhrase);
         if (passwordObjects.length === 1) {
@@ -335,22 +339,26 @@ function processPassword(state: PlayerState, command: string, game: Game): Comma
 
     // Check if the object is already unlocked
     if (!targetObject.state.isLocked) {
-        return { newState: state, messages: [createMessage('narrator', narratorName, 'It\'s already unlocked.')] };
+        return { 
+            newState: state, 
+            messages: [],
+            resultType: 'ALREADY_UNLOCKED',
+            targetObjectName: targetObject.gameLogic.name
+        };
     }
     
     // Extract the phrase
     const targetObjectNameLower = targetObject.gameLogic.name.toLowerCase();
-    const objectNameIndex = commandLower.indexOf(targetObjectNameLower);
-    let phrase = "";
+    let phrase = command;
+    const objectNameIndex = phrase.toLowerCase().indexOf(targetObjectNameLower);
     if (objectNameIndex !== -1) {
-        phrase = command.substring(objectNameIndex + targetObjectNameLower.length).trim();
-    } else {
-        // Fallback for commands like 'password "phrase"' where object is implicit
-        const match = command.match(/"(.*?)"/);
-        if(match && match[1]) phrase = match[1];
+        phrase = phrase.substring(objectNameIndex + targetObjectNameLower.length);
     }
     
-    phrase = phrase.replace(/^"|"$/g, '').replace(/^is\s*/, '').trim();
+    // Remove initial command verb if present
+    phrase = phrase.replace(/^\s*(password|say|enter|for|is)\s*/i, '');
+    // Clean up quotes and trim
+    phrase = phrase.replace(/^"|"$/g, '').trim();
 
     if (!phrase) {
         return { newState: state, messages: [createMessage('narrator', narratorName, 'You need to specify a password phrase.')] };
@@ -369,9 +377,8 @@ function processPassword(state: PlayerState, command: string, game: Game): Comma
         const unlockMessage = createMessage(
             'narrator', 
             narratorName, 
-            targetObject.gameLogic.onUnlock?.successMessage || "It unlocks!", 
-            'image', 
-            { id: targetObject.gameLogic.id, game, state: result.newState!, showEvenIfExamined: true }
+            targetObject.gameLogic.onUnlock?.successMessage || "It unlocks!",
+            'text'
         );
         result.messages.unshift(unlockMessage);
 
@@ -942,7 +949,7 @@ export async function processCommand(
             availableCommands: AVAILABLE_COMMANDS.join(', '),
         });
 
-        const agentMessage = createMessage('agent', narratorName, `${aiResponse.agentResponse}`, 'text', undefined, usage);
+        let agentMessage = createMessage('agent', narratorName, `${aiResponse.agentResponse}`, 'text', undefined, usage);
         const commandToExecute = aiResponse.commandToExecute.toLowerCase();
         
         const verbMatch = commandToExecute.match(/^(\w+)\s*/);
@@ -1034,11 +1041,17 @@ export async function processCommand(
                 }
                 break;
         }
-        
-        const hasSystemMessage = commandHandlerResult.messages.some(m => m.sender === 'system');
-        // Only add agent message if the command wasn't "invalid" and didn't already produce a system message
-        if (verb !== 'invalid' && !hasSystemMessage) {
-            commandHandlerResult.messages.unshift(agentMessage);
+
+        if (commandHandlerResult.resultType === 'ALREADY_UNLOCKED' && commandHandlerResult.targetObjectName) {
+            commandHandlerResult.messages = [
+                createMessage('system', 'System', `It seems that you already unlocked the ${commandHandlerResult.targetObjectName} successfully.`),
+                createMessage('agent', narratorName, `Burt, maybe we can try another action on the ${commandHandlerResult.targetObjectName}? What do you say?`)
+            ];
+        } else {
+            const hasSystemMessage = commandHandlerResult.messages.some(m => m.sender === 'system');
+            if (verb !== 'invalid' && !hasSystemMessage) {
+                commandHandlerResult.messages.unshift(agentMessage);
+            }
         }
     }
     
