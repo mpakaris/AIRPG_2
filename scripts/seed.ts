@@ -2,17 +2,15 @@
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { config } from 'dotenv';
+import * as fs from 'fs';
+import * as path from 'path';
 
 // Load environment variables from .env file
 config();
 
-import { game as gameCartridge } from '../src/lib/game/cartridge';
+import type { Chapter, Game, GameObject, Item, Location, NPC, Portal } from '../src/lib/game/types';
 import { getInitialState } from '../src/lib/game-state';
-import { Chapter, Game, GameObject, Item, Location, NPC, Portal, Structure } from '../src/lib/game/types';
 
-// IMPORTANT: Replace with your actual service account key content
-// You can get this from your Firebase project settings -> Service accounts -> Generate new private key
-// For security, it's best to load this from an environment variable
 const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 
 if (!serviceAccountKey && getApps().length === 0) {
@@ -21,53 +19,37 @@ if (!serviceAccountKey && getApps().length === 0) {
 
 try {
     if (getApps().length === 0) {
-        // The key must be a valid JSON string.
         const parsedKey = JSON.parse(serviceAccountKey!);
-        
         initializeApp({
             credential: cert(parsedKey)
         });
     }
 } catch (error: any) {
-    // This can happen in some environments where initialization is automatic.
-    if (error.code !== 'app/duplicate-app') {
-        console.error("Failed to initialize Firebase Admin SDK:", error);
-        // It's helpful to log what the key looks like (without sensitive info)
-        if(serviceAccountKey) {
-            console.error("Key starts with:", serviceAccountKey.substring(0, 30));
-        }
-        throw new Error(`Could not parse FIREBASE_SERVICE_ACCOUNT_KEY. Ensure it's a valid JSON string in your .env file.`);
+    console.error("Failed to initialize Firebase Admin SDK:", error);
+    if (serviceAccountKey) {
+        console.error("Key starts with:", serviceAccountKey.substring(0, 30));
     }
+    throw new Error(`Could not parse FIREBASE_SERVICE_ACCOUNT_KEY. Ensure it's a valid JSON string in your .env file.`);
 }
-
 
 const db = getFirestore();
-
 const DEV_USER_ID = process.env.NEXT_PUBLIC_DEV_USER_ID || '36308548589';
 
-async function seedCollection<T extends {id: string}>(collectionName: string, data: Record<string, T>) {
-    console.log(`Seeding collection: ${collectionName}...`);
-    const collectionRef = db.collection(collectionName);
-    const batch = db.batch();
-
-    for (const key in data) {
-        const entity = data[key];
-        const docRef = collectionRef.doc(entity.id);
-        batch.set(docRef, { ...entity }, { merge: true });
+// Function to read the baked JSON cartridge
+function loadCartridgeFromFile(): Game {
+    const filePath = path.resolve(__dirname, '../src/lib/game/cartridge.json');
+    if (!fs.existsSync(filePath)) {
+        throw new Error(`cartridge.json not found at ${filePath}. Please run 'npm run db:bake' first.`);
     }
-
-    await batch.commit();
-    console.log(`Collection ${collectionName} seeded with ${Object.keys(data).length} documents.`);
+    const fileContent = fs.readFileSync(filePath, 'utf-8');
+    return JSON.parse(fileContent);
 }
 
-/**
- * Seeds only the game cartridge to the 'games' collection and its subcollections.
- * This is safe to run to update game content without affecting users.
- */
+const gameCartridge = loadCartridgeFromFile();
+
 async function seedGameCartridge() {
-    console.log('Starting game cartridge seed...');
+    console.log('Starting game cartridge seed from cartridge.json...');
     
-    // Seed main game document
     const gameId = gameCartridge.id;
     const gameDocData: Omit<Game, 'chapters' | 'locations' | 'gameObjects' | 'items' | 'npcs' | 'portals' | 'structures' | 'world'> = { ...gameCartridge };
     delete (gameDocData as any).chapters;
@@ -83,8 +65,11 @@ async function seedGameCartridge() {
     await gameRef.set(gameDocData, { merge: true });
     console.log(`Game document ${gameId} seeded.`);
 
-    // Seed sub-collections within the game document
-    const seedSubCollection = async <T extends {id: string}>(subCollectionName: string, data: Record<string, T>) => {
+    const seedSubCollection = async <T extends {id: string}>(subCollectionName: string, data: Record<string, T> | undefined) => {
+        if (!data) {
+            console.log(`Skipping empty sub-collection: ${subCollectionName}`);
+            return;
+        }
         console.log(`Seeding sub-collection: games/${gameId}/${subCollectionName}...`);
         const batch = db.batch();
         for (const key in data) {
@@ -106,17 +91,10 @@ async function seedGameCartridge() {
     console.log('Game cartridge seeded successfully.');
 }
 
-/**
- * Seeds the entire database including a dev user, their state, and logs.
- * WARNING: This will overwrite existing dev user data.
- */
 async function seedAll() {
     console.log('Starting full database seed...');
-
-    // 1. Seed Games Collection and all related sub-collections
     await seedGameCartridge();
 
-    // 2. Seed Users Collection
     const userRef = db.collection('users').doc(DEV_USER_ID);
     console.log(`Seeding user: ${DEV_USER_ID}`);
     await userRef.set({
@@ -126,24 +104,20 @@ async function seedAll() {
     }, { merge: true });
     console.log('User seeded successfully.');
 
-    // 3. Seed Player States Collection
     const initialPlayerState = getInitialState(gameCartridge);
     const playerStateRef = db.collection('player_states').doc(`${DEV_USER_ID}_${gameCartridge.id}`);
     console.log(`Seeding player state for user ${DEV_USER_ID} and game ${gameCartridge.id}`);
     await playerStateRef.set(initialPlayerState);
     console.log('Player state seeded successfully.');
 
-    // 4. Wipe and Seed Logs Collection
     const logRef = db.collection('logs').doc(`${DEV_USER_ID}_${gameCartridge.id}`);
     console.log(`Wiping logs for user ${DEV_USER_ID} and game ${gameCartridge.id}`);
     await logRef.set({ messages: [] });
     console.log('Logs wiped successfully.');
 
-
     console.log('Full database seeding complete!');
 }
 
-// Check for command line arguments to decide which function to run
 const args = process.argv.slice(2);
 const seedType = args[0];
 
@@ -160,4 +134,5 @@ if (seedType === 'game') {
 } else {
     console.log("No seed type specified. Please run with 'game' or 'all'.");
     console.log("Example: `npm run db:seed game` or `npm run db:seed all`");
+    console.log("If you changed cartridge.ts, run `npm run db:bake` first.");
 }

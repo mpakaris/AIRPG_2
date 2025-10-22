@@ -10,6 +10,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "db:bake": "tsx scripts/bake.ts",
     "db:seed": "tsx scripts/seed.ts all",
     "db:seed:game": "tsx scripts/seed.ts game"
   },
