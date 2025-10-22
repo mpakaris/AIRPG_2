@@ -4,11 +4,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getGameData } from './actions';
-import type { Game } from '@/lib/game/types';
+import type { Game, GameId } from '@/lib/game/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { LoaderCircle } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
+
 
 function EntityTable({ title, description, data, columns }: { title: string, description: string, data: any[], columns: { key: string, label: string }[] }) {
     if (!data) {
@@ -49,16 +53,16 @@ function EntityTable({ title, description, data, columns }: { title: string, des
 }
 
 
-export function Dashboard() {
+export function Dashboard({ gameId }: { gameId: GameId }) {
   const [game, setGame] = useState<Game | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchAllData = useCallback(async () => {
     setIsLoading(true);
-    const gameData = await getGameData(); // Assumes a default gameId for now
+    const gameData = await getGameData(gameId);
     setGame(gameData);
     setIsLoading(false);
-  }, []);
+  }, [gameId]);
 
   useEffect(() => {
     fetchAllData();
@@ -68,7 +72,7 @@ export function Dashboard() {
       return (
           <div className="flex min-h-screen flex-col items-center justify-center bg-muted/40">
               <LoaderCircle className="animate-spin h-12 w-12 text-primary" />
-              <p className="mt-4 text-muted-foreground">Loading Game Data from Firestore...</p>
+              <p className="mt-4 text-muted-foreground">Loading Game Data for {gameId} from Firestore...</p>
           </div>
       );
   }
@@ -84,7 +88,13 @@ export function Dashboard() {
   return (
     <div className="flex min-h-screen flex-col bg-muted/40">
       <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
-        <h1 className="text-xl font-bold">Writer's Room: {game.title}</h1>
+        <Button asChild variant="outline" size="icon">
+          <Link href="/writer">
+            <ArrowLeft />
+            <span className="sr-only">Back to Games</span>
+          </Link>
+        </Button>
+        <h1 className="text-xl font-bold">Editing: {game.title}</h1>
       </header>
       <main className="flex-1 p-4 sm:px-6 sm:py-0">
         <Tabs defaultValue="chapters">

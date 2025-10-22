@@ -1,14 +1,29 @@
 
 'use server';
 
-import type { Game, Chapter, Location, GameObject, Item, NPC, Portal } from '@/lib/game/types';
+import type { Game, GameId, Chapter, Location, GameObject, Item, NPC, Portal } from '@/lib/game/types';
 import { initializeFirebase } from '@/firebase';
 import { collection, doc, getDoc, getDocs } from 'firebase/firestore';
 
 /**
- * Loads the entire game structure from Firestore.
+ * Fetches the list of all games.
  */
-export async function getGameData(gameId: string = 'blood-on-brass'): Promise<Game | null> {
+export async function getGames(): Promise<Game[]> {
+    const { firestore } = initializeFirebase();
+    const gamesCol = collection(firestore, 'games');
+    const gameSnapshot = await getDocs(gamesCol);
+    if (gameSnapshot.empty) {
+        return [];
+    }
+    const gameList = gameSnapshot.docs.map(doc => doc.data() as Game);
+    return gameList;
+}
+
+
+/**
+ * Loads the entire game structure for a specific gameId from Firestore.
+ */
+export async function getGameData(gameId: GameId): Promise<Game | null> {
     const { firestore } = initializeFirebase();
     
     try {
