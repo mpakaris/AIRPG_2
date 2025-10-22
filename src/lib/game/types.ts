@@ -94,6 +94,7 @@ export type User = {
 
 export type PlayerState = {
   currentGameId: GameId;
+  currentChapterId: ChapterId;
   currentLocationId: LocationId; // Can be a cell or a location
   inventory: ItemId[];
   flags: Flag[];

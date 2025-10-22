@@ -11,7 +11,7 @@ This document outlines the standard structure for all `GameObject` definitions w
 | `name` | `string` | The user-facing name of the object (e.g., "Main Safe"). |
 | `description` | `string` | The default description of the object when it first appears or is examined. |
 | `capabilities` | `object` | A set of boolean flags declaring what the object *can* do. |
-| `initialState` | `object` | The starting state of the object when the game loads. |
+| `state` | `object` | The starting state of the object when the game loads. |
 | `inventory` | `object` | (Optional) Defines the object as a container. |
 | `links` | `array` | (Optional) Defines relationships with other objects (e.g., a switch controlling a door). |
 | `media` | `object` | Contains all visual and audio assets for the object. |
@@ -40,7 +40,7 @@ Defines the inherent abilities of an object. If a capability is `false`, the eng
 | `readable` | `boolean` | Can this object be read? |
 | `inputtable` | `boolean` | Does this object accept direct input (like a keypad)? |
 
-### `initialState`
+### `state`
 The default state of the object. This is copied into the player's dynamic `playerState.objectStates` at the start of the game.
 
 | Property | Type | Description |
@@ -118,3 +118,4 @@ Provides default messages for common verbs if a specific handler is not defined 
 | `locked` | `string` | Message for trying to `open` a `lockable` object that is locked. |
 | `notMovable` | `string` | Message for trying to `move` an object where `movable: false`. |
 | `noEffect` | `string` | Message for `use` when the item has no special interaction. |
+

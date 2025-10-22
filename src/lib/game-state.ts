@@ -1,6 +1,6 @@
 
 
-import type { Game, PlayerState, Chapter, ChapterId, GameObjectId, GameObjectState, PortalState, PortalId, NpcId, NpcState } from './game/types';
+import type { Game, PlayerState, Chapter, ChapterId, GameObjectId, GameObjectState, PortalState, PortalId, NpcId, NpcState, LocationId } from './game/types';
 
 export function getInitialState(game: Game): PlayerState {
   
@@ -50,6 +50,7 @@ export function getInitialState(game: Game): PlayerState {
 
   return {
     currentGameId: game.id,
+    currentChapterId: game.startChapterId,
     currentLocationId: startChapter.startLocationId,
     inventory: [],
     flags: [],

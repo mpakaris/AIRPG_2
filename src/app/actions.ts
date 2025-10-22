@@ -227,6 +227,9 @@ export async function processCommand(
         const verb = verbMatch ? verbMatch[1] : commandToExecute;
         const restOfCommand = commandToExecute.substring((verbMatch ? verbMatch[0].length : verb.length)).trim();
         
+        // Find the target object for the command
+        const targetObject = objectsInLocation.find(obj => restOfCommand.includes(obj.gameLogic.name.toLowerCase()));
+
         switch (verb) {
             case 'examine':
                  if (restOfCommand.startsWith('at ')) {
@@ -295,7 +298,6 @@ export async function processCommand(
                  commandHandlerResult = { newState: currentState, messages: [agentMessage] };
                  break;
             default:
-                const targetObject = objectsInLocation.find(obj => restOfCommand.includes(obj.gameLogic.name.toLowerCase()));
                 if (targetObject && targetObject.gameLogic.fallbackMessages) {
                     const fallbackMessages = targetObject.gameLogic.fallbackMessages;
                     const failureMessage = fallbackMessages?.[verb as keyof typeof fallbackMessages] || fallbackMessages?.default;
