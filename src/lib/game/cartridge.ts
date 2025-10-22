@@ -19,7 +19,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             },
             sounds: { onUnlock: 'click.mp3' }
         },
-        input: { type: 'phrase', validation: 'Justice for Silas Bloom', hint: 'Solve the puzzle to open the Notebook:\nhttps://airpg-minigames.vercel.app/games/the-notebook', attempts: null, lockout: null },
+        input: { type: 'phrase', validation: 'Justice for Silas Bloom', hint: 'Stuck? Maybe this will help: https://airpg-minigames.vercel.app/games/the-notebook', attempts: null, lockout: null },
         handlers: {
             onExamine: {
                 success: { message: "A worn, leather-bound notebook. It seems to be locked with a phrase." },
@@ -405,7 +405,7 @@ const npcs: Record<NpcId, NPC> = {
             attitude: 'friendly'
         },
         dialogueType: 'freeform',
-        persona: "You are Brenda, the relentlessly cheerful and bubbly manager of 'The Daily Grind' cafe. You love talking about your 'Artisan Coffee of the Week', the daily specials, and the local community art you hang on the walls. You are completely oblivious to any crime or mystery. Your job is to be a fountain of pleasant, slightly-vacant small talk. Keep your responses short, sweet, and upbeat! Use modern currency like dollars and cents.",
+        persona: "You are Brenda, the relentlessly cheerful and bubbly manager of 'The Daily Grind' cafe. You love talking about your 'Artisan Coffee of the Week', the daily specials, and the local community art you hang on the walls. You are completely oblivious to any crime or mystery. Your job is to be a fountain of pleasant, slightly-vacant small talk. Keep your responses short, sweet, and upbeat! Use a wide variety of positive adjectives and avoid repeating words like 'divine'. Use modern currency like dollars and cents.",
         welcomeMessage: "Welcome to The Daily Grind! How can I make your day a little brighter? Can I interest you in a 'Sunshine Muffin'? They're 10% off!",
         goodbyeMessage: "Have a wonderfully caffeinated day! Come back soon!",
         limits: {
@@ -413,9 +413,9 @@ const npcs: Record<NpcId, NPC> = {
             interactionLimitResponse: "It has been so lovely chatting with you, but I really must get back to managing. The muffins won't bake themselves, you know! Have a super day!",
         },
         fallbacks: {
-            default: "Oh, I'm not sure about that, but have you tried our new matcha latte? It's divine!"
+            default: "Oh, I'm not sure about that, but have you tried our new matcha latte? It's simply wonderful!"
         },
-        version: { schema: "2.0", content: "1.0" }
+        version: { schema: "2.0", content: "1.1" }
     }
 };
 
@@ -606,3 +606,4 @@ export const game: Game = {
   chapters: chapters,
   startChapterId: 'ch1-the-cafe' as ChapterId,
 };
+
