@@ -39,7 +39,8 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                 fail: { message: "That password doesn't work. The lock remains stubbornly shut." }
             },
             onMove: {
-                fail: { message: "You slide the notebook around on the table, but there's nothing hidden underneath." }
+                success: { message: "You slide the notebook around on the table, but there's nothing hidden underneath." },
+                fail: { message: "" }
             }
         },
         fallbackMessages: {
@@ -65,7 +66,8 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                 alternateMessage: "The menu hasn't changed. The special is still about 'justice'."
             },
             onMove: {
-                fail: { message: "You shift the chalkboard stand. Just a dusty floor behind it."}
+                success: { message: "You shift the chalkboard stand. Just a dusty floor behind it.", actions: [] },
+                fail: { message: "" }
             }
         },
         fallbackMessages: { default: "Probably best to leave the menu alone. It's not part of the case." },
@@ -86,7 +88,8 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                 alternateMessage: "It's just today's magazine. Nothing new here."
             },
             onMove: {
-                fail: { message: "You slide the magazine aside. Nothing but a sticky coffee ring on the table."}
+                success: { message: "You slide the magazine aside. Nothing but a sticky coffee ring on the table." },
+                fail: { message: "" }
             }
         },
         fallbackMessages: { default: "The magazine is old news. Let's stick to the facts of our case." },
@@ -111,7 +114,8 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                 alternateMessage: "The bookshelf still has that romance novel, 'Justice for My Love'."
             },
             onMove: {
-                fail: { message: "It's too heavy to move by yourself." }
+                success: { message: "It's too heavy to move by yourself." },
+                fail: { message: "" }
             }
         },
         fallbackMessages: { default: "It's just a bookshelf. Let's not get sidetracked." },
