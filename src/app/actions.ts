@@ -518,10 +518,12 @@ function handleOpen(state: PlayerState, targetName: string, game: Game): Command
 function handleTake(state: PlayerState, targetName: string, game: Game): CommandResult {
   const chapter = game.chapters[state.currentChapterId];
   const location = chapter.locations[state.currentLocationId];
-  const newState = { ...state, inventory: [...state.inventory], objectStates: {...state.objectStates} };
-  const normalizedTargetName = targetName.toLowerCase().replace(/"/g, '').trim();
   const narratorName = game.narratorName || "Narrator";
+  const normalizedTargetName = targetName.toLowerCase().replace(/"/g, '').trim();
   
+  // Create a deep copy of the state to safely mutate
+  let newState = JSON.parse(JSON.stringify(state));
+
   for (const objId of location.objects) {
     const liveObject = getLiveGameObject(objId, newState, game);
     
@@ -534,18 +536,18 @@ function handleTake(state: PlayerState, targetName: string, game: Game): Command
             const itemToTake = chapter.items[itemToTakeId];
 
             if (!itemToTake.isTakable) {
-                return { newState, messages: [createMessage('narrator', narratorName, itemToTake.onTake?.failMessage || `You can't take the ${itemToTake.name}.`)] };
+                return { newState: state, messages: [createMessage('narrator', narratorName, itemToTake.onTake?.failMessage || `You can't take the ${itemToTake.name}.`)] };
             }
             
             if (newState.inventory.includes(itemToTake.id)) {
-                return { newState, messages: [createMessage('system', 'System', `You already have the ${itemToTake.name}.`)] };
+                return { newState: state, messages: [createMessage('system', 'System', `You already have the ${itemToTake.name}.`)] };
             }
 
+            // Perform the transaction
             newState.inventory.push(itemToTake.id);
             
             const currentObjectItems = liveObject.state.items || [];
             const newObjectItems = currentObjectItems.filter(id => id !== itemToTake.id);
-            if (!newState.objectStates[objId]) newState.objectStates[objId] = {};
             newState.objectStates[objId].items = newObjectItems;
 
             const actions = itemToTake.onTake?.successActions || [];
@@ -556,7 +558,7 @@ function handleTake(state: PlayerState, targetName: string, game: Game): Command
     }
   }
   
-  return { newState, messages: [createMessage('system', 'System', `You can't take that.`)] };
+  return { newState: state, messages: [createMessage('system', 'System', `You can't take that.`)] };
 }
 
 function handleGo(state: PlayerState, targetName: string, game: Game): CommandResult {
@@ -1222,6 +1224,3 @@ export async function generateStoryForChapter(userId: string, gameId: GameId, ch
 
     return { newState };
 }
-
-
-

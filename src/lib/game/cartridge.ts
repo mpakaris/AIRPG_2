@@ -116,7 +116,7 @@ export const game: Game = {
                     }
                 },
                 onUnlock: {
-                    successMessage: "The notebook unlocks with a soft click. The cover creaks open.",
+                    successMessage: "The notebook unlocks with a soft click. The cover creaks open. https://airpg-minigames.vercel.app/games/the-notebook",
                     failMessage: "That password doesn't work. The lock remains stubbornly shut.",
                     actions: [
                          { type: 'SET_FLAG', flag: 'has_unlocked_notebook' as Flag }
@@ -256,6 +256,7 @@ export const game: Game = {
                 isTakable: true,
                 onTake: {
                     successMessage: 'You take the newspaper article.',
+                    failMessage: "You can't take that right now."
                 },
                 onRead: {
                     message: 'You read the article.',
@@ -279,6 +280,7 @@ export const game: Game = {
                 isTakable: true,
                 onTake: {
                     successMessage: 'You take the SD card.',
+                    failMessage: "You can't take that right now."
                 },
                 onUse: {
                     message: "You insert the SD card into your phone.",
@@ -374,8 +376,3 @@ export const game: Game = {
     }
   }
 };
-
-    
-
-
-
