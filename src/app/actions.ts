@@ -1053,7 +1053,7 @@ export async function processCommand(
             const isTakeCommand = verb === 'take' || verb === 'pick';
             if (verb !== 'invalid' && !hasSystemMessage && !isTakeCommand) {
                 commandHandlerResult.messages.unshift(agentMessage);
-_            }
+            }
         }
     }
     
