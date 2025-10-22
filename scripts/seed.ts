@@ -21,13 +21,8 @@ if (!serviceAccountKey && getApps().length === 0) {
 
 try {
     if (getApps().length === 0) {
-        // The key might be a stringified JSON wrapped in single quotes.
-        // This logic robustly parses it.
-        let keyString = serviceAccountKey!;
-        if (keyString.startsWith("'") && keyString.endsWith("'")) {
-            keyString = keyString.substring(1, keyString.length - 1);
-        }
-        const parsedKey = JSON.parse(keyString);
+        // The key must be a valid JSON string.
+        const parsedKey = JSON.parse(serviceAccountKey!);
         
         initializeApp({
             credential: cert(parsedKey)
