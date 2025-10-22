@@ -29,12 +29,14 @@ export async function getGameData(gameId: string = 'blood-on-brass'): Promise<Ga
         const gameObjectsSnap = await getDocs(collection(firestore, `games/${gameId}/game_objects`));
         const itemsSnap = await getDocs(collection(firestore, `games/${gameId}/items`));
         const npcsSnap = await getDocs(collection(firestore, `games/${gameId}/npcs`));
+        const portalsSnap = await getDocs(collection(firestore, `games/${gameId}/portals`));
 
         gameData.chapters = Object.fromEntries(chaptersSnap.docs.map(d => [d.id, d.data() as Chapter]));
         gameData.locations = Object.fromEntries(locationsSnap.docs.map(d => [d.id, d.data() as Location]));
         gameData.gameObjects = Object.fromEntries(gameObjectsSnap.docs.map(d => [d.id, d.data() as GameObject]));
         gameData.items = Object.fromEntries(itemsSnap.docs.map(d => [d.id, d.data() as Item]));
         gameData.npcs = Object.fromEntries(npcsSnap.docs.map(d => [d.id, d.data() as NPC]));
+        gameData.portals = Object.fromEntries(portalsSnap.docs.map(d => [d.id, d.data() as any]));
 
         return gameData;
 

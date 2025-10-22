@@ -36,7 +36,7 @@ function EntityTable({ title, description, data, columns }: { title: string, des
                         </TableHeader>
                         <TableBody>
                             {data.map((item) => (
-                                <TableRow key={item.id}>
+                                <TableRow key={item.id || item.locationId || item.portalId}>
                                     {columns.map(col => <TableCell key={col.key}>{String(item[col.key])}</TableCell>)}
                                 </TableRow>
                             ))}

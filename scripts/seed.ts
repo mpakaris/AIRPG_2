@@ -18,7 +18,7 @@ if (!serviceAccountKey && getApps().length === 0) {
 
 try {
     if (getApps().length === 0) {
-        // The key from dotenv might be wrapped in quotes or have escaped newlines.
+        // The key from dotenv might have escaped newlines.
         // The cert() function expects an object, so we must parse the JSON string.
         const parsedKey = JSON.parse(serviceAccountKey!);
         initializeApp({
