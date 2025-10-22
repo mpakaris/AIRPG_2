@@ -76,7 +76,7 @@ Defines a direct input puzzle. Requires `capabilities.inputtable` to be `true`.
 | :--- | :--- | :--- |
 | `type` | `string` | `code`, `phrase`, `pattern`, `sequence`. |
 | `validation`| `string` | The correct answer or a regex pattern for validation. |
-| `puzzleUrl` | `string` | (Optional) An external URL for a mini-game or interactive hint. |
+| `hint` | `string` | (Optional) A generic hint to be displayed on failure. Can be text or a URL. |
 | `attempts` | `number` | (Optional) Max number of failed attempts. `null` for infinite. |
 | `lockout` | `number` | (Optional) Duration of lockout after max attempts are reached. |
 

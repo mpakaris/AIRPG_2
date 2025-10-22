@@ -19,7 +19,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             },
             sounds: { onUnlock: 'click.mp3' }
         },
-        input: { type: 'phrase', validation: 'Justice for Silas Bloom', puzzleUrl: 'https://airpg-minigames.vercel.app/games/the-notebook', attempts: null, lockout: null },
+        input: { type: 'phrase', validation: 'Justice for Silas Bloom', hint: 'Stuck? Maybe this will help: https://airpg-minigames.vercel.app/games/the-notebook', attempts: null, lockout: null },
         handlers: {
             onExamine: {
                 success: { message: "A worn, leather-bound notebook. It seems to be locked with a phrase." },

@@ -25,8 +25,8 @@ export function handleOpen(state: PlayerState, targetName: string, game: Game): 
     
     if (liveObject.state.isLocked) {
         let lockMessage = liveObject.gameLogic.fallbackMessages?.locked || "It's locked.";
-        if (liveObject.gameLogic.input?.puzzleUrl) {
-            lockMessage += `\n\nStuck? Maybe this will help: ${liveObject.gameLogic.input.puzzleUrl}`;
+        if (liveObject.gameLogic.input?.hint) {
+            lockMessage += `\n\n${liveObject.gameLogic.input.hint}`;
         }
         return { newState: state, messages: [createMessage('narrator', narratorName, lockMessage)] };
     }

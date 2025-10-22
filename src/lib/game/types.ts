@@ -189,7 +189,7 @@ export type GameObject = {
   input?: {
     type: 'code' | 'phrase' | 'pattern' | 'sequence';
     validation: string; // The correct code/phrase, or a regex for patterns
-    puzzleUrl?: string; // URL to a mini-game or external hint
+    hint?: string; // A generic hint, can be a URL or text
     attempts: number | null;
     lockout: number | null; // Lockout duration in seconds, or for N turns
   };
