@@ -7,19 +7,21 @@ import { getGameData } from './actions';
 import type { Game, GameId } from '@/lib/game/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { LoaderCircle } from 'lucide-react';
+import { LoaderCircle, ArrowLeft } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
-
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 function EntityTable({ title, description, data, columns }: { title: string, description: string, data: any[], columns: { key: string, label: string }[] }) {
-    if (!data) {
+    if (!data || data.length === 0) {
         return (
             <Card>
-                <CardHeader><CardTitle>{title}</CardTitle></CardHeader>
-                <CardContent><p>No data found for {title}.</p></CardContent>
+                <CardHeader>
+                    <CardTitle>{title}</CardTitle>
+                    <CardDescription>{description}</CardDescription>
+                </CardHeader>
+                <CardContent><p className="text-muted-foreground">No data found for {title}.</p></CardContent>
             </Card>
         )
     }
@@ -32,20 +34,35 @@ function EntityTable({ title, description, data, columns }: { title: string, des
             </CardHeader>
             <CardContent>
                 <ScrollArea className="h-[60vh]">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                {columns.map(col => <TableHead key={col.key}>{col.label}</TableHead>)}
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {data.map((item) => (
-                                <TableRow key={item.id || item.locationId || item.portalId}>
-                                    {columns.map(col => <TableCell key={col.key}>{String(item[col.key])}</TableCell>)}
+                    <Accordion type="single" collapsible className="w-full">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    {columns.map(col => <TableHead key={col.key}>{col.label}</TableHead>)}
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                            </TableHeader>
+                            <TableBody>
+                                {data.map((item) => (
+                                    <AccordionItem value={item.id || item.locationId || item.portalId} key={item.id || item.locationId || item.portalId} className="border-b-0">
+                                        <AccordionTrigger asChild>
+                                            <TableRow className="cursor-pointer hover:bg-muted/50">
+                                                {columns.map(col => <TableCell key={col.key}>{String(item[col.key])}</TableCell>)}
+                                            </TableRow>
+                                        </AccordionTrigger>
+                                        <AccordionContent asChild>
+                                            <tr>
+                                                <td colSpan={columns.length + 1}>
+                                                    <div className="bg-muted/50 p-4 rounded-lg">
+                                                        <pre className="text-xs whitespace-pre-wrap">{JSON.stringify(item, null, 2)}</pre>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </AccordionContent>
+                                    </AccordionItem>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </Accordion>
                 </ScrollArea>
             </CardContent>
         </Card>
