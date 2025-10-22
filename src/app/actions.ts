@@ -380,7 +380,8 @@ function processPassword(state: PlayerState, command: string, game: Game): Comma
             'narrator', 
             narratorName, 
             targetObject.gameLogic.onUnlock?.successMessage || "It unlocks!",
-            'text'
+            'image',
+            { id: targetObject.gameLogic.id, game, state: result.newState!, showEvenIfExamined: true }
         );
         result.messages.unshift(unlockMessage);
 
