@@ -4,12 +4,14 @@
 import { initializeFirebase } from '@/firebase';
 import { collection, getDocs, doc, getDoc, deleteDoc } from 'firebase/firestore';
 import type { User, PlayerState, Message, Game, GameId } from '@/lib/game/types';
-import { game as gameCartridge } from '@/lib/game/cartridge';
 
-// Since we only have one game cartridge for now, we'll return it directly.
-// In the future, this could fetch from a 'games' collection.
+// Now we fetch games from the database.
 export async function getGames(): Promise<Game[]> {
-    return [gameCartridge];
+    const { firestore } = initializeFirebase();
+    const gamesCol = collection(firestore, 'games');
+    const gameSnapshot = await getDocs(gamesCol);
+    const gameList = gameSnapshot.docs.map(doc => doc.data() as Game);
+    return gameList;
 }
 
 export async function getUsers(): Promise<User[]> {
@@ -40,21 +42,24 @@ export async function getPlayerLogs(userId: string, gameId: GameId): Promise<Mes
     return [];
 }
 
-export async function deleteUser(userId: string): Promise<void> {
+export async function deleteUser(userId: string, gameIds: GameId[]): Promise<void> {
     const { firestore } = initializeFirebase();
-    const gameId = gameCartridge.id;
-
-    const userRef = doc(firestore, 'users', userId);
-    const stateRef = doc(firestore, 'player_states', `${userId}_${gameId}`);
-    const logRef = doc(firestore, 'logs', `${userId}_${gameId}`);
-
+    
     try {
-        await Promise.all([
-            deleteDoc(userRef),
-            deleteDoc(stateRef),
-            deleteDoc(logRef)
-        ]);
+        const deletePromises: Promise<any>[] = [];
+        
+        // Delete user document
+        deletePromises.push(deleteDoc(doc(firestore, 'users', userId)));
+
+        // Delete player state and logs for each game they have
+        gameIds.forEach(gameId => {
+            deletePromises.push(deleteDoc(doc(firestore, 'player_states', `${userId}_${gameId}`)));
+            deletePromises.push(deleteDoc(doc(firestore, 'logs', `${userId}_${gameId}`)));
+        });
+
+        await Promise.all(deletePromises);
         console.log(`Successfully deleted all data for user: ${userId}`);
+
     } catch (error) {
         console.error(`Error deleting user ${userId}:`, error);
         throw new Error(`Failed to delete user data. Please try again.`);

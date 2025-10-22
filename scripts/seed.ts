@@ -8,6 +8,7 @@ config();
 
 import { game as gameCartridge } from '../src/lib/game/cartridge';
 import { getInitialState } from '../src/lib/game-state';
+import { Chapter, Game, GameObject, Item, Location, NPC, Portal, Structure } from '../src/lib/game/types';
 
 // IMPORTANT: Replace with your actual service account key content
 // You can get this from your Firebase project settings -> Service accounts -> Generate new private key
@@ -37,17 +38,48 @@ const db = getFirestore();
 
 const DEV_USER_ID = process.env.NEXT_PUBLIC_DEV_USER_ID || '36308548589';
 
+async function seedCollection<T extends {id: string}>(collectionName: string, data: Record<string, T>) {
+    console.log(`Seeding collection: ${collectionName}...`);
+    const collectionRef = db.collection(collectionName);
+    const batch = db.batch();
+
+    for (const key in data) {
+        const entity = data[key];
+        const docRef = collectionRef.doc(entity.id);
+        batch.set(docRef, { ...entity }, { merge: true });
+    }
+
+    await batch.commit();
+    console.log(`Collection ${collectionName} seeded with ${Object.keys(data).length} documents.`);
+}
+
 /**
  * Seeds only the game cartridge to the 'games' collection.
  * This is safe to run to update game content without affecting users.
  */
 async function seedGameCartridge() {
     console.log('Starting game cartridge seed...');
+    
+    // Seed main game document
+    const gameDoc: Omit<Game, 'chapters' | 'locations' | 'gameObjects' | 'items' | 'npcs' | 'portals' | 'structures' | 'world'> = { ...gameCartridge };
     const gameRef = db.collection('games').doc(gameCartridge.id);
-    console.log(`Seeding game: ${gameCartridge.id}`);
-    await gameRef.set({ ...gameCartridge });
-    console.log('Game cartridge seeded successfully to games/blood-on-brass.');
-    console.log('Database seeding complete!');
+    await gameRef.set(gameDoc, { merge: true });
+    console.log(`Game document ${gameCartridge.id} seeded.`);
+
+    // Seed sub-collections
+    await seedCollection('chapters', gameCartridge.chapters as Record<string, Chapter>);
+    await seedCollection('locations', gameCartridge.locations as Record<string, Location>);
+    await seedCollection('game_objects', gameCartridge.gameObjects as Record<string, GameObject>);
+    await seedCollection('items', gameCartridge.items as Record<string, Item>);
+    await seedCollection('npcs', gameCartridge.npcs as Record<string, NPC>);
+    await seedCollection('portals', gameCartridge.portals as Record<string, Portal>);
+    await seedCollection('structures', gameCartridge.structures as Record<string, Structure>);
+    // World is a bit different as it contains cells, not a simple record
+    const worldRef = db.collection('worlds').doc(gameCartridge.world.worldId);
+    await worldRef.set(gameCartridge.world, { merge: true });
+    console.log('World data seeded.');
+
+    console.log('Game cartridge seeded successfully.');
 }
 
 /**
@@ -57,7 +89,7 @@ async function seedGameCartridge() {
 async function seedAll() {
     console.log('Starting full database seed...');
 
-    // 1. Seed Games Collection
+    // 1. Seed Games Collection and all related sub-collections
     await seedGameCartridge();
 
     // 2. Seed Users Collection
@@ -81,7 +113,7 @@ async function seedAll() {
     const logRef = db.collection('logs').doc(`${DEV_USER_ID}_${gameCartridge.id}`);
     console.log(`Wiping logs for user ${DEV_USER_ID} and game ${gameCartridge.id}`);
     await logRef.set({ messages: [] });
-    console.log('Logs wiped successfully.');
+    consolelog('Logs wiped successfully.');
 
 
     console.log('Full database seeding complete!');
@@ -103,5 +135,5 @@ if (seedType === 'game') {
     });
 } else {
     console.log("No seed type specified. Please run with 'game' or 'all'.");
-    console.log("Example: `npm run db:seed -- game` or `npm run db:seed:all`");
+    console.log("Example: `npm run db:seed game` or `npm run db:seed all`");
 }

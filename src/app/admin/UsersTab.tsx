@@ -254,7 +254,7 @@ export function UsersTab({ users, games, isLoading, onRefresh }: { users: User[]
     const handleDeleteUser = (userToDelete: User) => {
         startDeleteTransition(async () => {
             try {
-                await deleteUser(userToDelete.id);
+                await deleteUser(userToDelete.id, userToDelete.purchasedGames);
                 toast({
                     title: "User Deleted",
                     description: `${userToDelete.username} (${userToDelete.id}) has been successfully deleted.`,

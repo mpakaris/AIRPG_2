@@ -4,17 +4,26 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getGameData } from './actions';
-import type { Game, Chapter, Location, GameObject, Item, NPC } from '@/lib/game/types';
+import type { Game } from '@/lib/game/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { LoaderCircle } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 function EntityTable({ title, description, data, columns }: { title: string, description: string, data: any[], columns: { key: string, label: string }[] }) {
+    if (!data) {
+        return (
+            <Card>
+                <CardHeader><CardTitle>{title}</CardTitle></CardHeader>
+                <CardContent><p>No data found for {title}.</p></CardContent>
+            </Card>
+        )
+    }
+
     return (
         <Card>
             <CardHeader>
-                <CardTitle>{title}</CardTitle>
+                <CardTitle>{title} ({data.length})</CardTitle>
                 <CardDescription>{description}</CardDescription>
             </CardHeader>
             <CardContent>
@@ -26,9 +35,9 @@ function EntityTable({ title, description, data, columns }: { title: string, des
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {data.map((item, index) => (
-                                <TableRow key={item.id || index}>
-                                    {columns.map(col => <TableCell key={col.key}>{item[col.key]}</TableCell>)}
+                            {data.map((item) => (
+                                <TableRow key={item.id}>
+                                    {columns.map(col => <TableCell key={col.key}>{String(item[col.key])}</TableCell>)}
                                 </TableRow>
                             ))}
                         </TableBody>
@@ -46,7 +55,7 @@ export function Dashboard() {
 
   const fetchAllData = useCallback(async () => {
     setIsLoading(true);
-    const gameData = await getGameData();
+    const gameData = await getGameData(); // Assumes a default gameId for now
     setGame(gameData);
     setIsLoading(false);
   }, []);
@@ -55,11 +64,19 @@ export function Dashboard() {
     fetchAllData();
   }, [fetchAllData]);
 
-  if (isLoading || !game) {
+  if (isLoading) {
       return (
           <div className="flex min-h-screen flex-col items-center justify-center bg-muted/40">
               <LoaderCircle className="animate-spin h-12 w-12 text-primary" />
-              <p className="mt-4 text-muted-foreground">Loading Game Cartridge...</p>
+              <p className="mt-4 text-muted-foreground">Loading Game Data from Firestore...</p>
+          </div>
+      );
+  }
+
+  if (!game) {
+       return (
+          <div className="flex min-h-screen flex-col items-center justify-center bg-muted/40">
+              <p className="mt-4 text-destructive">Failed to load game data. Have you seeded the database? Run `npm run db:seed game`.</p>
           </div>
       );
   }
@@ -67,32 +84,24 @@ export function Dashboard() {
   return (
     <div className="flex min-h-screen flex-col bg-muted/40">
       <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
-        <h1 className="text-xl font-bold">Writer's Room</h1>
+        <h1 className="text-xl font-bold">Writer's Room: {game.title}</h1>
       </header>
       <main className="flex-1 p-4 sm:px-6 sm:py-0">
-        <Tabs defaultValue="games">
+        <Tabs defaultValue="chapters">
           <TabsList className="grid w-full grid-cols-3 md:grid-cols-6 mb-4">
-            <TabsTrigger value="games">Games</TabsTrigger>
             <TabsTrigger value="chapters">Chapters</TabsTrigger>
             <TabsTrigger value="locations">Locations</TabsTrigger>
             <TabsTrigger value="objects">Objects</TabsTrigger>
             <TabsTrigger value="items">Items</TabsTrigger>
             <TabsTrigger value="npcs">NPCs</TabsTrigger>
+            <TabsTrigger value="portals">Portals</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="games">
-            <EntityTable 
-                title="Game"
-                description="The main game configuration."
-                data={[game]}
-                columns={[ { key: 'id', label: 'ID' }, { key: 'title', label: 'Title' }, { key: 'gameType', label: 'Type' } ]}
-            />
-          </TabsContent>
           <TabsContent value="chapters">
             <EntityTable 
                 title="Chapters"
                 description="The chapters that make up the game."
-                data={Object.values(game.chapters)}
+                data={Object.values(game.chapters || {})}
                 columns={[ { key: 'id', label: 'ID' }, { key: 'title', label: 'Title' }, { key: 'goal', label: 'Goal' } ]}
             />
           </TabsContent>
@@ -100,7 +109,7 @@ export function Dashboard() {
              <EntityTable 
                 title="Locations"
                 description="The different scenes or places in the game world."
-                data={Object.values(game.locations)}
+                data={Object.values(game.locations || {})}
                 columns={[ { key: 'locationId', label: 'ID' }, { key: 'name', label: 'Name' } ]}
             />
           </TabsContent>
@@ -108,7 +117,7 @@ export function Dashboard() {
              <EntityTable 
                 title="Game Objects"
                 description="The interactive objects within locations."
-                data={Object.values(game.gameObjects)}
+                data={Object.values(game.gameObjects || {})}
                 columns={[ { key: 'id', label: 'ID' }, { key: 'name', label: 'Name' }, { key: 'description', label: 'Description' } ]}
             />
           </TabsContent>
@@ -116,7 +125,7 @@ export function Dashboard() {
              <EntityTable 
                 title="Items"
                 description="Items that can be found, taken, and used by the player."
-                data={Object.values(game.items)}
+                data={Object.values(game.items || {})}
                 columns={[ { key: 'id', label: 'ID' }, { key: 'name', label: 'Name' }, { key: 'description', label: 'Description' } ]}
             />
           </TabsContent>
@@ -124,8 +133,16 @@ export function Dashboard() {
              <EntityTable 
                 title="NPCs"
                 description="The non-player characters in the game."
-                data={Object.values(game.npcs)}
+                data={Object.values(game.npcs || {})}
                 columns={[ { key: 'id', label: 'ID' }, { key: 'name', label: 'Name' }, { key: 'importance', label: 'Importance' }, { key: 'dialogueType', label: 'Dialogue Type' } ]}
+            />
+          </TabsContent>
+          <TabsContent value="portals">
+             <EntityTable 
+                title="Portals"
+                description="Connections between locations."
+                data={Object.values(game.portals || {})}
+                columns={[ { key: 'portalId', label: 'ID' }, { key: 'name', label: 'Name' }, { key: 'kind', label: 'Type' } ]}
             />
           </TabsContent>
         </Tabs>
