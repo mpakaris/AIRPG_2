@@ -95,7 +95,7 @@ export const game: Game = {
                 id: 'obj_brown_notebook' as GameObjectId,
                 name: 'Brown Notebook',
                 description: 'A worn, leather-bound notebook. It feels heavy with secrets.',
-                items: ['item_data_chip', 'item_newspaper_article'],
+                items: ['item_sd_card', 'item_newspaper_article'],
                 isOpenable: true,
                 state: {
                     isLocked: true,
@@ -106,13 +106,13 @@ export const game: Game = {
                         message: "A worn, leather-bound notebook. It seems to be locked with a phrase."
                     },
                     locked: {
-                        message: "A lock prevents it from being opened without the right password. You'll need to figure out the phrase. Maybe this will help: https://airpg-minigames.vercel.app/games/the-notebook"
+                        message: "A lock prevents it from being opened without the right password. You'll need to figure out the phrase."
                     },
                     unlocked: {
-                        message: "The notebook is open. Inside, you see a small data chip next to a folded newspaper article. You can 'use \"Data Chip\"' or 'read \"Newspaper Article\"' to examine the contents."
+                        message: "The notebook is open. Inside, you see a small SD card next to a folded newspaper article. You can 'use \"SD Card\"' or 'read \"Newspaper Article\"' to examine the contents."
                     },
                     alternate: {
-                        message: "Inside is the data chip and the article. You can use 'use \"Data Chip\"' or 'read \"Newspaper Article\"' to examine the contents."
+                        message: "Inside is the SD card and the article. You can use 'use \"SD Card\"' or 'read \"Newspaper Article\"' to examine the contents."
                     }
                 },
                 onUnlock: {
@@ -120,7 +120,8 @@ export const game: Game = {
                     failMessage: "That password doesn't work. The lock remains stubbornly shut.",
                     actions: [
                          { type: 'SET_FLAG', flag: 'has_unlocked_notebook' as Flag },
-                         { type: 'SET_FLAG', flag: 'notebook_is_open' as Flag }
+                         { type: 'SET_FLAG', flag: 'notebook_is_open' as Flag },
+                         { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'https://airpg-minigames.vercel.app/games/the-notebook' }
                     ]
                 },
                 onFailure: {
@@ -270,17 +271,17 @@ export const game: Game = {
                     hint: 'newspaper article'
                 }
             },
-            'item_data_chip': {
-                id: 'item_data_chip' as ItemId,
-                name: 'Data Chip',
-                description: 'A small, modern data chip, looking strangely out of place in the old notebook.',
+            'item_sd_card': {
+                id: 'item_sd_card' as ItemId,
+                name: 'SD Card',
+                description: 'A small, modern SD card, looking strangely out of place in the old notebook.',
                 isTakable: false,
                 onUse: {
-                    message: "You insert the data chip into your phone.",
+                    message: "You insert the SD card into your phone.",
                     actions: [
                         { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759241547/0930_eit8he.mov', messageType: 'video'},
                         { type: 'SHOW_MESSAGE', sender: 'agent', content: "Silas Bloom... I've never heard that name before. He seemed like a talented musician. And that song for Rose... sounds like they were deeply in love." },
-                        { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'Beside the data chip, you see a folded newspaper article.' },
+                        { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'Beside the SD card, you see a folded newspaper article.' },
                         { type: 'SET_FLAG', flag: 'notebook_video_watched' as Flag }
                     ]
                 }
@@ -371,4 +372,5 @@ export const game: Game = {
 };
 
     
+
 
