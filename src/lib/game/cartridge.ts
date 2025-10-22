@@ -106,7 +106,7 @@ export const game: Game = {
                         message: "A worn, leather-bound notebook. It seems to be locked with a phrase."
                     },
                     locked: {
-                        message: "A lock prevents it from being opened without the right password. You'll need to figure out the phrase. \n\n https://airpg-minigames.vercel.app/games/the-notebook"
+                        message: "A lock prevents it from being opened without the right password. You'll need to figure out the phrase.\n\nhttps://airpg-minigames.vercel.app/games/the-notebook"
                     },
                     unlocked: {
                         message: "The notebook is open. Inside, you see a small SD card next to a folded newspaper article. \n\nYou can 'take \"SD Card\"' or 'take \"Newspaper Article\"' to add them to your inventory."
@@ -116,7 +116,7 @@ export const game: Game = {
                     }
                 },
                 onUnlock: {
-                    successMessage: "The notebook unlocks with a soft click. The cover creaks open. https://airpg-minigames.vercel.app/games/the-notebook",
+                    successMessage: "The notebook unlocks with a soft click.",
                     failMessage: "That password doesn't work. The lock remains stubbornly shut.",
                     actions: [
                          { type: 'SET_FLAG', flag: 'has_unlocked_notebook' as Flag }

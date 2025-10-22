@@ -317,28 +317,40 @@ function processPassword(state: PlayerState, command: string, game: Game): Comma
     const commandLower = command.toLowerCase();
 
     // Find the target object
-    let targetObject = objectsInLocation.find(obj => {
+    let targetObjectResult = objectsInLocation.find(obj => {
         if (!obj.gameLogic.unlocksWithPhrase) return false;
         return commandLower.includes(obj.gameLogic.name.toLowerCase());
     });
 
-    // If no specific object is mentioned, and there's only one object that needs a password, assume it's the target
-    if (!targetObject) {
+    if (!targetObjectResult) {
         const passwordObjects = objectsInLocation.filter(obj => obj.state.isLocked && obj.gameLogic.unlocksWithPhrase);
         if (passwordObjects.length === 1) {
-            targetObject = passwordObjects[0];
+            targetObjectResult = passwordObjects[0];
         } else {
              return { newState: state, messages: [createMessage('system', 'System', 'You need to be more specific about what you are using the password on.')] };
         }
+    }
+
+    const targetObject = targetObjectResult;
+
+    // Check if the object is already unlocked
+    if (!targetObject.state.isLocked) {
+        return { newState: state, messages: [createMessage('narrator', narratorName, 'It\'s already unlocked.')] };
     }
     
     // Extract the phrase
     const targetObjectNameLower = targetObject.gameLogic.name.toLowerCase();
     const objectNameIndex = commandLower.indexOf(targetObjectNameLower);
-    let phrase = command.substring(objectNameIndex + targetObjectNameLower.length).trim();
-    // Clean up the extracted phrase
+    let phrase = "";
+    if (objectNameIndex !== -1) {
+        phrase = command.substring(objectNameIndex + targetObjectNameLower.length).trim();
+    } else {
+        // Fallback for commands like 'password "phrase"' where object is implicit
+        const match = command.match(/"(.*?)"/);
+        if(match && match[1]) phrase = match[1];
+    }
+    
     phrase = phrase.replace(/^"|"$/g, '').replace(/^is\s*/, '').trim();
-
 
     if (!phrase) {
         return { newState: state, messages: [createMessage('narrator', narratorName, 'You need to specify a password phrase.')] };
@@ -939,10 +951,9 @@ export async function processCommand(
         
         switch (verb) {
             case 'examine':
-            case 'look':
                  if (restOfCommand.startsWith('at ')) {
                      commandHandlerResult = handleExamine(currentState, restOfCommand.replace('at ', ''), game);
-                 } else if (restOfCommand.startsWith('around')) {
+                 } else if (restOfCommand.startsWith('around') || commandToExecute === 'look around') {
                      commandHandlerResult = handleLook(currentState, game, lookAroundSummary);
                  } else if (restOfCommand.startsWith('behind')) {
                      const targetName = restOfCommand.replace('behind ', '').trim();
@@ -958,11 +969,20 @@ export async function processCommand(
                     commandHandlerResult = handleExamine(currentState, restOfCommand, game);
                  }
                  break;
+            case 'look':
+                if(restOfCommand === 'around') {
+                     commandHandlerResult = handleLook(currentState, game, lookAroundSummary);
+                } else {
+                     commandHandlerResult = handleExamine(currentState, restOfCommand.replace('at ', ''), game);
+                }
+                break;
             case 'open':
                 commandHandlerResult = handleOpen(currentState, restOfCommand, game);
                 break;
             case 'take':
-                commandHandlerResult = handleTake(currentState, restOfCommand, game);
+            case 'pick': // Alias for take
+                const target = restOfCommand.startsWith('up ') ? restOfCommand.substring(3) : restOfCommand;
+                commandHandlerResult = handleTake(currentState, target, game);
                 break;
             case 'go':
                 commandHandlerResult = handleGo(currentState, restOfCommand.replace('to ', ''), game);
