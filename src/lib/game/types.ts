@@ -94,7 +94,7 @@ export type User = {
 
 export type PlayerState = {
   currentGameId: GameId;
-  currentLocationId: LocationId; // Can be a cell or a scene
+  currentLocationId: LocationId; // Can be a cell or a location
   inventory: ItemId[];
   flags: Flag[];
   objectStates: Record<GameObjectId, GameObjectState>;

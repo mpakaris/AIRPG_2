@@ -37,6 +37,9 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                     actions: [{ type: 'SET_FLAG', flag: 'has_unlocked_notebook' as Flag }]
                 },
                 fail: { message: "That password doesn't work. The lock remains stubbornly shut." }
+            },
+            onMove: {
+                fail: { message: "You slide the notebook around on the table, but there's nothing hidden underneath." }
             }
         },
         fallbackMessages: {
@@ -60,6 +63,9 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                 success: { message: "Today's special is three scones for the price of two. A deal almost as sweet as justice." },
                 fail: { message: "" },
                 alternateMessage: "The menu hasn't changed. The special is still about 'justice'."
+            },
+            onMove: {
+                fail: { message: "You shift the chalkboard stand. Just a dusty floor behind it."}
             }
         },
         fallbackMessages: { default: "Probably best to leave the menu alone. It's not part of the case." },
@@ -70,7 +76,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         id: 'obj_magazine' as GameObjectId,
         name: 'Magazine',
         description: "It's a copy of this week's local entertainment magazine. The cover story discusses the current series of murders. The usual craziness of a Metropolis.",
-        capabilities: { openable: false, lockable: false, breakable: true, movable: false, powerable: false, container: false, readable: true, inputtable: false },
+        capabilities: { openable: false, lockable: false, breakable: true, movable: true, powerable: false, container: false, readable: true, inputtable: false },
         state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
         media: { images: { default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759603706/Newspaper_p85m1h.png', description: 'A magazine on a table.', hint: 'magazine' } } },
         handlers: {
@@ -78,6 +84,9 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                 success: { message: "It's a copy of this week's local entertainment magazine. The cover story discusses the current series of murders. The usual craziness of a Metropolis." },
                 fail: { message: "" },
                 alternateMessage: "It's just today's magazine. Nothing new here."
+            },
+            onMove: {
+                fail: { message: "You slide the magazine aside. Nothing but a sticky coffee ring on the table."}
             }
         },
         fallbackMessages: { default: "The magazine is old news. Let's stick to the facts of our case." },
@@ -113,7 +122,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         id: 'obj_painting' as GameObjectId,
         name: 'Painting on the wall',
         description: "An abstract painting hangs on the wall, its swirls of color adding a touch of modern art to the cafe's cozy atmosphere. It seems to be signed 'S.B.'",
-        capabilities: { openable: false, lockable: false, breakable: false, movable: false, powerable: false, container: false, readable: false, inputtable: false },
+        capabilities: { openable: false, lockable: false, breakable: false, movable: true, powerable: false, container: false, readable: false, inputtable: false },
         state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
         media: { images: { default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759604943/picture_on_wall_fcx10j.png', description: 'A painting on the wall of the cafe.', hint: 'abstract painting' } } },
         handlers: {
@@ -121,11 +130,22 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                 success: { message: "An abstract painting hangs on the wall, its swirls of color adding a touch of modern art to the cafe's cozy atmosphere. It seems to be signed 'S.B.'" },
                 fail: { message: "" },
                 alternateMessage: "It's the same abstract painting signed 'S.B.'."
+            },
+            onMove: {
+                conditions: [{ type: 'NO_FLAG', targetId: 'has_found_note_behind_painting' as Flag }],
+                success: {
+                    message: "You lift the painting off its hook. Taped to the back is a small, folded note.",
+                    actions: [
+                        { type: 'SET_FLAG', flag: 'has_found_note_behind_painting' as Flag },
+                        { type: 'ADD_ITEM', itemId: 'item_hidden_note' as ItemId }
+                    ]
+                },
+                fail: { message: "You lift the painting again, but there's nothing else behind it." }
             }
         },
-        fallbackMessages: { default: "The painting is nice, but it's not a clue.", 'look behind': "You look behind the painting and see nothing but wall." },
-        design: { authorNotes: "Contains the 'S.B.' clue for Silas Bloom." },
-        version: { schema: "1.0", content: "1.0" }
+        fallbackMessages: { default: "The painting is nice, but it's not a clue." },
+        design: { authorNotes: "Contains the 'S.B.' clue for Silas Bloom and now a hidden note." },
+        version: { schema: "1.0", content: "1.1" }
     }
 };
 
@@ -256,6 +276,19 @@ const items: Record<ItemId, Item> = {
         design: { tags: ['book', 'clue'] },
         version: { schema: "1.0", content: "1.0" }
     },
+    'item_hidden_note': {
+        id: 'item_hidden_note' as ItemId,
+        name: 'Hidden Note',
+        type: 'item',
+        description: 'A small note, folded neatly. It reads: "He knows. Find the flower with a broken heart."',
+        capabilities: { isTakable: true, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+        handlers: {
+            onTake: { success: { message: "You take the hidden note." }, fail: { message: "" } },
+            onRead: { success: { message: 'The note reads: "He knows. Find the flower with a broken heart."' }, fail: { message: "" } }
+        },
+        design: { tags: ['clue', 'note'] },
+        version: { schema: "1.0", content: "1.0" }
+    }
 };
 
 const npcs: Record<NpcId, NPC> = {
@@ -489,11 +522,11 @@ export const game: Game = {
     *   If Burt wants to 'open' an object, the command is 'open <object>'.
     *   If Burt says "pick up the card," the command is 'take "Business Card"'.
     *   If Burt says 'read the article', the command is 'read "Newspaper Article"'.
+    *   If Burt wants to 'move the painting' or 'look behind the painting', the command is 'move "Painting on the wall"'.
     *   If Burt says 'use the SD card', the command is 'use "SD Card"'.
     *   If Burt wants to provide a password with keywords like "password", "say", or "enter", the command MUST be in the format 'password <object> <phrase>'. For example: "The password for the notebook is JUSTICE FOR SILAS BLOOM" becomes 'password "Brown Notebook" JUSTICE FOR SILAS BLOOM'. Do NOT include quotes in the final command phrase itself.
     *   If Burt wants to move, the command is 'go <direction or location name>'.
     *   If Burt says "look" or "look around", the command is 'look around'.
-    *   If Burt wants to 'look behind' an object, the command is 'look behind <object>'.
     *   If the chapter is complete and Burt wants to go to the next location (e.g., "let's go to the jazz club"), the command is 'go next_chapter'.
     *   **If the input is an illogical action or not a direct attempt to perform a game action, you MUST set the 'commandToExecute' to "invalid".** This includes conversational questions.
 3.  **Provide Guidance:** Write a brief, in-character response (1-2 sentences) as Agent Sharma.

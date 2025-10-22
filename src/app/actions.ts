@@ -20,6 +20,7 @@ import { handleExamine } from '@/lib/game/actions/handle-examine';
 import { handleGo } from '@/lib/game/actions/handle-go';
 import { handleInventory } from '@/lib/game/actions/handle-inventory';
 import { handleLook } from '@/lib/game/actions/handle-look';
+import { handleMove } from '@/lib/game/actions/handle-move';
 import { handleOpen } from '@/lib/game/actions/handle-open';
 import { handleRead } from '@/lib/game/actions/handle-read';
 import { handleTake } from '@/lib/game/actions/handle-take';
@@ -239,9 +240,15 @@ export async function processCommand(
             case 'look':
                 if(restOfCommand === 'around') {
                      commandHandlerResult = handleLook(currentState, game, lookAroundSummary);
+                } else if (restOfCommand.startsWith('behind')) {
+                    const target = restOfCommand.replace('behind ', '').trim();
+                    commandHandlerResult = handleMove(currentState, target, game);
                 } else {
                      commandHandlerResult = handleExamine(currentState, restOfCommand.replace('at ', ''), game);
                 }
+                break;
+            case 'move':
+                commandHandlerResult = handleMove(currentState, restOfCommand, game);
                 break;
             case 'open':
                 commandHandlerResult = handleOpen(currentState, restOfCommand, game);
@@ -314,8 +321,9 @@ export async function processCommand(
             const isTakeCommand = verb === 'take' || verb === 'pick';
             const isReadCommand = verb === 'read';
             const isUseCommand = verb === 'use';
+            const isMoveCommand = verb === 'move' || (verb === 'look' && restOfCommand.startsWith('behind'));
 
-            if (verb !== 'invalid' && !hasSystemMessage && !isTakeCommand && !isReadCommand && !isUseCommand) {
+            if (verb !== 'invalid' && !hasSystemMessage && !isTakeCommand && !isReadCommand && !isUseCommand && !isMoveCommand) {
                 commandHandlerResult.messages.unshift(agentMessage);
             }
         }
