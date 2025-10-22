@@ -10,7 +10,8 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "db:seed": "tsx scripts/seed.ts"
+    "db:seed": "tsx scripts/seed.ts all",
+    "db:seed:game": "tsx scripts/seed.ts game"
   },
   "dependencies": {
     "@genkit-ai/google-genai": "^1.20.0",

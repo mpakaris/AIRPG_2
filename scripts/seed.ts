@@ -37,14 +37,28 @@ const db = getFirestore();
 
 const DEV_USER_ID = process.env.NEXT_PUBLIC_DEV_USER_ID || '36308548589';
 
-async function seedDatabase() {
-    console.log('Starting database seed...');
-
-    // 1. Seed Games Collection
+/**
+ * Seeds only the game cartridge to the 'games' collection.
+ * This is safe to run to update game content without affecting users.
+ */
+async function seedGameCartridge() {
+    console.log('Starting game cartridge seed...');
     const gameRef = db.collection('games').doc(gameCartridge.id);
     console.log(`Seeding game: ${gameCartridge.id}`);
     await gameRef.set({ ...gameCartridge });
-    console.log('Game seeded successfully.');
+    console.log('Game cartridge seeded successfully to games/blood-on-brass.');
+    console.log('Database seeding complete!');
+}
+
+/**
+ * Seeds the entire database including a dev user, their state, and logs.
+ * WARNING: This will overwrite existing dev user data.
+ */
+async function seedAll() {
+    console.log('Starting full database seed...');
+
+    // 1. Seed Games Collection
+    await seedGameCartridge();
 
     // 2. Seed Users Collection
     const userRef = db.collection('users').doc(DEV_USER_ID);
@@ -70,10 +84,24 @@ async function seedDatabase() {
     console.log('Logs wiped successfully.');
 
 
-    console.log('Database seeding complete!');
+    console.log('Full database seeding complete!');
 }
 
-seedDatabase().catch((error) => {
-    console.error('Error seeding database:', error);
-    process.exit(1);
-});
+// Check for command line arguments to decide which function to run
+const args = process.argv.slice(2);
+const seedType = args[0];
+
+if (seedType === 'game') {
+    seedGameCartridge().catch((error) => {
+        console.error('Error seeding game cartridge:', error);
+        process.exit(1);
+    });
+} else if (seedType === 'all') {
+    seedAll().catch((error) => {
+        console.error('Error seeding all data:', error);
+        process.exit(1);
+    });
+} else {
+    console.log("No seed type specified. Please run with 'game' or 'all'.");
+    console.log("Example: `npm run db:seed -- game` or `npm run db:seed:all`");
+}
