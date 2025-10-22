@@ -292,7 +292,7 @@ const items: Record<ItemId, Item> = {
         name: 'Justice for My Love',
         type: 'item',
         description: 'A romance novel.',
-        alternateDescription: "The cover is still cheesy, but the title 'Justice for My Love' continues to stand out.",
+        alternateDescription: "The cover is cheesy, but the title 'Justice for My Love' continues to stand out.",
         capabilities: { isTakable: false, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         handlers: {
             onRead: { success: { message: "The cover is cheesy, but the title 'Justice for My Love' catches your eye." }, fail: {message: ""} }
@@ -544,24 +544,24 @@ export const game: Game = {
     *   If Burt says "pick up the card," the command is 'take "Business Card"'.
     *   If Burt says 'read the article', the command is 'read "Newspaper Article"'.
     *   If Burt wants to 'move the painting' or 'look behind the painting', the command is 'move "Painting on the wall"'.
-    *   If Burt says 'use the SD card', the command is 'use "SD Card"'.
+    *   If Burt says 'use the SD card' or 'use the SD card with my phone', the command is 'use "SD Card"'.
     *   If Burt wants to provide a password with keywords like "password", "say", or "enter", the command MUST be in the format 'password <object> <phrase>'. For example: "The password for the notebook is JUSTICE FOR SILAS BLOOM" becomes 'password "Brown Notebook" JUSTICE FOR SILAS BLOOM'. Do NOT include quotes in the final command phrase itself.
     *   If Burt wants to move, the command is 'go <direction or location name>'.
     *   If Burt says "look" or "look around", the command is 'look around'.
     *   If the chapter is complete and Burt wants to go to the next location (e.g., "let's go to the jazz club"), the command is 'go next_chapter'.
-    *   **If the input is an illogical action or not a direct attempt to perform a game action, you MUST set the 'commandToExecute' to "invalid".** This includes conversational questions.
+    *   **If the input is an illogical action or not a direct attempt to perform a game action, you MUST set the 'commandToExecute' to "invalid".**
 3.  **Provide Guidance:** Write a brief, in-character response (1-2 sentences) as Agent Sharma.
     *   If the command is **valid**, confirm the action with a neutral, professional phrase. Examples: "Alright, checking it out.", "Copy that.", "Let's see.", "Makes sense."
-    *   If the command is **invalid due to being illogical**, your response must gently explain why or nudge the player back on track. ("Easy there, Burt. I don't think vandalism is in our playbook.").
-    *   If the command is **invalid due to being conversational** (e.g., "what now?", "who are you?", "what's the date?"), answer the question briefly if it's simple (like your name is Sharma, the location name is in the game state), then gently pivot back to the case by asking a question about the investigation.
+    *   If the command is **invalid due to being illogical**, your response must be supportive and guide the player back. Instead of saying "You can't do that," say something like "Good thought, Burt, but that doesn't seem to work. Let's rethink our approach." or "I'm not sure that's possible right now. What else can we try?"
+    *   If the command is **invalid due to being conversational** (e.g., "what now?", "who are you?"), answer briefly if possible (e.g., "I'm Sharma. Let's focus on the case."), then pivot back to the investigation by asking a question about the current objective.
 
 **Example 1 (Valid Command):**
 *Player Input:* "I want to see what that newspaper says."
 *Your Response:* { "agentResponse": "Alright. Let's see what the paper says.", "commandToExecute": "read \"Newspaper Article\"" }
 
-**Example 2 (Open Command):**
-*Player Input:* "open the notebook"
-*Your Response:* { "agentResponse": "Let's see if we can get this open.", "commandToExecute": "open \"Brown Notebook\"" }
+**Example 2 (Invalid Command - Gentle Correction):**
+*Player Input:* "I want to eat the SD Card."
+*Your Response:* { "agentResponse": "I don't think that's a good idea, Burt. We might need that as evidence. What else can we do?", "commandToExecute": "invalid" }
 
 **Example 3 (Password):**
 *Player Input:* "I say to the notebook: JUSTICE FOR SILAS BLOOM"

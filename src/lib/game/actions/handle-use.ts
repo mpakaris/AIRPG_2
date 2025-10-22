@@ -13,7 +13,7 @@ export async function handleUse(state: PlayerState, itemName: string, objectName
     return { newState: state, messages: [createMessage('system', 'System', `You don't have a "${itemName}".`)] };
   }
   
-  // Case 1: Using an item on a specific object
+  // Case 1: Using an item on a specific object ("use item on object")
   if (objectName) {
     const targetObjectId = location.objects.find(objId => game.gameObjects[objId]?.name.toLowerCase().includes(objectName.toLowerCase()));
   
@@ -39,12 +39,25 @@ export async function handleUse(state: PlayerState, itemName: string, objectName
     return { newState: state, messages: [createMessage('narrator', narratorName, `That doesn't seem to work.`)] };
   }
   
-  // Case 2: Using an item by itself (like reading it, or using the data chip)
+  // Case 2: Using an item by itself (like "use SD Card" or "use phone")
   if (itemToUse.handlers.onUse) {
-    let result = processActions(state, itemToUse.handlers.onUse.success.actions || [], game);
-    result.messages.unshift(createMessage('narrator', narratorName, itemToUse.handlers.onUse.success.message));
-    return result;
+    // Check conditions for the onUse handler
+    const handler = itemToUse.handlers.onUse;
+    const conditionsMet = (handler.conditions || []).every(cond => {
+        if (cond.type === 'HAS_FLAG') return state.flags.includes(cond.targetId as any);
+        // Add more condition checks here if needed
+        return true;
+    });
+
+    if (conditionsMet) {
+        let result = processActions(state, handler.success.actions || [], game);
+        result.messages.unshift(createMessage('narrator', narratorName, handler.success.message));
+        return result;
+    } else {
+        return { newState: state, messages: [createMessage('narrator', narratorName, handler.fail.message || `You can't use the ${itemToUse.name} right now.`)]};
+    }
   }
 
-  return { newState: state, messages: [createMessage('system', 'System', 'You need to specify what to use that on.')] };
+  // Fallback if the item exists but has no onUse handler or conditions aren't met
+  return { newState: state, messages: [createMessage('system', 'System', 'You need to specify what to use that on, or it can\'t be used by itself.')] };
 }

@@ -62,7 +62,7 @@ Your entire output must be a single, valid JSON object matching the output schem
 `,
 });
 
-const guidePlayerWithNarratorFlow = ai.defineFlow(
+const generatePlayerWithNarratorFlow = ai.defineFlow(
   {
     name: 'guidePlayerWithNarratorFlow',
     inputSchema: GuidePlayerWithNarratorInputSchema,
@@ -103,3 +103,4 @@ const guidePlayerWithNarratorFlow = ai.defineFlow(
 );
 
     
+
