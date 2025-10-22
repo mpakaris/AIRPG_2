@@ -70,7 +70,10 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                 fail: { message: "" }
             }
         },
-        fallbackMessages: { default: "Probably best to leave the menu alone. It's not part of the case." },
+        fallbackMessages: { 
+            default: "Probably best to leave the menu alone. It's not part of the case.",
+            notMovable: "It's a heavy stand, but you manage to slide it aside. There's only dust and a stray sugar packet underneath."
+        },
         design: { authorNotes: "Contains the 'justice' clue for the notebook password." },
         version: { schema: "1.0", content: "1.0" }
     },
@@ -92,7 +95,10 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                 fail: { message: "" }
             }
         },
-        fallbackMessages: { default: "The magazine is old news. Let's stick to the facts of our case." },
+        fallbackMessages: { 
+            default: "The magazine is old news. Let's stick to the facts of our case.",
+            notMovable: "You shift the magazine, revealing a sticky coffee ring. Not the clue you were hoping for."
+        },
         design: { authorNotes: "Flavor item to build atmosphere." },
         version: { schema: "1.0", content: "1.0" }
     },
@@ -118,7 +124,10 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                 fail: { message: "" }
             }
         },
-        fallbackMessages: { default: "It's just a bookshelf. Let's not get sidetracked." },
+        fallbackMessages: { 
+            default: "It's just a bookshelf. Let's not get sidetracked.",
+            notMovable: "It's too heavy to move by yourself."
+        },
         design: { authorNotes: "Contains the other 'justice' clue for the notebook." },
         version: { schema: "1.0", content: "1.0" }
     },
@@ -147,7 +156,10 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                 fail: { message: "You lift the painting again, but there's nothing else behind it." }
             }
         },
-        fallbackMessages: { default: "The painting is nice, but it's not a clue." },
+        fallbackMessages: { 
+            default: "The painting is nice, but it's not a clue.",
+            notMovable: "You can't move the painting, but you could try looking behind it."
+        },
         design: { authorNotes: "Contains the 'S.B.' clue for Silas Bloom and now a hidden note." },
         version: { schema: "1.0", content: "1.1" }
     }
@@ -202,7 +214,7 @@ const items: Record<ItemId, Item> = {
                         { type: 'SET_FLAG', flag: 'notebook_interaction_complete' as Flag }
                     ]
                 },
-                fail: { message: "You can't read that right now." }
+                fail: { message: "You can't read that now." }
             }
         },
         media: {
