@@ -1,5 +1,6 @@
 
-import type { Action, Game, GameObjectId, ImageDetails, ItemId, Message, NpcId, PlayerState, TokenUsage } from '../types';
+
+import type { Action, Game, GameObjectId, ItemId, Message, NpcId, PlayerState, TokenUsage } from '../types';
 import { getLiveGameObject } from './helpers';
 
 const examinedObjectFlag = (id: string) => `examined_${id}`;
@@ -12,7 +13,7 @@ export function createMessage(
   imageDetails?: { id: ItemId | NpcId | GameObjectId, game: Game, state: PlayerState, showEvenIfExamined?: boolean },
   usage?: TokenUsage
 ): Message {
-    let image: ImageDetails | undefined;
+    let image: Message['image'];
     
     if (imageDetails) {
         const { id, game, state, showEvenIfExamined } = imageDetails;
@@ -60,7 +61,13 @@ export function createMessage(
 }
 
 export function processActions(initialState: PlayerState, actions: Action[], game: Game): { newState: PlayerState, messages: Message[] } {
-    let newState = { ...initialState, flags: [...initialState.flags], objectStates: {...initialState.objectStates} };
+    let newState = { 
+        ...initialState, 
+        flags: [...initialState.flags], 
+        objectStates: {...initialState.objectStates},
+        npcStates: {...initialState.npcStates},
+        inventory: [...initialState.inventory],
+    };
     const messages: Message[] = [];
     const narratorName = game.narratorName || 'Narrator';
 
@@ -68,12 +75,12 @@ export function processActions(initialState: PlayerState, actions: Action[], gam
         switch (action.type) {
             case 'ADD_ITEM':
                 if (!newState.inventory.includes(action.itemId)) {
-                    newState.inventory = [...newState.inventory, action.itemId];
+                    newState.inventory.push(action.itemId);
                 }
                 break;
             case 'SET_FLAG':
                 if (!newState.flags.includes(action.flag)) {
-                    newState.flags = [...newState.flags, action.flag];
+                    newState.flags.push(action.flag);
                 }
                 break;
             case 'SHOW_MESSAGE':
@@ -126,6 +133,16 @@ export function processActions(initialState: PlayerState, actions: Action[], gam
                     };
                 }
                 break;
+            case 'DEMOTE_NPC':
+                 const npcToDemote = game.npcs[action.npcId];
+                 if (npcToDemote?.demoteRules?.then) {
+                    newState.npcStates[action.npcId] = {
+                        ...newState.npcStates[action.npcId],
+                        stage: npcToDemote.demoteRules.then.setStage,
+                        importance: npcToDemote.demoteRules.then.setImportance,
+                    };
+                 }
+                 break;
         }
     }
 

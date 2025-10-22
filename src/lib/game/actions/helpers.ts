@@ -1,5 +1,6 @@
 
-import type { Game, GameObject, GameObjectId, GameObjectState, Item, ItemId, PlayerState } from '../types';
+
+import type { Game, GameObject, GameObjectId, GameObjectState, Item, ItemId, NPC, NpcId, NpcState, PlayerState } from '../types';
 
 export function getLiveGameObject(id: GameObjectId, state: PlayerState, game: Game): {gameLogic: GameObject, state: GameObjectState} | null {
     const baseObject = game.gameObjects[id];
@@ -19,6 +20,23 @@ export function getLiveGameObject(id: GameObjectId, state: PlayerState, game: Ga
     
     return { gameLogic: baseObject, state: combinedState };
 }
+
+export function getLiveNpc(id: NpcId, state: PlayerState, baseNpc: NPC): NpcState {
+    const liveState = state.npcStates[id];
+    if (liveState) {
+        return liveState;
+    }
+    // Fallback to initial state if not found (should not happen after initialization)
+    return {
+        stage: baseNpc.initialState.stage,
+        importance: baseNpc.importance,
+        trust: baseNpc.initialState.trust,
+        attitude: baseNpc.initialState.attitude,
+        completedTopics: [],
+        interactionCount: 0,
+    };
+}
+
 
 export function findItemInContext(state: PlayerState, game: Game, targetName: string): Item | null {
     const location = game.locations[state.currentLocationId];

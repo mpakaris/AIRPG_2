@@ -1,4 +1,5 @@
 
+
 // Branded types for stronger type safety
 export type GameId = string & { readonly __brand: 'GameId' };
 export type ChapterId = string & { readonly __brand: 'ChapterId' };
@@ -50,7 +51,8 @@ export type Action =
   | { type: 'SET_INTERACTION_STATE', state: string }
   | { type: 'MOVE_TO_CELL', toCellId: CellId }
   | { type: 'ENTER_PORTAL', portalId: PortalId }
-  | { type: 'TELEPORT_PLAYER', toLocationId: LocationId };
+  | { type: 'TELEPORT_PLAYER', toLocationId: LocationId }
+  | { type: 'DEMOTE_NPC', npcId: NpcId };
 
 
 export type Story = {
@@ -74,6 +76,15 @@ export type PortalState = {
     isOpen: boolean;
 };
 
+export type NpcState = {
+    stage: 'active' | 'completed' | 'demoted';
+    importance: 'primary' | 'supporting' | 'ambient';
+    trust: number;
+    attitude: 'friendly' | 'neutral' | 'hostile' | 'suspicious';
+    completedTopics: string[];
+    interactionCount: number;
+}
+
 export type User = {
     id: string; // This can be a phone number or a dev ID
     username: string;
@@ -88,16 +99,16 @@ export type PlayerState = {
   flags: Flag[];
   objectStates: Record<GameObjectId, GameObjectState>;
   portalStates: Record<PortalId, PortalState>;
+  npcStates: Record<NpcId, NpcState>;
   stories: Record<ChapterId, Story>;
   activeConversationWith: NpcId | null;
   interactingWithObject: GameObjectId | null;
-  conversationCounts: Record<NpcId, number>;
 };
 
 // --- Standardized Schemas ---
 
 export type Condition = {
-  type: 'HAS_ITEM' | 'HAS_FLAG' | 'STATE_MATCH';
+  type: 'HAS_ITEM' | 'HAS_FLAG' | 'STATE_MATCH' | 'NO_FLAG';
   targetId: ItemId | Flag | GameObjectId;
   expectedValue?: any; // For state matching
 };
@@ -322,32 +333,102 @@ export type Item = {
   };
 };
 
+export type Topic = {
+  topicId: string;
+  label: string;
+  keywords: string[];
+  conditions?: {
+      requiredFlagsAll?: Flag[];
+      forbiddenFlagsAny?: Flag[];
+      minTrust?: number;
+  };
+  once?: boolean;
+  response: InteractionResult;
+};
 
-export type CannedResponse = {
-    topic: string;
-    keywords?: string; // comma-separated
-    response: string;
-    actions?: Action[];
-}
+export type AskAboutHandler = {
+  topicId: string;
+  keywords: string[];
+  conditions?: Condition[];
+  once?: boolean;
+  success: InteractionResult;
+  fail: { message: string };
+};
 
 export type NPC = {
   id: NpcId;
   name: string;
   description: string;
-  dialogueType: 'scripted' | 'freeform';
+  image?: ImageDetails;
+
+  importance: 'primary' | 'supporting' | 'ambient';
+  initialState: {
+    stage: 'active' | 'completed' | 'demoted';
+    trust: number;
+    attitude: 'friendly' | 'neutral' | 'hostile' | 'suspicious';
+  };
+  
+  dialogueType: 'scripted' | 'freeform' | 'tree';
+  persona?: string;
   welcomeMessage: string;
   goodbyeMessage: string;
-  image?: ImageDetails;
-  
-  cannedResponses?: CannedResponse[];
-  startConversationActions?: Action[];
-  completionFlag?: Flag;
-  finalResponse?: string;
 
-  persona?: string;
-  maxInteractions?: number;
-  interactionLimitResponse?: string;
+  limits?: {
+    maxInteractions?: number;
+    cooldownSec?: number;
+    interactionLimitResponse?: string;
+  };
+
+  demoteRules?: {
+    onFlagsAll?: Flag[];
+    onGiveItemsAny?: ItemId[];
+    onTopicCompletedAll?: string[];
+    then: {
+      setStage: 'demoted';
+      setImportance: 'ambient';
+      setFlags?: Flag[];
+      actions?: Action[];
+    };
+  };
+
+  postCompletionProfile?: {
+    welcomeMessage: string;
+    goodbyeMessage: string;
+    defaultResponse: string;
+    topics?: Topic[];
+  };
+
+  handlers?: {
+    onStartConversation?: Handler;
+    onEndConversation?: Handler;
+    onGive?: ItemHandler[];
+    onAskAbout?: AskAboutHandler[];
+    onAccuse?: Handler;
+    onBribe?: Handler;
+  };
+
+  topics?: Topic[];
+
+  knowledge?: {
+    clueId: string;
+    revealsFlag: Flag;
+    viaTopicId: string;
+    once?: boolean;
+  }[];
+
+  fallbacks?: {
+    default: string;
+    offTopic?: string;
+    noMoreHelp?: string;
+    rateLimited?: string;
+  };
+
+  version: {
+    schema: string;
+    content: string;
+  };
 };
+
 
 // NEW WORLD-BUILDING SCHEMAS
 

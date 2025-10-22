@@ -1,5 +1,6 @@
 
-import type { Game, GameId, ChapterId, LocationId, GameObjectId, ItemId, NpcId, Flag, WorldId, StructureId, CellId, PortalId } from './types';
+
+import type { Game, GameId, ChapterId, LocationId, GameObjectId, ItemId, NpcId, Flag, WorldId, StructureId, CellId, PortalId, GameObject, Item, NPC, Location, Portal, Structure, World, Chapter } from './types';
 
 // --- Static Game Data ---
 
@@ -262,61 +263,95 @@ const npcs: Record<NpcId, NPC> = {
         id: 'npc_barista' as NpcId,
         name: 'Barista',
         description: 'A tired-looking man in his late 20s, with faded tattoos and a cynical arch to his eyebrow. He seems to have seen a thousand stories like yours and is not easily impressed.',
-        dialogueType: 'scripted',
-        welcomeMessage: 'What can I get for you? Or are you just here to brood? Either is fine.',
-        goodbyeMessage: "Alright, I've got Pumpkin spice lattes to craft. Good luck with... whatever it is you're doing.",
-        completionFlag: 'has_received_business_card' as Flag,
-        finalResponse: "Look, I told you all I know. I've got work to do.",
-        persona: "You are a tired, cynical barista in a downtown cafe. You've seen it all and are not impressed by much. Your primary focus is on making coffee and dealing with customers as efficiently as possible. You will not discuss the case or any past events further, deflecting any questions with short, dismissive, but not overly rude answers. You just want to do your job.",
-        maxInteractions: 8,
-        interactionLimitResponse: "Seriously, I've got a line of customers. I can't keep chatting. The coffee machine calls.",
         image: {
             url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759241505/Cafe_barrista_hpwona.png',
             description: 'A portrait of the cafe barista.',
             hint: 'male barista'
         },
-        startConversationActions: [
-            { type: 'SET_FLAG', flag: 'has_talked_to_barista' as Flag }
-        ],
-        cannedResponses: [
-            { topic: 'greeting', keywords: "hello, hi, how are you", response: 'Another day, another dollar. What do you need?' },
-            { topic: 'coffee', keywords: "coffee, drink, menu, order, buy, latte, cappuccino, espresso", response: 'The coffee is hot and the pastries are day-old. The menu is on the board. Let me know if you can decipher my handwriting.' },
-            { topic: 'prices', keywords: "price, cost, how much", response: 'More than it should be, less than I want to charge. The prices are on the board.' },
-            { topic: 'recommendation', keywords: "recommend, good, special", response: 'The espresso will wake you up. The scones... well, they exist.' },
-            { topic: 'man_in_black', keywords: "man, regular, customer, guy, who left", response: "The guy in the black coat? Yeah, he's a regular. Comes in, stares at his notebook, doesn't say much. Pays in cash. My favorite kind of customer." },
-            { topic: 'musician', keywords: "musician, saxophone, job, background, what does he do", response: "I hear he's a musician. Plays the saxophone out on the corner most days. Keeps to himself, you know?" },
-            { topic: 'his_notebook', keywords: "notebook, book, his, what was he doing", response: "Always scribbling in that old notebook of his. Looked like he was writing the next great American novel, or maybe just his grocery list. Who knows."},
-            {
-                topic: 'give_business_card',
-                keywords: "business card, left, name, note, anything else, what did he leave, ask about silas bloom",
-                response: "You know, he left this here the other day. Said I could have it. Some business card. If you're that interested, you can take it. It's just collecting dust.",
+        importance: 'primary',
+        initialState: {
+            stage: 'active',
+            trust: 0,
+            attitude: 'neutral',
+        },
+        dialogueType: 'scripted',
+        persona: "You are a tired, cynical barista in a downtown cafe. You've seen it all and are not impressed by much. Your primary focus is on making coffee and dealing with customers as efficiently as possible. You will not discuss the case or any past events further, deflecting any questions with short, dismissive, but not overly rude answers. You just want to do your job.",
+        welcomeMessage: 'What can I get for you? Or are you just here to brood? Either is fine.',
+        goodbyeMessage: "Alright, I've got Pumpkin spice lattes to craft. Good luck with... whatever it is you're doing.",
+        limits: { maxInteractions: 15, interactionLimitResponse: "Seriously, I've got a line of customers. I can't keep chatting. The coffee machine calls." },
+        demoteRules: {
+            onFlagsAll: ['has_received_business_card' as Flag],
+            then: { setStage: 'demoted', setImportance: 'ambient' }
+        },
+        postCompletionProfile: {
+            welcomeMessage: "Back again? Hope you're buying something this time.",
+            goodbyeMessage: "See ya.",
+            defaultResponse: "Look, I told you what I know. I've got work to do."
+        },
+        handlers: {
+            onStartConversation: {
+                success: { message: '', actions: [{ type: 'SET_FLAG', flag: 'has_talked_to_barista' as Flag }] },
+                fail: { message: '' }
+            }
+        },
+        topics: [
+            { topicId: 't_greet', label: 'Greeting', keywords: ["hello", "hi", "how are you"], response: { message: 'Another day, another dollar. What do you need?' } },
+            { topicId: 't_coffee', label: 'Ask about coffee', keywords: ["coffee", "drink", "menu", "order", "buy", "latte", "cappuccino", "espresso"], response: { message: 'The coffee is hot and the pastries are day-old. The menu is on the board. Let me know if you can decipher my handwriting.' } },
+            { topicId: 't_prices', label: 'Ask about prices', keywords: ["price", "cost", "how much"], response: { message: 'More than it should be, less than I want to charge. The prices are on the board.' } },
+            { topicId: 't_reco', label: 'Ask for recommendation', keywords: ["recommend", "good", "special"], response: { message: 'The espresso will wake you up. The scones... well, they exist.' } },
+            { topicId: 't_man', label: 'Ask about the man in black', keywords: ["man", "regular", "customer", "guy", "who left"], response: { message: "The guy in the black coat? Yeah, he's a regular. Comes in, stares at his notebook, doesn't say much. Pays in cash. My favorite kind of customer." } },
+            { topicId: 't_musician', label: 'Ask about his job', keywords: ["musician", "saxophone", "job", "background", "what does he do"], response: { message: "I hear he's a musician. Plays the saxophone out on the corner most days. Keeps to himself, you know?" } },
+            { topicId: 't_notebook', label: 'Ask about the notebook', keywords: ["notebook", "book", "his", "what was he doing"], response: { message: "Always scribbling in that old notebook of his. Looked like he was writing the next great American novel, or maybe just his grocery list. Who knows."} },
+            { 
+              topicId: 't_give_card', 
+              label: 'Give business card', 
+              keywords: ["business card", "left", "name", "note", "anything else", "what did he leave", "ask about silas bloom", "silas bloom"], 
+              once: true,
+              response: { 
+                message: "You know, he left this here the other day. Said I could have it. Some business card. If you're that interested, you can take it. It's just collecting dust.",
                 actions: [
                     { type: 'ADD_ITEM', itemId: 'item_business_card' as ItemId },
                     { type: 'SET_FLAG', flag: 'has_received_business_card' as Flag },
                     { type: 'SHOW_MESSAGE', sender: 'narrator', senderName: 'Narrator', content: "The barista slides a business card across the counter. It's been added to your inventory.", messageType: 'image', imageId: 'item_business_card' },
                     { type: 'SHOW_MESSAGE', sender: 'agent', content: "Good work, Burt. This could be the lead we need."},
-                    { type: 'END_CONVERSATION' }
                 ]
+              } 
             },
-            { topic: 'insult', keywords: "stupid, idiot, useless, rude, dumb", response: "Hey, I get paid to pour coffee, not to be your punching bag. Watch it." },
-            { topic: 'default', keywords: "default", response: "Look, I just work here. I pour coffee, I wipe counters. You're the detective." }
-        ]
+            { topicId: 't_insult', label: 'React to insult', keywords: ["stupid", "idiot", "useless", "rude", "dumb"], response: { message: "Hey, I get paid to pour coffee, not to be your punching bag. Watch it." } }
+        ],
+        fallbacks: {
+            default: "Look, I just work here. I pour coffee, I wipe counters. You're the detective.",
+            noMoreHelp: "I told you all I know. I've got work to do.",
+        },
+        version: { schema: "2.0", content: "1.0" }
     },
     'npc_manager': {
         id: 'npc_manager' as NpcId,
         name: 'Cafe Manager',
         description: 'A cheerful woman in her late 40s, with a permanent, slightly-too-wide smile. She radiates a relentless positivity that feels slightly out of place in the grim city.',
-        dialogueType: 'freeform',
-        persona: "You are Brenda, the relentlessly cheerful and bubbly manager of 'The Daily Grind' cafe. You love talking about your 'Artisan Coffee of the Week', the daily specials, and the local community art you hang on the walls. You are completely oblivious to any crime or mystery. Your job is to be a fountain of pleasant, slightly-vacant small talk. Keep your responses short, sweet, and upbeat! Use modern currency like dollars and cents.",
-        welcomeMessage: "Welcome to The Daily Grind! How can I make your day a little brighter? Can I interest you in a 'Sunshine Muffin'? They're 10% off!",
-        goodbyeMessage: "Have a wonderfully caffeinated day! Come back soon!",
-        maxInteractions: 10,
-        interactionLimitResponse: "It has been so lovely chatting with you, but I really must get back to managing. The muffins won't bake themselves, you know! Have a super day!",
         image: {
             url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759604054/cafe_manager_punwhs.png',
             description: 'Portrait of the cafe manager.',
             hint: 'female manager'
-        }
+        },
+        importance: 'ambient',
+        initialState: {
+            stage: 'active',
+            trust: 50,
+            attitude: 'friendly'
+        },
+        dialogueType: 'freeform',
+        persona: "You are Brenda, the relentlessly cheerful and bubbly manager of 'The Daily Grind' cafe. You love talking about your 'Artisan Coffee of the Week', the daily specials, and the local community art you hang on the walls. You are completely oblivious to any crime or mystery. Your job is to be a fountain of pleasant, slightly-vacant small talk. Keep your responses short, sweet, and upbeat! Use modern currency like dollars and cents.",
+        welcomeMessage: "Welcome to The Daily Grind! How can I make your day a little brighter? Can I interest you in a 'Sunshine Muffin'? They're 10% off!",
+        goodbyeMessage: "Have a wonderfully caffeinated day! Come back soon!",
+        limits: {
+            maxInteractions: 10,
+            interactionLimitResponse: "It has been so lovely chatting with you, but I really must get back to managing. The muffins won't bake themselves, you know! Have a super day!",
+        },
+        fallbacks: {
+            default: "Oh, I'm not sure about that, but have you tried our new matcha latte? It's divine!"
+        },
+        version: { schema: "2.0", content: "1.0" }
     }
 };
 
@@ -501,7 +536,7 @@ export const game: Game = {
   items: items,
   npcs: npcs,
 
-  // Legacy Chapter model
+  // Legacy Chapter model (for gradual migration)
   chapters: chapters,
   startChapterId: 'ch1-the-cafe' as ChapterId,
 };

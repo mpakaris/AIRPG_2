@@ -1,5 +1,6 @@
 
-import type { Game, PlayerState, Chapter, ChapterId, GameObjectId, GameObjectState, PortalState, PortalId } from './game/types';
+
+import type { Game, PlayerState, Chapter, ChapterId, GameObjectId, GameObjectState, PortalState, PortalId, NpcId, NpcState } from './game/types';
 
 export function getInitialState(game: Game): PlayerState {
   
@@ -27,6 +28,20 @@ export function getInitialState(game: Game): PlayerState {
       };
   }
 
+  // Create a clean state for all NPCs
+  const initialNpcStates: Record<NpcId, NpcState> = {};
+  for (const npcId in game.npcs) {
+    const npc = game.npcs[npcId as NpcId];
+    initialNpcStates[npc.id] = {
+      stage: npc.initialState.stage,
+      importance: npc.importance,
+      trust: npc.initialState.trust,
+      attitude: npc.initialState.attitude,
+      completedTopics: [],
+      interactionCount: 0,
+    };
+  }
+
   // Find the starting location, which could be a cell or a location
   const startChapter = game.chapters[game.startChapterId];
   if (!startChapter) {
@@ -40,9 +55,9 @@ export function getInitialState(game: Game): PlayerState {
     flags: [],
     objectStates: initialObjectStates,
     portalStates: initialPortalStates,
+    npcStates: initialNpcStates,
     stories: {},
     activeConversationWith: null,
     interactingWithObject: null,
-    conversationCounts: {},
   };
 }
