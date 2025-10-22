@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import type { NPC } from '@/lib/game/types';
+import { Button } from '@/components/ui/button';
 
 const fieldGlossary: Record<string, string> = {
     id: "The unique identifier for this NPC. Cannot be changed.",
