@@ -90,7 +90,7 @@ export function processActions(initialState: PlayerState, actions: Action[], gam
                     action.senderName || narratorName,
                     action.content,
                     action.messageType,
-                    messageImageId ? { id: messageImageId, game, state: newState, showEvenIfExamined: true } : undefined
+                    messageImageId ? { id: messageImageId, game, state: newState, showEvenIfExamined: false } : undefined
                 );
                 messages.push(message);
 

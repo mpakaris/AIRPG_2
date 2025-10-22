@@ -198,6 +198,7 @@ const items: Record<ItemId, Item> = {
         name: 'Newspaper Article',
         type: "item",
         description: 'A folded newspaper article from the 1940s. The headline is about a local musician, Silas Bloom.',
+        alternateDescription: 'The old article about Silas Bloom. The mention of your family name, Macklin, still feels strange.',
         capabilities: { isTakable: true, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         handlers: {
             onTake: {
@@ -231,7 +232,7 @@ const items: Record<ItemId, Item> = {
         id: 'item_sd_card' as ItemId,
         name: 'SD Card',
         type: "item",
-        description: 'A small, modern SD card, looking strangely out of place in the old notebook.',
+        description: 'A small, modern SD card, looking strangely out of place in the old notebook. Most likely it would fit in the slot of your phone. Curious to see what\'s inside.',
         alternateDescription: 'You can "use SD Card" to see what\'s on it.',
         capabilities: { isTakable: true, isReadable: true, isUsable: true, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         handlers: {
@@ -248,7 +249,7 @@ const items: Record<ItemId, Item> = {
                     message: "You insert the SD card into your phone. You open the file explorer and discover one single file: A Video. It looks old. Maybe from the 1940's?",
                     actions: [
                         { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759241547/0930_eit8he.mov', messageType: 'video'},
-                        { type: 'SHOW_MESSAGE', sender: 'agent', content: "Silas Bloom... I've never heard that name before. He seemed like a talented musician. And that song for Rose... sounds like they were deeply in love." },
+                        { type: 'SHOW_MESSAGE', sender: 'agent', content: "Silas Bloom... I've never heard that name before. Talented musician, if you ask me. And that song for Rose ... sounds like they were deeply in love." },
                         { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'Beside the SD card, you see a folded newspaper article.' },
                         { type: 'SET_FLAG', flag: 'notebook_video_watched' as Flag }
                     ]
@@ -265,6 +266,7 @@ const items: Record<ItemId, Item> = {
         name: 'The Art of the Deal',
         type: 'item',
         description: 'A book about business.',
+        alternateDescription: 'Still a book about business.',
         capabilities: { isTakable: false, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         handlers: {
             onRead: { success: { message: "It seems to be a ghost-written book about a real estate magnate. Not relevant to the case." }, fail: {message: ""} }
@@ -277,6 +279,7 @@ const items: Record<ItemId, Item> = {
         name: 'A Brief History of Time',
         type: 'item',
         description: 'A book about physics.',
+        alternateDescription: 'Still a book about physics.',
         capabilities: { isTakable: false, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         handlers: {
             onRead: { success: { message: "Complex theories about spacetime. Unlikely to help you solve a murder." }, fail: {message: ""} }
@@ -289,6 +292,7 @@ const items: Record<ItemId, Item> = {
         name: 'Justice for My Love',
         type: 'item',
         description: 'A romance novel.',
+        alternateDescription: "The cover is still cheesy, but the title 'Justice for My Love' continues to stand out.",
         capabilities: { isTakable: false, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         handlers: {
             onRead: { success: { message: "The cover is cheesy, but the title 'Justice for My Love' catches your eye." }, fail: {message: ""} }
@@ -301,6 +305,7 @@ const items: Record<ItemId, Item> = {
         name: 'Hidden Note',
         type: 'item',
         description: 'A small note, folded neatly. It reads: "He knows. Find the flower with a broken heart."',
+        alternateDescription: 'The note still reads: "He knows. Find the flower with a broken heart."',
         capabilities: { isTakable: true, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         handlers: {
             onTake: { success: { message: "You take the hidden note." }, fail: { message: "" } },
