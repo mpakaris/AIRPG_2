@@ -127,11 +127,9 @@ export const game: Game = {
                         fail: { message: "That password doesn't work. The lock remains stubbornly shut." }
                     },
                     onBreak: {
-                        success: { message: "" },
                         fail: { message: "You hammer on the notebook, but the old leather is surprisingly tough. The lock doesn't budge." }
                     },
                     onMove: {
-                        success: { message: "" },
                         fail: { message: "You slide the notebook around on the table. It doesn't reveal anything." }
                     }
                 },
@@ -158,11 +156,9 @@ export const game: Game = {
                         alternateMessage: "The menu hasn't changed. The special is still about 'justice'."
                     },
                     onBreak: {
-                        success: { message: "" },
                         fail: { message: "You could probably smash the chalkboard, but that would just make a mess and draw unwanted attention." }
                     },
                     onMove: {
-                        success: { message: "" },
                         fail: { message: "You shift the chalkboard stand an inch to the left. Nothing of interest is revealed." }
                     }
                 },
@@ -184,7 +180,6 @@ export const game: Game = {
                         alternateMessage: "It's just today's magazine. Nothing new here."
                     },
                      onBreak: {
-                        success: { message: "" },
                         fail: { message: "Tearing up the magazine won't help you solve any crimes." }
                     }
                 },
@@ -210,7 +205,6 @@ export const game: Game = {
                         alternateMessage: "The bookshelf still has that romance novel, 'Justice for My Love'."
                     },
                     onMove: {
-                        success: { message: "" },
                         fail: { message: "It's too heavy to move by yourself." }
                     }
                 },
@@ -232,7 +226,7 @@ export const game: Game = {
                         alternateMessage: "It's the same abstract painting signed 'S.B.'."
                     }
                 },
-                fallbackMessages: { default: "The painting is nice, but it's not a clue.", noEffect: "Looking behind the painting reveals nothing but wall." },
+                fallbackMessages: { default: "The painting is nice, but it's not a clue.", 'look behind': "You look behind the painting and see nothing but wall." },
                 design: { authorNotes: "Contains the 'S.B.' clue for Silas Bloom." },
                 version: { schema: "1.0", content: "1.0" }
             }
@@ -241,79 +235,118 @@ export const game: Game = {
             'item_business_card': {
                 id: 'item_business_card' as ItemId,
                 name: 'Business Card',
+                type: "item",
                 description: 'A simple business card for a musician. It reads: "S A X O - The World\'s Best Sax Player". A phone number is listed, along with a handwritten number "1943" and the name "ROSE".',
                 alternateDescription: "The musician's business card. That name, 'ROSE', and the number '1943' seem significant.",
-                isTakable: true,
-                onTake: {
-                    successMessage: "You pick up the business card.",
-                    failMessage: "You can't take that right now."
+                capabilities: { isTakable: true, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+                handlers: {
+                    onTake: {
+                        success: { message: "You pick up the business card." },
+                        fail: { message: "You can't take that right now." }
+                    }
                 },
-                image: {
-                    url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759241477/Screenshot_2025-09-30_at_15.46.02_fuk4tb.png',
-                    description: 'A business card for a saxophone player.',
-                    hint: 'business card'
-                }
+                media: {
+                    image: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759241477/Screenshot_2025-09-30_at_15.46.02_fuk4tb.png',
+                        description: 'A business card for a saxophone player.',
+                        hint: 'business card'
+                    }
+                },
+                design: { authorNotes: "Connects to the saxophonist and provides the 'Rose' and '1943' clues." },
+                version: { schema: "1.0", content: "1.0" }
             },
             'item_newspaper_article': {
                 id: 'item_newspaper_article' as ItemId,
                 name: 'Newspaper Article',
+                type: "item",
                 description: 'A folded newspaper article from the 1940s. The headline is about a local musician, Silas Bloom.',
-                isTakable: true,
-                onTake: {
-                    successMessage: 'You take the Newspaper Article. You can "read Article" to find out what it is about.',
-                    failMessage: "You can't take that right now."
+                capabilities: { isTakable: true, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+                handlers: {
+                    onTake: {
+                        success: { message: 'You take the Newspaper Article. You can "read Article" to find out what it is about.' },
+                        fail: { message: "You can't take that right now." }
+                    },
+                    onRead: {
+                        success: {
+                            message: 'You unfold the old newspaper clipping.',
+                            actions: [
+                                { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'A newspaper article about Silas Bloom.', messageType: 'article', imageId: 'item_newspaper_article' },
+                                { type: 'SHOW_MESSAGE', sender: 'agent', content: "Wait a second, Burt... the article mentions an Agent Macklin. That can't be a coincidence. Is he related to you? This could be about your own family." },
+                                { type: 'SET_FLAG', flag: 'notebook_article_read' as Flag },
+                                { type: 'SET_FLAG', flag: 'notebook_interaction_complete' as Flag }
+                            ]
+                        },
+                        fail: { message: "You can't read that right now." }
+                    }
                 },
-                onRead: {
-                    message: 'You unfold the old newspaper clipping.',
-                    actions: [
-                        { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'A newspaper article about Silas Bloom.', messageType: 'article', imageId: 'item_newspaper_article' },
-                        { type: 'SHOW_MESSAGE', sender: 'agent', content: "Wait a second, Burt... the article mentions an Agent Macklin. That can't be a coincidence. Is he related to you? This could be about your own family." },
-                        { type: 'SET_FLAG', flag: 'notebook_article_read' as Flag },
-                        { type: 'SET_FLAG', flag: 'notebook_interaction_complete' as Flag }
-                    ]
+                media: {
+                    image: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759241463/Screenshot_2025-09-30_at_15.51.35_gyj3d5.png',
+                        description: 'A newspaper article about Silas Bloom.',
+                        hint: 'newspaper article'
+                    }
                 },
-                image: {
-                    url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759241463/Screenshot_2025-09-30_at_15.51.35_gyj3d5.png',
-                    description: 'A newspaper article about Silas Bloom.',
-                    hint: 'newspaper article'
-                }
+                design: { authorNotes: "Provides the main backstory and a personal connection for the player." },
+                version: { schema: "1.0", content: "1.0" }
             },
             'item_sd_card': {
                 id: 'item_sd_card' as ItemId,
                 name: 'SD Card',
-                description: 'A small, modern SD card, looking strangely out of place in the old notebook. You can "use SD Card" to see what\'s on it.',
-                isTakable: true,
-                onTake: {
-                    successMessage: 'You take the SD Card. You can "use SD Card" to check what is hidden on it.',
-                    failMessage: "You can't take that right now."
+                type: "item",
+                description: 'A small, modern SD card, looking strangely out of place in the old notebook.',
+                alternateDescription: 'You can "use SD Card" to see what\'s on it.',
+                capabilities: { isTakable: true, isReadable: false, isUsable: true, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+                handlers: {
+                    onTake: {
+                        success: { message: 'You take the SD Card. You can "use SD Card" to check what is hidden on it.' },
+                        fail: { message: "You can't take that right now." }
+                    },
+                    onUse: {
+                        success: {
+                            message: "You insert the SD card into your phone.",
+                            actions: [
+                                { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759241547/0930_eit8he.mov', messageType: 'video'},
+                                { type: 'SHOW_MESSAGE', sender: 'agent', content: "Silas Bloom... I've never heard that name before. He seemed like a talented musician. And that song for Rose... sounds like they were deeply in love." },
+                                { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'Beside the SD card, you see a folded newspaper article.' },
+                                { type: 'SET_FLAG', flag: 'notebook_video_watched' as Flag }
+                            ]
+                        },
+                        fail: { message: "You can't use the SD card right now." }
+                    }
                 },
-                onUse: {
-                    message: "You insert the SD card into your phone.",
-                    actions: [
-                        { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759241547/0930_eit8he.mov', messageType: 'video'},
-                        { type: 'SHOW_MESSAGE', sender: 'agent', content: "Silas Bloom... I've never heard that name before. He seemed like a talented musician. And that song for Rose... sounds like they were deeply in love." },
-                        { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'Beside the SD card, you see a folded newspaper article.' },
-                        { type: 'SET_FLAG', flag: 'notebook_video_watched' as Flag }
-                    ]
-                }
+                logic: { intendedUseTargets: ['player_phone'] },
+                design: { authorNotes: "Contains the video clue about Silas Bloom." },
+                version: { schema: "1.0", content: "1.0" }
             },
              'item_book_deal': {
                 id: 'item_book_deal' as ItemId,
                 name: 'The Art of the Deal',
+                type: 'item',
                 description: 'A book about business.',
-                isTakable: false,
+                capabilities: { isTakable: false, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+                handlers: { onRead: { success: { message: "It seems to be a ghost-written book about a real estate magnate. Not relevant to the case." }, fail: {message: ""} } },
+                design: { tags: ['book', 'distraction'] },
+                version: { schema: "1.0", content: "1.0" }
             },
             'item_book_time': {
                 id: 'item_book_time' as ItemId,
                 name: 'A Brief History of Time',
+                type: 'item',
                 description: 'A book about physics.',
-                isTakable: false,
+                capabilities: { isTakable: false, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+                handlers: { onRead: { success: { message: "Complex theories about spacetime. Unlikely to help you solve a murder." }, fail: {message: ""} } },
+                design: { tags: ['book', 'distraction'] },
+                version: { schema: "1.0", content: "1.0" }
             },
             'item_book_justice': {
                 id: 'item_book_justice' as ItemId,
                 name: 'Justice for My Love',
+                type: 'item',
                 description: 'A romance novel.',
-                isTakable: false,
+                capabilities: { isTakable: false, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+                handlers: { onRead: { success: { message: "The cover is cheesy, but the title 'Justice for My Love' catches your eye." }, fail: {message: ""} } },
+                design: { tags: ['book', 'clue'] },
+                version: { schema: "1.0", content: "1.0" }
             },
         },
         npcs: {
@@ -381,3 +414,4 @@ export const game: Game = {
     }
   }
 };
+

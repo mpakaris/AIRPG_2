@@ -51,12 +51,12 @@ export type Story = {
 };
 
 export type GameObjectState = {
-  isLocked: boolean;
-  isOpen: boolean;
-  isBroken: boolean;
-  isPoweredOn: boolean;
-  items?: ItemId[];
-  currentStateId: string;
+    isLocked: boolean;
+    isOpen: boolean;
+    isBroken: boolean;
+    isPoweredOn: boolean;
+    items?: ItemId[];
+    currentStateId: string;
 };
 
 export type User = {
@@ -199,6 +199,7 @@ export type GameObject = {
     notMovable?: string;
     notContainer?: string;
     noEffect?: string; // For 'use' when there's no matching item handler
+    [key: string]: string | undefined;
   };
 
   design: {
@@ -216,18 +217,96 @@ export type GameObject = {
 export type Item = {
   id: ItemId;
   name: string;
+  type: "item";
   description: string;
   alternateDescription?: string;
-  image?: ImageDetails;
-  isTakable?: boolean;
-  onTake?: {
-      successMessage: string;
-      failMessage: string;
-      successActions?: Action[];
-  }
-  onUse?: InteractionResult; // For using items directly
-  onRead?: InteractionResult; // For reading items directly
+  i18nKey?: string;
+  
+  capabilities: {
+    isTakable: boolean;
+    isReadable: boolean;
+    isUsable: boolean;
+    isCombinable: boolean;
+    isConsumable: boolean;
+    isScannable: boolean;
+    isAnalyzable: boolean;
+    isPhotographable: boolean;
+  };
+  
+  state?: {
+    currentStateId: string;
+    usesRemaining: number | null;
+    stateTags: string[];
+  };
+
+  logic?: {
+    revealConditions?: Condition[];
+    grantsClues?: Flag[];
+    affectsFlags?: Flag[];
+    intendedUseTargets?: (GameObjectId | string)[]; // Can be object ID or a tag
+    blockedByFlags?: Flag[];
+  };
+
+  placement?: {
+    locationId?: LocationId; // If placed directly in a location
+    ownerObjectId?: GameObjectId; // If inside another object
+    ownerNpcId?: NpcId; // If given by an NPC
+  };
+
+  ui?: {
+    group?: string;
+    sortOrder?: number;
+    hotbar?: boolean;
+    iconVariant?: string;
+  };
+
+  media?: {
+    image?: ImageDetails;
+    sounds?: {
+      onUse?: string;
+      onCombine?: string;
+      onRead?: string;
+    };
+  };
+
+  handlers: {
+    onTake?: { success: InteractionResult; fail: { message: string } };
+    onUse?: Handler;
+    onRead?: Handler;
+    onScan?: Handler;
+    onAnalyze?: Handler;
+    onPhotograph?: Handler;
+    onCombine?: ItemHandler[];
+    defaultFailMessage?: string;
+  };
+
+  stacking?: {
+    stackable: boolean;
+    maxStack: number | null;
+  };
+
+  limits?: {
+    usesPerTurn: number | null;
+    cooldownTime: number | null; // in seconds
+  };
+  
+  design: {
+    tags?: string[];
+    authorNotes?: string;
+  };
+
+  analytics?: { // Engine-filled
+    seen: boolean;
+    used: number;
+    combined: number;
+  };
+
+  version: {
+    schema: string;
+    content: string;
+  };
 };
+
 
 export type CannedResponse = {
     topic: string;
@@ -307,3 +386,4 @@ export type Game = {
   objectInteractionPromptContext?: string;
   storyStyleGuide?: string;
 };
+
