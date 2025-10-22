@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Fragment } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getGameData } from './actions';
 import type { Game, GameId } from '@/lib/game/types';
@@ -39,14 +39,16 @@ function EntityTable({ title, description, data, columns }: { title: string, des
                             <TableHeader>
                                 <TableRow>
                                     {columns.map(col => <TableHead key={col.key}>{col.label}</TableHead>)}
+                                    <TableHead className="w-[50px]"></TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {data.map((item) => (
-                                    <AccordionItem value={item.id || item.locationId || item.portalId} key={item.id || item.locationId || item.portalId} className="border-b-0">
+                                    <AccordionItem value={item.id || item.locationId || item.portalId} key={item.id || item.locationId || item.portalId} className="border-b">
                                         <AccordionTrigger asChild>
                                             <TableRow className="cursor-pointer hover:bg-muted/50">
                                                 {columns.map(col => <TableCell key={col.key}>{String(item[col.key])}</TableCell>)}
+                                                <TableCell></TableCell>
                                             </TableRow>
                                         </AccordionTrigger>
                                         <AccordionContent asChild>
