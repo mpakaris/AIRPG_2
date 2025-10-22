@@ -52,9 +52,9 @@ function createMessage(
             
             if (gameObject) {
                 const liveObject = getLiveGameObject(gameObject.id, state, game);
-                if (!liveObject.state.isLocked && liveObject.gameLogic.unlockedImage) {
+                if (liveObject && !liveObject.state.isLocked && liveObject.gameLogic.unlockedImage) {
                     image = liveObject.gameLogic.unlockedImage;
-                } else {
+                } else if (liveObject) {
                     image = liveObject.gameLogic.image;
                 }
             } else if (item?.image) {
@@ -79,10 +79,18 @@ function createMessage(
 }
 
 
-function getLiveGameObject(id: GameObjectId, state: PlayerState, game: Game): {gameLogic: GameObject, state: GameObjectState} {
+function getLiveGameObject(id: GameObjectId, state: PlayerState, game: Game): {gameLogic: GameObject, state: GameObjectState} | null {
     const chapter = game.chapters[state.currentChapterId];
+    if (!chapter) return null;
     const baseObject = chapter.gameObjects[id];
-    const liveState = state.objectStates[id] || {};
+    if (!baseObject) return null;
+    
+    const liveState: GameObjectState = state.objectStates[id] || {
+        isLocked: baseObject.state?.isLocked ?? false,
+        isOpen: baseObject.state?.isOpen ?? false,
+        items: baseObject.items ? [...baseObject.items] : [],
+        currentInteractionStateId: baseObject.state?.currentInteractionStateId,
+    };
 
     const combinedState: GameObjectState = {
         isLocked: typeof liveState?.isLocked === 'boolean' ? liveState.isLocked : (baseObject.state?.isLocked ?? false),
@@ -110,7 +118,7 @@ function findItemInContext(state: PlayerState, game: Game, targetName: string): 
     // 2. Check items inside all open objects in the current location
     for (const objId of location.objects) {
          const liveObject = getLiveGameObject(objId, state, game);
-         if (liveObject.state.isOpen) {
+         if (liveObject && liveObject.state.isOpen) {
             const itemsInContainer = liveObject.state.items || [];
             for (const itemId of itemsInContainer) {
                 const item = chapter.items[itemId];
@@ -309,22 +317,17 @@ function processPassword(state: PlayerState, command: string, game: Game): Comma
     const narratorName = game.narratorName || "Narrator";
     const chapter = game.chapters[state.currentChapterId];
     const location = chapter.locations[state.currentLocationId];
-    const objectsInLocation = location.objects.map(id => getLiveGameObject(id, state, game));
+    const objectsInLocation = location.objects.map(id => getLiveGameObject(id, state, game)).filter(Boolean) as {gameLogic: GameObject, state: GameObjectState}[];
     
     const commandLower = command.toLowerCase();
 
-    const passwordKeywords = ['password for', 'password', 'say', 'enter', 'use phrase'];
-    const usedKeyword = passwordKeywords.find(kw => commandLower.startsWith(kw));
-    
-    if (!usedKeyword) {
-         return { newState: state, messages: [createMessage('system', 'System', 'Invalid password command format.')] };
-    }
-
+    // Find the target object
     let targetObject = objectsInLocation.find(obj => {
         if (!obj.gameLogic.unlocksWithPhrase) return false;
         return commandLower.includes(obj.gameLogic.name.toLowerCase());
     });
 
+    // If no specific object is mentioned, and there's only one object that needs a password, assume it's the target
     if (!targetObject) {
         const passwordObjects = objectsInLocation.filter(obj => obj.state.isLocked && obj.gameLogic.unlocksWithPhrase);
         if (passwordObjects.length === 1) {
@@ -334,12 +337,13 @@ function processPassword(state: PlayerState, command: string, game: Game): Comma
         }
     }
     
-    let phrase = commandLower;
-    passwordKeywords.forEach(kw => {
-        phrase = phrase.replace(kw, '');
-    });
-    phrase = phrase.replace(targetObject.gameLogic.name.toLowerCase(), "").trim();
-    phrase = phrase.replace(/^"|"$/g, '').replace(/^for |^is /,'').trim();
+    // Extract the phrase
+    const targetObjectNameLower = targetObject.gameLogic.name.toLowerCase();
+    const objectNameIndex = commandLower.indexOf(targetObjectNameLower);
+    let phrase = command.substring(objectNameIndex + targetObjectNameLower.length).trim();
+    // Clean up the extracted phrase
+    phrase = phrase.replace(/^"|"$/g, '').replace(/^is\s*/, '').trim();
+
 
     if (!phrase) {
         return { newState: state, messages: [createMessage('narrator', narratorName, 'You need to specify a password phrase.')] };
@@ -360,12 +364,12 @@ function processPassword(state: PlayerState, command: string, game: Game): Comma
             narratorName, 
             targetObject.gameLogic.onUnlock?.successMessage || "It unlocks!", 
             'image', 
-            { id: targetObject.gameLogic.id, game, state: result.newState, showEvenIfExamined: true }
+            { id: targetObject.gameLogic.id, game, state: result.newState!, showEvenIfExamined: true }
         );
         result.messages.unshift(unlockMessage);
 
-        if (!result.newState.flags.includes(examinedObjectFlag(targetObject.gameLogic.id))) {
-            result.newState.flags.push(examinedObjectFlag(targetObject.gameLogic.id));
+        if (!result.newState!.flags.includes(examinedObjectFlag(targetObject.gameLogic.id))) {
+            result.newState!.flags.push(examinedObjectFlag(targetObject.gameLogic.id));
         }
         
         return result;
@@ -391,6 +395,9 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
 
     if (targetObjectId) {
         const liveObject = getLiveGameObject(targetObjectId, newState, game);
+        if (!liveObject) {
+            return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${targetName}" here.`)] };
+        }
         const flag = examinedObjectFlag(liveObject.gameLogic.id);
         const isAlreadyExamined = newState.flags.includes(flag);
         
@@ -399,10 +406,10 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
 
         if (liveObject.state.isLocked && onExamine?.locked) {
             messageContent = onExamine.locked.message;
-        } else if (!liveObject.state.isOpen && onExamine?.unlocked) { // Unlocked but not yet open
-            messageContent = `The ${liveObject.gameLogic.name} is unlocked. You can 'open' it.`;
         } else if (liveObject.state.isOpen && onExamine?.unlocked) { // Is open
-            messageContent = onExamine.unlocked.message;
+             messageContent = onExamine.unlocked.message;
+        } else if (!liveObject.state.isLocked && !liveObject.state.isOpen) { // Unlocked but not yet open
+            messageContent = `The ${liveObject.gameLogic.name} is unlocked. You can 'open' it.`;
         } else if (isAlreadyExamined && onExamine?.alternate) {
             messageContent = onExamine.alternate.message;
         } else if (onExamine?.default) {
@@ -469,6 +476,9 @@ function handleOpen(state: PlayerState, targetName: string, game: Game): Command
     }
 
     const liveObject = getLiveGameObject(targetObjectId, state, game);
+    if (!liveObject) {
+         return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${targetName}" to open.`)] };
+    }
     
     if (liveObject.state.isLocked) {
         const lockMessage = liveObject.gameLogic.onExamine?.locked?.message || "It's locked.";
@@ -502,7 +512,7 @@ function handleOpen(state: PlayerState, targetName: string, game: Game): Command
         narratorName,
         messageContent,
         'image',
-        { id: liveObject.gameLogic.id, game, state: actionResult.newState, showEvenIfExamined: true }
+        { id: liveObject.gameLogic.id, game, state: actionResult.newState!, showEvenIfExamined: true }
     );
     actionResult.messages.unshift(mainMessage);
 
@@ -520,7 +530,7 @@ function handleTake(state: PlayerState, targetName: string, game: Game): Command
   for (const objId of location.objects) {
     const liveObject = getLiveGameObject(objId, newState, game);
     
-    if (liveObject.state.isOpen) {
+    if (liveObject && liveObject.state.isOpen) {
         const itemToTakeId = (liveObject.state.items || []).find(itemId => 
             chapter.items[itemId]?.name.toLowerCase() === normalizedTargetName
         );
@@ -639,7 +649,7 @@ async function handleUse(state: PlayerState, itemName: string, objectName: strin
     
     const targetObject = getLiveGameObject(targetObjectId, state, game);
 
-    if (targetObject.state.isLocked && targetObject.gameLogic.unlocksWith === itemToUse.id) {
+    if (targetObject && targetObject.state.isLocked && targetObject.gameLogic.unlocksWith === itemToUse.id) {
         let newState = { ...state, objectStates: { ...state.objectStates }};
         if(!newState.objectStates[targetObject.gameLogic.id]) newState.objectStates[targetObject.gameLogic.id] = {};
         newState.objectStates[targetObject.gameLogic.id].isLocked = false;
@@ -696,7 +706,7 @@ async function handleTalk(state: PlayerState, npcName: string, game: Game): Prom
         
         const startActions = npc.startConversationActions || [];
         const actionResult = processActions(newState, startActions, game);
-newState = actionResult.newState;
+newState = actionResult.newState!;
         messages.push(...actionResult.messages);
 
         messages.unshift(createMessage('system', 'System', `You are now talking to ${npc.name}. Type your message to continue the conversation. To end the conversation, type 'goodbye'.`));
@@ -881,29 +891,31 @@ export async function processCommand(
     }
     // Interaction Trap Guardrail
     else if (currentState.interactingWithObject) {
-        const interactingWith = chapter.gameObjects[currentState.interactingWithObject];
-        const mentionsAnotherObject = Object.values(chapter.gameObjects).some(obj => 
-            obj.id !== interactingWith.id && lowerInput.includes(obj.name.toLowerCase())
-        );
-
-        if (mentionsAnotherObject) {
-            const trapMessage = createMessage(
-                'agent', 
-                narratorName, 
-                `Whoa there, Burt. We're zeroed in on the ${interactingWith.name} right now. If you want to check something else, we need to 'exit' this first.`
+        const liveObject = getLiveGameObject(currentState.interactingWithObject, currentState, game);
+        if (liveObject) {
+            const interactingWith = liveObject.gameLogic;
+            const mentionsAnotherObject = Object.values(chapter.gameObjects).some(obj => 
+                obj.id !== interactingWith.id && lowerInput.includes(obj.name.toLowerCase())
             );
-            // This is a special case: we just return the message and don't change state.
-            return { newState: currentState, messages: [playerMessage, trapMessage] };
+
+            if (mentionsAnotherObject) {
+                const trapMessage = createMessage(
+                    'agent', 
+                    narratorName, 
+                    `Whoa there, Burt. We're zeroed in on the ${interactingWith.name} right now. If you want to check something else, we need to 'exit' this first.`
+                );
+                // This is a special case: we just return the message and don't change state.
+                return { newState: currentState, messages: [playerMessage, trapMessage] };
+            }
         }
     }
     
     // Main command parsing logic
     if (!commandHandlerResult) {
         const location = chapter.locations[currentState.currentLocationId];
-        const objectsInLocation = location.objects.map(id => getLiveGameObject(id, currentState, game));
+        const objectsInLocation = location.objects.map(id => getLiveGameObject(id, currentState, game)).filter(Boolean) as {gameLogic: GameObject, state: GameObjectState}[];
         const objectNames = objectsInLocation.map(obj => obj.gameLogic.name);
         const npcNames = location.npcs.map(id => chapter.npcs[id]?.name).filter(Boolean) as string[];
-        const isChapterComplete = checkChapterCompletion(currentState, game).isComplete;
         
         let lookAroundSummary = `${location.description}\n\n`;
         if(objectNames.length > 0) {
@@ -1021,11 +1033,12 @@ export async function processCommand(
 
     if (finalState) {
         const completion = checkChapterCompletion(finalState, game);
-        const isNewlyComplete = completion.isComplete && !finalState.flags.includes(chapterCompletionFlag(finalState.currentChapterId));
-
-        if (isNewlyComplete) {
-            finalState.flags = [...finalState.flags, chapterCompletionFlag(finalState.currentChapterId)];
-            allMessagesForSession.push(...completion.messages);
+        if (completion.isComplete) {
+            const isNewlyComplete = !currentState.flags.includes(chapterCompletionFlag(finalState.currentChapterId));
+            if (isNewlyComplete) {
+                finalState.flags = [...finalState.flags, chapterCompletionFlag(finalState.currentChapterId)];
+                allMessagesForSession.push(...completion.messages);
+            }
         }
     }
     
@@ -1214,4 +1227,5 @@ export async function generateStoryForChapter(userId: string, gameId: GameId, ch
 
     return { newState };
 }
+
 
