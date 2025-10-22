@@ -200,10 +200,26 @@ export async function processCommand(
     // Main command parsing logic
     if (!commandHandlerResult) {
         const location = game.locations[currentState.currentLocationId];
-        const objectsInLocation = location.objects.map(id => getLiveGameObject(id, currentState, game)).filter(Boolean) as {gameLogic: GameObject, state: GameObjectState}[];
-        const objectNames = objectsInLocation.map(obj => obj.gameLogic.name);
-        const npcNames = location.npcs.map(id => game.npcs[id]?.name).filter(Boolean) as string[];
         
+        // --- Start AI Context Preparation ---
+        const visibleObjects = location.objects.map(id => getLiveGameObject(id, currentState, game)).filter(Boolean) as {gameLogic: GameObject, state: GameObjectState}[];
+        const visibleObjectNames = visibleObjects.map(obj => obj.gameLogic.name);
+
+        // Add items inside open containers to the list of visible names
+        for (const obj of visibleObjects) {
+            if (obj.state.isOpen && obj.state.items) {
+                for (const itemId of obj.state.items) {
+                    const item = game.items[itemId];
+                    if (item) {
+                        visibleObjectNames.push(item.name);
+                    }
+                }
+            }
+        }
+        
+        const visibleNpcNames = location.npcs.map(id => game.npcs[id]?.name).filter(Boolean) as string[];
+        // --- End AI Context Preparation ---
+
         const { output: aiResponse, usage } = await guidePlayerWithNarrator({
             promptContext: game.promptContext || '',
             gameState: JSON.stringify({
@@ -216,8 +232,8 @@ export async function processCommand(
             }, null, 2),
             playerCommand: playerInput,
             availableCommands: AVAILABLE_COMMANDS.join(', '),
-            visibleObjectNames: objectNames,
-            visibleNpcNames: npcNames,
+            visibleObjectNames: visibleObjectNames,
+            visibleNpcNames: visibleNpcNames,
         });
 
         let agentMessage = createMessage('agent', narratorName, `${aiResponse.agentResponse}`, 'text', undefined, usage);
@@ -231,7 +247,7 @@ export async function processCommand(
             case 'examine':
             case 'look':
                 if(restOfCommand === 'around') {
-                     const lookAroundSummary = `${location.sceneDescription}\n\nYou can see the following objects:\n${objectNames.map(name => `• ${name}`).join('\n')}\n\nYou see the following people here:\n${npcNames.map(name => `• ${name}`).join('\n')}`;
+                     const lookAroundSummary = `${location.sceneDescription}\n\nYou can see the following objects:\n${visibleObjectNames.map(name => `• ${name}`).join('\n')}\n\nYou see the following people here:\n${visibleNpcNames.map(name => `• ${name}`).join('\n')}`;
                      commandHandlerResult = handleLook(currentState, game, lookAroundSummary);
                 } else if (restOfCommand.startsWith('behind')) {
                     const target = restOfCommand.replace('behind ', '').trim();
@@ -288,7 +304,7 @@ export async function processCommand(
                  commandHandlerResult = { newState: currentState, messages: [agentMessage] };
                  break;
             default:
-                const targetObject = objectsInLocation.find(obj => restOfCommand.includes(obj.gameLogic.name.toLowerCase()));
+                const targetObject = visibleObjects.find(obj => restOfCommand.includes(obj.gameLogic.name.toLowerCase()));
                 if (targetObject && targetObject.gameLogic.fallbackMessages) {
                     const fallbackMessages = targetObject.gameLogic.fallbackMessages;
                     const failureMessage = fallbackMessages?.[verb as keyof typeof fallbackMessages] || fallbackMessages?.default;
@@ -310,13 +326,10 @@ export async function processCommand(
             ];
         } else {
             const hasSystemMessage = commandHandlerResult.messages.some(m => m.sender === 'system');
-            // Suppress the initial AI message for certain commands that have their own specific feedback.
-            const isTakeCommand = verb === 'take' || verb === 'pick';
-            const isReadCommand = verb === 'read';
-            const isUseCommand = verb === 'use';
-            const isMoveCommand = verb === 'move' || (verb === 'look' && restOfCommand.startsWith('behind'));
+            
+            const isSelfContainedCommand = ['take', 'pick', 'read', 'use', 'move', 'open', 'password', 'say', 'enter', 'examine', 'look'].includes(verb);
 
-            if (verb !== 'invalid' && !hasSystemMessage && !isTakeCommand && !isReadCommand && !isUseCommand && !isMoveCommand) {
+            if (verb !== 'invalid' && !hasSystemMessage && !isSelfContainedCommand) {
                 commandHandlerResult.messages.unshift(agentMessage);
             }
         }

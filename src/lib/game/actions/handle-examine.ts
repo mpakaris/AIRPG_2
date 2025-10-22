@@ -48,11 +48,11 @@ export function handleExamine(state: PlayerState, targetName: string, game: Game
             newState.flags.push(flag as any);
         }
         
-        return { newState, messages: [mainMessage] };
+        return { newState, messages: [createMessage('agent', narratorName, `Alright, I'm looking at the ${liveObject.gameLogic.name}.`), mainMessage] };
     }
 
     // If not an object, try to find an item in inventory or in an open container
-    const itemInContext = findItemInContext(newState, game, targetName);
+    const itemInContext = findItemInContext(state, game, targetName);
     if (itemInContext) {
         const flag = examinedObjectFlag(itemInContext.id);
         const isAlreadyExamined = newState.flags.includes(flag as any);
@@ -73,7 +73,7 @@ export function handleExamine(state: PlayerState, targetName: string, game: Game
             newState.flags.push(flag as any);
         }
 
-        return { newState, messages: [message] };
+        return { newState, messages: [createMessage('agent', narratorName, `Okay, let's check out the ${itemInContext.name}.`), message] };
     }
 
     return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${targetName}" here.`)] };
