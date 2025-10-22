@@ -547,13 +547,14 @@ export const game: Game = {
 
 **Your Task:**
 1.  **Analyze Intent:** Understand what what your partner, Burt, is trying to do as a game action.
-2.  **Select Command:** Choose the *best* matching command from the 'Available Game Commands' list.
+2.  **Select Command:** Choose the *best* matching command from the 'Available Game Commands' list. Use the exact names from the 'Visible Object Names' and 'Visible NPC Names' lists.
     *   If Burt says "look at the book," the command is 'examine "The Art of the Deal"'.
-    *   If Burt wants to 'open' an object, the command is 'open <object>'.
+    *   If Burt wants to 'open' an object, the command is 'open "Brown Notebook"'.
     *   If Burt says "pick up the card," the command is 'take "Business Card"'.
     *   If Burt says 'read the article', the command is 'read "Newspaper Article"'.
     *   If Burt wants to 'move the painting' or 'look behind the painting', the command is 'move "Painting on the wall"'.
     *   If Burt says 'use the SD card' or 'use the SD card with my phone', the command is 'use "SD Card"'.
+    *   If Burt says 'talk to the barista', the command is 'talk to "Barista"'.
     *   If Burt wants to provide a password with keywords like "password", "say", or "enter", the command MUST be in the format 'password <object> <phrase>'. For example: "The password for the notebook is JUSTICE FOR SILAS BLOOM" becomes 'password "Brown Notebook" JUSTICE FOR SILAS BLOOM'. Do NOT include quotes in the final command phrase itself.
     *   If Burt wants to move, the command is 'go <direction or location name>'.
     *   If Burt says "look" or "look around", the command is 'look around'.

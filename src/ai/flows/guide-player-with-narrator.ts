@@ -29,7 +29,7 @@ const GuidePlayerWithNarratorOutputSchema = z.object({
 export type GuidePlayerWithNarratorOutput = z.infer<typeof GuidePlayerWithNarratorOutputSchema>;
 
 export async function guidePlayerWithNarrator(input: GuidePlayerWithNarratorInput): Promise<{ output: GuidePlayerWithNarratorOutput, usage: TokenUsage }> {
-  return guidePlayerWithNarratorFlow(input);
+  return generatePlayerWithNarratorFlow(input);
 }
 
 const prompt = ai.definePrompt({
@@ -62,7 +62,7 @@ Your entire output must be a single, valid JSON object matching the output schem
 `,
 });
 
-const guidePlayerWithNarratorFlow = ai.defineFlow(
+const generatePlayerWithNarratorFlow = ai.defineFlow(
   {
     name: 'guidePlayerWithNarratorFlow',
     inputSchema: GuidePlayerWithNarratorInputSchema,
@@ -101,5 +101,3 @@ const guidePlayerWithNarratorFlow = ai.defineFlow(
     throw new Error("AI call failed after multiple retries.");
   }
 );
-
-    
