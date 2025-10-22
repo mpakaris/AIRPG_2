@@ -103,7 +103,7 @@ Most handlers follow this shape:
 *   `onInput`: Player enters a code/phrase into an `inputtable` object.
 *   `onUse`: An array defining how the object reacts to another item being used on it (e.g., using a key on a lock).
 *   `onInsert` / `onRemove`: Player puts an item into or takes an item from a `container`.
-*   `onMove`: Player tries to move the object.
+*   `onMove`: Player tries to move the object. This is also triggered by "look behind" commands and is the primary way to find hidden items or clues.
 *   `onBreak`: Player tries to break the object.
 *   `onActivate` / `onDeactivate`: Player toggles a `powerable` object.
 *   `onReset`: Player resets a puzzle to its initial state.
@@ -119,3 +119,5 @@ Provides default messages for common verbs if a specific handler is not defined 
 | `notMovable` | `string` | Message for trying to `move` an object where `movable: false`. |
 | `noEffect` | `string` | Message for `use` when the item has no special interaction. |
 
+
+```

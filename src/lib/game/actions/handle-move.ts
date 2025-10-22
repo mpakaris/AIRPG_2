@@ -49,7 +49,7 @@ export function handleMove(state: PlayerState, targetName: string, game: Game): 
         // Safety check for incomplete game data
         if (!onMoveHandler.success) {
             console.error(`ERROR: onMove handler for ${liveObject.gameLogic.id} is missing a 'success' block.`);
-            return { newState: state, messages: [createMessage('system', 'System', 'Action failed due to incomplete game data.')]};
+            return { newState: state, messages: [createMessage('narrator', narratorName, `You move the ${liveObject.gameLogic.name} around, but find nothing of interest.`)]};
         }
         const result = processActions(state, onMoveHandler.success.actions || [], game);
         result.messages.unshift(createMessage('narrator', narratorName, onMoveHandler.success.message));
