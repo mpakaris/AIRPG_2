@@ -51,10 +51,12 @@ export type Story = {
 };
 
 export type GameObjectState = {
-  isLocked?: boolean;
-  isOpen?: boolean; // Added for containers
+  isLocked: boolean;
+  isOpen: boolean;
+  isBroken: boolean;
+  isPoweredOn: boolean;
   items?: ItemId[];
-  currentInteractionStateId?: string;
+  currentStateId: string;
 };
 
 export type User = {
@@ -77,9 +79,138 @@ export type PlayerState = {
   conversationCounts: Record<NpcId, number>;
 };
 
+// --- Standardized Game Object Schema ---
+
+type Condition = {
+  type: 'HAS_ITEM' | 'HAS_FLAG' | 'STATE_MATCH';
+  targetId: ItemId | Flag | GameObjectId;
+  expectedValue?: any; // For state matching
+};
+
 type InteractionResult = {
-    message: string;
-    actions?: Action[];
+  message: string;
+  actions?: Action[];
+  once?: boolean; // If true, this success block can only be triggered once.
+};
+
+type Handler = {
+  conditions?: Condition[];
+  success: InteractionResult;
+  fail: { message: string };
+};
+
+type ItemHandler = {
+  itemId: ItemId;
+  conditions?: Condition[];
+  success: InteractionResult;
+  fail: { message: string };
+};
+
+export type GameObject = {
+  id: GameObjectId;
+  name: string;
+  description: string;
+
+  capabilities: {
+    openable: boolean;
+    lockable: boolean;
+    breakable: boolean;
+    movable: boolean;
+    powerable: boolean;
+    container: boolean;
+    readable: boolean;
+    inputtable: boolean;
+  };
+
+  initialState: {
+    isOpen: boolean;
+    isLocked: boolean;
+    isBroken: boolean;
+    isPoweredOn: boolean;
+    currentStateId: string;
+  };
+
+  inventory?: {
+    items: ItemId[];
+    capacity: number | null;
+    allowTags?: string[];
+    denyTags?: string[];
+  };
+  
+  links?: {
+      type: 'controls' | 'reveals' | 'blocks';
+      targetId: GameObjectId | LocationId;
+      params?: any;
+  }[];
+
+  media: {
+    images?: {
+      default?: ImageDetails;
+      unlocked?: ImageDetails;
+      open?: ImageDetails;
+      broken?: ImageDetails;
+      [key: string]: ImageDetails | undefined; // For stateMap overrides
+    };
+    sounds?: {
+      onOpen?: string;
+      onUnlock?: string;
+      onBreak?: string;
+      [key: string]: string | undefined;
+    };
+  };
+
+  input?: {
+    type: 'code' | 'phrase' | 'pattern' | 'sequence';
+    validation: string; // The correct code/phrase, or a regex for patterns
+    attempts: number | null;
+    lockout: number | null; // Lockout duration in seconds, or for N turns
+  };
+
+  handlers: {
+    onExamine?: Handler & { alternateMessage?: string };
+    onSearch?: Handler;
+    onOpen?: Handler;
+    onClose?: Handler;
+    onUnlock?: Handler;
+    onInput?: Handler;
+    onUse?: ItemHandler[]; // Can react to multiple items
+    onInsert?: ItemHandler[];
+    onRemove?: ItemHandler[];
+    onMove?: Handler;
+    onBreak?: Handler;
+    onReset?: Handler;
+    onActivate?: Handler;
+    onDeactivate?: Handler;
+  };
+
+  stateMap?: Record<string, {
+    description?: string;
+    media?: {
+        images?: Record<string, ImageDetails>;
+        sounds?: Record<string, string>;
+    },
+    overrideHandlers?: Partial<GameObject['handlers']>;
+  }>;
+
+  fallbackMessages: {
+    default: string; // Generic "that doesn't work"
+    notOpenable?: string;
+    locked?: string;
+    notMovable?: string;
+    notContainer?: string;
+    noEffect?: string; // For 'use' when there's no matching item handler
+  };
+
+  design: {
+    tags?: string[];
+    authorNotes?: string;
+    i18nKey?: string;
+  };
+
+  version: {
+    schema: string;
+    content: string;
+  };
 };
 
 export type Item = {
@@ -96,56 +227,6 @@ export type Item = {
   }
   onUse?: InteractionResult; // For using items directly
   onRead?: InteractionResult; // For reading items directly
-};
-
-
-export type ObjectInteractionState = {
-    id: string;
-    description: string;
-    commands: Record<string, Action[]>;
-}
-
-export type GameObject = {
-  id: GameObjectId;
-  name:string;
-  description: string; // General description
-  items: ItemId[]; // Defines the items it contains by default
-  
-  onExamine?: {
-      default?: InteractionResult;
-      locked?: InteractionResult;
-      unlocked?: InteractionResult;
-      alternate?: InteractionResult;
-  };
-  
-  isOpenable?: boolean;
-  state?: {
-    isLocked?: boolean;
-    isOpen?: boolean;
-    currentInteractionStateId?: string;
-  };
-
-  unlocksWith?: ItemId;
-  unlocksWithPhrase?: string;
-  onUnlock?: {
-      successMessage: string;
-      failMessage: string;
-      actions?: Action[];
-  };
-
-  // For handling non-standard verbs like "break", "destroy", "climb", etc.
-  onFailure?: {
-    default: string; // Generic fallback for any unhandled verb
-    [verb: string]: string; // Specific message for a given verb
-  };
-  
-  // For complex, multi-step interactions
-  interactionStates?: Record<string, ObjectInteractionState>;
-  defaultInteractionStateId?: string;
-
-  // Visuals
-  image?: ImageDetails;
-  unlockedImage?: ImageDetails;
 };
 
 export type CannedResponse = {
@@ -226,5 +307,3 @@ export type Game = {
   objectInteractionPromptContext?: string;
   storyStyleGuide?: string;
 };
-
-    

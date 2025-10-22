@@ -97,141 +97,144 @@ export const game: Game = {
                 id: 'obj_brown_notebook' as GameObjectId,
                 name: 'Brown Notebook',
                 description: 'A worn, leather-bound notebook. It feels heavy with secrets.',
-                items: ['item_sd_card', 'item_newspaper_article'],
-                isOpenable: true,
-                state: {
-                    isLocked: true,
+                capabilities: { openable: true, lockable: true, breakable: false, movable: true, powerable: false, container: true, readable: false, inputtable: true },
+                initialState: { isOpen: false, isLocked: true, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
+                inventory: { items: ['item_sd_card', 'item_newspaper_article'], capacity: 2 },
+                media: {
+                    images: {
+                        default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759242347/Notebook_locked_ngfes0.png', description: 'A locked notebook.', hint: 'locked notebook' },
+                        unlocked: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759242346/Notebook_unlocked_fpxqgl.jpg', description: 'An unlocked notebook.', hint: 'unlocked notebook' }
+                    },
+                    sounds: { onUnlock: 'click.mp3' }
                 },
-                unlocksWithPhrase: 'Justice for Silas Bloom',
-                onExamine: {
-                    default: {
-                        message: "A worn, leather-bound notebook. It seems to be locked with a phrase."
+                input: { type: 'phrase', validation: 'Justice for Silas Bloom', attempts: null, lockout: null },
+                handlers: {
+                    onExamine: {
+                        success: { message: "A worn, leather-bound notebook. It seems to be locked with a phrase." },
+                        fail: { message: "" },
+                        alternateMessage: "The notebook lies open. The slots for the SD card and article are now empty."
                     },
-                    locked: {
-                        message: "A lock prevents it from being opened without the right password. You'll need to figure out the phrase.\n\nhttps://airpg-minigames.vercel.app/games/the-notebook"
+                    onOpen: {
+                        conditions: [{ type: 'STATE_MATCH', targetId: 'obj_brown_notebook', expectedValue: { isLocked: false } }],
+                        success: { message: "The notebook is open. Inside, you see a small SD card next to a folded newspaper article." },
+                        fail: { message: "A lock prevents it from being opened without the right password. You'll need to figure out the phrase.\n\nhttps://airpg-minigames.vercel.app/games/the-notebook" }
                     },
-                    unlocked: {
-                        message: "The notebook is open. Inside, you see a small SD card next to a folded newspaper article. \n\nYou can 'take SD Card' or 'take Newspaper Article' to add them to your inventory if you want to check what information is on them."
+                    onUnlock: {
+                        success: {
+                            message: "The notebook unlocks with a soft click. The cover creaks open.",
+                            actions: [{ type: 'SET_FLAG', flag: 'has_unlocked_notebook' as Flag }]
+                        },
+                        fail: { message: "That password doesn't work. The lock remains stubbornly shut." }
                     },
-                    alternate: {
-                        message: "The notebook lies open. The slots for the SD card and article are now empty."
+                    onBreak: {
+                        success: { message: "" },
+                        fail: { message: "You hammer on the notebook, but the old leather is surprisingly tough. The lock doesn't budge." }
+                    },
+                    onMove: {
+                        success: { message: "" },
+                        fail: { message: "You slide the notebook around on the table. It doesn't reveal anything." }
                     }
                 },
-                onUnlock: {
-                    successMessage: "The notebook unlocks with a soft click. The cover creaks open.\n\nhttps://airpg-minigames.vercel.app/games/the-notebook",
-                    failMessage: "That password doesn't work. The lock remains stubbornly shut.",
-                    actions: [
-                         { type: 'SET_FLAG', flag: 'has_unlocked_notebook' as Flag }
-                    ]
-                },
-                onFailure: {
+                fallbackMessages: {
                     default: "That's not going to work. It's a key piece of evidence.",
-                    break: "You hammer on the notebook, but the old leather is surprisingly tough. The lock doesn't budge.",
-                    destroy: "You consider destroying the notebook, but that would defeat the whole purpose of being here. There must be a more subtle way.",
-                    move: "You slide the notebook around on the table. It doesn't reveal anything.",
-                    "look behind": "It's a notebook on a table. There's nothing behind it."
+                    notOpenable: "You can't open that.",
+                    locked: "It's locked.",
+                    noEffect: "Using that on the notebook has no effect."
                 },
-                image: {
-                    url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759242347/Notebook_locked_ngfes0.png',
-                    description: 'A locked notebook.',
-                    hint: 'locked notebook'
-                },
-                unlockedImage: {
-                    url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759242346/Notebook_unlocked_fpxqgl.jpg',
-                    description: 'An unlocked notebook.',
-                    hint: 'unlocked notebook'
-                }
+                design: { authorNotes: "Central puzzle item for Chapter 1." },
+                version: { schema: "1.0", content: "1.0" }
             },
             'obj_chalkboard_menu': {
                 id: 'obj_chalkboard_menu' as GameObjectId,
                 name: 'Chalkboard Menu',
-                description: "A simple chalkboard menu.",
-                items: [],
-                alternateDescription: "The menu hasn't changed. The special is still about 'justice'.",
-                onExamine: {
-                   default: { message: "Today's special is three scones for the price of two. A deal almost as sweet as justice." },
-                   alternate: { message: "The menu hasn't changed. The special is still about 'justice'."}
+                description: "Today's special is three scones for the price of two. A deal almost as sweet as justice.",
+                capabilities: { openable: false, lockable: false, breakable: true, movable: true, powerable: false, container: false, readable: true, inputtable: false },
+                initialState: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
+                media: { images: { default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759603706/Chalkboard_h61haz.png', description: 'A chalkboard menu in a cafe.', hint: 'chalkboard menu' } } },
+                handlers: {
+                    onExamine: {
+                        success: { message: "Today's special is three scones for the price of two. A deal almost as sweet as justice." },
+                        fail: { message: "" },
+                        alternateMessage: "The menu hasn't changed. The special is still about 'justice'."
+                    },
+                    onBreak: {
+                        success: { message: "" },
+                        fail: { message: "You could probably smash the chalkboard, but that would just make a mess and draw unwanted attention." }
+                    },
+                    onMove: {
+                        success: { message: "" },
+                        fail: { message: "You shift the chalkboard stand an inch to the left. Nothing of interest is revealed." }
+                    }
                 },
-                onFailure: {
-                    default: "Probably best to leave the menu alone. It's not part of the case.",
-                    break: "You could probably smash the chalkboard, but that would just make a mess and draw unwanted attention.",
-                    destroy: "It's just a menu, Burt. Let's focus on the case.",
-                    move: "You shift the chalkboard stand an inch to the left. Nothing of interest is revealed.",
-                    "look behind": "You peek behind the chalkboard. Just a dusty wall and a stray sugar packet."
-                },
-                image: {
-                    url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759603706/Chalkboard_h61haz.png',
-                    description: 'A chalkboard menu in a cafe.',
-                    hint: 'chalkboard menu'
-                }
+                fallbackMessages: { default: "Probably best to leave the menu alone. It's not part of the case." },
+                design: { authorNotes: "Contains the 'justice' clue for the notebook password." },
+                version: { schema: "1.0", content: "1.0" }
             },
             'obj_magazine': {
                 id: 'obj_magazine' as GameObjectId,
                 name: 'Magazine',
-                description: "A discarded local magazine.",
-                alternateDescription: "It's just today's magazine. Nothing new here.",
-                items: [],
-                 onExamine: {
-                   default: { message: "It's a copy of this week's local entertainment magazine. The cover story discusses the current series of murders. The usual craziness of a Metropolis." },
-                   alternate: { message: "It's just today's magazine. Nothing new here." }
+                description: "It's a copy of this week's local entertainment magazine. The cover story discusses the current series of murders. The usual craziness of a Metropolis.",
+                capabilities: { openable: false, lockable: false, breakable: true, movable: false, powerable: false, container: false, readable: true, inputtable: false },
+                initialState: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
+                media: { images: { default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759603706/Newspaper_p85m1h.png', description: 'A magazine on a table.', hint: 'magazine' } } },
+                handlers: {
+                    onExamine: {
+                        success: { message: "It's a copy of this week's local entertainment magazine. The cover story discusses the current series of murders. The usual craziness of a Metropolis." },
+                        fail: { message: "" },
+                        alternateMessage: "It's just today's magazine. Nothing new here."
+                    },
+                     onBreak: {
+                        success: { message: "" },
+                        fail: { message: "Tearing up the magazine won't help you solve any crimes." }
+                    }
                 },
-                onFailure: {
-                    default: "The magazine is old news. Let's stick to the facts of our case.",
-                    take: "You could take it, but you have no reason to. It's just a magazine.",
-                    destroy: "Tearing up the magazine won't help you solve any crimes."
-                },
-                image: {
-                    url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759603706/Newspaper_p85m1h.png',
-                    description: 'A magazine on a table.',
-                    hint: 'magazine'
-                }
+                fallbackMessages: { default: "The magazine is old news. Let's stick to the facts of our case." },
+                design: { authorNotes: "Flavor item to build atmosphere." },
+                version: { schema: "1.0", content: "1.0" }
             },
             'obj_bookshelf': {
                 id: 'obj_bookshelf' as GameObjectId,
                 name: 'Bookshelf',
-                description: 'A small bookshelf in a reading corner.',
-                items: ['item_book_deal', 'item_book_time', 'item_book_justice'],
-                alternateDescription: "The bookshelf still holds that romance novel, 'Justice for My Love'.",
-                 onExamine: {
-                   default: { 
-                        message: "A small bookshelf filled with used paperbacks. You can see the titles: 'The Art of the Deal', 'A Brief History of Time', and a romance novel called 'Justice for My Love'." ,
-                        actions: [
-                            { type: 'SET_FLAG', flag: 'has_seen_justice_book' as Flag }
-                        ]
+                description: "A small bookshelf filled with used paperbacks. You can see the titles: 'The Art of the Deal', 'A Brief History of Time', and a romance novel called 'Justice for My Love'.",
+                capabilities: { openable: false, lockable: false, breakable: false, movable: true, powerable: false, container: true, readable: false, inputtable: false },
+                initialState: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
+                inventory: { items: ['item_book_deal', 'item_book_time', 'item_book_justice'], capacity: null },
+                media: { images: { default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759604596/Bookshelf_Cafe_kn4poz.png', description: 'A bookshelf in a cafe.', hint: 'bookshelf reading corner' } } },
+                handlers: {
+                    onExamine: {
+                        success: {
+                            message: "A small bookshelf filled with used paperbacks. You can see the titles: 'The Art of the Deal', 'A Brief History of Time', and a romance novel called 'Justice for My Love'.",
+                            actions: [{ type: 'SET_FLAG', flag: 'has_seen_justice_book' as Flag }]
+                        },
+                        fail: { message: "" },
+                        alternateMessage: "The bookshelf still has that romance novel, 'Justice for My Love'."
                     },
-                   alternate: { message: "The bookshelf still has that romance novel, 'Justice for My Love'."}
+                    onMove: {
+                        success: { message: "" },
+                        fail: { message: "It's too heavy to move by yourself." }
+                    }
                 },
-                onFailure: {
-                    default: "It's just a bookshelf. Let's not get sidetracked.",
-                    take: "You can't take the whole bookshelf, Burt.",
-                    move: "It's too heavy to move by yourself."
-                },
-                image: {
-                    url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759604596/Bookshelf_Cafe_kn4poz.png',
-                    description: 'A bookshelf in a cafe.',
-                    hint: 'bookshelf reading corner'
-                }
+                fallbackMessages: { default: "It's just a bookshelf. Let's not get sidetracked." },
+                design: { authorNotes: "Contains the other 'justice' clue for the notebook." },
+                version: { schema: "1.0", content: "1.0" }
             },
             'obj_painting': {
                 id: 'obj_painting' as GameObjectId,
                 name: 'Painting on the wall',
-                description: "A colorful abstract painting.",
-                items: [],
-                alternateDescription: "It's the same abstract painting signed 'S.B.'.",
-                onExamine: {
-                   default: { message: "An abstract painting hangs on the wall, its swirls of color adding a touch of modern art to the cafe's cozy atmosphere. It seems to be signed 'S.B.'" },
-                   alternate: { message: "It's the same abstract painting signed 'S.B.'." }
+                description: "An abstract painting hangs on the wall, its swirls of color adding a touch of modern art to the cafe's cozy atmosphere. It seems to be signed 'S.B.'",
+                capabilities: { openable: false, lockable: false, breakable: false, movable: false, powerable: false, container: false, readable: false, inputtable: false },
+                initialState: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
+                media: { images: { default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759604943/picture_on_wall_fcx10j.png', description: 'A painting on the wall of the cafe.', hint: 'abstract painting' } } },
+                handlers: {
+                    onExamine: {
+                        success: { message: "An abstract painting hangs on the wall, its swirls of color adding a touch of modern art to the cafe's cozy atmosphere. It seems to be signed 'S.B.'" },
+                        fail: { message: "" },
+                        alternateMessage: "It's the same abstract painting signed 'S.B.'."
+                    }
                 },
-                onFailure: {
-                    default: "The painting is nice, but it's not a clue.",
-                    take: "The painting is securely fastened to the wall.",
-                    "look behind": "You try to look behind the painting, but it's flush against the wall."
-                },
-                image: {
-                    url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759604943/picture_on_wall_fcx10j.png',
-                    description: 'A painting on the wall of the cafe.',
-                    hint: 'abstract painting'
-                }
+                fallbackMessages: { default: "The painting is nice, but it's not a clue.", noEffect: "Looking behind the painting reveals nothing but wall." },
+                design: { authorNotes: "Contains the 'S.B.' clue for Silas Bloom." },
+                version: { schema: "1.0", content: "1.0" }
             }
         },
         items: {
@@ -278,7 +281,7 @@ export const game: Game = {
             'item_sd_card': {
                 id: 'item_sd_card' as ItemId,
                 name: 'SD Card',
-                description: 'A small, modern SD card, looking strangely out of place in the old notebook.',
+                description: 'A small, modern SD card, looking strangely out of place in the old notebook. You can "use SD Card" to see what\'s on it.',
                 isTakable: true,
                 onTake: {
                     successMessage: 'You take the SD Card. You can "use SD Card" to check what is hidden on it.',
