@@ -116,7 +116,7 @@ export const game: Game = {
                     failMessage: "That password doesn't work. The lock remains stubbornly shut.",
                     actions: [
                          { type: 'SET_FLAG', flag: 'has_unlocked_notebook' as Flag },
-                         { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'Let\'s see what\'s inside: https://airpg-minigames.vercel.app/games/the-notebook'},
+                         { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'You can now access the contents of the notebook: https://airpg-minigames.vercel.app/games/the-notebook'},
                          { type: 'SET_FLAG', flag: 'notebook_is_open' as Flag }
                     ]
                 },
