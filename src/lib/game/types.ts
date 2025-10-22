@@ -485,6 +485,7 @@ export type Location = {
   locationId: LocationId;
   name:string;
   sceneDescription: string;
+  sceneImage?: ImageDetails;
   overworldDescription?: string;
   coord?: { x: number; y: number; z: number };
   mapIcon?: string;

@@ -75,14 +75,18 @@ function createInitialMessages(playerState: PlayerState): Message[] {
     // Add initial location description
     const initialLocation = game.locations[playerState.currentLocationId];
     if (initialLocation) {
-        newInitialMessages.push({
+        const locationMessage: Message = {
             id: crypto.randomUUID(),
             sender: 'narrator' as const,
             senderName: game.narratorName || 'Narrator',
-            type: 'text' as const,
+            type: initialLocation.sceneImage ? 'image' : 'text',
             content: initialLocation.sceneDescription,
             timestamp: Date.now() + 2,
-        });
+        };
+        if (initialLocation.sceneImage) {
+            locationMessage.image = initialLocation.sceneImage;
+        }
+        newInitialMessages.push(locationMessage);
     }
 
     return newInitialMessages;

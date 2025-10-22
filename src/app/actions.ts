@@ -306,7 +306,6 @@ export async function processCommand(
             default:
                 const targetObject = visibleObjects.find(obj => restOfCommand.includes(obj.gameLogic.name.toLowerCase()));
                 if (targetObject && targetObject.gameLogic.fallbackMessages) {
-                    const fallbackMessages = targetObject.gameLogic.fallbackMessages;
                     const failureMessage = fallbackMessages?.[verb as keyof typeof fallbackMessages] || fallbackMessages?.default;
                     if (failureMessage) {
                         commandHandlerResult = { newState: currentState, messages: [createMessage('narrator', narratorName, failureMessage)] };
@@ -440,14 +439,18 @@ function createInitialMessages(): Message[] {
     // Add initial location description
     const initialLocation = game.locations[initialGameState.currentLocationId];
     if (initialLocation) {
-        newInitialMessages.push({
+        const locationMessage: Message = {
             id: crypto.randomUUID(),
             sender: 'narrator' as const,
             senderName: game.narratorName || 'Narrator',
-            type: 'text' as const,
+            type: initialLocation.sceneImage ? 'image' : 'text',
             content: initialLocation.sceneDescription,
             timestamp: Date.now() + 2,
-        });
+        };
+        if (initialLocation.sceneImage) {
+            locationMessage.image = initialLocation.sceneImage;
+        }
+        newInitialMessages.push(locationMessage);
     }
   
     return newInitialMessages;

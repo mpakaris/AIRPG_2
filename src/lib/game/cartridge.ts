@@ -66,7 +66,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                 alternateMessage: "The menu hasn't changed. The special is still about 'justice'."
             },
             onMove: {
-                success: { message: "You shift the chalkboard stand. Just a dusty floor behind it.", actions: [] },
+                success: { message: "You shift the chalkboard stand. Just a dusty floor behind it." },
                 fail: { message: "" }
             }
         },
@@ -423,6 +423,7 @@ const locations: Record<LocationId, Location> = {
         locationId: 'loc_cafe_interior' as LocationId,
         name: 'The Cafe Interior',
         sceneDescription: 'You are inside The Daily Grind. \n\nIt\'s a bustling downtown cafe, smelling of coffee and rain. A puddle of rainwater is near the door, and a discarded magazine lies on an empty table.',
+        sceneImage: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761156561/bustling_cafe_bluwgq.jpg', description: 'A view of the bustling cafe interior.', hint: 'bustling cafe' },
         coord: { x: 1, y: 1, z: 0 },
         objects: ['obj_brown_notebook', 'obj_chalkboard_menu', 'obj_magazine', 'obj_bookshelf', 'obj_painting'] as GameObjectId[],
         npcs: ['npc_barista', 'npc_manager'] as NpcId[],
