@@ -106,22 +106,20 @@ export const game: Game = {
                         message: "A worn, leather-bound notebook. It seems to be locked with a phrase."
                     },
                     locked: {
-                        message: "A lock prevents it from being opened without the right password. You'll need to figure out the phrase."
+                        message: "A lock prevents it from being opened without the right password. You'll need to figure out the phrase. \n\n https://airpg-minigames.vercel.app/games/the-notebook"
                     },
                     unlocked: {
-                        message: "The notebook is open. Inside, you see a small SD card next to a folded newspaper article. You can 'use \"SD Card\"' or 'read \"Newspaper Article\"' to examine the contents."
+                        message: "The notebook is open. Inside, you see a small SD card next to a folded newspaper article. \n\nYou can 'take \"SD Card\"' or 'take \"Newspaper Article\"' to add them to your inventory."
                     },
                     alternate: {
-                        message: "Inside is the SD card and the article. You can use 'use \"SD Card\"' or 'read \"Newspaper Article\"' to examine the contents."
+                        message: "The notebook lies open. The slots for the SD card and article are now empty."
                     }
                 },
                 onUnlock: {
                     successMessage: "The notebook unlocks with a soft click. The cover creaks open.",
                     failMessage: "That password doesn't work. The lock remains stubbornly shut.",
                     actions: [
-                         { type: 'SET_FLAG', flag: 'has_unlocked_notebook' as Flag },
-                         { type: 'SET_FLAG', flag: 'notebook_is_open' as Flag },
-                         { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'https://airpg-minigames.vercel.app/games/the-notebook' }
+                         { type: 'SET_FLAG', flag: 'has_unlocked_notebook' as Flag }
                     ]
                 },
                 onFailure: {
@@ -255,7 +253,10 @@ export const game: Game = {
                 id: 'item_newspaper_article' as ItemId,
                 name: 'Newspaper Article',
                 description: 'A folded newspaper article from the 1940s. The headline is about a local musician, Silas Bloom.',
-                isTakable: false,
+                isTakable: true,
+                onTake: {
+                    successMessage: 'You take the newspaper article.',
+                },
                 onRead: {
                     message: 'You read the article.',
                     actions: [
@@ -275,7 +276,10 @@ export const game: Game = {
                 id: 'item_sd_card' as ItemId,
                 name: 'SD Card',
                 description: 'A small, modern SD card, looking strangely out of place in the old notebook.',
-                isTakable: false,
+                isTakable: true,
+                onTake: {
+                    successMessage: 'You take the SD card.',
+                },
                 onUse: {
                     message: "You insert the SD card into your phone.",
                     actions: [
@@ -372,5 +376,6 @@ export const game: Game = {
 };
 
     
+
 
 

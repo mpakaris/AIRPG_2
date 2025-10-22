@@ -85,12 +85,7 @@ function getLiveGameObject(id: GameObjectId, state: PlayerState, game: Game): {g
     const baseObject = chapter.gameObjects[id];
     if (!baseObject) return null;
     
-    const liveState: GameObjectState = state.objectStates[id] || {
-        isLocked: baseObject.state?.isLocked ?? false,
-        isOpen: baseObject.state?.isOpen ?? false,
-        items: baseObject.items ? [...baseObject.items] : [],
-        currentInteractionStateId: baseObject.state?.currentInteractionStateId,
-    };
+    const liveState: GameObjectState | undefined = state.objectStates[id];
 
     const combinedState: GameObjectState = {
         isLocked: typeof liveState?.isLocked === 'boolean' ? liveState.isLocked : (baseObject.state?.isLocked ?? false),
@@ -406,9 +401,9 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
 
         if (liveObject.state.isLocked && onExamine?.locked) {
             messageContent = onExamine.locked.message;
-        } else if (liveObject.state.isOpen && onExamine?.unlocked) { // Is open
+        } else if (liveObject.state.isOpen && onExamine?.unlocked) { 
              messageContent = onExamine.unlocked.message;
-        } else if (!liveObject.state.isLocked && !liveObject.state.isOpen) { // Unlocked but not yet open
+        } else if (!liveObject.state.isLocked && !liveObject.state.isOpen) { 
             messageContent = `The ${liveObject.gameLogic.name} is unlocked. You can 'open' it.`;
         } else if (isAlreadyExamined && onExamine?.alternate) {
             messageContent = onExamine.alternate.message;
@@ -1227,5 +1222,6 @@ export async function generateStoryForChapter(userId: string, gameId: GameId, ch
 
     return { newState };
 }
+
 
 
