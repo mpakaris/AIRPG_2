@@ -4,8 +4,6 @@
 
 import { 
   guidePlayerWithNarrator,
-  selectNpcResponse,
-  generateNpcChatter,
   generateStoryFromLogs
 } from '@/ai';
 import { game as gameCartridge } from '@/lib/game/cartridge';
@@ -15,14 +13,25 @@ import { initializeFirebase } from '@/firebase';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { getInitialState } from '@/lib/game-state';
 import { dispatchMessage } from '@/lib/whinself-service';
-
+import { processActions } from '@/lib/game/actions/process-actions';
+import { getLiveGameObject } from '@/lib/game/actions/helpers';
+import { handleConversation } from '@/lib/game/actions/handle-conversation';
+import { handleExamine } from '@/lib/game/actions/handle-examine';
+import { handleGo } from '@/lib/game/actions/handle-go';
+import { handleInventory } from '@/lib/game/actions/handle-inventory';
+import { handleLook } from '@/lib/game/actions/handle-look';
+import { handleOpen } from '@/lib/game/actions/handle-open';
+import { handleRead } from '@/lib/game/actions/handle-read';
+import { handleTake } from '@/lib/game/actions/handle-take';
+import { handleTalk } from '@/lib/game/actions/handle-talk';
+import { handleUse } from '@/lib/game/actions/handle-use';
+import { processPassword } from '@/lib/game/actions/process-password';
 
 // --- Utility Functions ---
 const examinedObjectFlag = (id: GameObjectId | ItemId | NpcId) => `examined_${id}` as Flag;
 const chapterCompletionFlag = (chapterId: ChapterId) => `chapter_${chapterId}_complete` as Flag;
 
-
-function createMessage(
+export function createMessage(
   sender: Message['sender'],
   senderName: string,
   content: string,
@@ -50,15 +59,16 @@ function createMessage(
             const npc = chapter.npcs[id as NpcId];
             const gameObject = chapter.gameObjects[id as GameObjectId];
             
-            if (gameObject) {
+            // This is the new standardized schema
+            if (gameObject?.media?.images) {
                 const liveObject = getLiveGameObject(gameObject.id, state, game);
-                if (liveObject && !liveObject.state.isLocked && liveObject.gameLogic.unlockedImage) {
-                    image = liveObject.gameLogic.unlockedImage;
-                } else if (liveObject) {
-                    image = liveObject.gameLogic.image;
+                if (liveObject && liveObject.state.isLocked === false && gameObject.media.images.unlocked) {
+                    image = gameObject.media.images.unlocked;
+                } else {
+                    image = gameObject.media.images.default;
                 }
-            } else if (item?.image) {
-                image = item.image;
+            } else if (item?.media?.image) {
+                image = item.media.image;
             } else if (npc?.image) {
                 image = npc.image;
             }
@@ -78,57 +88,7 @@ function createMessage(
   };
 }
 
-
-function getLiveGameObject(id: GameObjectId, state: PlayerState, game: Game): {gameLogic: GameObject, state: GameObjectState} | null {
-    const chapter = game.chapters[state.currentChapterId];
-    if (!chapter) return null;
-    const baseObject = chapter.gameObjects[id];
-    if (!baseObject) return null;
-    
-    const liveState: GameObjectState | undefined = state.objectStates[id];
-
-    // Safely build the combined state with fallbacks for every property
-    const combinedState: GameObjectState = {
-        isLocked: typeof liveState?.isLocked === 'boolean' ? liveState.isLocked : (baseObject.state?.isLocked ?? false),
-        isOpen: typeof liveState?.isOpen === 'boolean' ? liveState.isOpen : (baseObject.state?.isOpen ?? false),
-        items: liveState?.items ? [...liveState.items] : (baseObject.items ? [...baseObject.items] : []),
-        currentInteractionStateId: liveState?.currentInteractionStateId || baseObject.state?.currentInteractionStateId,
-    };
-    
-    return { gameLogic: baseObject, state: combinedState };
-}
-
-function findItemInContext(state: PlayerState, game: Game, targetName: string): Item | null {
-    const chapter = game.chapters[state.currentChapterId];
-    const location = chapter.locations[state.currentLocationId];
-    const normalizedTargetName = targetName.toLowerCase().replace(/"/g, '').trim();
-
-    // 1. Check inventory
-    const itemInInventory = state.inventory
-        .map(id => chapter.items[id])
-        .find(item => item && item.name.toLowerCase().includes(normalizedTargetName));
-    if (itemInInventory) {
-        return itemInInventory;
-    }
-
-    // 2. Check items inside all open objects in the current location
-    for (const objId of location.objects) {
-         const liveObject = getLiveGameObject(objId, state, game);
-         if (liveObject && liveObject.state.isOpen) {
-            const itemsInContainer = liveObject.state.items || [];
-            for (const itemId of itemsInContainer) {
-                const item = chapter.items[itemId];
-                if (item && item.name.toLowerCase().includes(normalizedTargetName)) {
-                    return item;
-                }
-            }
-         }
-    }
-
-    return null;
-}
-
-type CommandResult = {
+export type CommandResult = {
   newState: PlayerState | null;
   messages: Message[];
   resultType?: 'ALREADY_UNLOCKED';
@@ -136,642 +96,7 @@ type CommandResult = {
 };
 
 
-// --- Generic Action Processor ---
-
-function processActions(initialState: PlayerState, actions: Action[], game: Game): CommandResult {
-    let newState = { ...initialState, flags: [...initialState.flags], objectStates: {...initialState.objectStates} };
-    const messages: Message[] = [];
-    const chapter = game.chapters[newState.currentChapterId];
-    const narratorName = game.narratorName || 'Narrator';
-
-    for (const action of actions) {
-        switch (action.type) {
-            case 'ADD_ITEM':
-                if (!newState.inventory.includes(action.itemId)) {
-                    newState.inventory = [...newState.inventory, action.itemId];
-                }
-                break;
-            case 'SET_FLAG':
-                if (!newState.flags.includes(action.flag)) {
-                    newState.flags = [...newState.flags, action.flag];
-                }
-                break;
-            case 'SHOW_MESSAGE':
-                const messageImageId = action.imageId;
-                const message = createMessage(
-                    action.sender,
-                    action.senderName || narratorName,
-                    action.content,
-                    action.messageType,
-                    messageImageId ? { id: messageImageId, game, state: newState, showEvenIfExamined: true } : undefined
-                );
-                messages.push(message);
-
-                 if (messageImageId && !newState.flags.includes(examinedObjectFlag(messageImageId))) {
-                     newState.flags.push(examinedObjectFlag(messageImageId));
-                 }
-                break;
-            case 'END_CONVERSATION':
-                 if (newState.activeConversationWith) {
-                    const npc = chapter.npcs[newState.activeConversationWith];
-                    messages.push(createMessage('system', 'System', `You ended the conversation with ${npc.name}.`));
-                    if (npc.goodbyeMessage) {
-                        messages.push(createMessage(npc.id as NpcId, npc.name, `"${npc.goodbyeMessage}"`));
-                    }
-                    newState.activeConversationWith = null;
-                }
-                break;
-            case 'START_INTERACTION':
-                newState.interactingWithObject = action.objectId;
-                break;
-            case 'END_INTERACTION':
-                if (newState.interactingWithObject) {
-                    const object = chapter.gameObjects[newState.interactingWithObject];
-                    messages.push(createMessage('system', 'System', `You stop examining the ${object.name}.`));
-                    newState.interactingWithObject = null;
-                }
-                break;
-            case 'SET_INTERACTION_STATE':
-                 if(newState.interactingWithObject) {
-                    newState.objectStates[newState.interactingWithObject] = {
-                        ...newState.objectStates[newState.interactingWithObject],
-                        currentInteractionStateId: action.state
-                    };
-                }
-                break;
-        }
-    }
-
-    return { newState, messages };
-}
-
-
-// --- Conversation Helpers ---
-
-const CONVERSATION_END_KEYWORDS = ['goodbye', 'bye', 'leave', 'stop', 'end', 'exit', 'thank you and goodbye'];
-
-function isEndingConversation(input: string): boolean {
-    const lowerInput = input.toLowerCase().trim();
-    return CONVERSATION_END_KEYWORDS.some(keyword => {
-        const regex = new RegExp(`\\b${keyword}\\b`, 'i');
-        return regex.test(lowerInput);
-    });
-}
-
-async function handleFreeformChat(npc: NPC, state: PlayerState, playerInput: string, game: Game): Promise<CommandResult> {
-    const chapter = game.chapters[state.currentChapterId];
-    let newState = { ...state, conversationCounts: { ...state.conversationCounts } };
-    newState.conversationCounts[npc.id] = (newState.conversationCounts[npc.id] || 0) + 1;
-
-    const interactionCount = newState.conversationCounts[npc.id];
-    if (npc.maxInteractions && interactionCount > npc.maxInteractions && npc.interactionLimitResponse) {
-        return { newState, messages: [createMessage(npc.id, npc.name, `"${npc.interactionLimitResponse}"`)] };
-    }
-
-    const location = chapter.locations[state.currentLocationId];
-    const { output: aiResponse, usage } = await generateNpcChatter({
-        playerInput: playerInput,
-        npcName: npc.name,
-        npcPersona: npc.persona || 'A generic townsperson.',
-        locationDescription: location.description,
-        gameSetting: game.setting || 'Modern-day USA, 2025'
-    });
-    
-    const message = createMessage(npc.id, npc.name, `"${aiResponse.npcResponse}"`, 'text', undefined, usage);
-    return { newState, messages: [message] };
-}
-
-
-async function handleConversation(state: PlayerState, playerInput: string, game: Game): Promise<CommandResult> {
-    if (!state.activeConversationWith) {
-        return { newState: state, messages: [createMessage('system', 'System', 'Error: Not in a conversation.')] };
-    }
-
-    const chapter = game.chapters[state.currentChapterId];
-    const npcId = state.activeConversationWith;
-    const npc = chapter.npcs[npcId];
-    let newState = { ...state };
-
-    if (isEndingConversation(playerInput)) {
-        return processActions(newState, [{type: 'END_CONVERSATION'}], game);
-    }
-    
-    const completionFlag = npc.completionFlag;
-    const isQuestComplete = completionFlag && newState.flags.includes(completionFlag);
-
-    // If the NPC's quest is complete AND they have a persona, they become a freeform chatterer.
-    if (isQuestComplete && npc.dialogueType === 'scripted' && npc.persona) {
-        return handleFreeformChat(npc, newState, playerInput, game);
-    }
-
-    // Handle SCRIPTED NPCs (or completed ones without a persona)
-    if (npc.dialogueType === 'scripted') {
-        if (isQuestComplete && npc.finalResponse) {
-             return { newState, messages: [createMessage(npcId, npc.name, `"${npc.finalResponse}"`)] };
-        }
-        
-        if (!npc.cannedResponses || npc.cannedResponses.length === 0) {
-            return {
-                newState: newState,
-                messages: [createMessage(npcId, npc.name, `"${npc.goodbyeMessage || 'I have nothing more to say.'}"`)]
-            };
-        }
-
-        const cannedResponsesForAI = npc.cannedResponses.map(r => ({ topic: r.topic, response: r.response, keywords: r.keywords }));
-        const { output: aiResponse, usage } = await selectNpcResponse({
-            playerInput: playerInput,
-            npcName: npc.name,
-            cannedResponses: cannedResponsesForAI,
-        });
-        
-        const chosenTopic = aiResponse.topic;
-        const selectedResponse = npc.cannedResponses.find(r => r.topic === chosenTopic)
-            || npc.cannedResponses.find(r => r.topic === 'default');
-
-        if (!selectedResponse) {
-            return { newState, messages: [createMessage(npcId, npc.name, `"I don't know what to say."`)] };
-        }
-
-        const initialMessage = createMessage(npcId, npc.name, `"${selectedResponse.response}"`, 'text', undefined, usage);
-        const actionsToProcess = selectedResponse.actions || [];
-        let actionResult = processActions(newState, actionsToProcess, game);
-        actionResult.messages.unshift(initialMessage);
-        return actionResult;
-    }
-
-    // Handle FREEFORM NPCs
-    if (npc.dialogueType === 'freeform') {
-        return handleFreeformChat(npc, newState, playerInput, game);
-    }
-
-    // Fallback if dialogueType is not set
-    return {
-        newState: newState,
-        messages: [createMessage(npcId, npc.name, `"${npc.goodbyeMessage || 'I have nothing to say.'}"`)]
-    };
-}
-
-function processPassword(state: PlayerState, command: string, game: Game): CommandResult {
-    const narratorName = game.narratorName || "Narrator";
-    const chapter = game.chapters[state.currentChapterId];
-    const location = chapter.locations[state.currentLocationId];
-    const objectsInLocation = location.objects.map(id => getLiveGameObject(id, state, game)).filter(Boolean) as {gameLogic: GameObject, state: GameObjectState}[];
-    
-    const commandLower = command.toLowerCase();
-
-    // Find the target object
-    let targetObjectResult = objectsInLocation.find(obj => {
-        if (!obj.gameLogic.unlocksWithPhrase) return false;
-        // Prioritize object names that appear in the command
-        return commandLower.includes(obj.gameLogic.name.toLowerCase());
-    });
-
-    // If no object is explicitly mentioned, find the single, implicitly targeted object
-    if (!targetObjectResult) {
-        const passwordObjects = objectsInLocation.filter(obj => obj.state.isLocked && obj.gameLogic.unlocksWithPhrase);
-        if (passwordObjects.length === 1) {
-            targetObjectResult = passwordObjects[0];
-        } else {
-             return { newState: state, messages: [createMessage('system', 'System', 'You need to be more specific about what you are using the password on.')] };
-        }
-    }
-
-    const targetObject = targetObjectResult;
-
-    // Check if the object is already unlocked
-    if (!targetObject.state.isLocked) {
-        return { 
-            newState: state, 
-            messages: [],
-            resultType: 'ALREADY_UNLOCKED',
-            targetObjectName: targetObject.gameLogic.name
-        };
-    }
-    
-    // Extract the phrase
-    const targetObjectNameLower = targetObject.gameLogic.name.toLowerCase();
-    let phrase = command;
-    const objectNameIndex = phrase.toLowerCase().indexOf(targetObjectNameLower);
-    if (objectNameIndex !== -1) {
-        phrase = phrase.substring(objectNameIndex + targetObjectNameLower.length);
-    }
-    
-    // Remove initial command verb if present
-    phrase = phrase.replace(/^\s*(password|say|enter|for|is)\s*/i, '');
-    // Clean up quotes and trim
-    phrase = phrase.replace(/^"|"$/g, '').trim();
-
-    if (!phrase) {
-        return { newState: state, messages: [createMessage('narrator', narratorName, 'You need to specify a password phrase.')] };
-    }
-    
-    const expectedPhrase = targetObject.gameLogic.unlocksWithPhrase;
-
-    if (phrase.toLowerCase() === expectedPhrase!.toLowerCase()) {
-        let newState = { ...state, objectStates: { ...state.objectStates }};
-        if (!newState.objectStates[targetObject.gameLogic.id]) newState.objectStates[targetObject.gameLogic.id] = {};
-        newState.objectStates[targetObject.gameLogic.id].isLocked = false;
-        newState.objectStates[targetObject.gameLogic.id].isOpen = true; // Also open it
-        
-        const actions = targetObject.gameLogic.onUnlock?.actions || [];
-        const result = processActions(newState, actions, game);
-        
-        const unlockMessage = createMessage(
-            'narrator', 
-            narratorName, 
-            targetObject.gameLogic.onUnlock?.successMessage || "It unlocks!",
-            'image',
-            { id: targetObject.gameLogic.id, game, state: result.newState!, showEvenIfExamined: true }
-        );
-        result.messages.unshift(unlockMessage);
-
-        if (!result.newState!.flags.includes(examinedObjectFlag(targetObject.gameLogic.id))) {
-            result.newState!.flags.push(examinedObjectFlag(targetObject.gameLogic.id));
-        }
-        
-        return result;
-    } else {
-        return { newState: state, messages: [createMessage('narrator', narratorName, targetObject.gameLogic.onUnlock?.failMessage || 'That password doesn\'t work.')] };
-    }
-}
-
-
-// --- Command Handlers ---
-
-function handleExamine(state: PlayerState, targetName: string, game: Game): CommandResult {
-    const chapter = game.chapters[state.currentChapterId];
-    const location = chapter.locations[state.currentLocationId];
-    let newState = { ...state, flags: [...state.flags] };
-    const normalizedTargetName = targetName.toLowerCase().replace(/"/g, '').trim();
-    const narratorName = game.narratorName || "Narrator";
-
-    // Try to find an object in the location first
-    const targetObjectId = location.objects.find(id =>
-        chapter.gameObjects[id]?.name.toLowerCase().includes(normalizedTargetName)
-    );
-
-    if (targetObjectId) {
-        const liveObject = getLiveGameObject(targetObjectId, newState, game);
-        if (!liveObject) {
-            return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${targetName}" here.`)] };
-        }
-        const flag = examinedObjectFlag(liveObject.gameLogic.id);
-        const isAlreadyExamined = newState.flags.includes(flag);
-        
-        let messageContent: string;
-        const onExamine = liveObject.gameLogic.onExamine;
-
-        if (liveObject.state.isLocked && onExamine?.locked) {
-            messageContent = onExamine.locked.message;
-        } else if (liveObject.state.isOpen && onExamine?.unlocked) { 
-             messageContent = onExamine.unlocked.message;
-        } else if (!liveObject.state.isLocked && !liveObject.state.isOpen && liveObject.gameLogic.isOpenable) { 
-            messageContent = `The ${liveObject.gameLogic.name} is unlocked. You can 'open' it.`;
-        } else if (isAlreadyExamined && onExamine?.alternate) {
-            messageContent = onExamine.alternate.message;
-        } else if (onExamine?.default) {
-            messageContent = onExamine.default.message;
-        } else {
-            messageContent = `You examine the ${liveObject.gameLogic.name}.`;
-        }
-        
-        const mainMessage = createMessage(
-            'narrator',
-            narratorName,
-            messageContent,
-            'image',
-            { id: liveObject.gameLogic.id, game, state: newState, showEvenIfExamined: false }
-        );
-        
-        if (!isAlreadyExamined) {
-            newState.flags.push(flag);
-        }
-        
-        return { newState, messages: [mainMessage] };
-    }
-
-    // If not an object, try to find an item in inventory or in an open container
-    const itemInContext = findItemInContext(newState, game, targetName);
-    if (itemInContext) {
-        const flag = examinedObjectFlag(itemInContext.id);
-        const isAlreadyExamined = newState.flags.includes(flag);
-        
-        const messageText = isAlreadyExamined && itemInContext.alternateDescription
-            ? itemInContext.alternateDescription
-            : itemInContext.description;
-
-        const message = createMessage(
-            'narrator', 
-            narratorName, 
-            messageText,
-            'image',
-            { id: itemInContext.id, game, state: newState, showEvenIfExamined: false }
-        );
-        
-        if (!isAlreadyExamined) {
-            newState.flags.push(flag);
-        }
-
-        return { newState, messages: [message] };
-    }
-
-    return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${targetName}" here.`)] };
-}
-
-function handleOpen(state: PlayerState, targetName: string, game: Game): CommandResult {
-    const chapter = game.chapters[state.currentChapterId];
-    const location = chapter.locations[state.currentLocationId];
-    const narratorName = game.narratorName || "Narrator";
-    const normalizedTargetName = targetName.toLowerCase().replace(/"/g, '').trim();
-
-    const targetObjectId = location.objects.find(id =>
-        chapter.gameObjects[id]?.name.toLowerCase().includes(normalizedTargetName)
-    );
-
-    if (!targetObjectId) {
-        return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${targetName}" to open.`)] };
-    }
-
-    const liveObject = getLiveGameObject(targetObjectId, state, game);
-    if (!liveObject) {
-         return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${targetName}" to open.`)] };
-    }
-    
-    if (liveObject.state.isLocked) {
-        const lockMessage = liveObject.gameLogic.onExamine?.locked?.message || "It's locked.";
-        return { newState: state, messages: [createMessage('narrator', narratorName, lockMessage)] };
-    }
-
-    if (liveObject.state.isOpen) {
-        const alreadyOpenMessage = liveObject.gameLogic.onExamine?.alternate?.message || "It's already open.";
-        return { newState: state, messages: [createMessage('narrator', narratorName, alreadyOpenMessage)] };
-    }
-    
-    if (!liveObject.gameLogic.isOpenable) {
-         return { newState: state, messages: [createMessage('narrator', narratorName, `You can't open the ${liveObject.gameLogic.name}.`)] };
-    }
-
-    // Unlock and open the object
-    let newState = { ...state, objectStates: { ...state.objectStates }};
-    if (!newState.objectStates[liveObject.gameLogic.id]) {
-        newState.objectStates[liveObject.gameLogic.id] = {};
-    }
-    newState.objectStates[liveObject.gameLogic.id].isOpen = true;
-
-    const onExamine = liveObject.gameLogic.onExamine;
-    const messageContent = onExamine?.unlocked?.message || `You open the ${liveObject.gameLogic.name}.`;
-    const actions = onExamine?.unlocked?.actions || [];
-    
-    let actionResult = processActions(newState, actions, game);
-    
-    const mainMessage = createMessage(
-        'narrator',
-        narratorName,
-        messageContent,
-        'image',
-        { id: liveObject.gameLogic.id, game, state: actionResult.newState!, showEvenIfExamined: true }
-    );
-    actionResult.messages.unshift(mainMessage);
-
-    return actionResult;
-}
-
-
-function handleTake(state: PlayerState, targetName: string, game: Game): CommandResult {
-  const chapter = game.chapters[state.currentChapterId];
-  const location = chapter.locations[state.currentLocationId];
-  const narratorName = game.narratorName || "Narrator";
-  const normalizedTargetName = targetName.toLowerCase().replace(/"/g, '').trim();
-  
-  // Create a deep copy of the state to safely mutate
-  let newState = JSON.parse(JSON.stringify(state));
-
-  for (const objId of location.objects) {
-    const liveObject = getLiveGameObject(objId, newState, game);
-    
-    if (liveObject && liveObject.state.isOpen) {
-        const itemToTakeId = (liveObject.state.items || []).find(itemId => 
-            chapter.items[itemId]?.name.toLowerCase() === normalizedTargetName
-        );
-
-        if (itemToTakeId) {
-            const itemToTake = chapter.items[itemToTakeId];
-
-            if (!itemToTake.isTakable) {
-                return { newState: state, messages: [createMessage('narrator', narratorName, itemToTake.onTake?.failMessage || `You can't take the ${itemToTake.name}.`)] };
-            }
-            
-            if (newState.inventory.includes(itemToTake.id)) {
-                return { newState: state, messages: [createMessage('system', 'System', `You already have the ${itemToTake.name}.`)] };
-            }
-
-            // Perform the transaction
-            newState.inventory.push(itemToTake.id);
-            
-            const currentObjectItems = liveObject.state.items || [];
-            const newObjectItems = currentObjectItems.filter(id => id !== itemToTake.id);
-            newState.objectStates[objId].items = newObjectItems;
-
-            const actions = itemToTake.onTake?.successActions || [];
-            const result = processActions(newState, actions, game);
-            result.messages.unshift(createMessage('narrator', narratorName, itemToTake.onTake?.successMessage || `You take the ${itemToTake.name}.`));
-            return result;
-        }
-    }
-  }
-  
-  return { newState: state, messages: [createMessage('system', 'System', `You can't take that.`)] };
-}
-
-function handleGo(state: PlayerState, targetName: string, game: Game): CommandResult {
-    const chapter = game.chapters[state.currentChapterId];
-    const currentLocation = chapter.locations[state.currentLocationId];
-    targetName = targetName.toLowerCase();
-    const narratorName = game.narratorName || "Narrator";
-
-    if (targetName === 'next_chapter') {
-        const completion = checkChapterCompletion(state, game);
-        if (completion.isComplete) {
-            const nextChapterId = chapter.nextChapter?.id;
-            if (nextChapterId && game.chapters[nextChapterId]) {
-                const nextChapter = game.chapters[nextChapterId];
-                const newState: PlayerState = {
-                    ...state,
-                    currentChapterId: nextChapterId,
-                    currentLocationId: nextChapter.startLocationId,
-                    activeConversationWith: null,
-                    interactingWithObject: null,
-                };
-                const newLocation = nextChapter.locations[newState.currentLocationId];
-                return {
-                    newState,
-                    messages: [
-                        createMessage('system', 'System', `You are now in Chapter: ${nextChapter.title}.`),
-                        createMessage('narrator', narratorName, newLocation.description),
-                    ]
-                };
-            } else {
-                 return { newState: state, messages: [createMessage('system', 'System', `There is no next chapter defined.`)] };
-            }
-        } else {
-            return { newState: state, messages: [createMessage('agent', narratorName, `Wait a second. We still need to ${chapter.goal.toLowerCase()} here in ${currentLocation.name}. We can't move on until we've figured that out.`)] };
-        }
-    }
-
-    let targetLocation: Location | undefined;
-    targetLocation = Object.values(chapter.locations).find(loc => loc.name.toLowerCase() === targetName);
-
-    if (!targetLocation) {
-        const { x, y } = currentLocation.gridPosition;
-        let nextPos = { x, y };
-        switch (targetName) {
-            case 'north': nextPos.y -= 1; break;
-            case 'south': nextPos.y += 1; break;
-            case 'east': nextPos.x += 1; break;
-            case 'west': nextPos.x -= 1; break;
-        }
-        targetLocation = Object.values(chapter.locations).find(loc => loc.gridPosition.x === nextPos.x && loc.gridPosition.y === nextPos.y);
-    }
-    
-    if (targetLocation) {
-        const newState = { ...state, currentLocationId: targetLocation.id, activeConversationWith: null, interactingWithObject: null };
-        return {
-            newState,
-            messages: [
-                createMessage('system', 'System', `You go to the ${targetLocation.name}.`),
-                createMessage('narrator', narratorName, targetLocation.description)
-            ]
-        };
-    }
-
-    return { newState: state, messages: [createMessage('system', 'System', `You can't go there.`)] };
-}
-
-
-async function handleUse(state: PlayerState, itemName: string, objectName: string, game: Game): Promise<CommandResult> {
-  const chapter = game.chapters[state.currentChapterId];
-  const location = chapter.locations[state.currentLocationId];
-  const narratorName = game.narratorName || "Narrator";
-
-  const itemToUse = findItemInContext(state, game, itemName);
-  if (!itemToUse) {
-    return { newState: state, messages: [createMessage('system', 'System', `You don't have a "${itemName}".`)] };
-  }
-  
-  // Case 1: Using an item on a specific object
-  if (objectName) {
-    const targetObjectId = location.objects.find(objId => chapter.gameObjects[objId]?.name.toLowerCase().includes(objectName.toLowerCase()));
-  
-    if (!targetObjectId) {
-      return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${objectName}" here.`)] };
-    }
-    
-    const targetObject = getLiveGameObject(targetObjectId, state, game);
-
-    if (targetObject && targetObject.state.isLocked && targetObject.gameLogic.unlocksWith === itemToUse.id) {
-        let newState = { ...state, objectStates: { ...state.objectStates }};
-        if(!newState.objectStates[targetObject.gameLogic.id]) newState.objectStates[targetObject.gameLogic.id] = {};
-        newState.objectStates[targetObject.gameLogic.id].isLocked = false;
-        
-        const actions = targetObject.gameLogic.onUnlock?.actions || [];
-        const result = processActions(newState, actions, game);
-        result.messages.unshift(createMessage('narrator', narratorName, targetObject.gameLogic.onUnlock?.successMessage || `You use the ${itemToUse.name} on the ${targetObject.gameLogic.name}. It unlocks!`));
-
-        return result;
-    }
-
-    return { newState: state, messages: [createMessage('narrator', narratorName, `That doesn't seem to work.`)] };
-  }
-  
-  // Case 2: Using an item by itself (like reading it, or using the data chip)
-  if (itemToUse.onUse) {
-    let result = processActions(state, itemToUse.onUse.actions || [], game);
-    result.messages.unshift(createMessage('narrator', narratorName, itemToUse.onUse.message));
-    return result;
-  }
-
-  return { newState: state, messages: [createMessage('system', 'System', 'You need to specify what to use that on.')] };
-}
-
-async function handleRead(state: PlayerState, itemName: string, game: Game): Promise<CommandResult> {
-    const narratorName = game.narratorName || "Narrator";
-    const itemToRead = findItemInContext(state, game, itemName);
-
-    if (!itemToRead) {
-        return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${itemName}" to read.`)] };
-    }
-
-    if (itemToRead.onRead) {
-        let result = processActions(state, itemToRead.onRead.actions || [], game);
-        result.messages.unshift(createMessage('narrator', narratorName, itemToRead.onRead.message));
-        return result;
-    }
-
-    return { newState: state, messages: [createMessage('narrator', narratorName, `There's nothing to read on the ${itemToRead.name}.`)] };
-}
-
-
-async function handleTalk(state: PlayerState, npcName: string, game: Game): Promise<CommandResult> {
-    const chapter = game.chapters[state.currentChapterId];
-    const location = chapter.locations[state.currentLocationId];
-    npcName = npcName.toLowerCase();
-
-    const npc = Object.values(chapter.npcs)
-        .find(n => n?.name.toLowerCase().includes(npcName));
-
-    if (npc && location.npcs.includes(npc.id)) {
-        let newState = { ...state, activeConversationWith: npc.id, interactingWithObject: null };
-        let messages: Message[] = [];
-        
-        const startActions = npc.startConversationActions || [];
-        const actionResult = processActions(newState, startActions, game);
-newState = actionResult.newState!;
-        messages.push(...actionResult.messages);
-
-        messages.unshift(createMessage('system', 'System', `You are now talking to ${npc.name}. Type your message to continue the conversation. To end the conversation, type 'goodbye'.`));
-        
-        const welcomeMessage = (npc as NPC).welcomeMessage || "Hello.";
-        
-        const flag = examinedObjectFlag(npc.id);
-
-        const npcMessage = createMessage(
-            npc.id as NpcId,
-            npc.name,
-            `"${welcomeMessage}"`,
-            'image',
-            { id: npc.id, game, state: newState, showEvenIfExamined: false }
-        );
-        messages.push(npcMessage);
-
-
-        if (!newState.flags.includes(flag)) {
-            newState.flags.push(flag);
-        }
-
-        return { newState, messages };
-    }
-    
-    return { newState: state, messages: [createMessage('system', 'System', `There is no one called "${npcName}" here.`)] };
-}
-
-function handleLook(state: PlayerState, game: Game, summary: string): CommandResult {
-  const narratorName = game.narratorName || "Narrator";
-  return { newState: state, messages: [createMessage('narrator', narratorName, summary.trim())] };
-}
-
-
-function handleInventory(state: PlayerState, game: Game): CommandResult {
-    const chapter = game.chapters[state.currentChapterId];
-    if (state.inventory.length === 0) {
-        return { newState: state, messages: [createMessage('system', 'System', 'Your inventory is empty.')] };
-    }
-    const itemNames = state.inventory.map(id => {
-        const item = chapter.items[id];
-        if (item) return `• ${item.name}`;
-        return null;
-    }).filter(Boolean).join('\n');
-    return { newState: state, messages: [createMessage('system', 'System', `You are carrying:\n${itemNames}`)] };
-}
+// --- Chapter & Game Completion ---
 
 function checkChapterCompletion(state: PlayerState, game: Game): { isComplete: boolean; messages: Message[] } {
     const chapter = game.chapters[state.currentChapterId];
@@ -965,16 +290,6 @@ export async function processCommand(
                      commandHandlerResult = handleExamine(currentState, restOfCommand.replace('at ', ''), game);
                  } else if (restOfCommand.startsWith('around') || commandToExecute === 'look around') {
                      commandHandlerResult = handleLook(currentState, game, lookAroundSummary);
-                 } else if (restOfCommand.startsWith('behind')) {
-                     const targetName = restOfCommand.replace('behind ', '').trim();
-                     const targetObject = objectsInLocation.find(obj => obj.gameLogic.name.toLowerCase().includes(targetName));
-                     if (targetObject?.gameLogic.onFailure?.['look behind']) {
-                         commandHandlerResult = { newState: currentState, messages: [createMessage('narrator', narratorName, targetObject.gameLogic.onFailure['look behind'])] };
-                     } else if (targetObject) {
-                         commandHandlerResult = { newState: currentState, messages: [createMessage('narrator', narratorName, targetObject.gameLogic.onFailure?.default || `You look behind the ${targetObject.gameLogic.name} and see nothing out of the ordinary.`)] };
-                     } else {
-                         commandHandlerResult = { newState: currentState, messages: [createMessage('narrator', narratorName, "You don't see that here.")] };
-                     }
                  } else {
                     commandHandlerResult = handleExamine(currentState, restOfCommand, game);
                  }
@@ -1033,7 +348,8 @@ export async function processCommand(
             default:
                 const targetObject = objectsInLocation.find(obj => restOfCommand.includes(obj.gameLogic.name.toLowerCase()));
                 if (targetObject) {
-                    const failureMessage = targetObject.gameLogic.onFailure?.[verb] || targetObject.gameLogic.onFailure?.default;
+                    const fallbackMessages = targetObject.gameLogic.fallbackMessages;
+                    const failureMessage = fallbackMessages?.[verb as keyof typeof fallbackMessages] || fallbackMessages?.default;
                     if (failureMessage) {
                         commandHandlerResult = { newState: currentState, messages: [createMessage('narrator', narratorName, failureMessage)] };
                     } else {
