@@ -1,0 +1,135 @@
+
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { getGameData } from './actions';
+import type { Game, Chapter, Location, GameObject, Item, NPC } from '@/lib/game/types';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { LoaderCircle } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
+
+function EntityTable({ title, description, data, columns }: { title: string, description: string, data: any[], columns: { key: string, label: string }[] }) {
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>{title}</CardTitle>
+                <CardDescription>{description}</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <ScrollArea className="h-[60vh]">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                {columns.map(col => <TableHead key={col.key}>{col.label}</TableHead>)}
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {data.map((item, index) => (
+                                <TableRow key={item.id || index}>
+                                    {columns.map(col => <TableCell key={col.key}>{item[col.key]}</TableCell>)}
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </ScrollArea>
+            </CardContent>
+        </Card>
+    );
+}
+
+
+export function Dashboard() {
+  const [game, setGame] = useState<Game | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchAllData = useCallback(async () => {
+    setIsLoading(true);
+    const gameData = await getGameData();
+    setGame(gameData);
+    setIsLoading(false);
+  }, []);
+
+  useEffect(() => {
+    fetchAllData();
+  }, [fetchAllData]);
+
+  if (isLoading || !game) {
+      return (
+          <div className="flex min-h-screen flex-col items-center justify-center bg-muted/40">
+              <LoaderCircle className="animate-spin h-12 w-12 text-primary" />
+              <p className="mt-4 text-muted-foreground">Loading Game Cartridge...</p>
+          </div>
+      );
+  }
+
+  return (
+    <div className="flex min-h-screen flex-col bg-muted/40">
+      <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
+        <h1 className="text-xl font-bold">Writer's Room</h1>
+      </header>
+      <main className="flex-1 p-4 sm:px-6 sm:py-0">
+        <Tabs defaultValue="games">
+          <TabsList className="grid w-full grid-cols-3 md:grid-cols-6 mb-4">
+            <TabsTrigger value="games">Games</TabsTrigger>
+            <TabsTrigger value="chapters">Chapters</TabsTrigger>
+            <TabsTrigger value="locations">Locations</TabsTrigger>
+            <TabsTrigger value="objects">Objects</TabsTrigger>
+            <TabsTrigger value="items">Items</TabsTrigger>
+            <TabsTrigger value="npcs">NPCs</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="games">
+            <EntityTable 
+                title="Game"
+                description="The main game configuration."
+                data={[game]}
+                columns={[ { key: 'id', label: 'ID' }, { key: 'title', label: 'Title' }, { key: 'gameType', label: 'Type' } ]}
+            />
+          </TabsContent>
+          <TabsContent value="chapters">
+            <EntityTable 
+                title="Chapters"
+                description="The chapters that make up the game."
+                data={Object.values(game.chapters)}
+                columns={[ { key: 'id', label: 'ID' }, { key: 'title', label: 'Title' }, { key: 'goal', label: 'Goal' } ]}
+            />
+          </TabsContent>
+          <TabsContent value="locations">
+             <EntityTable 
+                title="Locations"
+                description="The different scenes or places in the game world."
+                data={Object.values(game.locations)}
+                columns={[ { key: 'locationId', label: 'ID' }, { key: 'name', label: 'Name' } ]}
+            />
+          </TabsContent>
+          <TabsContent value="objects">
+             <EntityTable 
+                title="Game Objects"
+                description="The interactive objects within locations."
+                data={Object.values(game.gameObjects)}
+                columns={[ { key: 'id', label: 'ID' }, { key: 'name', label: 'Name' }, { key: 'description', label: 'Description' } ]}
+            />
+          </TabsContent>
+          <TabsContent value="items">
+             <EntityTable 
+                title="Items"
+                description="Items that can be found, taken, and used by the player."
+                data={Object.values(game.items)}
+                columns={[ { key: 'id', label: 'ID' }, { key: 'name', label: 'Name' }, { key: 'description', label: 'Description' } ]}
+            />
+          </TabsContent>
+          <TabsContent value="npcs">
+             <EntityTable 
+                title="NPCs"
+                description="The non-player characters in the game."
+                data={Object.values(game.npcs)}
+                columns={[ { key: 'id', label: 'ID' }, { key: 'name', label: 'Name' }, { key: 'importance', label: 'Importance' }, { key: 'dialogueType', label: 'Dialogue Type' } ]}
+            />
+          </TabsContent>
+        </Tabs>
+      </main>
+    </div>
+  );
+}
