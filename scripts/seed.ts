@@ -65,7 +65,7 @@ async function seedGameCartridge() {
     await gameRef.set(gameDocData, { merge: true });
     console.log(`Game document ${gameId} seeded.`);
 
-    const seedSubCollection = async <T extends {id: string}>(subCollectionName: string, data: Record<string, T> | undefined) => {
+    const seedSubCollection = async <T extends {id?: string; locationId?: string; portalId?: string}>(subCollectionName: string, data: Record<string, T> | undefined) => {
         if (!data) {
             console.log(`Skipping empty sub-collection: ${subCollectionName}`);
             return;
@@ -74,7 +74,12 @@ async function seedGameCartridge() {
         const batch = db.batch();
         for (const key in data) {
             const entity = data[key];
-            const docRef = db.collection('games').doc(gameId).collection(subCollectionName).doc(entity.id);
+            const docId = entity.id || entity.locationId || entity.portalId;
+            if (!docId) {
+                console.warn(`Skipping entity in ${subCollectionName} with key ${key} because it has no 'id', 'locationId', or 'portalId'.`);
+                continue;
+            }
+            const docRef = db.collection('games').doc(gameId).collection(subCollectionName).doc(docId);
             batch.set(docRef, { ...entity }, { merge: true });
         }
         await batch.commit();
