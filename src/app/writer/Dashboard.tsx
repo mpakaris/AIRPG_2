@@ -57,11 +57,7 @@ function EntityTable({ title, description, data, columns, entityType }: { title:
                                     </AccordionTrigger>
                                     <AccordionContent>
                                         <div className="bg-muted/50 p-4 rounded-lg mx-4 mb-2">
-                                            {entityType === 'npcs' ? (
-                                                <EntityEditor entity={item} />
-                                            ) : (
-                                                <pre className="text-xs whitespace-pre-wrap">{JSON.stringify(item, null, 2)}</pre>
-                                            )}
+                                           <EntityEditor entity={item} />
                                         </div>
                                     </AccordionContent>
                                 </AccordionItem>
