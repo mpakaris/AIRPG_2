@@ -19,12 +19,12 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             },
             sounds: { onUnlock: 'click.mp3' }
         },
-        input: { type: 'phrase', validation: 'Justice for Silas Bloom', hint: 'Stuck? Maybe this will help: https://airpg-minigames.vercel.app/games/the-notebook', attempts: null, lockout: null },
+        input: { type: 'phrase', validation: 'Justice for Silas Bloom', hint: 'Solve the puzzle to open the Notebook:\nhttps://airpg-minigames.vercel.app/games/the-notebook', attempts: null, lockout: null },
         handlers: {
             onExamine: {
                 success: { message: "A worn, leather-bound notebook. It seems to be locked with a phrase." },
                 fail: { message: "" },
-                alternateMessage: "The notebook lies open. The slots for the SD card and article are now empty."
+                alternateMessage: "The notebook is open. Inside, you see a small SD card next to a folded newspaper article."
             },
             onOpen: {
                 conditions: [{ type: 'STATE_MATCH', targetId: 'obj_brown_notebook', expectedValue: { isLocked: false } }],
@@ -233,15 +233,19 @@ const items: Record<ItemId, Item> = {
         type: "item",
         description: 'A small, modern SD card, looking strangely out of place in the old notebook.',
         alternateDescription: 'You can "use SD Card" to see what\'s on it.',
-        capabilities: { isTakable: true, isReadable: false, isUsable: true, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+        capabilities: { isTakable: true, isReadable: true, isUsable: true, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         handlers: {
             onTake: {
                 success: { message: 'You take the SD Card. You can "use SD Card" to check what is hidden on it.' },
                 fail: { message: "You can't take that right now." }
             },
+            onRead: {
+                success: { message: "It's a standard SD card. You'll need to 'use' it with your phone to see what's on it." },
+                fail: { message: "" }
+            },
             onUse: {
                 success: {
-                    message: "You insert the SD card into your phone.",
+                    message: "You insert the SD card into your phone. You open the file explorer and discover one single file: A Video. It looks old. Maybe from the 1940's?",
                     actions: [
                         { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759241547/0930_eit8he.mov', messageType: 'video'},
                         { type: 'SHOW_MESSAGE', sender: 'agent', content: "Silas Bloom... I've never heard that name before. He seemed like a talented musician. And that song for Rose... sounds like they were deeply in love." },
