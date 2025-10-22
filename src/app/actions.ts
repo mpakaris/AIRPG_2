@@ -87,6 +87,7 @@ function getLiveGameObject(id: GameObjectId, state: PlayerState, game: Game): {g
     
     const liveState: GameObjectState | undefined = state.objectStates[id];
 
+    // Safely build the combined state with fallbacks for every property
     const combinedState: GameObjectState = {
         isLocked: typeof liveState?.isLocked === 'boolean' ? liveState.isLocked : (baseObject.state?.isLocked ?? false),
         isOpen: typeof liveState?.isOpen === 'boolean' ? liveState.isOpen : (baseObject.state?.isOpen ?? false),
@@ -370,6 +371,7 @@ function processPassword(state: PlayerState, command: string, game: Game): Comma
         let newState = { ...state, objectStates: { ...state.objectStates }};
         if (!newState.objectStates[targetObject.gameLogic.id]) newState.objectStates[targetObject.gameLogic.id] = {};
         newState.objectStates[targetObject.gameLogic.id].isLocked = false;
+        newState.objectStates[targetObject.gameLogic.id].isOpen = true; // Also open it
         
         const actions = targetObject.gameLogic.onUnlock?.actions || [];
         const result = processActions(newState, actions, game);
