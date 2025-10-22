@@ -57,11 +57,13 @@ const FormField = ({ label, description, children }: { label: string, descriptio
 
 // Determines which input control to render based on the key and value type
 const renderFieldControl = (key: string, value: any) => {
-    // This is a read-only editor for now, so all fields are disabled.
-    const disabled = true; 
+    // The form is now editable.
+    const disabled = false; 
 
     switch (key) {
         case 'id':
+        case 'locationId':
+        case 'portalId':
             return <Input type="text" readOnly value={value} className="bg-black/10 flex-1" />;
         case 'description':
         case 'persona':
@@ -133,9 +135,9 @@ const renderObjectFields = (obj: Record<string, any>) => {
                             {value.map((item, index) => (
                                 <Input 
                                     key={index}
-                                    disabled 
+                                    disabled={false}
                                     value={item} 
-                                    className="flex-1 bg-black/10"
+                                    className="flex-1"
                                 />
                             ))}
                             {/* Placeholder for adding new keywords later */}
@@ -151,18 +153,21 @@ const renderObjectFields = (obj: Record<string, any>) => {
                         <Separator />
                     </div>
                     <div className="col-span-3 space-y-4">
-                        {value.map((item, index) => (
-                           <Card key={index} className="bg-muted/30">
-                               <CardHeader>
-                                   <CardTitle className="text-base">
-                                       {item.label || item.type || item.topicId || `${key} ${index + 1}`}
-                                   </CardTitle>
-                               </CardHeader>
-                               <CardContent>
-                                   {renderObjectFields(item)}
-                               </CardContent>
-                           </Card>
-                        ))}
+                        {value.map((item, index) => {
+                            const itemKey = item.topicId || item.id || `item-${index}`;
+                            return (
+                               <Card key={itemKey} className="bg-muted/30">
+                                   <CardHeader>
+                                       <CardTitle className="text-base">
+                                           {item.label || item.type || item.topicId || `${key} ${index + 1}`}
+                                       </CardTitle>
+                                   </CardHeader>
+                                   <CardContent>
+                                       {renderObjectFields(item)}
+                                   </CardContent>
+                               </Card>
+                            )
+                        })}
                     </div>
                 </div>
             );
