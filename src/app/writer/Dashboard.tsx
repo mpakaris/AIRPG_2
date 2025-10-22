@@ -12,8 +12,9 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
+import { EntityEditor } from './EntityEditor';
 
-function EntityTable({ title, description, data, columns }: { title: string, description: string, data: any[], columns: { key: string, label: string, className?: string }[] }) {
+function EntityTable({ title, description, data, columns, entityType }: { title: string, description: string, data: any[], columns: { key: string, label: string, className?: string }[], entityType: string }) {
     if (!data || data.length === 0) {
         return (
             <Card>
@@ -56,7 +57,11 @@ function EntityTable({ title, description, data, columns }: { title: string, des
                                     </AccordionTrigger>
                                     <AccordionContent>
                                         <div className="bg-muted/50 p-4 rounded-lg mx-4 mb-2">
-                                            <pre className="text-xs whitespace-pre-wrap">{JSON.stringify(item, null, 2)}</pre>
+                                            {entityType === 'npcs' ? (
+                                                <EntityEditor entity={item} />
+                                            ) : (
+                                                <pre className="text-xs whitespace-pre-wrap">{JSON.stringify(item, null, 2)}</pre>
+                                            )}
                                         </div>
                                     </AccordionContent>
                                 </AccordionItem>
@@ -114,7 +119,7 @@ export function Dashboard({ gameId }: { gameId: GameId }) {
         <h1 className="text-xl font-bold">Editing: {game.title}</h1>
       </header>
       <main className="flex-1 p-4 sm:px-6 sm:py-0">
-        <Tabs defaultValue="chapters">
+        <Tabs defaultValue="npcs">
           <TabsList className="grid w-full grid-cols-3 md:grid-cols-6 mb-4">
             <TabsTrigger value="chapters">Chapters</TabsTrigger>
             <TabsTrigger value="locations">Locations</TabsTrigger>
@@ -130,6 +135,7 @@ export function Dashboard({ gameId }: { gameId: GameId }) {
                 description="The chapters that make up the game."
                 data={Object.values(game.chapters || {})}
                 columns={[ { key: 'id', label: 'ID' }, { key: 'title', label: 'Title' }, { key: 'goal', label: 'Goal', className: 'flex-grow-[2]' } ]}
+                entityType="chapters"
             />
           </TabsContent>
           <TabsContent value="locations">
@@ -138,6 +144,7 @@ export function Dashboard({ gameId }: { gameId: GameId }) {
                 description="The different scenes or places in the game world."
                 data={Object.values(game.locations || {})}
                 columns={[ { key: 'locationId', label: 'ID' }, { key: 'name', label: 'Name' } ]}
+                entityType="locations"
             />
           </TabsContent>
           <TabsContent value="objects">
@@ -146,6 +153,7 @@ export function Dashboard({ gameId }: { gameId: GameId }) {
                 description="The interactive objects within locations."
                 data={Object.values(game.gameObjects || {})}
                 columns={[ { key: 'id', label: 'ID' }, { key: 'name', label: 'Name' }, { key: 'description', label: 'Description', className: 'flex-grow-[2]' } ]}
+                entityType="objects"
             />
           </TabsContent>
           <TabsContent value="items">
@@ -154,6 +162,7 @@ export function Dashboard({ gameId }: { gameId: GameId }) {
                 description="Items that can be found, taken, and used by the player."
                 data={Object.values(game.items || {})}
                 columns={[ { key: 'id', label: 'ID' }, { key: 'name', label: 'Name' }, { key: 'description', label: 'Description', className: 'flex-grow-[2]' } ]}
+                entityType="items"
             />
           </TabsContent>
           <TabsContent value="npcs">
@@ -162,6 +171,7 @@ export function Dashboard({ gameId }: { gameId: GameId }) {
                 description="The non-player characters in the game."
                 data={Object.values(game.npcs || {})}
                 columns={[ { key: 'id', label: 'ID' }, { key: 'name', label: 'Name' }, { key: 'importance', label: 'Importance' }, { key: 'dialogueType', label: 'Dialogue Type' } ]}
+                entityType="npcs"
             />
           </TabsContent>
           <TabsContent value="portals">
@@ -170,6 +180,7 @@ export function Dashboard({ gameId }: { gameId: GameId }) {
                 description="Connections between locations."
                 data={Object.values(game.portals || {})}
                 columns={[ { key: 'portalId', label: 'ID' }, { key: 'name', label: 'Name' }, { key: 'kind', label: 'Type' } ]}
+                entityType="portals"
             />
           </TabsContent>
         </Tabs>
