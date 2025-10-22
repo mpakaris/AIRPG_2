@@ -81,12 +81,11 @@ function createMessage(
 function getLiveGameObject(id: GameObjectId, state: PlayerState, game: Game): {gameLogic: GameObject, state: GameObjectState} {
     const chapter = game.chapters[state.currentChapterId];
     const baseObject = chapter.gameObjects[id];
-    const liveState = state.objectStates[id]; // This could be undefined
+    const liveState = state.objectStates[id];
 
-    // Safely build the combined state, providing fallbacks for every property
     const combinedState: GameObjectState = {
-        isLocked: typeof liveState?.isLocked === 'boolean' ? liveState.isLocked : baseObject.state?.isLocked ?? false,
-        isOpen: typeof liveState?.isOpen === 'boolean' ? liveState.isOpen : baseObject.state?.isOpen ?? false,
+        isLocked: typeof liveState?.isLocked === 'boolean' ? liveState.isLocked : (baseObject.state?.isLocked ?? false),
+        isOpen: typeof liveState?.isOpen === 'boolean' ? liveState.isOpen : (baseObject.state?.isOpen ?? false),
         items: liveState?.items ? [...liveState.items] : (baseObject.items ? [...baseObject.items] : []),
         currentInteractionStateId: liveState?.currentInteractionStateId || baseObject.state?.currentInteractionStateId,
     };
@@ -392,13 +391,16 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
     if (targetObjectId) {
         const liveObject = getLiveGameObject(targetObjectId, newState, game);
         
-        if (!newState.objectStates[liveObject.gameLogic.id]) {
-            newState.objectStates[liveObject.gameLogic.id] = {};
-        }
-        
-        // If it's unlockable and becomes unlocked, it also becomes open
-        if (!liveObject.state.isLocked && liveObject.gameLogic.isOpenable) {
+        // This is the core logic fix. An object must be explicitly unlocked before it can be opened.
+        // `examine` should not change the state, only report on it.
+        if (!liveObject.state.isLocked && liveObject.gameLogic.isOpenable && !liveObject.state.isOpen) {
+            // It's unlocked but not yet open. We mark it as open now.
+            if (!newState.objectStates[liveObject.gameLogic.id]) {
+                newState.objectStates[liveObject.gameLogic.id] = {};
+            }
             newState.objectStates[liveObject.gameLogic.id].isOpen = true;
+            // Update liveObject with the new state for the message generation below.
+            liveObject.state.isOpen = true;
         }
 
         const flag = examinedObjectFlag(liveObject.gameLogic.id);
@@ -415,7 +417,8 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
         } else if (liveObject.state.isLocked && onExamine?.locked) {
             messageContent = onExamine.locked.message;
             actions.push(...(onExamine.locked.actions || []));
-        } else if (!liveObject.state.isLocked && onExamine?.unlocked) {
+        } else if (!liveObject.state.isLocked && liveObject.state.isOpen && onExamine?.unlocked) {
+            // Only show unlocked contents if it is also open
             messageContent = onExamine.unlocked.message;
             actions.push(...(onExamine.unlocked.actions || []));
         } else {
