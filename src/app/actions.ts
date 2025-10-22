@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { 
@@ -81,7 +82,7 @@ function createMessage(
 function getLiveGameObject(id: GameObjectId, state: PlayerState, game: Game): {gameLogic: GameObject, state: GameObjectState} {
     const chapter = game.chapters[state.currentChapterId];
     const baseObject = chapter.gameObjects[id];
-    const liveState = state.objectStates[id];
+    const liveState = state.objectStates[id] || {};
 
     const combinedState: GameObjectState = {
         isLocked: typeof liveState?.isLocked === 'boolean' ? liveState.isLocked : (baseObject.state?.isLocked ?? false),
@@ -398,7 +399,9 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
 
         if (liveObject.state.isLocked && onExamine?.locked) {
             messageContent = onExamine.locked.message;
-        } else if (liveObject.state.isOpen && onExamine?.unlocked) {
+        } else if (!liveObject.state.isOpen && onExamine?.unlocked) { // Unlocked but not yet open
+            messageContent = `The ${liveObject.gameLogic.name} is unlocked. You can 'open' it.`;
+        } else if (liveObject.state.isOpen && onExamine?.unlocked) { // Is open
             messageContent = onExamine.unlocked.message;
         } else if (isAlreadyExamined && onExamine?.alternate) {
             messageContent = onExamine.alternate.message;
@@ -693,7 +696,7 @@ async function handleTalk(state: PlayerState, npcName: string, game: Game): Prom
         
         const startActions = npc.startConversationActions || [];
         const actionResult = processActions(newState, startActions, game);
-        newState = actionResult.newState;
+newState = actionResult.newState;
         messages.push(...actionResult.messages);
 
         messages.unshift(createMessage('system', 'System', `You are now talking to ${npc.name}. Type your message to continue the conversation. To end the conversation, type 'goodbye'.`));
@@ -910,22 +913,10 @@ export async function processCommand(
           lookAroundSummary += `\nYou see the following people here:\n${npcNames.map(name => `• ${name}`).join('\n')}`;
         }
         
-        let gameStateSummaryForAI = `
-          CHAPTER GOAL: ${chapter.goal}.
-          CURRENT LOCATION: ${location.name}.
-          INVENTORY: ${currentState.inventory.map(id => chapter.items[id]?.name).filter(Boolean).join(', ') || 'empty'}.
-          VISIBLE OBJECTS: ${objectNames.join(', ')}.
-          VISIBLE NPCS: ${npcNames.join(', ')}.
-        `;
-
-        if (isChapterComplete && chapter.nextChapter) {
-            gameStateSummaryForAI += `\nCHAPTER COMPLETE. The player is ready to move on to the next chapter: '${chapter.nextChapter.title}'.`
-        }
-
         const { output: aiResponse, usage } = await guidePlayerWithNarrator({
             promptContext: game.promptContext || '',
-            gameSpecifications: game.description,
-            gameState: gameStateSummaryForAI,
+            gameSpecifications: JSON.stringify(game, null, 2),
+            gameState: JSON.stringify(currentState, null, 2),
             playerCommand: playerInput,
             availableCommands: AVAILABLE_COMMANDS.join(', '),
         });
@@ -1223,3 +1214,4 @@ export async function generateStoryForChapter(userId: string, gameId: GameId, ch
 
     return { newState };
 }
+

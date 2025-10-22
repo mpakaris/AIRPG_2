@@ -106,7 +106,7 @@ export const game: Game = {
                         message: "A worn, leather-bound notebook. It seems to be locked with a phrase."
                     },
                     locked: {
-                        message: "A lock prevents it from being opened without the right password. You'll need to figure out the phrase."
+                        message: "A lock prevents it from being opened without the right password. You'll need to figure out the phrase. Maybe this will help: https://airpg-minigames.vercel.app/games/the-notebook"
                     },
                     unlocked: {
                         message: "The notebook is open. Inside, you see a small data chip next to a folded newspaper article. You can 'use \"Data Chip\"' or 'read \"Newspaper Article\"' to examine the contents."
@@ -120,7 +120,6 @@ export const game: Game = {
                     failMessage: "That password doesn't work. The lock remains stubbornly shut.",
                     actions: [
                          { type: 'SET_FLAG', flag: 'has_unlocked_notebook' as Flag },
-                         { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'You can now access the contents of the notebook: https://airpg-minigames.vercel.app/games/the-notebook'},
                          { type: 'SET_FLAG', flag: 'notebook_is_open' as Flag }
                     ]
                 },
@@ -372,3 +371,4 @@ export const game: Game = {
 };
 
     
+
