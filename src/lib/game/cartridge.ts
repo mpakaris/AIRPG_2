@@ -413,7 +413,7 @@ const locations: Record<LocationId, Location> = {
     'loc_cafe_interior': {
         locationId: 'loc_cafe_interior' as LocationId,
         name: 'The Cafe Interior',
-        sceneDescription: 'You are inside The Daily Grind. It\'s a bustling downtown cafe, smelling of coffee and rain. A puddle of rainwater is near the door, and a discarded magazine lies on an empty table.',
+        sceneDescription: 'You are inside The Daily Grind. \n\nIt\'s a bustling downtown cafe, smelling of coffee and rain. A puddle of rainwater is near the door, and a discarded magazine lies on an empty table.',
         coord: { x: 1, y: 1, z: 0 },
         objects: ['obj_brown_notebook', 'obj_chalkboard_menu', 'obj_magazine', 'obj_bookshelf', 'obj_painting'] as GameObjectId[],
         npcs: ['npc_barista', 'npc_manager'] as NpcId[],
@@ -487,7 +487,7 @@ const chapters: Record<ChapterId, Chapter> = {
         id: 'ch1-the-cafe' as ChapterId,
         title: 'A Blast from the Past',
         goal: "Unlock the contents of the notebook.",
-        introductionVideo: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759670681/CH_I_Intro_ccy0og.mov',
+        introductionVideo: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759670681/CH_I_Intro_ccy0og.mp4',
         completionVideo: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759678377/CH_I_completion_jqtyme.mp4',
         postChapterMessage: "Looks like we've got everything from this place. I'm thinking our next stop should be the jazz club mentioned in the article.",
         nextChapter: {

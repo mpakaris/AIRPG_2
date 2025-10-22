@@ -36,7 +36,7 @@ async function getInitialData(userId: string | null): Promise<{ playerState: Pla
     }
 
     let messages: Message[] = [];
-    if (logSnap.exists()) {
+    if (logSnap.exists() && logSnap.data()?.messages?.length > 0) {
         messages = logSnap.data()?.messages || [];
     } else {
         // If logs don't exist for the dev user, create them.

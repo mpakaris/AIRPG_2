@@ -204,18 +204,16 @@ export async function processCommand(
         const objectNames = objectsInLocation.map(obj => obj.gameLogic.name);
         const npcNames = location.npcs.map(id => game.npcs[id]?.name).filter(Boolean) as string[];
         
-        let lookAroundSummary = `${location.sceneDescription}\n\n`;
-        if(objectNames.length > 0) {
-          lookAroundSummary += `You can see the following objects:\n${objectNames.map(name => `• ${name}`).join('\n')}\n`;
-        }
-        if(npcNames.length > 0) {
-          lookAroundSummary += `\nYou see the following people here:\n${npcNames.map(name => `• ${name}`).join('\n')}`;
-        }
-        
         const { output: aiResponse, usage } = await guidePlayerWithNarrator({
             promptContext: game.promptContext || '',
-            gameSpecifications: JSON.stringify(game, null, 2), // This can be simplified later
-            gameState: JSON.stringify(currentState, null, 2), // This can be simplified later
+            gameState: JSON.stringify({
+                ...currentState,
+                // Sanitize large objects from gamestate to save tokens
+                objectStates: undefined,
+                portalStates: undefined,
+                npcStates: undefined,
+                stories: undefined
+            }, null, 2),
             playerCommand: playerInput,
             availableCommands: AVAILABLE_COMMANDS.join(', '),
             visibleObjectNames: objectNames,
@@ -233,6 +231,7 @@ export async function processCommand(
             case 'examine':
             case 'look':
                 if(restOfCommand === 'around') {
+                     const lookAroundSummary = `${location.sceneDescription}\n\nYou can see the following objects:\n${objectNames.map(name => `• ${name}`).join('\n')}\n\nYou see the following people here:\n${npcNames.map(name => `• ${name}`).join('\n')}`;
                      commandHandlerResult = handleLook(currentState, game, lookAroundSummary);
                 } else if (restOfCommand.startsWith('behind')) {
                     const target = restOfCommand.replace('behind ', '').trim();
@@ -538,4 +537,3 @@ export async function generateStoryForChapter(userId: string, gameId: GameId, ch
 
     return { newState };
 }
-

@@ -524,8 +524,8 @@ export type Chapter = {
   objectives?: { flag: Flag, label: string }[];
   startLocationId: LocationId; // Can be a cell or a location
   introductionVideo?: string;
-  postChapterMessage?: string;
   completionVideo?: string;
+  postChapterMessage?: string;
   nextChapter?: { id: ChapterId, title: string, transitionCommand: string };
   storyGenerationDetails?: string;
 
