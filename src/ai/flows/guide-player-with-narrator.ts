@@ -14,10 +14,11 @@ import { TokenUsage } from '@/lib/game/types';
 
 const GuidePlayerWithNarratorInputSchema = z.object({
   promptContext: z.string().describe('The persona, rules, and examples for the AI narrator.'),
-  gameSpecifications: z.string().describe('The overall specifications and rules of the game.'),
   gameState: z.string().describe('A detailed summary of the current state of the apgame, including chapter goal, player location, inventory, visible objects, and NPCs present.'),
   playerCommand: z.string().describe('The command or action the player wants to perform.'),
   availableCommands: z.string().describe('A list of available commands in the game. This might be a global list or a smaller, context-specific list for an interaction.'),
+  visibleObjectNames: z.array(z.string()).describe('A list of the user-facing names of all objects currently visible to the player.'),
+  visibleNpcNames: z.array(z.string()).describe('A list of the user-facing names of all NPCs currently visible to the player.'),
 });
 export type GuidePlayerWithNarratorInput = z.infer<typeof GuidePlayerWithNarratorInputSchema>;
 
@@ -40,6 +41,16 @@ const prompt = ai.definePrompt({
 
 **Game & Player State:**
 {{gameState}}
+
+**Visible Object Names:**
+{{#each visibleObjectNames}}
+- "{{this}}"
+{{/each}}
+
+**Visible NPC Names:**
+{{#each visibleNpcNames}}
+- "{{this}}"
+{{/each}}
 
 **Player's Input:**
 "{{playerCommand}}"

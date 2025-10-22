@@ -214,10 +214,12 @@ export async function processCommand(
         
         const { output: aiResponse, usage } = await guidePlayerWithNarrator({
             promptContext: game.promptContext || '',
-            gameSpecifications: JSON.stringify(game, null, 2),
-            gameState: JSON.stringify(currentState, null, 2),
+            gameSpecifications: JSON.stringify(game, null, 2), // This can be simplified later
+            gameState: JSON.stringify(currentState, null, 2), // This can be simplified later
             playerCommand: playerInput,
             availableCommands: AVAILABLE_COMMANDS.join(', '),
+            visibleObjectNames: objectNames,
+            visibleNpcNames: npcNames,
         });
 
         let agentMessage = createMessage('agent', narratorName, `${aiResponse.agentResponse}`, 'text', undefined, usage);
@@ -227,19 +229,8 @@ export async function processCommand(
         const verb = verbMatch ? verbMatch[1] : commandToExecute;
         const restOfCommand = commandToExecute.substring((verbMatch ? verbMatch[0].length : verb.length)).trim();
         
-        // Find the target object for the command
-        const targetObject = objectsInLocation.find(obj => restOfCommand.includes(obj.gameLogic.name.toLowerCase()));
-
         switch (verb) {
             case 'examine':
-                 if (restOfCommand.startsWith('at ')) {
-                     commandHandlerResult = handleExamine(currentState, restOfCommand.replace('at ', ''), game);
-                 } else if (restOfCommand.startsWith('around') || commandToExecute === 'look around') {
-                     commandHandlerResult = handleLook(currentState, game, lookAroundSummary);
-                 } else {
-                    commandHandlerResult = handleExamine(currentState, restOfCommand, game);
-                 }
-                 break;
             case 'look':
                 if(restOfCommand === 'around') {
                      commandHandlerResult = handleLook(currentState, game, lookAroundSummary);
@@ -298,6 +289,7 @@ export async function processCommand(
                  commandHandlerResult = { newState: currentState, messages: [agentMessage] };
                  break;
             default:
+                const targetObject = objectsInLocation.find(obj => restOfCommand.includes(obj.gameLogic.name.toLowerCase()));
                 if (targetObject && targetObject.gameLogic.fallbackMessages) {
                     const fallbackMessages = targetObject.gameLogic.fallbackMessages;
                     const failureMessage = fallbackMessages?.[verb as keyof typeof fallbackMessages] || fallbackMessages?.default;
@@ -546,3 +538,4 @@ export async function generateStoryForChapter(userId: string, gameId: GameId, ch
 
     return { newState };
 }
+
