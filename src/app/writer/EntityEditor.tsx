@@ -34,7 +34,8 @@ const fieldGlossary: Record<string, string> = {
     inventory: "Defines the object as a container.",
     input: "Defines the object as a puzzle that accepts direct user input (e.g., a keypad).",
     fallbackMessages: "A set of default messages for common failed actions.",
-    topics: "A structured list of dialogue topics for scripted NPCs."
+    topics: "A structured list of dialogue topics for scripted NPCs.",
+    keywords: "A list of player inputs that can trigger this dialogue topic.",
 };
 
 // ================================================================================================
@@ -124,20 +125,25 @@ const renderObjectFields = (obj: Record<string, any>) => {
 
         // --- Case 2: Value is an array ---
         if (Array.isArray(value)) {
-            // If it's an array of simple values (e.g., strings)
+            // If it's an array of simple values (e.g., keywords)
             if (value.every(item => typeof item !== 'object')) {
                  return (
                     <FormField key={key} label={key} description={description}>
-                        <Textarea 
-                            disabled 
-                            value={value.join('\n')} 
-                            className="h-24 font-mono text-xs bg-black/10 flex-1"
-                            placeholder="List of items, one per line"
-                        />
+                        <div className="flex flex-col gap-2 w-full">
+                            {value.map((item, index) => (
+                                <Input 
+                                    key={index}
+                                    disabled 
+                                    value={item} 
+                                    className="flex-1 bg-black/10"
+                                />
+                            ))}
+                            {/* Placeholder for adding new keywords later */}
+                        </div>
                     </FormField>
                 );
             }
-            // If it's an array of objects
+            // If it's an array of objects (e.g., topics)
             return (
                 <div key={key} className="contents">
                     <div className="col-span-3 pt-6 pb-2">
@@ -149,7 +155,7 @@ const renderObjectFields = (obj: Record<string, any>) => {
                            <Card key={index} className="bg-muted/30">
                                <CardHeader>
                                    <CardTitle className="text-base">
-                                       {item.label || item.type || `${key} ${index + 1}`}
+                                       {item.label || item.type || item.topicId || `${key} ${index + 1}`}
                                    </CardTitle>
                                </CardHeader>
                                <CardContent>
