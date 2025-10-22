@@ -105,7 +105,7 @@ function findItemInContext(state: PlayerState, game: Game, targetName: string): 
     // 1. Check inventory
     const itemInInventory = state.inventory
         .map(id => chapter.items[id])
-        .find(item => item && item.name.toLowerCase() === normalizedTargetName);
+        .find(item => item && item.name.toLowerCase().includes(normalizedTargetName));
     if (itemInInventory) {
         return itemInInventory;
     }
@@ -117,7 +117,7 @@ function findItemInContext(state: PlayerState, game: Game, targetName: string): 
             const itemsInContainer = liveObject.state.items || [];
             for (const itemId of itemsInContainer) {
                 const item = chapter.items[itemId];
-                if (item && item.name.toLowerCase() === normalizedTargetName) {
+                if (item && item.name.toLowerCase().includes(normalizedTargetName)) {
                     return item;
                 }
             }
@@ -1049,9 +1049,12 @@ export async function processCommand(
             ];
         } else {
             const hasSystemMessage = commandHandlerResult.messages.some(m => m.sender === 'system');
-            // Suppress the initial AI message for 'take' and 'pick' commands, as they have their own specific feedback.
+            // Suppress the initial AI message for certain commands that have their own specific feedback.
             const isTakeCommand = verb === 'take' || verb === 'pick';
-            if (verb !== 'invalid' && !hasSystemMessage && !isTakeCommand) {
+            const isReadCommand = verb === 'read';
+            const isUseCommand = verb === 'use';
+
+            if (verb !== 'invalid' && !hasSystemMessage && !isTakeCommand && !isReadCommand && !isUseCommand) {
                 commandHandlerResult.messages.unshift(agentMessage);
             }
         }

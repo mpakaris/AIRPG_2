@@ -22,6 +22,8 @@ export const game: Game = {
     *   If Burt says "look at the book," the command is 'examine "The Art of the Deal"'.
     *   If Burt wants to 'open' an object, the command is 'open <object>'.
     *   If Burt says "pick up the card," the command is 'take "Business Card"'.
+    *   If Burt says 'read the article', the command is 'read "Newspaper Article"'.
+    *   If Burt says 'use the SD card', the command is 'use "SD Card"'.
     *   If Burt wants to provide a password with keywords like "password", "say", or "enter", the command MUST be in the format 'password <object> <phrase>'. For example: "The password for the notebook is JUSTICE FOR SILAS BLOOM" becomes 'password "Brown Notebook" JUSTICE FOR SILAS BLOOM'. Do NOT include quotes in the final command phrase itself.
     *   If Burt wants to move, the command is 'go <direction or location>'.
     *   If Burt says "look" or "look around", the command is 'look around'.
@@ -109,7 +111,7 @@ export const game: Game = {
                         message: "A lock prevents it from being opened without the right password. You'll need to figure out the phrase.\n\nhttps://airpg-minigames.vercel.app/games/the-notebook"
                     },
                     unlocked: {
-                        message: "The notebook is open. Inside, you see a small SD card next to a folded newspaper article. \n\nYou can 'take SD Card' or 'take Newspaper Article' to add them to your inventory."
+                        message: "The notebook is open. Inside, you see a small SD card next to a folded newspaper article. \n\nYou can 'take SD Card' or 'take Newspaper Article' to add them to your inventory if you want to check what information is on them."
                     },
                     alternate: {
                         message: "The notebook lies open. The slots for the SD card and article are now empty."
@@ -259,7 +261,7 @@ export const game: Game = {
                     failMessage: "You can't take that right now."
                 },
                 onRead: {
-                    message: 'You read the article.',
+                    message: 'You unfold the old newspaper clipping.',
                     actions: [
                         { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'A newspaper article about Silas Bloom.', messageType: 'article', imageId: 'item_newspaper_article' },
                         { type: 'SHOW_MESSAGE', sender: 'agent', content: "Wait a second, Burt... the article mentions an Agent Macklin. That can't be a coincidence. Is he related to you? This could be about your own family." },
@@ -279,7 +281,7 @@ export const game: Game = {
                 description: 'A small, modern SD card, looking strangely out of place in the old notebook.',
                 isTakable: true,
                 onTake: {
-                    successMessage: 'You take the SD Card. You can "examine SD Card" to check what is hidden on it.',
+                    successMessage: 'You take the SD Card. You can "use SD Card" to check what is hidden on it.',
                     failMessage: "You can't take that right now."
                 },
                 onUse: {
@@ -361,7 +363,7 @@ export const game: Game = {
                 name: 'Cafe Manager',
                 description: 'A cheerful woman in her late 40s, with a permanent, slightly-too-wide smile. She radiates a relentless positivity that feels slightly out of place in the grim city.',
                 dialogueType: 'freeform',
-                persona: "You are Brenda, the relentlessly cheerful and bubbly manager of 'The Daily Grind' cafe. You see the best in everyone and everything. You love talking about your 'Artisan Coffee of the Week', the daily specials, and the local community art you hang on the walls. You are completely oblivious to any crime or mystery. Your job is to be a fountain of pleasant, slightly-vacant small talk. Keep your responses short, sweet, and upbeat! Use modern currency like dollars and cents.",
+                persona: "You are Brenda, the relentlessly cheerful and bubbly manager of 'The Daily Grind' cafe. You love talking about your 'Artisan Coffee of the Week', the daily specials, and the local community art you hang on the walls. You are completely oblivious to any crime or mystery. Your job is to be a fountain of pleasant, slightly-vacant small talk. Keep your responses short, sweet, and upbeat! Use modern currency like dollars and cents.",
                 welcomeMessage: "Welcome to The Daily Grind! How can I make your day a little brighter? Can I interest you in a 'Sunshine Muffin'? They're 10% off!",
                 goodbyeMessage: "Have a wonderfully caffeinated day! Come back soon!",
                 maxInteractions: 10,
