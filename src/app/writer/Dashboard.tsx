@@ -36,7 +36,7 @@ function EntityTable({ title, description, data, columns, entityType }: { title:
             <CardContent>
                 <ScrollArea className="h-[60vh]">
                     {/* Header Row */}
-                    <div className="flex p-4 border-b font-medium text-muted-foreground text-sm">
+                    <div className="flex p-4 border-b font-medium text-muted-foreground text-sm sticky top-0 bg-card z-10">
                         {columns.map(col => (
                             <div key={col.key} className={cn("flex-1", col.className)}>{col.label}</div>
                         ))}
