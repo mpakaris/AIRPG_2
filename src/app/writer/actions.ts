@@ -1,8 +1,7 @@
 
 'use server';
 
-import { game as gameCartridge } from '@/lib/game/cartridge';
-import type { Game, Chapter, Location, GameObject, Item, NPC } from '@/lib/game/types';
+import type { Game, Chapter, Location, GameObject, Item, NPC, Portal } from '@/lib/game/types';
 import { initializeFirebase } from '@/firebase';
 import { collection, doc, getDoc, getDocs } from 'firebase/firestore';
 
@@ -23,20 +22,36 @@ export async function getGameData(gameId: string = 'blood-on-brass'): Promise<Ga
 
         const gameData = gameSnap.data() as Game;
 
-        // Fetch all sub-collections
-        const chaptersSnap = await getDocs(collection(firestore, `games/${gameId}/chapters`));
-        const locationsSnap = await getDocs(collection(firestore, `games/${gameId}/locations`));
-        const gameObjectsSnap = await getDocs(collection(firestore, `games/${gameId}/game_objects`));
-        const itemsSnap = await getDocs(collection(firestore, `games/${gameId}/items`));
-        const npcsSnap = await getDocs(collection(firestore, `games/${gameId}/npcs`));
-        const portalsSnap = await getDocs(collection(firestore, `games/${gameId}/portals`));
+        // Helper function to fetch all documents from a sub-collection
+        const fetchSubCollection = async (subCollectionName: string) => {
+            const snap = await getDocs(collection(firestore, `games/${gameId}/${subCollectionName}`));
+            // Use the document ID as the key in the resulting object
+            return Object.fromEntries(snap.docs.map(d => [d.id, d.data()]));
+        };
 
-        gameData.chapters = Object.fromEntries(chaptersSnap.docs.map(d => [d.id, d.data() as Chapter]));
-        gameData.locations = Object.fromEntries(locationsSnap.docs.map(d => [d.id, d.data() as Location]));
-        gameData.gameObjects = Object.fromEntries(gameObjectsSnap.docs.map(d => [d.id, d.data() as GameObject]));
-        gameData.items = Object.fromEntries(itemsSnap.docs.map(d => [d.id, d.data() as Item]));
-        gameData.npcs = Object.fromEntries(npcsSnap.docs.map(d => [d.id, d.data() as NPC]));
-        gameData.portals = Object.fromEntries(portalsSnap.docs.map(d => [d.id, d.data() as any]));
+        // Fetch all sub-collections in parallel
+        const [
+            chaptersData,
+            locationsData,
+            gameObjectsData,
+            itemsData,
+            npcsData,
+            portalsData
+        ] = await Promise.all([
+            fetchSubCollection('chapters'),
+            fetchSubCollection('locations'),
+            fetchSubCollection('game_objects'),
+            fetchSubCollection('items'),
+            fetchSubCollection('npcs'),
+            fetchSubCollection('portals')
+        ]);
+
+        gameData.chapters = chaptersData as Record<string, Chapter>;
+        gameData.locations = locationsData as Record<string, Location>;
+        gameData.gameObjects = gameObjectsData as Record<string, GameObject>;
+        gameData.items = itemsData as Record<string, Item>;
+        gameData.npcs = npcsData as Record<string, NPC>;
+        gameData.portals = portalsData as Record<string, Portal>;
 
         return gameData;
 
