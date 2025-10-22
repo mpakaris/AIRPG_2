@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useRef, useState, type FC, Fragment } from 'react';
@@ -183,7 +184,8 @@ const MessageLog: FC<Pick<GameScreenProps, 'messages'>> = ({ messages }) => {
 
 
 export const GameScreen: FC<GameScreenProps> = ({ messages, onCommandSubmit, isLoading, game, playerState, commandInputValue, setCommandInputValue }) => {
-    const chapter = game.chapters[playerState.currentChapterId];
+    const chapter = game.chapters[game.startChapterId]; // Simplified for now
+    const location = game.locations[playerState.currentLocationId];
   return (
     <div className="flex h-screen flex-col bg-background">
         <header className="flex h-16 items-center justify-between border-b bg-card px-4 shadow-sm">
@@ -195,7 +197,7 @@ export const GameScreen: FC<GameScreenProps> = ({ messages, onCommandSubmit, isL
                   <h1 className="text-lg font-bold text-foreground">
                       {game.title}
                   </h1>
-                  <p className="text-sm text-muted-foreground">{chapter.title}</p>
+                  <p className="text-sm text-muted-foreground">{location?.name || chapter.title}</p>
                 </div>
             </div>
         </header>

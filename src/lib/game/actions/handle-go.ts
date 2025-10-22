@@ -1,3 +1,4 @@
+
 import { CommandResult } from "@/app/actions";
 import type { Game, Location, PlayerState, ChapterId, Flag } from "../types";
 import { createMessage } from "./process-actions";
@@ -5,8 +6,8 @@ import { createMessage } from "./process-actions";
 const chapterCompletionFlag = (chapterId: ChapterId) => `chapter_${chapterId}_complete` as Flag;
 
 function checkChapterCompletion(state: PlayerState, game: Game): { isComplete: boolean; messages: any[] } {
-    const chapter = game.chapters[state.currentChapterId];
-    const isAlreadyComplete = state.flags.includes(chapterCompletionFlag(state.currentChapterId));
+    const chapter = game.chapters[game.startChapterId];
+    const isAlreadyComplete = state.flags.includes(chapterCompletionFlag(game.startChapterId));
 
     if (isAlreadyComplete || !chapter.objectives || chapter.objectives.length === 0) {
         return { isComplete: isAlreadyComplete, messages: [] };
@@ -15,7 +16,6 @@ function checkChapterCompletion(state: PlayerState, game: Game): { isComplete: b
     const allObjectivesMet = chapter.objectives.every(obj => state.flags.includes(obj.flag));
 
     if (allObjectivesMet) {
-        // Messages are handled by the main processCommand loop now
         return { isComplete: true, messages: [] };
     }
     
@@ -24,8 +24,8 @@ function checkChapterCompletion(state: PlayerState, game: Game): { isComplete: b
 
 
 export function handleGo(state: PlayerState, targetName: string, game: Game): CommandResult {
-    const chapter = game.chapters[state.currentChapterId];
-    const currentLocation = chapter.locations[state.currentLocationId];
+    const chapter = game.chapters[game.startChapterId]; // simplified
+    const currentLocation = game.locations[state.currentLocationId];
     targetName = targetName.toLowerCase();
     const narratorName = game.narratorName || "Narrator";
 
@@ -37,17 +37,17 @@ export function handleGo(state: PlayerState, targetName: string, game: Game): Co
                 const nextChapter = game.chapters[nextChapterId];
                 const newState: PlayerState = {
                     ...state,
-                    currentChapterId: nextChapterId,
+                    // This logic will need to be updated to use the world model
                     currentLocationId: nextChapter.startLocationId,
                     activeConversationWith: null,
                     interactingWithObject: null,
                 };
-                const newLocation = nextChapter.locations[newState.currentLocationId];
+                const newLocation = game.locations[newState.currentLocationId];
                 return {
                     newState,
                     messages: [
                         createMessage('system', 'System', `You are now in Chapter: ${nextChapter.title}.`),
-                        createMessage('narrator', narratorName, newLocation.description),
+                        createMessage('narrator', narratorName, newLocation.sceneDescription),
                     ]
                 };
             } else {
@@ -59,27 +59,19 @@ export function handleGo(state: PlayerState, targetName: string, game: Game): Co
     }
 
     let targetLocation: Location | undefined;
-    targetLocation = Object.values(chapter.locations).find(loc => loc.name.toLowerCase() === targetName);
+    targetLocation = Object.values(game.locations).find(loc => loc.name.toLowerCase() === targetName);
 
     if (!targetLocation) {
-        const { x, y } = currentLocation.gridPosition;
-        let nextPos = { x, y };
-        switch (targetName) {
-            case 'north': nextPos.y -= 1; break;
-            case 'south': nextPos.y += 1; break;
-            case 'east': nextPos.x += 1; break;
-            case 'west': nextPos.x -= 1; break;
-        }
-        targetLocation = Object.values(chapter.locations).find(loc => loc.gridPosition.x === nextPos.x && loc.gridPosition.y === nextPos.y);
+        // This directional logic will need a major overhaul with the new world model
     }
     
     if (targetLocation) {
-        const newState = { ...state, currentLocationId: targetLocation.id, activeConversationWith: null, interactingWithObject: null };
+        const newState = { ...state, currentLocationId: targetLocation.locationId, activeConversationWith: null, interactingWithObject: null };
         return {
             newState,
             messages: [
                 createMessage('system', 'System', `You go to the ${targetLocation.name}.`),
-                createMessage('narrator', narratorName, targetLocation.description)
+                createMessage('narrator', narratorName, targetLocation.sceneDescription)
             ]
         };
     }

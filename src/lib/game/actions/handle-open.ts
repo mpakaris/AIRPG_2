@@ -1,16 +1,16 @@
+
 import { CommandResult } from "@/app/actions";
 import type { Game, PlayerState } from "../types";
 import { getLiveGameObject } from "./helpers";
 import { createMessage, processActions } from "./process-actions";
 
 export function handleOpen(state: PlayerState, targetName: string, game: Game): CommandResult {
-    const chapter = game.chapters[state.currentChapterId];
-    const location = chapter.locations[state.currentLocationId];
+    const location = game.locations[state.currentLocationId];
     const narratorName = game.narratorName || "Narrator";
     const normalizedTargetName = targetName.toLowerCase().replace(/"/g, '').trim();
 
     const targetObjectId = location.objects.find(id =>
-        chapter.gameObjects[id]?.name.toLowerCase().includes(normalizedTargetName)
+        game.gameObjects[id]?.name.toLowerCase().includes(normalizedTargetName)
     );
 
     if (!targetObjectId) {

@@ -1,44 +1,45 @@
-import type { Game, PlayerState, Chapter, ChapterId, GameObjectId, GameObjectState } from './game/types';
+
+import type { Game, PlayerState, Chapter, ChapterId, GameObjectId, GameObjectState, PortalState, PortalId } from './game/types';
 
 export function getInitialState(game: Game): PlayerState {
-  const chapterKeys = Object.keys(game.chapters);
-  let startChapterId = game.startChapterId;
-  let startChapter: Chapter | undefined = game.chapters[startChapterId];
-
-  // If the specified start chapter doesn't exist, fall back to the first one.
-  if (!startChapter && chapterKeys.length > 0) {
-    startChapterId = chapterKeys[0] as ChapterId;
-    startChapter = game.chapters[startChapterId];
-  }
-
-  if (!startChapter) {
-    throw new Error("No chapters found in the game cartridge. Cannot initialize state.");
-  }
   
-  // Create a clean state. This will be called on every page refresh.
+  // Create a clean state for all game objects
   const initialObjectStates: Record<GameObjectId, GameObjectState> = {};
-  for (const chapterId in game.chapters) {
-      const chapter = game.chapters[chapterId as ChapterId];
-      if (chapter && chapter.gameObjects) {
-        for (const gameObjectId in chapter.gameObjects) {
-            const gameObject = chapter.gameObjects[gameObjectId as GameObjectId];
-             initialObjectStates[gameObject.id] = {
-                 isLocked: typeof gameObject.state?.isLocked === 'boolean' ? gameObject.state.isLocked : false,
-                 isOpen: typeof gameObject.state?.isOpen === 'boolean' ? gameObject.state.isOpen : false,
-                 items: gameObject.items ? [...gameObject.items] : [], // Correctly copy initial items
-                 currentInteractionStateId: gameObject.state?.currentInteractionStateId,
-             };
-        }
-      }
+  for (const gameObjectId in game.gameObjects) {
+    const gameObject = game.gameObjects[gameObjectId as GameObjectId];
+    initialObjectStates[gameObject.id] = {
+      isLocked: gameObject.state.isLocked,
+      isOpen: gameObject.state.isOpen,
+      isBroken: gameObject.state.isBroken,
+      isPoweredOn: gameObject.state.isPoweredOn,
+      items: gameObject.inventory?.items ? [...gameObject.inventory.items] : [],
+      currentStateId: gameObject.state.currentStateId,
+    };
+  }
+
+  // Create a clean state for all portals
+  const initialPortalStates: Record<PortalId, PortalState> = {};
+  for (const portalId in game.portals) {
+      const portal = game.portals[portalId as PortalId];
+      initialPortalStates[portal.portalId] = {
+          isLocked: portal.state.isLocked,
+          isOpen: portal.state.isOpen,
+      };
+  }
+
+  // Find the starting location, which could be a cell or a location
+  const startChapter = game.chapters[game.startChapterId];
+  if (!startChapter) {
+      throw new Error(`Start chapter "${game.startChapterId}" not found in game data.`);
   }
 
   return {
     currentGameId: game.id,
-    currentChapterId: startChapterId,
     currentLocationId: startChapter.startLocationId,
     inventory: [],
     flags: [],
     objectStates: initialObjectStates,
+    portalStates: initialPortalStates,
     stories: {},
     activeConversationWith: null,
     interactingWithObject: null,

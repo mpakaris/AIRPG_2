@@ -1,5 +1,4 @@
 
-
 // Branded types for stronger type safety
 export type GameId = string & { readonly __brand: 'GameId' };
 export type ChapterId = string & { readonly __brand: 'ChapterId' };
@@ -9,6 +8,13 @@ export type ItemId = string & { readonly __brand: 'ItemId' };
 export type NpcId = string & { readonly __brand: 'NpcId' };
 export type Flag = string & { readonly __brand: 'Flag' };
 export type GameType = 'Escape Game' | 'Limited Open World' | 'Open World' | 'Multi Player';
+
+// New World-Building Types
+export type WorldId = string & { readonly __brand: 'WorldId' };
+export type CellId = string & { readonly __brand: 'CellId' };
+export type StructureId = string & { readonly __brand: 'StructureId' };
+export type PortalId = string & { readonly __brand: 'PortalId' };
+
 
 export type ImageDetails = {
     url: string;
@@ -37,11 +43,15 @@ export type Message = {
 export type Action =
   | { type: 'ADD_ITEM'; itemId: ItemId }
   | { type: 'SET_FLAG'; flag: Flag }
-  | { type: 'SHOW_MESSAGE'; sender: Message['sender']; senderName?: string; content: string; messageType?: Message['type']; imageId?: ItemId | NpcId | GameObjectId } // item, npc, or game object ID
+  | { type: 'SHOW_MESSAGE'; sender: Message['sender']; senderName?: string; content: string; messageType?: Message['type']; imageId?: ItemId | NpcId | GameObjectId }
   | { type: 'END_CONVERSATION' }
   | { type: 'START_INTERACTION'; objectId: GameObjectId, interactionStateId?: string }
   | { type: 'END_INTERACTION' }
-  | { type: 'SET_INTERACTION_STATE', state: string };
+  | { type: 'SET_INTERACTION_STATE', state: string }
+  | { type: 'MOVE_TO_CELL', toCellId: CellId }
+  | { type: 'ENTER_PORTAL', portalId: PortalId }
+  | { type: 'TELEPORT_PLAYER', toLocationId: LocationId };
+
 
 export type Story = {
     chapterId: ChapterId;
@@ -59,6 +69,11 @@ export type GameObjectState = {
     currentStateId: string;
 };
 
+export type PortalState = {
+    isLocked: boolean;
+    isOpen: boolean;
+};
+
 export type User = {
     id: string; // This can be a phone number or a dev ID
     username: string;
@@ -68,38 +83,38 @@ export type User = {
 
 export type PlayerState = {
   currentGameId: GameId;
-  currentChapterId: ChapterId;
-  currentLocationId: LocationId;
+  currentLocationId: LocationId; // Can be a cell or a scene
   inventory: ItemId[];
   flags: Flag[];
   objectStates: Record<GameObjectId, GameObjectState>;
+  portalStates: Record<PortalId, PortalState>;
   stories: Record<ChapterId, Story>;
   activeConversationWith: NpcId | null;
   interactingWithObject: GameObjectId | null;
   conversationCounts: Record<NpcId, number>;
 };
 
-// --- Standardized Game Object Schema ---
+// --- Standardized Schemas ---
 
-type Condition = {
+export type Condition = {
   type: 'HAS_ITEM' | 'HAS_FLAG' | 'STATE_MATCH';
   targetId: ItemId | Flag | GameObjectId;
   expectedValue?: any; // For state matching
 };
 
-type InteractionResult = {
+export type InteractionResult = {
   message: string;
   actions?: Action[];
   once?: boolean; // If true, this success block can only be triggered once.
 };
 
-type Handler = {
+export type Handler = {
   conditions?: Condition[];
   success: InteractionResult;
   fail: { message: string };
 };
 
-type ItemHandler = {
+export type ItemHandler = {
   itemId: ItemId;
   conditions?: Condition[];
   success: InteractionResult;
@@ -122,7 +137,7 @@ export type GameObject = {
     inputtable: boolean;
   };
 
-  initialState: {
+  state: {
     isOpen: boolean;
     isLocked: boolean;
     isBroken: boolean;
@@ -192,13 +207,13 @@ export type GameObject = {
     overrideHandlers?: Partial<GameObject['handlers']>;
   }>;
 
-  fallbackMessages: {
-    default: string; // Generic "that doesn't work"
+  fallbackMessages?: {
+    default?: string;
     notOpenable?: string;
     locked?: string;
     notMovable?: string;
     notContainer?: string;
-    noEffect?: string; // For 'use' when there's no matching item handler
+    noEffect?: string;
     [key: string]: string | undefined;
   };
 
@@ -270,7 +285,7 @@ export type Item = {
   };
 
   handlers: {
-    onTake?: { success: InteractionResult; fail: { message: string } };
+    onTake?: Handler;
     onUse?: Handler;
     onRead?: Handler;
     onScan?: Handler;
@@ -324,54 +339,119 @@ export type NPC = {
   goodbyeMessage: string;
   image?: ImageDetails;
   
-  // For 'scripted' NPCs
   cannedResponses?: CannedResponse[];
   startConversationActions?: Action[];
-  completionFlag?: Flag; // Flag that indicates the NPC's purpose is complete
-  finalResponse?: string; // Message to give after completionFlag is set
+  completionFlag?: Flag;
+  finalResponse?: string;
 
-  // For 'freeform' NPCs
   persona?: string;
   maxInteractions?: number;
   interactionLimitResponse?: string;
 };
 
+// NEW WORLD-BUILDING SCHEMAS
+
+export type Cell = {
+    cellId: CellId;
+    coord: { x: number; y: number; z: number; };
+    type: 'street' | 'alley' | 'rooftop' | 'courtyard' | 'stairwell' | 'interior';
+    isPassable: boolean;
+    visibility?: { discovered: boolean; fogOfWar: boolean; };
+    terrain?: { obstacle?: string; lighting?: string; weather?: string; };
+    structureId?: StructureId;
+    portalIds?: PortalId[];
+    onEnterCell?: Handler;
+    onExitCell?: Handler;
+};
+
+export type NavEdge = {
+    fromCellId: CellId;
+    toCellId: CellId;
+    direction: 'north' | 'south' | 'east' | 'west' | 'up' | 'down';
+    conditions?: Condition[];
+    cost?: number;
+};
+
+export type World = {
+    worldId: WorldId;
+    name: string;
+    cells: Record<CellId, Cell>;
+    navEdges?: NavEdge[];
+    fastTravel?: { enabled: boolean; nodes: { cellId: CellId; label: string; conditions?: Condition[]; }[]; };
+};
+
+export type Floor = {
+    z: number;
+    label: string;
+    locationIds: LocationId[];
+};
+
+export type Structure = {
+    structureId: StructureId;
+    name: string;
+    kind: 'house' | 'cafe' | 'office' | 'warehouse' | 'generic';
+    footprint: CellId[];
+    floors: Floor[];
+    serviceEntrances?: PortalId[];
+    securityLevel?: 'low' | 'medium' | 'high';
+    onBreach?: Handler;
+};
+
 export type Location = {
-  id: LocationId;
+  locationId: LocationId;
   name:string;
-  description: string;
-  gridPosition: { x: number; y: number };
+  sceneDescription: string;
+  overworldDescription?: string;
+  coord?: { x: number; y: number; z: number };
+  mapIcon?: string;
+  entryPortals?: PortalId[];
+  exitPortals?: PortalId[];
   objects: GameObjectId[];
   npcs: NpcId[];
+  onEnterLocation?: Handler;
+  onExitLocation?: Handler;
 };
 
-export type ChapterObjective = {
-    flag: Flag;
-    label: string;
+export type Portal = {
+    portalId: PortalId;
+    name: string;
+    kind: 'door' | 'gate' | 'window' | 'ladder' | 'elevator' | 'hatch';
+    tags?: ('front' | 'back' | 'roof' | 'staff-only' | 'quiet')[];
+    from: { scope: 'cell' | 'location'; id: CellId | LocationId; };
+    to: { scope: 'cell' | 'location'; id: CellId | LocationId; };
+    capabilities: { lockable: boolean; climbable: boolean; vertical: boolean; };
+    state: { isLocked: boolean; isOpen: boolean; };
+    unlockCondition?: { keyItemId?: ItemId; code?: string; phrase?: string; flag?: Flag; };
+    stealthProfile?: { noise: 'low' | 'medium' | 'high'; visibility: 'low' | 'medium' | 'high'; risk: 'low' | 'medium' | 'high'; };
+    entryEffects?: { setFlags?: Flag[]; affectReputation?: string; branchTag?: string; };
+    handlers: {
+        onExamine: Handler;
+        onUnlock?: Handler;
+        onEnter?: Handler;
+        onExit?: Handler;
+    };
 };
 
-export type NextChapterInfo = {
-    id: ChapterId;
-    title: string;
-    transitionCommand: string;
-};
 
 export type Chapter = {
   id: ChapterId;
   title: string;
   goal: string;
-  objectives?: ChapterObjective[];
-  startLocationId: LocationId;
+  objectives?: { flag: Flag, label: string }[];
+  startLocationId: LocationId; // Can be a cell or a location
+  introductionVideo?: string;
+  postChapterMessage?: string;
+  completionVideo?: string;
+  nextChapter?: { id: ChapterId, title: string, transitionCommand: string };
+  storyGenerationDetails?: string;
+
+  // These will be deprecated in favor of the world model
   locations: Record<LocationId, Location>;
   gameObjects: Record<GameObjectId, GameObject>;
   items: Record<ItemId, Item>;
   npcs: Record<NpcId, NPC>;
-  introductionVideo?: string;
-  postChapterMessage?: string;
-  completionVideo?: string;
-  nextChapter?: NextChapterInfo;
-  storyGenerationDetails?: string;
 };
+
 
 export type Game = {
   id: GameId;
@@ -379,11 +459,21 @@ export type Game = {
   description: string;
   setting?: string;
   gameType: GameType;
-  chapters: Record<ChapterId, Chapter>;
-  startChapterId: ChapterId;
   narratorName?: string;
   promptContext?: string;
   objectInteractionPromptContext?: string;
   storyStyleGuide?: string;
-};
+  
+  // New World Model
+  world: World;
+  structures: Record<StructureId, Structure>;
+  locations: Record<LocationId, Location>;
+  portals: Record<PortalId, Portal>;
+  gameObjects: Record<GameObjectId, GameObject>;
+  items: Record<ItemId, Item>;
+  npcs: Record<NpcId, NPC>;
 
+  // Legacy Chapter model (for gradual migration)
+  chapters: Record<ChapterId, Chapter>;
+  startChapterId: ChapterId;
+};

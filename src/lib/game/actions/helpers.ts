@@ -1,9 +1,8 @@
+
 import type { Game, GameObject, GameObjectId, GameObjectState, Item, ItemId, PlayerState } from '../types';
 
 export function getLiveGameObject(id: GameObjectId, state: PlayerState, game: Game): {gameLogic: GameObject, state: GameObjectState} | null {
-    const chapter = game.chapters[state.currentChapterId];
-    if (!chapter) return null;
-    const baseObject = chapter.gameObjects[id];
+    const baseObject = game.gameObjects[id];
     if (!baseObject) return null;
     
     const liveState: GameObjectState | undefined = state.objectStates[id];
@@ -22,13 +21,12 @@ export function getLiveGameObject(id: GameObjectId, state: PlayerState, game: Ga
 }
 
 export function findItemInContext(state: PlayerState, game: Game, targetName: string): Item | null {
-    const chapter = game.chapters[state.currentChapterId];
-    const location = chapter.locations[state.currentLocationId];
+    const location = game.locations[state.currentLocationId];
     const normalizedTargetName = targetName.toLowerCase().replace(/"/g, '').trim();
 
     // 1. Check inventory
     const itemInInventory = state.inventory
-        .map(id => chapter.items[id])
+        .map(id => game.items[id])
         .find(item => item && item.name.toLowerCase().includes(normalizedTargetName));
     if (itemInInventory) {
         return itemInInventory;
@@ -40,7 +38,7 @@ export function findItemInContext(state: PlayerState, game: Game, targetName: st
          if (liveObject && liveObject.state.isOpen) {
             const itemsInContainer = liveObject.state.items || [];
             for (const itemId of itemsInContainer) {
-                const item = chapter.items[itemId];
+                const item = game.items[itemId];
                 if (item && item.name.toLowerCase().includes(normalizedTargetName)) {
                     return item;
                 }

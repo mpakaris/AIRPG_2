@@ -46,9 +46,9 @@ const chapterCompletionFlag = (chapterId: ChapterId) => `chapter_${chapterId}_co
 
 
 export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommandSubmit, onResetGame, setCommandInputValue, userId, onStateUpdate }) => {
-  const chapter = game.chapters[playerState.currentChapterId];
-  const location = chapter.locations[playerState.currentLocationId];
-  const inventoryItems = playerState.inventory.map(id => chapter.items[id]).filter(Boolean);
+  const chapter = game.chapters[game.startChapterId]; // Simplified for now
+  const location = game.locations[playerState.currentLocationId];
+  const inventoryItems = playerState.inventory.map(id => game.items[id]).filter(Boolean);
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
   const [user, setUser] = useState<UserType | null>(null);
@@ -58,8 +58,8 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
 
   const [objectivesVisible, setObjectivesVisible] = useState(isDevEnvironment);
   
-  const isChapterComplete = playerState.flags.includes(chapterCompletionFlag(playerState.currentChapterId));
-  const hasStory = !!playerState.stories?.[playerState.currentChapterId];
+  const isChapterComplete = playerState.flags.includes(chapterCompletionFlag(game.startChapterId));
+  const hasStory = !!playerState.stories?.[game.startChapterId];
 
 
   useEffect(() => {
@@ -88,7 +88,7 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
     startTransition(async () => {
       try {
         toast({ title: "Crafting Your Story...", description: "The AI is weaving your adventure into a narrative. This may take a moment." });
-        const { newState } = await generateStoryForChapter(userId, game.id, playerState.currentChapterId);
+        const { newState } = await generateStoryForChapter(userId, game.id, game.startChapterId);
         onStateUpdate(newState);
         toast({ title: "Story Complete!", description: "Your personalized story for this chapter has been created." });
       } catch (error) {
@@ -113,13 +113,33 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
         {user && <p className="text-sm text-muted-foreground">Playing as: {userId}</p>}
       </SidebarHeader>
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel className="flex items-center gap-2">
-            <Compass />
-            Location
-          </SidebarGroupLabel>
-          <p className="px-2 text-sm text-muted-foreground">{location.name}</p>
-        </SidebarGroup>
+        {location && (
+            <>
+            <SidebarGroup>
+                <SidebarGroupLabel className="flex items-center gap-2">
+                    <Compass />
+                    Location
+                </SidebarGroupLabel>
+                <p className="px-2 text-sm text-muted-foreground">{location.name}</p>
+            </SidebarGroup>
+
+            <SidebarGroup>
+                <SidebarGroupLabel className="flex items-center gap-2">
+                    <User />
+                    NPCs Present
+                </SidebarGroupLabel>
+                {location.npcs.length > 0 ? (
+                    <p className="px-2 text-sm text-muted-foreground">
+                        {location.npcs.map(id => game.npcs[id]?.name).filter(Boolean).join(", ")}
+                    </p>
+                ) : (
+                    <p className="px-2 text-sm text-muted-foreground italic">
+                        You are alone here.
+                    </p>
+                )}
+            </SidebarGroup>
+            </>
+        )}
         <SidebarGroup>
           <SidebarGroupLabel className="flex items-center gap-2">
             <Target />
@@ -183,14 +203,14 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
                 return (
                     <SidebarMenuItem key={item.id}>
                         <SidebarMenuButton tooltip={item.description} size="lg" className="h-auto">
-                            {item.image && (
+                            {item.media?.image && (
                                 <Image
-                                    src={item.image.url}
-                                    alt={item.image.description}
+                                    src={item.media.image.url}
+                                    alt={item.media.image.description}
                                     width={24}
                                     height={24}
                                     className="rounded-sm"
-                                    data-ai-hint={item.image.hint}
+                                    data-ai-hint={item.media.image.hint}
                                 />
                             )}
                             <div className="flex flex-col items-start">
@@ -208,21 +228,7 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
             )}
           </SidebarMenu>
         </SidebarGroup>
-         <SidebarGroup>
-          <SidebarGroupLabel className="flex items-center gap-2">
-            <User />
-            NPCs Present
-          </SidebarGroupLabel>
-           {location.npcs.length > 0 ? (
-            <p className="px-2 text-sm text-muted-foreground">
-                {location.npcs.map(id => chapter.npcs[id]?.name).filter(Boolean).join(", ")}
-            </p>
-           ) : (
-            <p className="px-2 text-sm text-muted-foreground italic">
-                You are alone here.
-            </p>
-           )}
-        </SidebarGroup>
+        
         {isDevEnvironment && (
             <SidebarGroup>
                 <SidebarGroupLabel className='flex items-center gap-2'>
@@ -248,6 +254,3 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
     </Sidebar>
   );
 };
-
-
-    

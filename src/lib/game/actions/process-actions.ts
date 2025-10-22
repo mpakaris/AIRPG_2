@@ -1,3 +1,4 @@
+
 import type { Action, Game, GameObjectId, ImageDetails, ItemId, Message, NpcId, PlayerState, TokenUsage } from '../types';
 import { getLiveGameObject } from './helpers';
 
@@ -15,7 +16,6 @@ export function createMessage(
     
     if (imageDetails) {
         const { id, game, state, showEvenIfExamined } = imageDetails;
-        const chapter = game.chapters[state.currentChapterId];
         const isAlreadyExamined = state.flags.includes(examinedObjectFlag(id as string));
         
         let shouldShowImage = true;
@@ -27,11 +27,10 @@ export function createMessage(
         }
 
         if (shouldShowImage) {
-            const item = chapter.items[id as ItemId];
-            const npc = chapter.npcs[id as NpcId];
-            const gameObject = chapter.gameObjects[id as GameObjectId];
+            const item = game.items[id as ItemId];
+            const npc = game.npcs[id as NpcId];
+            const gameObject = game.gameObjects[id as GameObjectId];
             
-            // This is the new standardized schema
             if (gameObject?.media?.images) {
                 const liveObject = getLiveGameObject(gameObject.id, state, game);
                 if (liveObject && liveObject.state.isLocked === false && gameObject.media.images.unlocked) {
@@ -63,7 +62,6 @@ export function createMessage(
 export function processActions(initialState: PlayerState, actions: Action[], game: Game): { newState: PlayerState, messages: Message[] } {
     let newState = { ...initialState, flags: [...initialState.flags], objectStates: {...initialState.objectStates} };
     const messages: Message[] = [];
-    const chapter = game.chapters[newState.currentChapterId];
     const narratorName = game.narratorName || 'Narrator';
 
     for (const action of actions) {
@@ -95,7 +93,7 @@ export function processActions(initialState: PlayerState, actions: Action[], gam
                 break;
             case 'END_CONVERSATION':
                  if (newState.activeConversationWith) {
-                    const npc = chapter.npcs[newState.activeConversationWith];
+                    const npc = game.npcs[newState.activeConversationWith];
                     messages.push(createMessage('system', 'System', `You ended the conversation with ${npc.name}.`));
                     if (npc.goodbyeMessage) {
                         messages.push(createMessage(npc.id as any, npc.name, `"${npc.goodbyeMessage}"`));
@@ -115,7 +113,7 @@ export function processActions(initialState: PlayerState, actions: Action[], gam
                 break;
             case 'END_INTERACTION':
                 if (newState.interactingWithObject) {
-                    const object = chapter.gameObjects[newState.interactingWithObject];
+                    const object = game.gameObjects[newState.interactingWithObject];
                     messages.push(createMessage('system', 'System', `You stop examining the ${object.name}.`));
                     newState.interactingWithObject = null;
                 }

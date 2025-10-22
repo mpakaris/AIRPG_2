@@ -1,11 +1,11 @@
+
 import { CommandResult } from "@/app/actions";
 import type { Game, PlayerState } from "../types";
 import { getLiveGameObject } from "./helpers";
 import { createMessage, processActions } from "./process-actions";
 
 export function handleTake(state: PlayerState, targetName: string, game: Game): CommandResult {
-  const chapter = game.chapters[state.currentChapterId];
-  const location = chapter.locations[state.currentLocationId];
+  const location = game.locations[state.currentLocationId];
   const narratorName = game.narratorName || "Narrator";
   const normalizedTargetName = targetName.toLowerCase().replace(/"/g, '').trim();
   
@@ -16,11 +16,11 @@ export function handleTake(state: PlayerState, targetName: string, game: Game): 
     
     if (liveObject && liveObject.state.isOpen) {
         const itemToTakeId = (liveObject.state.items || []).find(itemId => 
-            chapter.items[itemId]?.name.toLowerCase() === normalizedTargetName
+            game.items[itemId]?.name.toLowerCase() === normalizedTargetName
         );
 
         if (itemToTakeId) {
-            const itemToTake = chapter.items[itemToTakeId];
+            const itemToTake = game.items[itemToTakeId];
 
             if (!itemToTake.capabilities.isTakable) {
                 return { newState: state, messages: [createMessage('narrator', narratorName, itemToTake.handlers.onTake?.fail.message || `You can't take the ${itemToTake.name}.`)] };

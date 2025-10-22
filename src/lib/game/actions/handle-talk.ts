@@ -1,3 +1,4 @@
+
 import { CommandResult } from "@/app/actions";
 import type { Game, NpcId, PlayerState } from "../types";
 import { createMessage, processActions } from "./process-actions";
@@ -5,14 +6,13 @@ import { createMessage, processActions } from "./process-actions";
 const examinedObjectFlag = (id: string) => `examined_${id}`;
 
 export async function handleTalk(state: PlayerState, npcName: string, game: Game): Promise<CommandResult> {
-    const chapter = game.chapters[state.currentChapterId];
-    const location = chapter.locations[state.currentLocationId];
+    const location = game.locations[state.currentLocationId];
     npcName = npcName.toLowerCase();
 
-    const npc = Object.values(chapter.npcs)
-        .find(n => n?.name.toLowerCase().includes(npcName));
+    const npc = Object.values(game.npcs)
+        .find(n => n?.name.toLowerCase().includes(npcName) && location.npcs.includes(n.id));
 
-    if (npc && location.npcs.includes(npc.id)) {
+    if (npc) {
         let newState = { ...state, activeConversationWith: npc.id, interactingWithObject: null };
         let messages: any[] = [];
         

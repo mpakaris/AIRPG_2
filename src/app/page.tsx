@@ -14,7 +14,7 @@ async function getInitialData(userId: string | null): Promise<{ playerState: Pla
     if (!userId) {
         return { 
             playerState: initialGameState, 
-            messages: createInitialMessages()
+            messages: createInitialMessages(initialGameState)
         };
     }
 
@@ -35,11 +35,6 @@ async function getInitialData(userId: string | null): Promise<{ playerState: Pla
         playerState = initialGameState;
     }
 
-    if (!gameCartridge.chapters[playerState.currentChapterId]) {
-        console.warn(`Invalid chapter ID '${playerState.currentChapterId}' found in state. Resetting.`);
-        playerState = initialGameState;
-    }
-
     let messages: Message[] = [];
     if (logSnap.exists()) {
         messages = logSnap.data()?.messages || [];
@@ -51,10 +46,9 @@ async function getInitialData(userId: string | null): Promise<{ playerState: Pla
     return { playerState, messages };
 }
 
-function createInitialMessages(playerState?: PlayerState): Message[] {
+function createInitialMessages(playerState: PlayerState): Message[] {
     const game = gameCartridge;
-    const state = playerState || getInitialState(game);
-    const startChapter = game.chapters[state.currentChapterId];
+    const startChapter = game.chapters[game.startChapterId];
     const newInitialMessages: Message[] = [];
   
     const welcomeMessage = {
@@ -78,6 +72,19 @@ function createInitialMessages(playerState?: PlayerState): Message[] {
       });
     }
   
+    // Add initial location description
+    const initialLocation = game.locations[playerState.currentLocationId];
+    if (initialLocation) {
+        newInitialMessages.push({
+            id: crypto.randomUUID(),
+            sender: 'narrator' as const,
+            senderName: game.narratorName || 'Narrator',
+            type: 'text' as const,
+            content: initialLocation.sceneDescription,
+            timestamp: Date.now() + 2,
+        });
+    }
+
     return newInitialMessages;
 };
 

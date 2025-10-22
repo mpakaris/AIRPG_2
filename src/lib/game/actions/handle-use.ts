@@ -1,11 +1,11 @@
+
 import { CommandResult } from "@/app/actions";
 import type { Game, PlayerState } from "../types";
 import { findItemInContext, getLiveGameObject } from "./helpers";
 import { createMessage, processActions } from "./process-actions";
 
 export async function handleUse(state: PlayerState, itemName: string, objectName: string, game: Game): Promise<CommandResult> {
-  const chapter = game.chapters[state.currentChapterId];
-  const location = chapter.locations[state.currentLocationId];
+  const location = game.locations[state.currentLocationId];
   const narratorName = game.narratorName || "Narrator";
 
   const itemToUse = findItemInContext(state, game, itemName);
@@ -15,7 +15,7 @@ export async function handleUse(state: PlayerState, itemName: string, objectName
   
   // Case 1: Using an item on a specific object
   if (objectName) {
-    const targetObjectId = location.objects.find(objId => chapter.gameObjects[objId]?.name.toLowerCase().includes(objectName.toLowerCase()));
+    const targetObjectId = location.objects.find(objId => game.gameObjects[objId]?.name.toLowerCase().includes(objectName.toLowerCase()));
   
     if (!targetObjectId) {
       return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${objectName}" here.`)] };

@@ -1,3 +1,4 @@
+
 import { CommandResult } from "@/app/actions";
 import type { Game, GameObject, GameObjectState, PlayerState } from "../types";
 import { getLiveGameObject } from "./helpers";
@@ -7,8 +8,7 @@ const examinedObjectFlag = (id: string) => `examined_${id}`;
 
 export function processPassword(state: PlayerState, command: string, game: Game): CommandResult {
     const narratorName = game.narratorName || "Narrator";
-    const chapter = game.chapters[state.currentChapterId];
-    const location = chapter.locations[state.currentLocationId];
+    const location = game.locations[state.currentLocationId];
     const objectsInLocation = location.objects.map(id => getLiveGameObject(id, state, game)).filter(Boolean) as {gameLogic: GameObject, state: GameObjectState}[];
     
     const commandLower = command.toLowerCase();
@@ -87,6 +87,7 @@ export function processPassword(state: PlayerState, command: string, game: Game)
         
         return result;
     } else {
-        return { newState: state, messages: [createMessage('narrator', narratorName, handler?.fail?.message || 'That password doesn\'t work.')] };
+        const failMessage = handler?.fail?.message || 'That password doesn\'t work.';
+        return { newState: state, messages: [createMessage('narrator', narratorName, failMessage)] };
     }
 }

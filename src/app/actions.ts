@@ -13,7 +13,7 @@ import { initializeFirebase } from '@/firebase';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { getInitialState } from '@/lib/game-state';
 import { dispatchMessage } from '@/lib/whinself-service';
-import { createMessage, processActions } from '@/lib/game/actions/process-actions';
+import { processActions, createMessage } from '@/lib/game/actions/process-actions';
 import { getLiveGameObject } from '@/lib/game/actions/helpers';
 import { handleConversation } from '@/lib/game/actions/handle-conversation';
 import { handleExamine } from '@/lib/game/actions/handle-examine';
@@ -27,8 +27,7 @@ import { handleTalk } from '@/lib/game/actions/handle-talk';
 import { handleUse } from '@/lib/game/actions/handle-use';
 import { processPassword } from '@/lib/game/actions/process-password';
 
-// --- Utility Functions ---
-const examinedObjectFlag = (id: GameObjectId | ItemId | NpcId) => `examined_${id}` as Flag;
+const examinedObjectFlag = (id: string) => `examined_${id}` as Flag;
 const chapterCompletionFlag = (chapterId: ChapterId) => `chapter_${chapterId}_complete` as Flag;
 
 export type CommandResult = {
@@ -42,8 +41,8 @@ export type CommandResult = {
 // --- Chapter & Game Completion ---
 
 function checkChapterCompletion(state: PlayerState, game: Game): { isComplete: boolean; messages: Message[] } {
-    const chapter = game.chapters[state.currentChapterId];
-    const isAlreadyComplete = state.flags.includes(chapterCompletionFlag(state.currentChapterId));
+    const chapter = game.chapters[game.startChapterId]; // Simplified for now
+    const isAlreadyComplete = state.flags.includes(chapterCompletionFlag(game.startChapterId));
 
     if (isAlreadyComplete || !chapter.objectives || chapter.objectives.length === 0) {
         return { isComplete: isAlreadyComplete, messages: [] }; 
@@ -137,8 +136,8 @@ export async function processCommand(
         currentState = getInitialState(game);
     }
   
-    if (!game.chapters[currentState.currentChapterId]) {
-        console.warn(`Invalid chapter ID '${currentState.currentChapterId}' found in processCommand. Resetting to initial state.`);
+    if (!game.locations[currentState.currentLocationId]) {
+        console.warn(`Invalid location ID '${currentState.currentLocationId}' found in processCommand. Resetting to initial state.`);
         currentState = getInitialState(game);
     }
     
@@ -148,7 +147,7 @@ export async function processCommand(
         allMessagesForSession = createInitialMessages();
     }
 
-    const chapter = game.chapters[currentState.currentChapterId];
+    const chapter = game.chapters[game.startChapterId]; // Simplified for now
     const narratorName = game.narratorName || "Narrator";
     const lowerInput = playerInput.toLowerCase().trim();
 
@@ -181,7 +180,7 @@ export async function processCommand(
         const liveObject = getLiveGameObject(currentState.interactingWithObject, currentState, game);
         if (liveObject) {
             const interactingWith = liveObject.gameLogic;
-            const mentionsAnotherObject = Object.values(chapter.gameObjects).some(obj => 
+            const mentionsAnotherObject = Object.values(game.gameObjects).some(obj => 
                 obj.id !== interactingWith.id && lowerInput.includes(obj.name.toLowerCase())
             );
 
@@ -199,12 +198,12 @@ export async function processCommand(
     
     // Main command parsing logic
     if (!commandHandlerResult) {
-        const location = chapter.locations[currentState.currentLocationId];
+        const location = game.locations[currentState.currentLocationId];
         const objectsInLocation = location.objects.map(id => getLiveGameObject(id, currentState, game)).filter(Boolean) as {gameLogic: GameObject, state: GameObjectState}[];
         const objectNames = objectsInLocation.map(obj => obj.gameLogic.name);
-        const npcNames = location.npcs.map(id => chapter.npcs[id]?.name).filter(Boolean) as string[];
+        const npcNames = location.npcs.map(id => game.npcs[id]?.name).filter(Boolean) as string[];
         
-        let lookAroundSummary = `${location.description}\n\n`;
+        let lookAroundSummary = `${location.sceneDescription}\n\n`;
         if(objectNames.length > 0) {
           lookAroundSummary += `You can see the following objects:\n${objectNames.map(name => `• ${name}`).join('\n')}\n`;
         }
@@ -290,7 +289,7 @@ export async function processCommand(
                  break;
             default:
                 const targetObject = objectsInLocation.find(obj => restOfCommand.includes(obj.gameLogic.name.toLowerCase()));
-                if (targetObject) {
+                if (targetObject && targetObject.gameLogic.fallbackMessages) {
                     const fallbackMessages = targetObject.gameLogic.fallbackMessages;
                     const failureMessage = fallbackMessages?.[verb as keyof typeof fallbackMessages] || fallbackMessages?.default;
                     if (failureMessage) {
@@ -331,9 +330,9 @@ export async function processCommand(
     if (finalState) {
         const completion = checkChapterCompletion(finalState, game);
         if (completion.isComplete) {
-            const isNewlyComplete = !currentState.flags.includes(chapterCompletionFlag(finalState.currentChapterId));
+            const isNewlyComplete = !currentState.flags.includes(chapterCompletionFlag(game.startChapterId));
             if (isNewlyComplete) {
-                finalState.flags = [...finalState.flags, chapterCompletionFlag(finalState.currentChapterId)];
+                finalState.flags = [...finalState.flags, chapterCompletionFlag(game.startChapterId)];
                 allMessagesForSession.push(...completion.messages);
             }
         }
@@ -422,6 +421,19 @@ function createInitialMessages(): Message[] {
         content: startChapter.introductionVideo,
         timestamp: Date.now() + 1,
       });
+    }
+
+    // Add initial location description
+    const initialLocation = game.locations[initialGameState.currentLocationId];
+    if (initialLocation) {
+        newInitialMessages.push({
+            id: crypto.randomUUID(),
+            sender: 'narrator' as const,
+            senderName: game.narratorName || 'Narrator',
+            type: 'text' as const,
+            content: initialLocation.sceneDescription,
+            timestamp: Date.now() + 2,
+        });
     }
   
     return newInitialMessages;

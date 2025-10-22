@@ -1,3 +1,4 @@
+
 import { generateNpcChatter, selectNpcResponse } from "@/ai";
 import { CommandResult } from "@/app/actions";
 import type { Game, NPC, PlayerState } from "../types";
@@ -14,7 +15,6 @@ function isEndingConversation(input: string): boolean {
 }
 
 async function handleFreeformChat(npc: NPC, state: PlayerState, playerInput: string, game: Game): Promise<CommandResult> {
-    const chapter = game.chapters[state.currentChapterId];
     let newState = { ...state, conversationCounts: { ...state.conversationCounts } };
     newState.conversationCounts[npc.id] = (newState.conversationCounts[npc.id] || 0) + 1;
 
@@ -23,12 +23,12 @@ async function handleFreeformChat(npc: NPC, state: PlayerState, playerInput: str
         return { newState, messages: [createMessage(npc.id, npc.name, `"${npc.interactionLimitResponse}"`)] };
     }
 
-    const location = chapter.locations[state.currentLocationId];
+    const location = game.locations[state.currentLocationId];
     const { output: aiResponse, usage } = await generateNpcChatter({
         playerInput: playerInput,
         npcName: npc.name,
         npcPersona: npc.persona || 'A generic townsperson.',
-        locationDescription: location.description,
+        locationDescription: location.sceneDescription,
         gameSetting: game.setting || 'Modern-day USA, 2025'
     });
     
@@ -42,9 +42,8 @@ export async function handleConversation(state: PlayerState, playerInput: string
         return { newState: state, messages: [createMessage('system', 'System', 'Error: Not in a conversation.')] };
     }
 
-    const chapter = game.chapters[state.currentChapterId];
     const npcId = state.activeConversationWith;
-    const npc = chapter.npcs[npcId];
+    const npc = game.npcs[npcId];
     let newState = { ...state };
 
     if (isEndingConversation(playerInput)) {
