@@ -53,7 +53,7 @@ export type Story = {
 export type GameObjectState = {
   isLocked?: boolean;
   isOpen?: boolean; // Added for containers
-  items: ItemId[];
+  items?: ItemId[];
   currentInteractionStateId?: string;
 };
 
@@ -119,7 +119,11 @@ export type GameObject = {
   };
   
   isOpenable?: boolean;
-  isLocked?: boolean;
+  state?: {
+    isLocked?: boolean;
+    isOpen?: boolean;
+    currentInteractionStateId?: string;
+  };
 
   unlocksWith?: ItemId;
   unlocksWithPhrase?: string;
@@ -222,3 +226,5 @@ export type Game = {
   objectInteractionPromptContext?: string;
   storyStyleGuide?: string;
 };
+
+    

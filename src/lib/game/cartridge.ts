@@ -96,7 +96,9 @@ export const game: Game = {
                 description: 'A worn, leather-bound notebook. It feels heavy with secrets.',
                 items: ['item_data_chip', 'item_newspaper_article'],
                 isOpenable: true,
-                isLocked: true,
+                state: {
+                    isLocked: true,
+                },
                 unlocksWithPhrase: 'Justice for Silas Bloom',
                 onExamine: {
                     locked: {
@@ -110,10 +112,11 @@ export const game: Game = {
                     }
                 },
                 onUnlock: {
-                    successMessage: "The notebook unlocks with a soft click. The cover creaks open. Inside, you see a small data chip next to a folded newspaper article. You can use 'use \"Data Chip\"' or 'read \"Newspaper Article\"' to examine them.",
+                    successMessage: "The notebook unlocks with a soft click. The cover creaks open.",
                     failMessage: "That password doesn't work. The lock remains stubbornly shut.",
                     actions: [
                          { type: 'SET_FLAG', flag: 'has_unlocked_notebook' as Flag },
+                         { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'Let\'s see what\'s inside: https://airpg-minigames.vercel.app/games/the-notebook'},
                          { type: 'SET_FLAG', flag: 'notebook_is_open' as Flag }
                     ]
                 },
@@ -364,3 +367,5 @@ export const game: Game = {
     }
   }
 };
+
+    
