@@ -1,5 +1,5 @@
 
-import { initializeApp, cert } from 'firebase-admin/app';
+import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { config } from 'dotenv';
 
@@ -15,30 +15,32 @@ import { Chapter, Game, GameObject, Item, Location, NPC, Portal, Structure } fro
 // For security, it's best to load this from an environment variable
 const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 
-if (!serviceAccountKey) {
+if (!serviceAccountKey && getApps().length === 0) {
     throw new Error("FIREBASE_SERVICE_ACCOUNT_KEY is not set in the environment variables. Please add it to your .env file.");
 }
 
 try {
-    // The key might be a stringified JSON wrapped in single quotes.
-    // This logic robustly parses it.
-    let keyString = serviceAccountKey;
-    if (keyString.startsWith("'") && keyString.endsWith("'")) {
-        keyString = keyString.substring(1, keyString.length - 1);
-    }
-    const parsedKey = JSON.parse(keyString);
-    
     if (getApps().length === 0) {
+        // The key might be a stringified JSON wrapped in single quotes.
+        // This logic robustly parses it.
+        let keyString = serviceAccountKey!;
+        if (keyString.startsWith("'") && keyString.endsWith("'")) {
+            keyString = keyString.substring(1, keyString.length - 1);
+        }
+        const parsedKey = JSON.parse(keyString);
+        
         initializeApp({
             credential: cert(parsedKey)
         });
     }
-} catch (error) {
+} catch (error: any) {
     // This can happen in some environments where initialization is automatic.
     if (error.code !== 'app/duplicate-app') {
         console.error("Failed to initialize Firebase Admin SDK:", error);
         // It's helpful to log what the key looks like (without sensitive info)
-        console.error("Key starts with:", serviceAccountKey.substring(0, 30));
+        if(serviceAccountKey) {
+            console.error("Key starts with:", serviceAccountKey.substring(0, 30));
+        }
         throw new Error(`Could not parse FIREBASE_SERVICE_ACCOUNT_KEY. Ensure it's a valid JSON string in your .env file.`);
     }
 }

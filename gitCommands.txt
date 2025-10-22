@@ -3,3 +3,19 @@ git fetch origin
 git reset --hard origin/main
 git clean -fd 
 
+Excellent question! Now that the seeding script is in place, you can run it manually from your project's terminal.
+I've set up two commands for you:
+To update only the game content (safest option): Run this command in your terminal:
+
+npm run db:seed game
+
+This will take all the data from cartridge.ts (objects, items, NPCs, etc.) and push it to Firestore. It will not touch any user data, so it's safe to run whenever you make changes to the game's story or content.
+To reset everything and start fresh (for development): Run this command:
+
+npm run db:seed all
+
+This does everything the game command does, but it also completely resets the game state and logs for your development user (NEXT_PUBLIC_DEV_USER_ID). This is useful when you want to test the game from the very beginning.
+Important: Before running either command, please make sure you have created a .env file and added your FIREBASE_SERVICE_ACCOUNT_KEY to it, as the script needs this to securely connect to your database.
+
+
+
