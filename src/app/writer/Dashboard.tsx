@@ -1,19 +1,19 @@
 
 'use client';
 
-import { useState, useEffect, useCallback, Fragment } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getGameData } from './actions';
 import type { Game, GameId } from '@/lib/game/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { LoaderCircle, ArrowLeft } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { cn } from '@/lib/utils';
 
-function EntityTable({ title, description, data, columns }: { title: string, description: string, data: any[], columns: { key: string, label: string }[] }) {
+function EntityTable({ title, description, data, columns }: { title: string, description: string, data: any[], columns: { key: string, label: string, className?: string }[] }) {
     if (!data || data.length === 0) {
         return (
             <Card>
@@ -34,36 +34,34 @@ function EntityTable({ title, description, data, columns }: { title: string, des
             </CardHeader>
             <CardContent>
                 <ScrollArea className="h-[60vh]">
+                    {/* Header Row */}
+                    <div className="flex p-4 border-b font-medium text-muted-foreground text-sm">
+                        {columns.map(col => (
+                            <div key={col.key} className={cn("flex-1", col.className)}>{col.label}</div>
+                        ))}
+                        <div className="w-8"></div> {/* Spacer for accordion icon */}
+                    </div>
+                    
                     <Accordion type="single" collapsible className="w-full">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    {columns.map(col => <TableHead key={col.key}>{col.label}</TableHead>)}
-                                    <TableHead className="w-[50px]"></TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {data.map((item) => (
-                                    <AccordionItem value={item.id || item.locationId || item.portalId} key={item.id || item.locationId || item.portalId} className="border-b">
-                                        <AccordionTrigger asChild>
-                                            <TableRow className="cursor-pointer hover:bg-muted/50">
-                                                {columns.map(col => <TableCell key={col.key}>{String(item[col.key])}</TableCell>)}
-                                                <TableCell></TableCell>
-                                            </TableRow>
-                                        </AccordionTrigger>
-                                        <AccordionContent asChild>
-                                            <tr>
-                                                <td colSpan={columns.length + 1}>
-                                                    <div className="bg-muted/50 p-4 rounded-lg">
-                                                        <pre className="text-xs whitespace-pre-wrap">{JSON.stringify(item, null, 2)}</pre>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        </AccordionContent>
-                                    </AccordionItem>
-                                ))}
-                            </TableBody>
-                        </Table>
+                        {data.map((item) => {
+                            const itemId = item.id || item.locationId || item.portalId;
+                            if (!itemId) return null; // Skip items without a valid ID
+
+                            return (
+                                <AccordionItem value={itemId} key={itemId}>
+                                    <AccordionTrigger className="flex p-4 text-sm hover:bg-muted/50 rounded-md">
+                                        {columns.map(col => (
+                                            <div key={col.key} className={cn("flex-1 text-left truncate", col.className)}>{String(item[col.key] ?? '')}</div>
+                                        ))}
+                                    </AccordionTrigger>
+                                    <AccordionContent>
+                                        <div className="bg-muted/50 p-4 rounded-lg mx-4 mb-2">
+                                            <pre className="text-xs whitespace-pre-wrap">{JSON.stringify(item, null, 2)}</pre>
+                                        </div>
+                                    </AccordionContent>
+                                </AccordionItem>
+                            );
+                        })}
                     </Accordion>
                 </ScrollArea>
             </CardContent>
@@ -131,7 +129,7 @@ export function Dashboard({ gameId }: { gameId: GameId }) {
                 title="Chapters"
                 description="The chapters that make up the game."
                 data={Object.values(game.chapters || {})}
-                columns={[ { key: 'id', label: 'ID' }, { key: 'title', label: 'Title' }, { key: 'goal', label: 'Goal' } ]}
+                columns={[ { key: 'id', label: 'ID' }, { key: 'title', label: 'Title' }, { key: 'goal', label: 'Goal', className: 'flex-grow-[2]' } ]}
             />
           </TabsContent>
           <TabsContent value="locations">
@@ -147,7 +145,7 @@ export function Dashboard({ gameId }: { gameId: GameId }) {
                 title="Game Objects"
                 description="The interactive objects within locations."
                 data={Object.values(game.gameObjects || {})}
-                columns={[ { key: 'id', label: 'ID' }, { key: 'name', label: 'Name' }, { key: 'description', label: 'Description' } ]}
+                columns={[ { key: 'id', label: 'ID' }, { key: 'name', label: 'Name' }, { key: 'description', label: 'Description', className: 'flex-grow-[2]' } ]}
             />
           </TabsContent>
           <TabsContent value="items">
@@ -155,7 +153,7 @@ export function Dashboard({ gameId }: { gameId: GameId }) {
                 title="Items"
                 description="Items that can be found, taken, and used by the player."
                 data={Object.values(game.items || {})}
-                columns={[ { key: 'id', label: 'ID' }, { key: 'name', label: 'Name' }, { key: 'description', label: 'Description' } ]}
+                columns={[ { key: 'id', label: 'ID' }, { key: 'name', label: 'Name' }, { key: 'description', label: 'Description', className: 'flex-grow-[2]' } ]}
             />
           </TabsContent>
           <TabsContent value="npcs">
