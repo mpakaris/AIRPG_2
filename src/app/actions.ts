@@ -56,8 +56,8 @@ function createMessage(
                 } else {
                     image = liveObject.gameLogic.image;
                 }
-            } else if (item?.gameLogic.image) {
-                image = item.gameLogic.image;
+            } else if (item?.image) {
+                image = item.image;
             } else if (npc?.image) {
                 image = npc.image;
             }
@@ -81,13 +81,14 @@ function createMessage(
 function getLiveGameObject(id: GameObjectId, state: PlayerState, game: Game): {gameLogic: GameObject, state: GameObjectState} {
     const chapter = game.chapters[state.currentChapterId];
     const baseObject = chapter.gameObjects[id];
-    const liveState = state.objectStates[id] || {};
-    
+    const liveState = state.objectStates[id]; // This could be undefined
+
+    // Safely build the combined state, providing fallbacks for every property
     const combinedState: GameObjectState = {
-        isLocked: typeof liveState.isLocked === 'boolean' ? liveState.isLocked : baseObject.state.isLocked,
-        isOpen: typeof liveState.isOpen === 'boolean' ? liveState.isOpen : baseObject.state.isOpen,
-        items: liveState.items ? [...liveState.items] : (baseObject.gameLogic.items ? [...baseObject.gameLogic.items] : []),
-        currentInteractionStateId: liveState.currentInteractionStateId || baseObject.state.currentInteractionStateId,
+        isLocked: typeof liveState?.isLocked === 'boolean' ? liveState.isLocked : baseObject.state?.isLocked ?? false,
+        isOpen: typeof liveState?.isOpen === 'boolean' ? liveState.isOpen : baseObject.state?.isOpen ?? false,
+        items: liveState?.items ? [...liveState.items] : (baseObject.items ? [...baseObject.items] : []),
+        currentInteractionStateId: liveState?.currentInteractionStateId || baseObject.state?.currentInteractionStateId,
     };
     
     return { gameLogic: baseObject, state: combinedState };
@@ -447,8 +448,8 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
         const flag = examinedObjectFlag(itemInInventory.id);
         const isAlreadyExamined = newState.flags.includes(flag);
         
-        const messageText = isAlreadyExamined && itemInInventory.gameLogic.alternateDescription
-            ? itemInInventory.gameLogic.alternateDescription
+        const messageText = isAlreadyExamined && itemInInventory.alternateDescription
+            ? itemInInventory.alternateDescription
             : itemInInventory.description;
 
         const message = createMessage(
@@ -488,8 +489,8 @@ function handleTake(state: PlayerState, targetName: string, game: Game): Command
         if (itemToTakeId) {
             const itemToTake = chapter.items[itemToTakeId];
 
-            if (!itemToTake.gameLogic.isTakable) {
-                return { newState, messages: [createMessage('narrator', narratorName, itemToTake.gameLogic.onTake?.failMessage || `You can't take the ${itemToTake.name}.`)] };
+            if (!itemToTake.isTakable) {
+                return { newState, messages: [createMessage('narrator', narratorName, itemToTake.onTake?.failMessage || `You can't take the ${itemToTake.name}.`)] };
             }
             
             if (newState.inventory.includes(itemToTake.id)) {
@@ -503,9 +504,9 @@ function handleTake(state: PlayerState, targetName: string, game: Game): Command
             if (!newState.objectStates[objId]) newState.objectStates[objId] = {};
             newState.objectStates[objId].items = newObjectItems;
 
-            const actions = itemToTake.gameLogic.onTake?.successActions || [];
+            const actions = itemToTake.onTake?.successActions || [];
             const result = processActions(newState, actions, game);
-            result.messages.unshift(createMessage('narrator', narratorName, itemToTake.gameLogic.onTake?.successMessage || `You take the ${itemToTake.name}.`));
+            result.messages.unshift(createMessage('narrator', narratorName, itemToTake.onTake?.successMessage || `You take the ${itemToTake.name}.`));
             return result;
         }
     }
@@ -615,9 +616,9 @@ async function handleUse(state: PlayerState, itemName: string, objectName: strin
   }
   
   // Case 2: Using an item by itself (like reading it, or using the data chip)
-  if (itemToUse.gameLogic.onUse) {
-    let result = processActions(state, itemToUse.gameLogic.onUse.actions || [], game);
-    result.messages.unshift(createMessage('narrator', narratorName, itemToUse.gameLogic.onUse.message));
+  if (itemToUse.onUse) {
+    let result = processActions(state, itemToUse.onUse.actions || [], game);
+    result.messages.unshift(createMessage('narrator', narratorName, itemToUse.onUse.message));
     return result;
   }
 
@@ -632,9 +633,9 @@ async function handleRead(state: PlayerState, itemName: string, game: Game): Pro
         return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${itemName}" to read.`)] };
     }
 
-    if (itemToRead.gameLogic.onRead) {
-        let result = processActions(state, itemToRead.gameLogic.onRead.actions || [], game);
-        result.messages.unshift(createMessage('narrator', narratorName, itemToRead.gameLogic.onRead.message));
+    if (itemToRead.onRead) {
+        let result = processActions(state, itemToRead.onRead.actions || [], game);
+        result.messages.unshift(createMessage('narrator', narratorName, itemToRead.onRead.message));
         return result;
     }
 
