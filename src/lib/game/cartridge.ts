@@ -376,6 +376,7 @@ const npcs: Record<NpcId, NPC> = {
                     { type: 'SET_FLAG', flag: 'has_received_business_card' as Flag },
                     { type: 'SHOW_MESSAGE', sender: 'narrator', senderName: 'Narrator', content: "The barista slides a business card across the counter. It's been added to your inventory.", messageType: 'image', imageId: 'item_business_card' },
                     { type: 'SHOW_MESSAGE', sender: 'agent', content: "Good work, Burt. This could be the lead we need."},
+                    { type: 'END_CONVERSATION' }
                 ]
               } 
             },
