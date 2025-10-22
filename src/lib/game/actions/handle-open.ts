@@ -1,4 +1,5 @@
 
+
 import { CommandResult } from "@/app/actions";
 import type { Game, PlayerState } from "../types";
 import { getLiveGameObject } from "./helpers";
@@ -23,7 +24,10 @@ export function handleOpen(state: PlayerState, targetName: string, game: Game): 
     }
     
     if (liveObject.state.isLocked) {
-        const lockMessage = liveObject.gameLogic.fallbackMessages?.locked || "It's locked.";
+        let lockMessage = liveObject.gameLogic.fallbackMessages?.locked || "It's locked.";
+        if (liveObject.gameLogic.input?.puzzleUrl) {
+            lockMessage += `\n\nStuck? Maybe this will help: ${liveObject.gameLogic.input.puzzleUrl}`;
+        }
         return { newState: state, messages: [createMessage('narrator', narratorName, lockMessage)] };
     }
 

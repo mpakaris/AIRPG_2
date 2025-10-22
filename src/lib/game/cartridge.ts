@@ -19,7 +19,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             },
             sounds: { onUnlock: 'click.mp3' }
         },
-        input: { type: 'phrase', validation: 'Justice for Silas Bloom', attempts: null, lockout: null },
+        input: { type: 'phrase', validation: 'Justice for Silas Bloom', puzzleUrl: 'https://airpg-minigames.vercel.app/games/the-notebook', attempts: null, lockout: null },
         handlers: {
             onExamine: {
                 success: { message: "A worn, leather-bound notebook. It seems to be locked with a phrase." },
@@ -29,7 +29,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             onOpen: {
                 conditions: [{ type: 'STATE_MATCH', targetId: 'obj_brown_notebook', expectedValue: { isLocked: false } }],
                 success: { message: "The notebook is open. Inside, you see a small SD card next to a folded newspaper article." },
-                fail: { message: "A lock prevents it from being opened without the right password. You'll need to figure out the phrase.\n\nhttps://airpg-minigames.vercel.app/games/the-notebook" }
+                fail: { message: "The lock prevents it from being opened without the right password." }
             },
             onUnlock: {
                 success: {
@@ -327,6 +327,7 @@ const npcs: Record<NpcId, NPC> = {
         persona: "You are a tired, cynical barista in a downtown cafe. You've seen it all and are not impressed by much. Your primary focus is on making coffee and dealing with customers as efficiently as possible. You will not discuss the case or any past events further, deflecting any questions with short, dismissive, but not overly rude answers. You just want to do your job.",
         welcomeMessage: 'What can I get for you? Or are you just here to brood? Either is fine.',
         goodbyeMessage: "Alright, I've got Pumpkin spice lattes to craft. Good luck with... whatever it is you're doing.",
+        startConversationActions: [{ type: 'SET_FLAG', flag: 'has_talked_to_barista' as Flag }],
         limits: { maxInteractions: 15, interactionLimitResponse: "Seriously, I've got a line of customers. I can't keep chatting. The coffee machine calls." },
         demoteRules: {
             onFlagsAll: ['has_received_business_card' as Flag],
@@ -336,12 +337,6 @@ const npcs: Record<NpcId, NPC> = {
             welcomeMessage: "Back again? Hope you're buying something this time.",
             goodbyeMessage: "See ya.",
             defaultResponse: "Look, I told you what I know. I've got work to do."
-        },
-        handlers: {
-            onStartConversation: {
-                success: { message: '', actions: [{ type: 'SET_FLAG', flag: 'has_talked_to_barista' as Flag }] },
-                fail: { message: '' }
-            }
         },
         topics: [
             { topicId: 't_greet', label: 'Greeting', keywords: ["hello", "hi", "how are you"], response: { message: 'Another day, another dollar. What do you need?' } },
@@ -492,7 +487,7 @@ const chapters: Record<ChapterId, Chapter> = {
         id: 'ch1-the-cafe' as ChapterId,
         title: 'A Blast from the Past',
         goal: "Unlock the contents of the notebook.",
-        introductionVideo: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759670681/CH_I_Intro_ccy0og.mov',
+        introductionVideo: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759670681/CH_I_Intro_ccy0og.mov',
         completionVideo: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759678377/CH_I_completion_jqtyme.mp4',
         postChapterMessage: "Looks like we've got everything from this place. I'm thinking our next stop should be the jazz club mentioned in the article.",
         nextChapter: {

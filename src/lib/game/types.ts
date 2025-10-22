@@ -189,6 +189,7 @@ export type GameObject = {
   input?: {
     type: 'code' | 'phrase' | 'pattern' | 'sequence';
     validation: string; // The correct code/phrase, or a regex for patterns
+    puzzleUrl?: string; // URL to a mini-game or external hint
     attempts: number | null;
     lockout: number | null; // Lockout duration in seconds, or for N turns
   };
@@ -373,6 +374,7 @@ export type NPC = {
   persona?: string;
   welcomeMessage: string;
   goodbyeMessage: string;
+  startConversationActions?: Action[];
 
   limits?: {
     maxInteractions?: number;
