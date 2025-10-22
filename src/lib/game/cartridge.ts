@@ -109,14 +109,14 @@ export const game: Game = {
                         message: "A lock prevents it from being opened without the right password. You'll need to figure out the phrase.\n\nhttps://airpg-minigames.vercel.app/games/the-notebook"
                     },
                     unlocked: {
-                        message: "The notebook is open. Inside, you see a small SD card next to a folded newspaper article. \n\nYou can 'take \"SD Card\"' or 'take \"Newspaper Article\"' to add them to your inventory."
+                        message: "The notebook is open. Inside, you see a small SD card next to a folded newspaper article. \n\nYou can 'take SD Card' or 'take Newspaper Article' to add them to your inventory."
                     },
                     alternate: {
                         message: "The notebook lies open. The slots for the SD card and article are now empty."
                     }
                 },
                 onUnlock: {
-                    successMessage: "The notebook unlocks with a soft click.",
+                    successMessage: "The notebook unlocks with a soft click. The cover creaks open.\n\nhttps://airpg-minigames.vercel.app/games/the-notebook",
                     failMessage: "That password doesn't work. The lock remains stubbornly shut.",
                     actions: [
                          { type: 'SET_FLAG', flag: 'has_unlocked_notebook' as Flag }
@@ -255,7 +255,7 @@ export const game: Game = {
                 description: 'A folded newspaper article from the 1940s. The headline is about a local musician, Silas Bloom.',
                 isTakable: true,
                 onTake: {
-                    successMessage: 'You take the newspaper article.',
+                    successMessage: 'You take the Newspaper Article. You can "read Article" to find out what it is about.',
                     failMessage: "You can't take that right now."
                 },
                 onRead: {
@@ -279,7 +279,7 @@ export const game: Game = {
                 description: 'A small, modern SD card, looking strangely out of place in the old notebook.',
                 isTakable: true,
                 onTake: {
-                    successMessage: 'You take the SD card.',
+                    successMessage: 'You take the SD Card. You can "examine SD Card" to check what is hidden on it.',
                     failMessage: "You can't take that right now."
                 },
                 onUse: {

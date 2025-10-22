@@ -422,7 +422,7 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
             messageContent = onExamine.locked.message;
         } else if (liveObject.state.isOpen && onExamine?.unlocked) { 
              messageContent = onExamine.unlocked.message;
-        } else if (!liveObject.state.isLocked && !liveObject.state.isOpen) { 
+        } else if (!liveObject.state.isLocked && !liveObject.state.isOpen && liveObject.gameLogic.isOpenable) { 
             messageContent = `The ${liveObject.gameLogic.name} is unlocked. You can 'open' it.`;
         } else if (isAlreadyExamined && onExamine?.alternate) {
             messageContent = onExamine.alternate.message;
@@ -1049,9 +1049,11 @@ export async function processCommand(
             ];
         } else {
             const hasSystemMessage = commandHandlerResult.messages.some(m => m.sender === 'system');
-            if (verb !== 'invalid' && !hasSystemMessage) {
+            // Suppress the initial AI message for 'take' and 'pick' commands, as they have their own specific feedback.
+            const isTakeCommand = verb === 'take' || verb === 'pick';
+            if (verb !== 'invalid' && !hasSystemMessage && !isTakeCommand) {
                 commandHandlerResult.messages.unshift(agentMessage);
-            }
+_            }
         }
     }
     
