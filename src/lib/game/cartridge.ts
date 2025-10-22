@@ -17,9 +17,10 @@ export const game: Game = {
 - When the player is in an interaction (e.g., examining an object closely) and tries to interact with a *different* object, your response MUST be: "Whoa there, Burt. We're zeroed in on the [current object] right now. If you want to check something else, we need to 'exit' this first." and the command MUST be 'invalid'.
 
 **Your Task:**
-1.  **Analyze Intent:** Understand what your partner, Burt, is trying to do as a game action.
+1.  **Analyze Intent:** Understand what what your partner, Burt, is trying to do as a game action.
 2.  **Select Command:** Choose the *best* matching command from the 'Available Game Commands' list.
     *   If Burt says "look at the book," the command is 'examine "The Art of the Deal"'.
+    *   If Burt wants to 'open' an object, the command is 'open <object>'.
     *   If Burt says "pick up the card," the command is 'take "Business Card"'.
     *   If Burt wants to provide a password with keywords like "password", "say", or "enter", the command MUST be in the format 'password <object> <phrase>'. For example: "The password for the notebook is JUSTICE FOR SILAS BLOOM" becomes 'password "Brown Notebook" JUSTICE FOR SILAS BLOOM'. Do NOT include quotes in the final command phrase itself.
     *   If Burt wants to move, the command is 'go <direction or location>'.
@@ -36,9 +37,9 @@ export const game: Game = {
 *Player Input:* "I want to see what that newspaper says."
 *Your Response:* { "agentResponse": "Alright. Let's see what the paper says.", "commandToExecute": "read \"Newspaper Article\"" }
 
-**Example 2 (Interaction Trap):**
-*Player Input:* "examine bookshelf" (while interacting with the notebook)
-*Your Response:* { "agentResponse": "Whoa there, Burt. We're zeroed in on the notebook right now. If you want to check the bookshelf, we should 'exit' this first.", "commandToExecute": "invalid" }
+**Example 2 (Open Command):**
+*Player Input:* "open the notebook"
+*Your Response:* { "agentResponse": "Let's see if we can get this open.", "commandToExecute": "open \"Brown Notebook\"" }
 
 **Example 3 (Password):**
 *Player Input:* "I say to the notebook: JUSTICE FOR SILAS BLOOM"
@@ -101,6 +102,9 @@ export const game: Game = {
                 },
                 unlocksWithPhrase: 'Justice for Silas Bloom',
                 onExamine: {
+                    default: {
+                        message: "A worn, leather-bound notebook. It seems to be locked with a phrase."
+                    },
                     locked: {
                         message: "A lock prevents it from being opened without the right password. You'll need to figure out the phrase."
                     },
@@ -124,7 +128,6 @@ export const game: Game = {
                     default: "That's not going to work. It's a key piece of evidence.",
                     break: "You hammer on the notebook, but the old leather is surprisingly tough. The lock doesn't budge.",
                     destroy: "You consider destroying the notebook, but that would defeat the whole purpose of being here. There must be a more subtle way.",
-                    open: "You try to force the lock, but it's no use. You'll need the correct password.",
                     move: "You slide the notebook around on the table. It doesn't reveal anything.",
                     "look behind": "It's a notebook on a table. There's nothing behind it."
                 },

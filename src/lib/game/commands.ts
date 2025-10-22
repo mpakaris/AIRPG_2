@@ -2,6 +2,7 @@
 export const AVAILABLE_COMMANDS = [
   'go <direction or location name>',
   'examine <object or item>',
+  'open <object>',
   'look at <object or item>',
   'look around',
   'look behind <object>',

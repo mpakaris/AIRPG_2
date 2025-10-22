@@ -379,7 +379,7 @@ function processPassword(state: PlayerState, command: string, game: Game): Comma
 function handleExamine(state: PlayerState, targetName: string, game: Game): CommandResult {
     const chapter = game.chapters[state.currentChapterId];
     const location = chapter.locations[state.currentLocationId];
-    let newState = { ...state, flags: [...state.flags], objectStates: {...state.objectStates} };
+    let newState = { ...state, flags: [...state.flags] };
     const normalizedTargetName = targetName.toLowerCase().replace(/"/g, '').trim();
     const narratorName = game.narratorName || "Narrator";
 
@@ -390,77 +390,55 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
 
     if (targetObjectId) {
         const liveObject = getLiveGameObject(targetObjectId, newState, game);
-        
-        // This is the core logic fix. An object must be explicitly unlocked before it can be opened.
-        // `examine` should not change the state, only report on it.
-        if (!liveObject.state.isLocked && liveObject.gameLogic.isOpenable && !liveObject.state.isOpen) {
-            // It's unlocked but not yet open. We mark it as open now.
-            if (!newState.objectStates[liveObject.gameLogic.id]) {
-                newState.objectStates[liveObject.gameLogic.id] = {};
-            }
-            newState.objectStates[liveObject.gameLogic.id].isOpen = true;
-            // Update liveObject with the new state for the message generation below.
-            liveObject.state.isOpen = true;
-        }
-
         const flag = examinedObjectFlag(liveObject.gameLogic.id);
         const isAlreadyExamined = newState.flags.includes(flag);
         
-        const actions: Action[] = [];
         let messageContent: string;
-        
         const onExamine = liveObject.gameLogic.onExamine;
 
-        if (isAlreadyExamined && onExamine?.alternate) {
-            messageContent = onExamine.alternate.message;
-            actions.push(...(onExamine.alternate.actions || []));
-        } else if (liveObject.state.isLocked && onExamine?.locked) {
+        if (liveObject.state.isLocked && onExamine?.locked) {
             messageContent = onExamine.locked.message;
-            actions.push(...(onExamine.locked.actions || []));
-        } else if (!liveObject.state.isLocked && liveObject.state.isOpen && onExamine?.unlocked) {
-            // Only show unlocked contents if it is also open
+        } else if (liveObject.state.isOpen && onExamine?.unlocked) {
             messageContent = onExamine.unlocked.message;
-            actions.push(...(onExamine.unlocked.actions || []));
+        } else if (isAlreadyExamined && onExamine?.alternate) {
+            messageContent = onExamine.alternate.message;
+        } else if (onExamine?.default) {
+            messageContent = onExamine.default.message;
         } else {
-             messageContent = onExamine?.default?.message || `You examine the ${liveObject.gameLogic.name}.`;
-             actions.push(...(onExamine?.default?.actions || []));
+            messageContent = `You examine the ${liveObject.gameLogic.name}.`;
         }
-        
-        let actionResult = processActions(newState, actions, game);
         
         const mainMessage = createMessage(
             'narrator',
             narratorName,
             messageContent,
             'image',
-            { id: liveObject.gameLogic.id, game, state: actionResult.newState, showEvenIfExamined: isAlreadyExamined ? false : true }
+            { id: liveObject.gameLogic.id, game, state: newState, showEvenIfExamined: false }
         );
         
-        if (!actionResult.newState.flags.includes(flag)) {
-            actionResult.newState.flags.push(flag);
+        if (!isAlreadyExamined) {
+            newState.flags.push(flag);
         }
         
-        actionResult.messages.unshift(mainMessage);
-        
-        return actionResult;
+        return { newState, messages: [mainMessage] };
     }
 
-    // If not an object, try to find an item in inventory
-    const itemInInventory = findItemInContext(newState, game, targetName);
-    if (itemInInventory) {
-        const flag = examinedObjectFlag(itemInInventory.id);
+    // If not an object, try to find an item in inventory or in an open container
+    const itemInContext = findItemInContext(newState, game, targetName);
+    if (itemInContext) {
+        const flag = examinedObjectFlag(itemInContext.id);
         const isAlreadyExamined = newState.flags.includes(flag);
         
-        const messageText = isAlreadyExamined && itemInInventory.alternateDescription
-            ? itemInInventory.alternateDescription
-            : itemInInventory.description;
+        const messageText = isAlreadyExamined && itemInContext.alternateDescription
+            ? itemInContext.alternateDescription
+            : itemInContext.description;
 
         const message = createMessage(
             'narrator', 
             narratorName, 
             messageText,
             'image',
-            { id: itemInInventory.id, game, state: newState, showEvenIfExamined: isAlreadyExamined ? false : true }
+            { id: itemInContext.id, game, state: newState, showEvenIfExamined: false }
         );
         
         if (!isAlreadyExamined) {
@@ -471,6 +449,61 @@ function handleExamine(state: PlayerState, targetName: string, game: Game): Comm
     }
 
     return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${targetName}" here.`)] };
+}
+
+function handleOpen(state: PlayerState, targetName: string, game: Game): CommandResult {
+    const chapter = game.chapters[state.currentChapterId];
+    const location = chapter.locations[state.currentLocationId];
+    const narratorName = game.narratorName || "Narrator";
+    const normalizedTargetName = targetName.toLowerCase().replace(/"/g, '').trim();
+
+    const targetObjectId = location.objects.find(id =>
+        chapter.gameObjects[id]?.name.toLowerCase().includes(normalizedTargetName)
+    );
+
+    if (!targetObjectId) {
+        return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${targetName}" to open.`)] };
+    }
+
+    const liveObject = getLiveGameObject(targetObjectId, state, game);
+    
+    if (liveObject.state.isLocked) {
+        const lockMessage = liveObject.gameLogic.onExamine?.locked?.message || "It's locked.";
+        return { newState: state, messages: [createMessage('narrator', narratorName, lockMessage)] };
+    }
+
+    if (liveObject.state.isOpen) {
+        const alreadyOpenMessage = liveObject.gameLogic.onExamine?.alternate?.message || "It's already open.";
+        return { newState: state, messages: [createMessage('narrator', narratorName, alreadyOpenMessage)] };
+    }
+    
+    if (!liveObject.gameLogic.isOpenable) {
+         return { newState: state, messages: [createMessage('narrator', narratorName, `You can't open the ${liveObject.gameLogic.name}.`)] };
+    }
+
+    // Unlock and open the object
+    let newState = { ...state, objectStates: { ...state.objectStates }};
+    if (!newState.objectStates[liveObject.gameLogic.id]) {
+        newState.objectStates[liveObject.gameLogic.id] = {};
+    }
+    newState.objectStates[liveObject.gameLogic.id].isOpen = true;
+
+    const onExamine = liveObject.gameLogic.onExamine;
+    const messageContent = onExamine?.unlocked?.message || `You open the ${liveObject.gameLogic.name}.`;
+    const actions = onExamine?.unlocked?.actions || [];
+    
+    let actionResult = processActions(newState, actions, game);
+    
+    const mainMessage = createMessage(
+        'narrator',
+        narratorName,
+        messageContent,
+        'image',
+        { id: liveObject.gameLogic.id, game, state: actionResult.newState, showEvenIfExamined: true }
+    );
+    actionResult.messages.unshift(mainMessage);
+
+    return actionResult;
 }
 
 
@@ -925,6 +958,9 @@ export async function processCommand(
                     commandHandlerResult = handleExamine(currentState, restOfCommand, game);
                  }
                  break;
+            case 'open':
+                commandHandlerResult = handleOpen(currentState, restOfCommand, game);
+                break;
             case 'take':
                 commandHandlerResult = handleTake(currentState, restOfCommand, game);
                 break;
