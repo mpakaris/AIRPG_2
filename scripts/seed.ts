@@ -1,12 +1,11 @@
 
+import { config } from 'dotenv';
+config(); // Load environment variables from .env file
+
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
-import { config } from 'dotenv';
 import * as fs from 'fs';
 import * as path from 'path';
-
-// Load environment variables from .env file
-config();
 
 import type { Chapter, Game, GameObject, Item, Location, NPC, Portal } from '../src/lib/game/types';
 import { getInitialState } from '../src/lib/game-state';
@@ -19,6 +18,8 @@ if (!serviceAccountKey && getApps().length === 0) {
 
 try {
     if (getApps().length === 0) {
+        // The key from dotenv might be wrapped in quotes or have escaped newlines.
+        // JSON.parse is robust enough to handle this correctly.
         const parsedKey = JSON.parse(serviceAccountKey!);
         initializeApp({
             credential: cert(parsedKey)
@@ -29,7 +30,7 @@ try {
     if (serviceAccountKey) {
         console.error("Key starts with:", serviceAccountKey.substring(0, 30));
     }
-    throw new Error(`Could not parse FIREBASE_SERVICE_ACCOUNT_KEY. Ensure it's a valid JSON string in your .env file.`);
+    throw new Error(`Could not parse or use FIREBASE_SERVICE_ACCOUNT_KEY. Ensure it's a valid JSON string in your .env file.`);
 }
 
 const db = getFirestore();
@@ -119,7 +120,7 @@ async function seedAll() {
 }
 
 const args = process.argv.slice(2);
-const seedType = args[0];
+const seedType = args[0] || 'all'; // Default to 'all' if no argument is provided
 
 if (seedType === 'game') {
     seedGameCartridge().catch((error) => {
@@ -132,7 +133,7 @@ if (seedType === 'game') {
         process.exit(1);
     });
 } else {
-    console.log("No seed type specified. Please run with 'game' or 'all'.");
-    console.log("Example: `npm run db:seed game` or `npm run db:seed all`");
-    console.log("If you changed cartridge.ts, run `npm run db:bake` first.");
+    console.log(`Invalid seed type: '${seedType}'. Please use 'game' or 'all'.`);
+    console.log("Example: `npm run db:seed game` or `npm run db:seed` (for all)");
+    console.log("If you changed cartridge.ts, run `npm run db:bake` first (though this is now automatic).");
 }
