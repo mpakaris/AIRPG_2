@@ -11,15 +11,15 @@ import type { Chapter, Game, GameObject, Item, Location, NPC, Portal } from '../
 import { getInitialState } from '../src/lib/game-state';
 
 const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+const DEV_USER_ID = process.env.NEXT_PUBLIC_DEV_USER_ID || '36308548589';
 
 if (!serviceAccountKey && getApps().length === 0) {
-    throw new Error("FIREBASE_SERVICE_ACCOUNT_KEY is not set in the environment variables. Please add it to your .env file.");
+    throw new Error("FIREBASE_SERVICE_ACCOUNT_KEY is not set in the environment variables. Please add it to your .env file, wrapped in double quotes.");
 }
 
 try {
     if (getApps().length === 0) {
-        // The key from dotenv might have escaped newlines.
-        // The cert() function expects an object, so we must parse the JSON string.
+        // The key from dotenv should be a valid JSON string if quoted correctly in the .env file.
         const parsedKey = JSON.parse(serviceAccountKey!);
         initializeApp({
             credential: cert(parsedKey)
@@ -28,13 +28,12 @@ try {
 } catch (error: any) {
     console.error("Failed to initialize Firebase Admin SDK:", error);
     if (serviceAccountKey) {
-        console.error("Key starts with:", serviceAccountKey.substring(0, 30));
+        console.error("The provided key (starting with a few characters) was:", serviceAccountKey.substring(0, 30));
     }
-    throw new Error(`Could not parse or use FIREBASE_SERVICE_ACCOUNT_KEY. Ensure it's a valid JSON string in your .env file.`);
+    throw new Error(`Could not parse or use FIREBASE_SERVICE_ACCOUNT_KEY. Ensure it's a valid JSON string in your .env file and wrapped in double quotes.`);
 }
 
 const db = getFirestore();
-const DEV_USER_ID = process.env.NEXT_PUBLIC_DEV_USER_ID || '36308548589';
 
 // Function to read the baked JSON cartridge
 function loadCartridgeFromFile(): Game {
