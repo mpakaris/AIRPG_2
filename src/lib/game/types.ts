@@ -49,6 +49,7 @@ export type Action =
   | { type: 'START_INTERACTION'; objectId: GameObjectId, interactionStateId?: string }
   | { type: 'END_INTERACTION' }
   | { type: 'SET_INTERACTION_STATE', state: string }
+  | { type: 'SET_OBJECT_STATE', objectId: GameObjectId, state: Partial<GameObjectState> }
   | { type: 'MOVE_TO_CELL', toCellId: CellId }
   | { type: 'ENTER_PORTAL', portalId: PortalId }
   | { type: 'TELEPORT_PLAYER', toLocationId: LocationId }
@@ -63,12 +64,12 @@ export type Story = {
 };
 
 export type GameObjectState = {
-    isLocked: boolean;
-    isOpen: boolean;
-    isBroken: boolean;
-    isPoweredOn: boolean;
+    isLocked?: boolean;
+    isOpen?: boolean;
+    isBroken?: boolean;
+    isPoweredOn?: boolean;
     items?: ItemId[];
-    currentStateId: string;
+    currentStateId?: string;
 };
 
 export type PortalState = {

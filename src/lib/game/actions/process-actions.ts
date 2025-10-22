@@ -61,13 +61,7 @@ export function createMessage(
 }
 
 export function processActions(initialState: PlayerState, actions: Action[], game: Game): { newState: PlayerState, messages: Message[] } {
-    let newState = { 
-        ...initialState, 
-        flags: [...initialState.flags], 
-        objectStates: {...initialState.objectStates},
-        npcStates: {...initialState.npcStates},
-        inventory: [...initialState.inventory],
-    };
+    let newState = JSON.parse(JSON.stringify(initialState)); // Deep copy to avoid mutation issues
     const messages: Message[] = [];
     const narratorName = game.narratorName || 'Narrator';
 
@@ -90,7 +84,7 @@ export function processActions(initialState: PlayerState, actions: Action[], gam
                     action.senderName || narratorName,
                     action.content,
                     action.messageType,
-                    messageImageId ? { id: messageImageId, game, state: newState, showEvenIfExamined: false } : undefined
+                    messageImageId ? { id: messageImageId, game, state: newState, showEvenIfExamined: true } : undefined
                 );
                 messages.push(message);
 
@@ -112,10 +106,10 @@ export function processActions(initialState: PlayerState, actions: Action[], gam
                 newState.interactingWithObject = action.objectId;
                 // Update state if provided
                 if (action.interactionStateId && newState.interactingWithObject) {
-                    newState.objectStates[newState.interactingWithObject] = {
-                        ...newState.objectStates[newState.interactingWithObject],
-                        currentStateId: action.interactionStateId
-                    };
+                    if (!newState.objectStates[newState.interactingWithObject]) {
+                        newState.objectStates[newState.interactingWithObject] = {};
+                    }
+                    newState.objectStates[newState.interactingWithObject].currentStateId = action.interactionStateId;
                 }
                 break;
             case 'END_INTERACTION':
@@ -127,11 +121,20 @@ export function processActions(initialState: PlayerState, actions: Action[], gam
                 break;
             case 'SET_INTERACTION_STATE':
                  if(newState.interactingWithObject) {
-                    newState.objectStates[newState.interactingWithObject] = {
-                        ...newState.objectStates[newState.interactingWithObject],
-                        currentStateId: action.state
-                    };
+                    if (!newState.objectStates[newState.interactingWithObject]) {
+                        newState.objectStates[newState.interactingWithObject] = {};
+                    }
+                    newState.objectStates[newState.interactingWithObject].currentStateId = action.state;
                 }
+                break;
+             case 'SET_OBJECT_STATE':
+                if (!newState.objectStates[action.objectId]) {
+                    newState.objectStates[action.objectId] = {};
+                }
+                newState.objectStates[action.objectId] = {
+                    ...newState.objectStates[action.objectId],
+                    ...action.state
+                };
                 break;
             case 'DEMOTE_NPC':
                  const npcToDemote = game.npcs[action.npcId];

@@ -40,27 +40,22 @@ export function handleOpen(state: PlayerState, targetName: string, game: Game): 
          return { newState: state, messages: [createMessage('narrator', narratorName, `You can't open the ${liveObject.gameLogic.name}.`)] };
     }
 
-    // Open the object
-    let newState = JSON.parse(JSON.stringify(state));
-    if (!newState.objectStates[liveObject.gameLogic.id]) {
-        newState.objectStates[liveObject.gameLogic.id] = {};
-    }
-    newState.objectStates[liveObject.gameLogic.id].isOpen = true;
-
     const onOpen = liveObject.gameLogic.handlers.onOpen;
-    const messageContent = onOpen?.success.message || `You open the ${liveObject.gameLogic.name}.`;
-    const actions = onOpen?.success.actions || [];
-    
-    let actionResult = processActions(newState, actions, game);
-    
-    const mainMessage = createMessage(
-        'narrator',
-        narratorName,
-        messageContent,
-        'image',
-        { id: liveObject.gameLogic.id, game, state: actionResult.newState!, showEvenIfExamined: true }
-    );
-    actionResult.messages.unshift(mainMessage);
 
-    return actionResult;
+    if (!onOpen) {
+        const genericOpenMessage = `You open the ${liveObject.gameLogic.name}.`;
+        const newState = { ...state, objectStates: { ...state.objectStates, [liveObject.gameLogic.id]: { ...liveObject.state, isOpen: true } } };
+        return { newState, messages: [createMessage('narrator', narratorName, genericOpenMessage)] };
+    }
+    
+    // The `onOpen` handler is now responsible for setting the state via actions
+    const result = processActions(state, onOpen.success.actions || [], game);
+    
+    // Prepend a default message if the handler doesn't provide one.
+    const hasMessageAction = onOpen.success.actions?.some(a => a.type === 'SHOW_MESSAGE');
+    if (!hasMessageAction) {
+        result.messages.unshift(createMessage('narrator', narratorName, onOpen.success.message));
+    }
+    
+    return result;
 }

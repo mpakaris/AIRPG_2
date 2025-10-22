@@ -28,13 +28,22 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             },
             onOpen: {
                 conditions: [{ type: 'STATE_MATCH', targetId: 'obj_brown_notebook', expectedValue: { isLocked: false } }],
-                success: { message: "The notebook is open. Inside, you see a small SD card next to a folded newspaper article." },
+                success: {
+                    message: "The notebook is open. Inside, you see a small SD card next to a folded newspaper article.",
+                    actions: [
+                        { type: 'SET_OBJECT_STATE', objectId: 'obj_brown_notebook', state: { isOpen: true } },
+                        { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'The notebook is open. Inside, you see a small SD card next to a folded newspaper article.', imageId: 'obj_brown_notebook' }
+                    ]
+                },
                 fail: { message: "The lock prevents it from being opened without the right password." }
             },
             onUnlock: {
                 success: {
                     message: "The notebook unlocks with a soft click. The cover creaks open.",
-                    actions: [{ type: 'SET_FLAG', flag: 'has_unlocked_notebook' as Flag }]
+                    actions: [
+                        { type: 'SET_FLAG', flag: 'has_unlocked_notebook' as Flag },
+                        { type: 'SET_OBJECT_STATE', objectId: 'obj_brown_notebook', state: { isLocked: false } }
+                    ]
                 },
                 fail: { message: "That password doesn't work. The lock remains stubbornly shut." }
             },
