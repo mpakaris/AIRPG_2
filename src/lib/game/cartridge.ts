@@ -19,9 +19,9 @@ export const game: Game = {
 **Your Task:**
 1.  **Analyze Intent:** Understand what your partner, Burt, is trying to do as a game action.
 2.  **Select Command:** Choose the *best* matching command from the 'Available Game Commands' list.
-    *   If Burt says "look at the book," the command is 'examine brown notebook'.
-    *   If Burt says "pick up the card," the command is 'take business card'.
-    *   If Burt wants to provide a password with keywords like "password", "say", or "enter", the command MUST be in the format 'password <object> <phrase>'. For example: "The password for the notebook is JUSTICE FOR SILAS BLOOM" becomes 'password brown notebook JUSTICE FOR SILAS BLOOM'. Do NOT include quotes in the final command.
+    *   If Burt says "look at the book," the command is 'examine "The Art of the Deal"'.
+    *   If Burt says "pick up the card," the command is 'take "Business Card"'.
+    *   If Burt wants to provide a password with keywords like "password", "say", or "enter", the command MUST be in the format 'password <object> <phrase>'. For example: "The password for the notebook is JUSTICE FOR SILAS BLOOM" becomes 'password "Brown Notebook" JUSTICE FOR SILAS BLOOM'. Do NOT include quotes in the final command phrase itself.
     *   If Burt wants to move, the command is 'go <direction or location>'.
     *   If Burt says "look" or "look around", the command is 'look around'.
     *   If Burt wants to 'look behind' an object, the command is 'look behind <object>'.
@@ -34,7 +34,7 @@ export const game: Game = {
 
 **Example 1 (Valid Command):**
 *Player Input:* "I want to see what that newspaper says."
-*Your Response:* { "agentResponse": "Alright. Let's see what the paper says.", "commandToExecute": "examine newspaper" }
+*Your Response:* { "agentResponse": "Alright. Let's see what the paper says.", "commandToExecute": "read \"Newspaper Article\"" }
 
 **Example 2 (Interaction Trap):**
 *Player Input:* "examine bookshelf" (while interacting with the notebook)
@@ -42,7 +42,7 @@ export const game: Game = {
 
 **Example 3 (Password):**
 *Player Input:* "I say to the notebook: JUSTICE FOR SILAS BLOOM"
-*Your Response:* { "agentResponse": "Let's see if that phrase does anything.", "commandToExecute": "password brown notebook JUSTICE FOR SILAS BLOOM" }
+*Your Response:* { "agentResponse": "Let's see if that phrase does anything.", "commandToExecute": "password \"Brown Notebook\" JUSTICE FOR SILAS BLOOM" }
 `,
   objectInteractionPromptContext: `You are Agent Sharma, observing your partner Burt as he inspects the {{objectName}}. Your job is to map his input to one of the available actions, while maintaining your persona as a supportive and curious colleague. Ask questions to guide him. Example: "What do you make of that, Burt?"`,
   storyStyleGuide: `You are a master storyteller and a brilliant editor. Your task is to transform a raw log of a text-based RPG into a captivating, well-written narrative chapter for a crime noir book.
@@ -83,9 +83,9 @@ export const game: Game = {
             'loc_cafe': {
                 id: 'loc_cafe' as LocationId,
                 name: 'The Cafe',
-                description: 'A bustling downtown cafe, smelling of coffee and rain. A puddle of rainwater is near the door, and a discarded newspaper lies on an empty table.',
+                description: 'A bustling downtown cafe, smelling of coffee and rain. A puddle of rainwater is near the door, and a discarded magazine lies on an empty table.',
                 gridPosition: { x: 1, y: 1 },
-                objects: ['obj_brown_notebook', 'obj_chalkboard_menu', 'obj_newspaper', 'obj_bookshelf', 'obj_painting'] as GameObjectId[],
+                objects: ['obj_brown_notebook', 'obj_chalkboard_menu', 'obj_magazine', 'obj_bookshelf', 'obj_painting'] as GameObjectId[],
                 npcs: ['npc_barista', 'npc_manager'] as NpcId[],
             }
         },
@@ -94,8 +94,7 @@ export const game: Game = {
                 id: 'obj_brown_notebook' as GameObjectId,
                 name: 'Brown Notebook',
                 description: 'A worn, leather-bound notebook. It feels heavy with secrets.',
-                alternateDescription: "It's the same locked notebook. We still need that password.",
-                items: [],
+                items: ['item_data_chip', 'item_newspaper_article'],
                 isOpenable: true,
                 isLocked: true,
                 unlocksWithPhrase: 'Justice for Silas Bloom',
@@ -104,14 +103,14 @@ export const game: Game = {
                         message: "A lock prevents it from being opened without the right password. You'll need to figure out the phrase."
                     },
                     unlocked: {
-                        message: "The notebook is open. Inside, you see a small data chip next to a folded newspaper article. You can use 'watch video' or 'read article' to examine the contents."
+                        message: "The notebook is open. Inside, you see a small data chip next to a folded newspaper article. You can 'use \"Data Chip\"' or 'read \"Newspaper Article\"' to examine the contents."
                     },
                     alternate: {
-                        message: "Inside is the data chip and the article. You can use *watch video* or *read article* to examine the contents."
+                        message: "Inside is the data chip and the article. You can use 'use \"Data Chip\"' or 'read \"Newspaper Article\"' to examine the contents."
                     }
                 },
                 onUnlock: {
-                    successMessage: "The notebook unlocks with a soft click. The cover creaks open. Inside, you see a small data chip next to a folded newspaper article. You can use 'watch video' or 'read article' to examine them.",
+                    successMessage: "The notebook unlocks with a soft click. The cover creaks open. Inside, you see a small data chip next to a folded newspaper article. You can use 'use \"Data Chip\"' or 'read \"Newspaper Article\"' to examine them.",
                     failMessage: "That password doesn't work. The lock remains stubbornly shut.",
                     actions: [
                          { type: 'SET_FLAG', flag: 'has_unlocked_notebook' as Flag },
@@ -141,8 +140,8 @@ export const game: Game = {
                 id: 'obj_chalkboard_menu' as GameObjectId,
                 name: 'Chalkboard Menu',
                 description: "A simple chalkboard menu.",
-                alternateDescription: "The menu hasn't changed. The special is still about 'justice'.",
                 items: [],
+                alternateDescription: "The menu hasn't changed. The special is still about 'justice'.",
                 onExamine: {
                    default: { message: "Today's special is three scones for the price of two. A deal almost as sweet as justice." },
                    alternate: { message: "The menu hasn't changed. The special is still about 'justice'."}
@@ -160,46 +159,45 @@ export const game: Game = {
                     hint: 'chalkboard menu'
                 }
             },
-            'obj_newspaper': {
-                id: 'obj_newspaper' as GameObjectId,
-                name: 'Newspaper',
-                description: "A discarded local newspaper.",
-                alternateDescription: "It's just today's paper. Nothing new here.",
+            'obj_magazine': {
+                id: 'obj_magazine' as GameObjectId,
+                name: 'Magazine',
+                description: "A discarded local magazine.",
+                alternateDescription: "It's just today's magazine. Nothing new here.",
                 items: [],
                  onExamine: {
-                   default: { message: "It's a copy of today's local paper. The main headlines discuss the current series of murders. The usual crazyness of a Metropolis." },
-                   alternate: { message: "It's just today's paper. Nothing new here." }
+                   default: { message: "It's a copy of this week's local entertainment magazine. The cover story discusses the current series of murders. The usual craziness of a Metropolis." },
+                   alternate: { message: "It's just today's magazine. Nothing new here." }
                 },
                 onFailure: {
-                    default: "The newspaper is old news. Let's stick to the facts of our case.",
-                    take: "You could take it, but you have no reason to. It's just today's paper.",
-                    destroy: "Tearing up the newspaper won't help you solve any crimes."
+                    default: "The magazine is old news. Let's stick to the facts of our case.",
+                    take: "You could take it, but you have no reason to. It's just a magazine.",
+                    destroy: "Tearing up the magazine won't help you solve any crimes."
                 },
                 image: {
                     url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759603706/Newspaper_p85m1h.png',
-                    description: 'A newspaper on a table.',
-                    hint: 'newspaper'
+                    description: 'A magazine on a table.',
+                    hint: 'magazine'
                 }
             },
             'obj_bookshelf': {
                 id: 'obj_bookshelf' as GameObjectId,
                 name: 'Bookshelf',
                 description: 'A small bookshelf in a reading corner.',
-                alternateDescription: "The bookshelf still has that romance novel, 'Justice for My Love'. That seems important.",
-                items: [],
+                items: ['item_book_deal', 'item_book_time', 'item_book_justice'],
+                alternateDescription: "The bookshelf still holds that romance novel, 'Justice for My Love'.",
                  onExamine: {
                    default: { 
-                        message: "A small bookshelf filled with used paperbacks. You scan the titles: 'The Art of the Deal', 'A Brief History of Time', 'How to Win Friends and Influence People', and a romance novel titled 'Justice for My Love'. The word 'Justice' rings a bell..." ,
+                        message: "A small bookshelf filled with used paperbacks. You can see the titles: 'The Art of the Deal', 'A Brief History of Time', and a romance novel called 'Justice for My Love'." ,
                         actions: [
                             { type: 'SET_FLAG', flag: 'has_seen_justice_book' as Flag }
                         ]
                     },
-                   alternate: { message: "The bookshelf still has that romance novel, 'Justice for My Love'. That seems important."}
+                   alternate: { message: "The bookshelf still has that romance novel, 'Justice for My Love'."}
                 },
                 onFailure: {
                     default: "It's just a bookshelf. Let's not get sidetracked.",
                     take: "You can't take the whole bookshelf, Burt.",
-                    "take book": "That book seems important, but you can't take it. Maybe the title is the clue.",
                     move: "It's too heavy to move by yourself."
                 },
                 image: {
@@ -212,8 +210,8 @@ export const game: Game = {
                 id: 'obj_painting' as GameObjectId,
                 name: 'Painting on the wall',
                 description: "A colorful abstract painting.",
-                alternateDescription: "It's the same abstract painting signed 'S.B.'.",
                 items: [],
+                alternateDescription: "It's the same abstract painting signed 'S.B.'.",
                 onExamine: {
                    default: { message: "An abstract painting hangs on the wall, its swirls of color adding a touch of modern art to the cafe's cozy atmosphere. It seems to be signed 'S.B.'" },
                    alternate: { message: "It's the same abstract painting signed 'S.B.'." }
@@ -247,17 +245,59 @@ export const game: Game = {
                     hint: 'business card'
                 }
             },
-             'newspaper_article': {
-                id: 'newspaper_article' as ItemId,
+            'item_newspaper_article': {
+                id: 'item_newspaper_article' as ItemId,
                 name: 'Newspaper Article',
-                description: 'A newspaper article about Silas Bloom.',
+                description: 'A folded newspaper article from the 1940s. The headline is about a local musician, Silas Bloom.',
                 isTakable: false,
+                onRead: {
+                    message: 'You read the article.',
+                    actions: [
+                        { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'A newspaper article about Silas Bloom.', messageType: 'article', imageId: 'item_newspaper_article' },
+                        { type: 'SHOW_MESSAGE', sender: 'agent', content: "Wait a second, Burt... the article mentions an Agent Macklin. That can't be a coincidence. Is he related to you? This could be about your own family." },
+                        { type: 'SET_FLAG', flag: 'notebook_article_read' as Flag },
+                        { type: 'SET_FLAG', flag: 'notebook_interaction_complete' as Flag }
+                    ]
+                },
                 image: {
                     url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759241463/Screenshot_2025-09-30_at_15.51.35_gyj3d5.png',
                     description: 'A newspaper article about Silas Bloom.',
                     hint: 'newspaper article'
                 }
-            }
+            },
+            'item_data_chip': {
+                id: 'item_data_chip' as ItemId,
+                name: 'Data Chip',
+                description: 'A small, modern data chip, looking strangely out of place in the old notebook.',
+                isTakable: false,
+                onUse: {
+                    message: "You insert the data chip into your phone.",
+                    actions: [
+                        { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759241547/0930_eit8he.mov', messageType: 'video'},
+                        { type: 'SHOW_MESSAGE', sender: 'agent', content: "Silas Bloom... I've never heard that name before. He seemed like a talented musician. And that song for Rose... sounds like they were deeply in love." },
+                        { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'Beside the data chip, you see a folded newspaper article.' },
+                        { type: 'SET_FLAG', flag: 'notebook_video_watched' as Flag }
+                    ]
+                }
+            },
+             'item_book_deal': {
+                id: 'item_book_deal' as ItemId,
+                name: 'The Art of the Deal',
+                description: 'A book about business.',
+                isTakable: false,
+            },
+            'item_book_time': {
+                id: 'item_book_time' as ItemId,
+                name: 'A Brief History of Time',
+                description: 'A book about physics.',
+                isTakable: false,
+            },
+            'item_book_justice': {
+                id: 'item_book_justice' as ItemId,
+                name: 'Justice for My Love',
+                description: 'A romance novel.',
+                isTakable: false,
+            },
         },
         npcs: {
             'npc_barista': {

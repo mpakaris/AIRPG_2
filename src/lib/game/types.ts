@@ -52,7 +52,8 @@ export type Story = {
 
 export type GameObjectState = {
   isLocked?: boolean;
-  items?: ItemId[];
+  isOpen?: boolean; // Added for containers
+  items: ItemId[];
   currentInteractionStateId?: string;
 };
 
@@ -93,14 +94,10 @@ export type Item = {
       failMessage: string;
       successActions?: Action[];
   }
+  onUse?: InteractionResult; // For using items directly
+  onRead?: InteractionResult; // For reading items directly
 };
 
-export type GameObjectContent = {
-    id: string;
-    name: string;
-    type: 'video' | 'article';
-    url: string;
-};
 
 export type ObjectInteractionState = {
     id: string;
@@ -112,7 +109,7 @@ export type GameObject = {
   id: GameObjectId;
   name:string;
   description: string; // General description
-  items: ItemId[];
+  items: ItemId[]; // Defines the items it contains by default
   
   onExamine?: {
       default?: InteractionResult;
@@ -225,5 +222,3 @@ export type Game = {
   objectInteractionPromptContext?: string;
   storyStyleGuide?: string;
 };
-
-

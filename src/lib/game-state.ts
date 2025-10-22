@@ -1,4 +1,4 @@
-import type { Game, PlayerState, Chapter, ChapterId } from './game/types';
+import type { Game, PlayerState, Chapter, ChapterId, GameObjectId } from './game/types';
 
 export function getInitialState(game: Game): PlayerState {
   const chapterKeys = Object.keys(game.chapters);
@@ -21,10 +21,11 @@ export function getInitialState(game: Game): PlayerState {
       const chapter = game.chapters[chapterId as ChapterId];
       if (chapter && chapter.gameObjects) {
         for (const gameObjectId in chapter.gameObjects) {
-            const gameObject = chapter.gameObjects[gameObjectId as keyof typeof chapter.gameObjects];
+            const gameObject = chapter.gameObjects[gameObjectId as GameObjectId];
              initialObjectStates[gameObject.id] = {
                  isLocked: typeof gameObject.isLocked === 'boolean' ? gameObject.isLocked : false,
-                 items: gameObject.items || [],
+                 isOpen: typeof gameObject.isOpenable === 'boolean' ? !gameObject.isLocked : false, // Default to open if not lockable
+                 items: gameObject.items ? [...gameObject.items] : [], // Correctly copy initial items
              };
         }
       }
