@@ -1,7 +1,64 @@
-import type { Action, Game, Message, PlayerState } from '../types';
-import { createMessage } from '@/app/actions';
+import type { Action, Game, GameObjectId, ImageDetails, ItemId, Message, NpcId, PlayerState, TokenUsage } from '../types';
+import { getLiveGameObject } from './helpers';
 
 const examinedObjectFlag = (id: string) => `examined_${id}`;
+
+export function createMessage(
+  sender: Message['sender'],
+  senderName: string,
+  content: string,
+  type: Message['type'] = 'text',
+  imageDetails?: { id: ItemId | NpcId | GameObjectId, game: Game, state: PlayerState, showEvenIfExamined?: boolean },
+  usage?: TokenUsage
+): Message {
+    let image: ImageDetails | undefined;
+    
+    if (imageDetails) {
+        const { id, game, state, showEvenIfExamined } = imageDetails;
+        const chapter = game.chapters[state.currentChapterId];
+        const isAlreadyExamined = state.flags.includes(examinedObjectFlag(id as string));
+        
+        let shouldShowImage = true;
+        
+        if (showEvenIfExamined !== true) {
+            if (isAlreadyExamined) {
+                shouldShowImage = false;
+            }
+        }
+
+        if (shouldShowImage) {
+            const item = chapter.items[id as ItemId];
+            const npc = chapter.npcs[id as NpcId];
+            const gameObject = chapter.gameObjects[id as GameObjectId];
+            
+            // This is the new standardized schema
+            if (gameObject?.media?.images) {
+                const liveObject = getLiveGameObject(gameObject.id, state, game);
+                if (liveObject && liveObject.state.isLocked === false && gameObject.media.images.unlocked) {
+                    image = gameObject.media.images.unlocked;
+                } else {
+                    image = gameObject.media.images.default;
+                }
+            } else if (item?.media?.image) {
+                image = item.media.image;
+            } else if (npc?.image) {
+                image = npc.image;
+            }
+        }
+    }
+
+
+  return {
+    id: crypto.randomUUID(),
+    sender,
+    senderName,
+    content,
+    type,
+    image,
+    timestamp: Date.now(),
+    usage,
+  };
+}
 
 export function processActions(initialState: PlayerState, actions: Action[], game: Game): { newState: PlayerState, messages: Message[] } {
     let newState = { ...initialState, flags: [...initialState.flags], objectStates: {...initialState.objectStates} };
@@ -32,8 +89,8 @@ export function processActions(initialState: PlayerState, actions: Action[], gam
                 );
                 messages.push(message);
 
-                 if (messageImageId && !newState.flags.includes(examinedObjectFlag(messageImageId))) {
-                     newState.flags.push(examinedObjectFlag(messageImageId));
+                 if (messageImageId && !newState.flags.includes(examinedObjectFlag(messageImageId as string))) {
+                     newState.flags.push(examinedObjectFlag(messageImageId as string));
                  }
                 break;
             case 'END_CONVERSATION':

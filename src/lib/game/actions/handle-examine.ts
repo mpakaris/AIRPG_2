@@ -1,6 +1,7 @@
-import { CommandResult, createMessage } from "@/app/actions";
+import { CommandResult } from "@/app/actions";
 import type { Game, PlayerState } from "../types";
 import { findItemInContext, getLiveGameObject } from "./helpers";
+import { createMessage } from "./process-actions";
 
 const examinedObjectFlag = (id: string) => `examined_${id}`;
 

@@ -1,7 +1,7 @@
 import { generateNpcChatter, selectNpcResponse } from "@/ai";
-import { CommandResult, createMessage } from "@/app/actions";
+import { CommandResult } from "@/app/actions";
 import type { Game, NPC, PlayerState } from "../types";
-import { processActions } from "./process-actions";
+import { createMessage, processActions } from "./process-actions";
 
 const CONVERSATION_END_KEYWORDS = ['goodbye', 'bye', 'leave', 'stop', 'end', 'exit', 'thank you and goodbye'];
 

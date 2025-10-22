@@ -1,7 +1,7 @@
-import { CommandResult, createMessage } from "@/app/actions";
+import { CommandResult } from "@/app/actions";
 import type { Game, PlayerState } from "../types";
 import { findItemInContext, getLiveGameObject } from "./helpers";
-import { processActions } from "./process-actions";
+import { createMessage, processActions } from "./process-actions";
 
 export async function handleUse(state: PlayerState, itemName: string, objectName: string, game: Game): Promise<CommandResult> {
   const chapter = game.chapters[state.currentChapterId];

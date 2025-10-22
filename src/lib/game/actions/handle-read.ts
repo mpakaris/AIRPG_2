@@ -1,7 +1,7 @@
-import { CommandResult, createMessage } from "@/app/actions";
+import { CommandResult } from "@/app/actions";
 import type { Game, PlayerState } from "../types";
 import { findItemInContext } from "./helpers";
-import { processActions } from "./process-actions";
+import { createMessage, processActions } from "./process-actions";
 
 export async function handleRead(state: PlayerState, itemName: string, game: Game): Promise<CommandResult> {
     const narratorName = game.narratorName || "Narrator";

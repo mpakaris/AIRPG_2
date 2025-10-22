@@ -13,7 +13,7 @@ import { initializeFirebase } from '@/firebase';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { getInitialState } from '@/lib/game-state';
 import { dispatchMessage } from '@/lib/whinself-service';
-import { processActions } from '@/lib/game/actions/process-actions';
+import { createMessage, processActions } from '@/lib/game/actions/process-actions';
 import { getLiveGameObject } from '@/lib/game/actions/helpers';
 import { handleConversation } from '@/lib/game/actions/handle-conversation';
 import { handleExamine } from '@/lib/game/actions/handle-examine';
@@ -30,63 +30,6 @@ import { processPassword } from '@/lib/game/actions/process-password';
 // --- Utility Functions ---
 const examinedObjectFlag = (id: GameObjectId | ItemId | NpcId) => `examined_${id}` as Flag;
 const chapterCompletionFlag = (chapterId: ChapterId) => `chapter_${chapterId}_complete` as Flag;
-
-export function createMessage(
-  sender: Message['sender'],
-  senderName: string,
-  content: string,
-  type: Message['type'] = 'text',
-  imageDetails?: { id: ItemId | NpcId | GameObjectId, game: Game, state: PlayerState, showEvenIfExamined?: boolean },
-  usage?: TokenUsage
-): Message {
-    let image: ImageDetails | undefined;
-    
-    if (imageDetails) {
-        const { id, game, state, showEvenIfExamined } = imageDetails;
-        const chapter = game.chapters[state.currentChapterId];
-        const isAlreadyExamined = state.flags.includes(examinedObjectFlag(id));
-        
-        let shouldShowImage = true;
-        
-        if (showEvenIfExamined !== true) {
-            if (isAlreadyExamined) {
-                shouldShowImage = false;
-            }
-        }
-
-        if (shouldShowImage) {
-            const item = chapter.items[id as ItemId];
-            const npc = chapter.npcs[id as NpcId];
-            const gameObject = chapter.gameObjects[id as GameObjectId];
-            
-            // This is the new standardized schema
-            if (gameObject?.media?.images) {
-                const liveObject = getLiveGameObject(gameObject.id, state, game);
-                if (liveObject && liveObject.state.isLocked === false && gameObject.media.images.unlocked) {
-                    image = gameObject.media.images.unlocked;
-                } else {
-                    image = gameObject.media.images.default;
-                }
-            } else if (item?.media?.image) {
-                image = item.media.image;
-            } else if (npc?.image) {
-                image = npc.image;
-            }
-        }
-    }
-
-
-  return {
-    id: crypto.randomUUID(),
-    sender,
-    senderName,
-    content,
-    type,
-    image,
-    timestamp: Date.now(),
-    usage,
-  };
-}
 
 export type CommandResult = {
   newState: PlayerState | null;
