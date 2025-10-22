@@ -76,6 +76,7 @@ Defines a direct input puzzle. Requires `capabilities.inputtable` to be `true`.
 | :--- | :--- | :--- |
 | `type` | `string` | `code`, `phrase`, `pattern`, `sequence`. |
 | `validation`| `string` | The correct answer or a regex pattern for validation. |
+| `puzzleUrl` | `string` | (Optional) An external URL for a mini-game or interactive hint. |
 | `attempts` | `number` | (Optional) Max number of failed attempts. `null` for infinite. |
 | `lockout` | `number` | (Optional) Duration of lockout after max attempts are reached. |
 
@@ -99,7 +100,7 @@ Most handlers follow this shape:
 *   `onExamine`: Player looks at the object.
 *   `onSearch`: A more thorough version of `onExamine`.
 *   `onOpen` / `onClose`: Player opens/closes the object.
-*   `onUnlock`: Player attempts to unlock the object (typically via `onUse` with a key).
+*   `onUnlock`: Player attempts to unlock the object (typically via `onUse` with a key or `onInput`).
 *   `onInput`: Player enters a code/phrase into an `inputtable` object.
 *   `onUse`: An array defining how the object reacts to another item being used on it (e.g., using a key on a lock).
 *   `onInsert` / `onRemove`: Player puts an item into or takes an item from a `container`.
@@ -118,6 +119,3 @@ Provides default messages for common verbs if a specific handler is not defined 
 | `locked` | `string` | Message for trying to `open` a `lockable` object that is locked. |
 | `notMovable` | `string` | Message for trying to `move` an object where `movable: false`. |
 | `noEffect` | `string` | Message for `use` when the item has no special interaction. |
-
-
-```
