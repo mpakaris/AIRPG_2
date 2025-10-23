@@ -1,5 +1,4 @@
 
-
 import { CommandResult } from "@/app/actions";
 import type { Game, ItemId, PlayerState } from "../types";
 import { findItemInContext, getLiveGameObject } from "./helpers";
@@ -42,14 +41,14 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
     // If no GameObject found, try to find another Item in context (inventory, open containers)
     const targetItem = findItemInContext(state, game, normalizedTargetName);
     if(targetItem) {
-        // This is an item-on-item use case
+        // This is an item-on-item use case. We check the TARGET item's handlers to see how it reacts.
         const useHandlers = targetItem.handlers?.onUse;
         if(Array.isArray(useHandlers)) {
-            const specificHandler = useHandlers.find(h => h.itemId === itemToUse.id);
+            const specificHandler = useHandlers.find(h => 'itemId' in h && h.itemId === itemToUse.id);
             if(specificHandler) {
-                const { success, fail } = specificHandler;
+                const { success, fail, conditions } = specificHandler;
                  // Check conditions if they exist
-                const conditionsMet = (specificHandler.conditions || []).every(cond => {
+                const conditionsMet = (conditions || []).every(cond => {
                     if (cond.type === 'HAS_FLAG') return state.flags.includes(cond.targetId as any);
                     // Add more condition checks here if needed
                     return true;
