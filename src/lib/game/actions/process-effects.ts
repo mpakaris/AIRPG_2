@@ -78,18 +78,18 @@ export function processEffects(initialState: PlayerState, effects: Effect[], gam
                 break;
             case 'SPAWN_ITEM':
                  // When an item spawns from a broken object, it should be placed inside that object's inventory.
-                 // We find the object that was just broken (the vase) and add the key to it.
-                const brokenVaseId = 'obj_ming_vase' as GameObjectId;
-                const brokenVaseState = newState.objectStates[brokenVaseId];
-                if (brokenVaseState) {
-                    if (!brokenVaseState.items) {
-                        brokenVaseState.items = [];
+                 // We find the object that was just broken (the coffee machine) and add the key to it.
+                const brokenMachineId = 'obj_coffee_machine' as GameObjectId;
+                const brokenMachineState = newState.objectStates[brokenMachineId];
+                if (brokenMachineState) {
+                    if (!brokenMachineState.items) {
+                        brokenMachineState.items = [];
                     }
-                    if (!brokenVaseState.items.includes(effect.itemId)) {
-                        brokenVaseState.items.push(effect.itemId);
+                    if (!brokenMachineState.items.includes(effect.itemId)) {
+                        brokenMachineState.items.push(effect.itemId);
                     }
                     // Ensure the broken container is "open" so its contents can be seen/taken.
-                    brokenVaseState.isOpen = true; 
+                    brokenMachineState.isOpen = true; 
                 }
                 break;
             case 'SET_FLAG':

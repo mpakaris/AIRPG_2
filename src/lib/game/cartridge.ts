@@ -177,58 +177,58 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         design: { authorNotes: "Contains the 'S.B.' clue for Silas Bloom and now a hidden note." },
         version: { schema: "1.0", content: "1.1" }
     },
-    'obj_ming_vase': {
-        id: 'obj_ming_vase' as GameObjectId,
-        name: 'Ming Vase',
-        archetype: 'Prop',
-        description: "A Vase from the ming dynasty. Looks like a cheap copy from the chinese market though. Closer look reveals that there may be some item inside. Possibly, that there is a way to get closer to it.",
-        capabilities: { openable: false, lockable: false, breakable: true, movable: true, powerable: false, container: true, readable: false, inputtable: false },
+    'obj_coffee_machine': {
+        id: 'obj_coffee_machine' as GameObjectId,
+        name: 'Coffee Machine',
+        archetype: 'Device',
+        description: "It's a high-end Italian model, very expensive but totally worth it. The coffee tastes amazing and the milk foam is as soft as clouds. A small compartment seems loose.",
+        capabilities: { openable: false, lockable: false, breakable: true, movable: false, powerable: false, container: true, readable: false, inputtable: false },
         state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
         inventory: { items: ['item_deposit_key'] as ItemId[], capacity: 1 },
         media: {
             images: {
-                default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761211151/coffee_machine_detail_frexuu.png', description: 'A cheap-looking Ming vase.', hint: 'vase ming' },
-                broken: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761211151/coffee_machine_detail_broken_slkpfd.png', description: 'The shattered remains of a vase.', hint: 'broken vase' }
+                default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761211151/coffee_machine_detail_frexuu.png', description: 'A high-end Italian coffee machine.', hint: 'coffee machine' },
+                broken: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761211151/coffee_machine_detail_broken_slkpfd.png', description: 'The shattered remains of the coffee machine\'s side panel.', hint: 'broken machine' }
             }
         },
         handlers: {
             onExamine: {
-                success: { message: "It's a cheap Ming dynasty vase replica. Something inside shifts when you move it, but the opening is too narrow to reach into." },
+                success: { message: "It's a high-end Italian coffee machine. The barista polishes it lovingly. A small service compartment on the side seems to be stuck." },
                 fail: { message: "" }
             },
             onMove: {
-                success: { message: "You carefully move the vase. It's heavy and something rattles inside. You don't want to drop it." },
+                success: { message: "The machine is bolted to the counter and far too heavy to move." },
                 fail: { message: "" }
             },
             onUse: [
                 {
                     itemId: 'item_heavy_stone' as ItemId,
-                    conditions: [{ type: 'NO_FLAG', targetId: 'vase_is_broken' as Flag }],
+                    conditions: [{ type: 'NO_FLAG', targetId: 'machine_is_broken' as Flag }],
                     success: {
-                        message: "With a sharp crack, the heavy stone shatters the vase. A small, ornate key is revealed among the broken pieces.",
+                        message: "With a sharp crack, the heavy stone shatters the side panel of the coffee machine. A small, ornate key falls out from the broken compartment.",
                         effects: [
-                            { type: 'SET_FLAG', flag: 'vase_is_broken' as Flag },
-                            { type: 'SET_OBJECT_STATE', objectId: 'obj_ming_vase', state: { isBroken: true, currentStateId: 'broken' } },
+                            { type: 'SET_FLAG', flag: 'machine_is_broken' as Flag },
+                            { type: 'SET_OBJECT_STATE', objectId: 'obj_coffee_machine', state: { isBroken: true, currentStateId: 'broken' } },
                             { type: 'SPAWN_ITEM', itemId: 'item_deposit_key' as ItemId, locationId: 'loc_cafe_interior' as LocationId },
-                            { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'The vase is now shattered.', imageId: 'obj_ming_vase' }
+                            { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'The side of the coffee machine is now smashed.', imageId: 'obj_coffee_machine' }
                         ]
                     },
-                    fail: { message: "The vase is already broken." }
+                    fail: { message: "The side panel is already broken." }
                 }
             ]
         },
         stateMap: {
             default: {
-                description: "It's a cheap Ming dynasty vase replica. Something inside shifts when you move it, but the opening is too narrow to reach into."
+                description: "It's a high-end Italian coffee machine. A small service compartment on the side seems to be stuck."
             },
             broken: {
-                description: "The vase is broken. Amidst the shards, you see a small key."
+                description: "The side panel of the coffee machine is smashed. Amidst the broken plastic, you can see where the key was hidden."
             }
         },
         fallbackMessages: { 
-            default: "That doesn't seem to work on the vase.",
-            notOpenable: "You can't open it. The neck is too narrow.",
-            noEffect: "Using that on the vase has no effect."
+            default: "That doesn't seem to work on the coffee machine.",
+            notOpenable: "You can't open it. The compartment is jammed shut.",
+            noEffect: "Using that on the coffee machine has no effect."
         },
         design: { authorNotes: "Breakable object containing the deposit key." },
         version: { schema: "1.0", content: "1.0" }
@@ -244,8 +244,12 @@ const items: Record<ItemId, Item> = {
         capabilities: { isTakable: false, isReadable: true, isUsable: true, isCombinable: true, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: true },
         handlers: {
             onUse: {
-                success: { message: "You pull out your phone. The camera, messaging, and analysis apps are ready." },
-                fail: { message: "" }
+                success: {
+                    message: "You pull out your phone. The camera, messaging, and analysis apps are ready."
+                },
+                fail: {
+                    message: ""
+                }
             },
             defaultFailMessage: "You can't use the phone like that."
         },
@@ -261,7 +265,7 @@ const items: Record<ItemId, Item> = {
         handlers: {
             defaultFailMessage: "You can't use the stone on its own."
         },
-        design: { authorNotes: "Tool for breaking objects like the vase." },
+        design: { authorNotes: "Tool for breaking objects like the coffee machine." },
         version: { schema: "1.0", content: "1.0" }
     },
     'item_deposit_key': {
@@ -281,7 +285,7 @@ const items: Record<ItemId, Item> = {
             },
             defaultFailMessage: "You need to use this key on a lock."
         },
-        design: { authorNotes: "Clue item found inside the broken vase." },
+        design: { authorNotes: "Clue item found inside the broken coffee machine." },
         version: { schema: "1.0", content: "1.0" }
     },
     'item_business_card': {
@@ -576,7 +580,7 @@ const locations: Record<LocationId, Location> = {
         sceneDescription: 'You are inside The Daily Grind. \n\nIt\'s a bustling downtown cafe, smelling of coffee and rain. A puddle of rainwater is near the door, and a discarded magazine lies on an empty table.',
         sceneImage: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761156561/bustling_cafe_bluwgq.jpg', description: 'A view of the bustling cafe interior.', hint: 'bustling cafe' },
         coord: { x: 1, y: 1, z: 0 },
-        objects: ['obj_brown_notebook', 'obj_chalkboard_menu', 'obj_magazine', 'obj_bookshelf', 'obj_painting', 'obj_ming_vase'] as GameObjectId[],
+        objects: ['obj_brown_notebook', 'obj_chalkboard_menu', 'obj_magazine', 'obj_bookshelf', 'obj_painting', 'obj_coffee_machine'] as GameObjectId[],
         npcs: ['npc_barista', 'npc_manager'] as NpcId[],
         entryPortals: ['portal_street_to_cafe' as PortalId],
         exitPortals: ['portal_cafe_to_street' as PortalId]
@@ -702,8 +706,8 @@ export const game: Game = {
     *   Player says: "use sd card" -> Your command should be: \`use "SD Card"\`
 8.  **Physical Interaction:** Map gentle physical interactions like "touch", "feel", or "put hand in" to the 'examine' command.
 9.  **Breaking Things:** If Burt tries to break something with his hands (e.g., "hit vase with fist"), you must guide him to use a tool.
-    *   Player says: "punch the vase" -> Your response: \`{"agentResponse": "Easy there, Burt. Your fist isn't going to cut it. We'll need a tool if we want to break this.", "commandToExecute": "invalid"}\`
-    *   Player says: "hit vase with stone" -> Your response: \`{"agentResponse": "Good thinking, Burt. Let's see if this works.", "commandToExecute": "use \\"Heavy Stone\\" on \\"Ming Vase\\""}\`
+    *   Player says: "punch the coffee machine" -> Your response: \`{"agentResponse": "Easy there, Burt. Your fist isn't going to cut it. We'll need a tool if we want to break this.", "commandToExecute": "invalid"}\`
+    *   Player says: "hit coffee machine with stone" -> Your response: \`{"agentResponse": "Good thinking, Burt. Let's see if this works.", "commandToExecute": "use \\"Heavy Stone\\" on \\"Coffee Machine\\""}\`
 
 **Your Task Flow:**
 1.  Analyze Burt's input to understand his intent.
