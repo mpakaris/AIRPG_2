@@ -58,5 +58,3 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
     // If no specific handler or success block is found, use the item's description as the default content.
     return { newState: state, messages: [createMessage('narrator', narratorName, itemToRead.description)] };
 }
-
-    

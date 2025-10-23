@@ -56,5 +56,3 @@ export function handleTake(state: PlayerState, targetName: string, game: Game): 
   
   return { newState: state, messages: [createMessage('system', 'System', `You can't take that.`)] };
 }
-
-    

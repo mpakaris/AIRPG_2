@@ -188,11 +188,11 @@ const items: Record<ItemId, Item> = {
         capabilities: { isTakable: true, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         handlers: {
             onTake: {
-                success: { message: "You pick up the business card." },
+                success: { message: "You pick up the business card.", effects: [] },
                 fail: { message: "You can't take that right now." }
             },
             onRead: {
-                success: { message: 'The card reads: "S A X O - The World\'s Best Sax Player". A phone number is listed, along with a handwritten number "1943" and the name "ROSE".'},
+                success: { message: 'The card reads: "S A X O - The World\'s Best Sax Player". A phone number is listed, along with a handwritten number "1943" and the name "ROSE".', effects: [] },
                 fail: { message: "You can't read that now."}
             }
         },
@@ -215,7 +215,7 @@ const items: Record<ItemId, Item> = {
         capabilities: { isTakable: true, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         handlers: {
             onTake: {
-                success: { message: 'You take the Newspaper Article. You can "read Article" to find out what it is about.' },
+                success: { message: 'You take the Newspaper Article. You can "read Article" to find out what it is about.', effects: [] },
                 fail: { message: "You can't take that right now." }
             },
             onRead: {
@@ -250,11 +250,11 @@ const items: Record<ItemId, Item> = {
         capabilities: { isTakable: true, isReadable: true, isUsable: true, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         handlers: {
             onTake: {
-                success: { message: 'You take the SD Card. You can "use SD Card" to check what is hidden on it.' },
+                success: { message: 'You take the SD Card. You can "use SD Card" to check what is hidden on it.', effects: [] },
                 fail: { message: "You can't take that right now." }
             },
             onRead: {
-                success: { message: "It's a standard SD card. You'll need to 'use' it with your phone to see what's on it." },
+                success: { message: "It's a standard SD card. You'll need to 'use' it with your phone to see what's on it.", effects: [] },
                 fail: { message: "" }
             },
             onUse: {
@@ -282,9 +282,12 @@ const items: Record<ItemId, Item> = {
         alternateDescription: 'Still a book about business.',
         capabilities: { isTakable: false, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         state: { readCount: 0, currentStateId: 'default' },
-        handlers: {
-            onTake: { success: {}, fail: { message: "You can't take that book." } },
-            onRead: { success: { message: "It seems to be a ghost-written book about a real estate magnate. Not relevant to the case." }, fail: {} }
+        handlers: { onTake: { success: {}, fail: { message: "You can't take that book." } }, onRead: {} },
+        stateMap: {
+            'default': { overrides: { onRead: {
+                success: { message: "It seems to be a ghost-written book about a real estate magnate. Not relevant to the case.", effects: [] },
+                fail: { message: "" }
+            }}}
         },
         design: { tags: ['book', 'distraction'] },
         version: { schema: "1.0", content: "1.1" }
@@ -297,9 +300,12 @@ const items: Record<ItemId, Item> = {
         alternateDescription: 'Still a book about physics.',
         capabilities: { isTakable: false, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         state: { readCount: 0, currentStateId: 'default' },
-        handlers: {
-            onTake: { success: {}, fail: { message: "You can't take that book." } },
-            onRead: { success: { message: "Complex theories about spacetime. Unlikely to help you solve a murder." }, fail: {} }
+        handlers: { onTake: { success: {}, fail: { message: "You can't take that book." } }, onRead: {} },
+        stateMap: {
+            'default': { overrides: { onRead: {
+                success: { message: "Complex theories about spacetime. Unlikely to help you solve a murder.", effects: [] },
+                fail: { message: "" }
+            }}}
         },
         design: { tags: ['book', 'distraction'] },
         version: { schema: "1.0", content: "1.1" }
@@ -312,22 +318,12 @@ const items: Record<ItemId, Item> = {
         alternateDescription: "The cover is cheesy, but the title 'Justice for My Love' continues to stand out.",
         capabilities: { isTakable: false, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         state: { readCount: 0, currentStateId: 'default' },
-        handlers: {
-            onTake: { success: {}, fail: { message: "You can't take that book." } },
-            onRead: { success: {}, fail: {} }
-        },
+        handlers: { onTake: { success: {}, fail: { message: "You can't take that book." } }, onRead: {} },
         stateMap: {
-            'default': {
-                overrides: {
-                    onRead: {
-                        success: { 
-                            message: "Against your better judgment, you read a page. 'His voice was like smooth jazz on a rainy night, but his eyes held a storm. She knew then that he would get justice for her, or die trying.'", 
-                            effects: [] 
-                        },
-                        fail: { message: "" }
-                    }
-                }
-            }
+            'default': { overrides: { onRead: {
+                success: { message: "Against your better judgment, you read a page. 'His voice was like smooth jazz on a rainy night, but his eyes held a storm. She knew then that he would get justice for her, or die trying.'", effects: [] },
+                fail: { message: "" }
+            }}}
         },
         design: { tags: ['book', 'clue'] },
         version: { schema: "1.0", content: "1.1" }
@@ -340,8 +336,8 @@ const items: Record<ItemId, Item> = {
         alternateDescription: 'The note still reads: "He knows. Find the flower with a broken heart."',
         capabilities: { isTakable: true, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         handlers: {
-            onTake: { success: { message: "You take the hidden note." }, fail: { message: "" } },
-            onRead: { success: { message: 'The note reads: "He knows. Find the flower with a broken heart."' }, fail: { message: "" } }
+            onTake: { success: { message: "You take the hidden note.", effects: [] }, fail: { message: "" } },
+            onRead: { success: { message: 'The note reads: "He knows. Find the flower with a broken heart."', effects: [] }, fail: { message: "" } }
         },
         design: { tags: ['clue', 'note'] },
         version: { schema: "1.0", content: "1.0" }
@@ -629,5 +625,3 @@ export const game: Game = {
   chapters: chapters,
   startChapterId: 'ch1-the-cafe' as ChapterId,
 };
-
-    
