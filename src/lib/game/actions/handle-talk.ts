@@ -18,7 +18,7 @@ export async function handleTalk(state: PlayerState, npcName: string, game: Game
         let newState = { ...state, activeConversationWith: npc.id, interactingWithObject: null };
         let messages: any[] = [];
         
-        const startEffects = npc.startConversationActions || [];
+        const startEffects = npc.startConversationEffects || [];
         const effectResult = processEffects(newState, startEffects, game);
         newState = effectResult.newState!;
         messages.push(...effectResult.messages);
@@ -46,5 +46,5 @@ export async function handleTalk(state: PlayerState, npcName: string, game: Game
         return { newState, messages };
     }
     
-    return { newState: state, messages: [createMessage('system', 'System', `There is no one called "${normalizedNpcName}" here.`)] };
+    return { newState: state, messages: [createMessage('narrator', 'Narrator', `There is no one called "${normalizedNpcName}" here.`)] };
 }

@@ -1,4 +1,5 @@
 
+
 import { CommandResult } from "@/app/actions";
 import type { Game, PlayerState } from "../types";
 import { findItemInContext, getLiveGameObject } from "./helpers";
@@ -8,7 +9,7 @@ import { handleRead } from "./handle-read";
 
 export async function handleOpen(state: PlayerState, targetName: string, game: Game): Promise<CommandResult> {
     const location = game.locations[state.currentLocationId];
-    const narratorName = game.narratorName || "Narrator";
+    const narratorName = "Narrator";
     const normalizedTargetName = normalizeName(targetName);
 
     // First, try to find a GameObject with that name
@@ -49,8 +50,7 @@ export async function handleOpen(state: PlayerState, targetName: string, game: G
             
             let result = processEffects(state, effectsToProcess, game);
             
-            const hasMessageEffect = effectsToProcess.some(a => a.type === 'SHOW_MESSAGE');
-            if (!hasMessageEffect && successBlock.message) {
+            if (successBlock.message) {
                 result.messages.unshift(createMessage('narrator', narratorName, successBlock.message));
             }
             
@@ -77,4 +77,3 @@ export async function handleOpen(state: PlayerState, targetName: string, game: G
     // If neither an object nor an item was found
     return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${normalizedTargetName}" to open.`)] };
 }
-

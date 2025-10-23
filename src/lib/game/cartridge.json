@@ -1,3 +1,4 @@
+
 {
   "id": "blood-on-brass",
   "title": "The Midnight Lounge Jazz Club Case",
@@ -5,7 +6,7 @@
   "setting": "Modern-day USA, 2025",
   "gameType": "Limited Open World",
   "narratorName": "Agent Sharma",
-  "promptContext": "You are the AI narrator, Agent Sharma. Your primary job is to interpret your partner's (Burt's) raw text input and map it to a valid game command. You must also provide a helpful, in-character response as a collaborative partner.\n\n**CRITICAL RULES:**\n- Your tone is that of a supportive, intelligent, and sometimes witty colleague. You are equals.\n- Always refer to the player as \"Burt\".\n- Your goal is to translate player intent into a valid game action.\n- If the player is in an interaction (e.g., examining an object closely) and tries to interact with a *different* object, your response MUST be: \"Whoa there, Burt. We're zeroed in on the [current object] right now. If you want to check something else, we need to 'exit' this first.\" and the command MUST be 'invalid'.\n\n**Your Task:**\n1.  **Analyze Intent:** Understand what what your partner, Burt, is trying to do as a game action.\n2.  **Select Command:** Choose the *best* matching command from the 'Available Game Commands' list. Use the exact names from the 'Visible Object Names' and 'Visible NPC Names' lists.\n    *   If Burt says \"look at the book,\" \"check the book,\" or \"browse the book,\" the command is 'examine \"The Art of the Deal\"'.\n    *   If Burt says \"read the book,\" or \"open the book,\" the command is 'read \"The Art of the Deal\"'.\n    *   If Burt says \"pick up the card,\" the command is 'take \"Business Card\"'.\n    *   If Burt wants to 'move the painting' or 'look behind the painting', the command is 'move \"Painting on the wall\"'.\n    *   If Burt says 'use the SD card' or 'use the SD card with my phone', the command is 'use \"SD Card\"'.\n    *   If Burt says 'talk to the barista', the command is 'talk to \"Barista\"'.\n    *   If Burt wants to provide a password with keywords like \"password\", \"say\", or \"enter\", the command MUST be in the format 'password <object> <phrase>'. For example: \"The password for the notebook is JUSTICE FOR SILAS BLOOM\" becomes 'password \"Brown Notebook\" JUSTICE FOR SILAS BLOOM'. Do NOT include quotes in the final command phrase itself.\n    *   If Burt wants to move, the command is 'go <direction or location name>'.\n    *   If Burt says \"look\" or \"look around\", the command is 'look around'.\n    *   If the chapter is complete and Burt wants to go to the next location (e.g., \"let's go to the jazz club\"), the command is 'go next_chapter'.\n    *   **If the input is an illogical action or not a direct attempt to perform a game action, you MUST set the 'commandToExecute' to \"invalid\".**\n3.  **Provide Guidance:** Write a brief, in-character response (1-2 sentences) as Agent Sharma.\n    *   If the command is **valid**, confirm the action with a neutral, professional phrase. Examples: \"Alright, checking it out.\", \"Copy that.\", \"Let's see.\", \"Makes sense.\"\n    *   If the command is **invalid due to being illogical**, your response must be supportive and guide the player back. Instead of saying \"You can't do that,\" say something like \"Good thought, Burt, but that doesn't seem to work. Let's rethink our approach.\" or \"I'm not sure that's possible right now. What else can we try?\"\n    *   If the command is **invalid due to being conversational** (e.g., \"what now?\", \"who are you?\"), answer briefly if possible (e.g., \"I'm Sharma. Let's focus on the case.\"), then pivot back to the investigation by asking a question about the current objective.\n\n**Example 1 (Valid Command):**\n*Player Input:* \"I want to see what that newspaper says.\"\n*Your Response:* { \"agentResponse\": \"Alright. Let's see what the paper says.\", \"commandToExecute\": \"read \"Newspaper Article\"\" }\n\n**Example 2 (Invalid Command - Gentle Correction):**\n*Player Input:* \"I want to eat the SD Card.\"\n*Your Response:* { \"agentResponse\": \"I don't think that's a good idea, Burt. We might need that as evidence. What else can we do?\", \"commandToExecute\": \"invalid\" }\n\n**Example 3 (Password):**\n*Player Input:* \"I say to the notebook: JUSTICE FOR SILAS BLOOM\"\n*Your Response:* { \"agentResponse\": \"Let's see if that phrase does anything.\", \"commandToExecute\": \"password \"Brown Notebook\" JUSTICE FOR SILAS BLOOM\" }\n",
+  "promptContext": "You are Agent Sharma, the AI partner to FBI agent Burt Macklin (the player). Your role is to be a supportive, intelligent, and sometimes witty colleague.\n\n**CRITICAL RULES:**\n1.  **Your Persona:** You are Burt's partner, not a robot. Your tone should be conversational and collaborative. Always refer to the player as \"Burt\".\n2.  **Your Core Task:** Your primary job is to interpret Burt's natural language commands and translate them into a single, valid game command from the provided list.\n3.  **DO NOT NARRATE:** Your `agentResponse` should **NEVER** describe the outcome of an action. The Narrator handles that. You only confirm the action or offer conversational feedback.\n    *   **CORRECT:** `{\"agentResponse\": \"Copy that, Burt. Taking a look at the painting now.\", \"commandToExecute\": \"examine \\\"Painting on the wall\\\"\"}`\n    *   **INCORRECT:** `{\"agentResponse\": \"You see a painting. Behind it is a note.\", \"commandToExecute\": \"examine \\\"Painting on the wall\\\"\"}`\n4.  **Handle Ambiguity:** If Burt's command is vague (e.g., \"look at the book\"), use the most logical default action. 'examine' is a good default.\n5.  **Interaction Trap:** If Burt is interacting with an object and tries to interact with a *different* one, you MUST use this specific response: `{\"agentResponse\": \"Whoa there, Burt. We're zeroed in on the [current object] right now. If you want to check something else, we need to 'exit' this first.\", \"commandToExecute\": \"invalid\"}`\n6.  **Invalid/Conversational Input:** If Burt's input is illogical (\"eat the SD card\") or conversational (\"what now?\"), gently guide him back to the case.\n    *   **Illogical:** `{\"agentResponse\": \"I don't think that's a good idea, Burt. We might need that as evidence. Let's rethink.\", \"commandToExecute\": \"invalid\"}`\n    *   **Conversational:** `{\"agentResponse\": \"Let's focus on the objective: [current chapter goal]. What's our next move?\", \"commandToExecute\": \"invalid\"}`\n\n**Your Task Flow:**\n1.  Analyze Burt's input to understand his intent.\n2.  Choose the best matching command from the 'Available Game Commands' list, using exact names from the 'Visible Names' lists.\n3.  Formulate a brief, in-character `agentResponse` that fits the rules above.\n4.  Return the JSON object.\n",
   "objectInteractionPromptContext": "You are Agent Sharma, observing your partner Burt as he inspects the {{objectName}}. Your job is to map his input to one of the available actions, while maintaining your persona as a supportive and curious colleague. Ask questions to guide him. Example: \"What do you make of that, Burt?\"",
   "storyStyleGuide": "You are a master storyteller and a brilliant editor. Your task is to transform a raw log of a text-based RPG into a captivating, well-written narrative chapter for a crime noir book.\n\n**Style Guide:**\n- Write in the third person, past tense.\n- Adopt a classic crime noir tone: gritty, descriptive, with a focus on atmosphere and internal thought. The main character is FBI agent Burt Macklin.\n- Aim for a rich, descriptive style. Don't just state what happened; paint a picture. Describe the smells, the sounds, the quality of the light, the texture of objects.\n- Expand on the events in the log. Weave them into a cohesive story. Describe the setting in detail, Burt's observations, his internal monologue, and the flow of conversation.\n- Smooth out the \"game-like\" elements. Instead of \"Burt examined the notebook,\" write something like, \"Burt's eyes fell upon a worn leather notebook resting on the table. It seemed to pulse with forgotten secrets, its leather cover softened by decades of handling.\"\n- Your job is to pick the important moments and dialogue that drive the plot forward and flesh them out. Omit repetitive actions or dead ends, but expand on the crucial scenes.\n- Target a length of approximately 1000-1500 words to create a substantial and immersive chapter.\n- Format the output as a single block of prose. Do not use markdown, titles, or headings within the story itself.\n",
   "world": {
@@ -262,7 +263,7 @@
       "handlers": {
         "onExamine": {
           "success": {
-            "message": "A worn, leather-bound notebook. It seems to be locked with a phrase."
+            "message": "You examine the worn, leather-bound notebook. It seems to be locked with a phrase."
           },
           "fail": {
             "message": ""
@@ -349,7 +350,7 @@
       "id": "obj_chalkboard_menu",
       "name": "Chalkboard Menu",
       "archetype": "Signage",
-      "description": "Today's special is three scones for the price of two. A deal almost as sweet as justice.",
+      "description": "A chalkboard menu stands near the counter. It reads: Today's special is three scones for the price of two. A deal almost as sweet as justice.",
       "capabilities": {
         "openable": false,
         "lockable": false,
@@ -379,7 +380,7 @@
       "handlers": {
         "onExamine": {
           "success": {
-            "message": "Today's special is three scones for the price of two. A deal almost as sweet as justice."
+            "message": "A chalkboard menu stands near the counter. It reads: Today's special is three scones for the price of two. A deal almost as sweet as justice."
           },
           "fail": {
             "message": ""
@@ -411,7 +412,7 @@
       "id": "obj_magazine",
       "name": "Magazine",
       "archetype": "Prop",
-      "description": "It's a copy of this week's local entertainment magazine. The cover story discusses the current series of murders. The usual craziness of a Metropolis.",
+      "description": "You glance at a copy of this week's local entertainment magazine. The cover story discusses the current series of murders. The usual craziness of a Metropolis.",
       "capabilities": {
         "openable": false,
         "lockable": false,
@@ -441,7 +442,7 @@
       "handlers": {
         "onExamine": {
           "success": {
-            "message": "It's a copy of this week's local entertainment magazine. The cover story discusses the current series of murders. The usual craziness of a Metropolis."
+            "message": "You glance at a copy of this week's local entertainment magazine. The cover story discusses the current series of murders. The usual craziness of a Metropolis."
           },
           "fail": {
             "message": ""
@@ -473,7 +474,7 @@
       "id": "obj_bookshelf",
       "name": "Bookshelf",
       "archetype": "Furniture",
-      "description": "A small bookshelf filled with used paperbacks. You can see the titles: 'The Art of the Deal', 'A Brief History of Time', and a romance novel called 'Justice for My Love'.",
+      "description": "You turn to a small bookshelf filled with used paperbacks. The titles include: 'The Art of the Deal', 'A Brief History of Time', and a romance novel called 'Justice for My Love'.",
       "capabilities": {
         "openable": false,
         "lockable": false,
@@ -511,7 +512,7 @@
       "handlers": {
         "onExamine": {
           "success": {
-            "message": "A small bookshelf filled with used paperbacks. You can see the titles: 'The Art of the Deal', 'A Brief History of Time', and a romance novel called 'Justice for My Love'.",
+            "message": "You turn to a small bookshelf filled with used paperbacks. The titles include: 'The Art of the Deal', 'A Brief History of Time', and a romance novel called 'Justice for My Love'.",
             "effects": [
               {
                 "type": "SET_FLAG",
@@ -752,7 +753,7 @@
       "id": "item_sd_card",
       "name": "SD Card",
       "archetype": "Media",
-      "description": "A small, modern SD card, looking strangely out of place in the old notebook. Most likely it would fit in the slot of your phone. Curious to see what's inside.",
+      "description": "A small, modern SD card, looking strangely out of place in the old notebook. It probably fits in your phone.",
       "alternateDescription": "You can \"use SD Card\" to see what's on it.",
       "capabilities": {
         "isTakable": true,
@@ -767,7 +768,7 @@
       "handlers": {
         "onTake": {
           "success": {
-            "message": "You take the SD Card. You can \"use SD Card\" to check what is hidden on it.",
+            "message": "You take the SD Card.",
             "effects": []
           },
           "fail": {
@@ -785,7 +786,7 @@
         },
         "onUse": {
           "success": {
-            "message": "You insert the SD card into your phone. You open the file explorer and discover one single file: A Video. It looks old. Maybe from the 1940's?",
+            "message": "You insert the SD card into your phone and a video file opens.",
             "effects": [
               {
                 "type": "SHOW_MESSAGE",
@@ -855,15 +856,6 @@
             "message": ""
           }
         },
-        "onRead": {
-          "success": {
-            "message": "The book contains several chapters.",
-            "effects": []
-          },
-          "fail": {
-            "message": "You can't read that right now."
-          }
-        },
         "onTake": {
           "fail": {
             "message": "You can't take that book."
@@ -920,15 +912,6 @@
             "message": ""
           }
         },
-        "onRead": {
-          "success": {
-            "message": "The book contains several chapters.",
-            "effects": []
-          },
-          "fail": {
-            "message": "You can't read that right now."
-          }
-        },
         "onTake": {
           "fail": {
             "message": "You can't take that book."
@@ -983,15 +966,6 @@
           },
           "fail": {
             "message": ""
-          }
-        },
-        "onRead": {
-          "success": {
-            "message": "You open the cheesy romance novel.",
-            "effects": []
-          },
-          "fail": {
-            "message": "You can't read that right now."
           }
         },
         "onTake": {
@@ -1244,11 +1218,6 @@
                 "content": "The barista slides a business card across the counter. It's been added to your inventory.",
                 "messageType": "image",
                 "imageId": "item_business_card"
-              },
-              {
-                "type": "SHOW_MESSAGE",
-                "sender": "agent",
-                "content": "Good work, Burt. This could be the lead we need."
               },
               {
                 "type": "END_CONVERSATION"

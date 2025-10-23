@@ -8,7 +8,7 @@ import { normalizeName } from "@/lib/utils";
 
 export function handleMove(state: PlayerState, targetName: string, game: Game): CommandResult {
     const location = game.locations[state.currentLocationId];
-    const narratorName = game.narratorName || "Narrator";
+    const narratorName = "Narrator";
     const normalizedTargetName = normalizeName(targetName);
 
     const targetObjectId = location.objects.find(id =>

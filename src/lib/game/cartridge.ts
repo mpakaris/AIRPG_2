@@ -22,7 +22,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         input: { type: 'phrase', validation: 'Justice for Silas Bloom', hint: 'Stuck? Maybe this will help: https://airpg-minigames.vercel.app/games/the-notebook', attempts: null, lockout: null },
         handlers: {
             onExamine: {
-                success: { message: "A worn, leather-bound notebook. It seems to be locked with a phrase." },
+                success: { message: "You examine the worn, leather-bound notebook. It seems to be locked with a phrase." },
                 fail: { message: "" },
                 alternateMessage: "The notebook is open. Inside, you see a small SD card next to a folded newspaper article."
             },
@@ -65,13 +65,13 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         id: 'obj_chalkboard_menu' as GameObjectId,
         name: 'Chalkboard Menu',
         archetype: 'Signage',
-        description: "Today's special is three scones for the price of two. A deal almost as sweet as justice.",
+        description: "A chalkboard menu stands near the counter. It reads: Today's special is three scones for the price of two. A deal almost as sweet as justice.",
         capabilities: { openable: false, lockable: false, breakable: true, movable: true, powerable: false, container: false, readable: true, inputtable: false },
         state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
         media: { images: { default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759603706/Chalkboard_h61haz.png', description: 'A chalkboard menu in a cafe.', hint: 'chalkboard menu' } } },
         handlers: {
             onExamine: {
-                success: { message: "Today's special is three scones for the price of two. A deal almost as sweet as justice." },
+                success: { message: "A chalkboard menu stands near the counter. It reads: Today's special is three scones for the price of two. A deal almost as sweet as justice." },
                 fail: { message: "" },
                 alternateMessage: "The menu hasn't changed. The special is still about 'justice'."
             },
@@ -91,13 +91,13 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         id: 'obj_magazine' as GameObjectId,
         name: 'Magazine',
         archetype: 'Prop',
-        description: "It's a copy of this week's local entertainment magazine. The cover story discusses the current series of murders. The usual craziness of a Metropolis.",
+        description: "You glance at a copy of this week's local entertainment magazine. The cover story discusses the current series of murders. The usual craziness of a Metropolis.",
         capabilities: { openable: false, lockable: false, breakable: true, movable: true, powerable: false, container: false, readable: true, inputtable: false },
         state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
         media: { images: { default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759603706/Newspaper_p85m1h.png', description: 'A magazine on a table.', hint: 'magazine' } } },
         handlers: {
             onExamine: {
-                success: { message: "It's a copy of this week's local entertainment magazine. The cover story discusses the current series of murders. The usual craziness of a Metropolis." },
+                success: { message: "You glance at a copy of this week's local entertainment magazine. The cover story discusses the current series of murders. The usual craziness of a Metropolis." },
                 fail: { message: "" },
                 alternateMessage: "It's just today's magazine. Nothing new here."
             },
@@ -117,7 +117,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         id: 'obj_bookshelf' as GameObjectId,
         name: 'Bookshelf',
         archetype: 'Furniture',
-        description: "A small bookshelf filled with used paperbacks. You can see the titles: 'The Art of the Deal', 'A Brief History of Time', and a romance novel called 'Justice for My Love'.",
+        description: "You turn to a small bookshelf filled with used paperbacks. The titles include: 'The Art of the Deal', 'A Brief History of Time', and a romance novel called 'Justice for My Love'.",
         capabilities: { openable: false, lockable: false, breakable: false, movable: true, powerable: false, container: true, readable: false, inputtable: false },
         state: { isOpen: true, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
         inventory: { items: ['item_book_deal', 'item_book_time', 'item_book_justice'] as ItemId[], capacity: null },
@@ -125,7 +125,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         handlers: {
             onExamine: {
                 success: {
-                    message: "A small bookshelf filled with used paperbacks. You can see the titles: 'The Art of the Deal', 'A Brief History of Time', and a romance novel called 'Justice for My Love'.",
+                    message: "You turn to a small bookshelf filled with used paperbacks. The titles include: 'The Art of the Deal', 'A Brief History of Time', and a romance novel called 'Justice for My Love'.",
                     effects: [{ type: 'SET_FLAG', flag: 'has_seen_justice_book' as Flag }]
                 },
                 fail: { message: "" },
@@ -245,12 +245,12 @@ const items: Record<ItemId, Item> = {
         id: 'item_sd_card' as ItemId,
         name: 'SD Card',
         archetype: "Media",
-        description: 'A small, modern SD card, looking strangely out of place in the old notebook. Most likely it would fit in the slot of your phone. Curious to see what\'s inside.',
+        description: 'A small, modern SD card, looking strangely out of place in the old notebook. It probably fits in your phone.',
         alternateDescription: 'You can "use SD Card" to see what\'s on it.',
         capabilities: { isTakable: true, isReadable: true, isUsable: true, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         handlers: {
             onTake: {
-                success: { message: 'You take the SD Card. You can "use SD Card" to check what is hidden on it.', effects: [] },
+                success: { message: 'You take the SD Card.', effects: [] },
                 fail: { message: "You can't take that right now." }
             },
             onRead: {
@@ -259,10 +259,11 @@ const items: Record<ItemId, Item> = {
             },
             onUse: {
                 success: {
-                    message: "You insert the SD card into your phone. You open the file explorer and discover one single file: A Video. It looks old. Maybe from the 1940's?",
+                    message: "You insert the SD card into your phone and a video file opens.",
                     effects: [
                         { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759241547/0930_eit8he.mov', messageType: 'video'},
                         { type: 'SHOW_MESSAGE', sender: 'agent', content: "Silas Bloom... I've never heard that name before. Talented musician, if you ask me. And that song for Rose ... sounds like they were deeply in love." },
+                        { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'Beside the SD card, you see a folded newspaper article.' },
                         { type: 'SET_FLAG', flag: 'notebook_video_watched' as Flag }
                     ]
                 },
@@ -284,13 +285,6 @@ const items: Record<ItemId, Item> = {
             onExamine: {
                 success: { message: 'A book about business with a gaudy cover.' },
                 fail: { message: "" }
-            },
-            onRead: {
-                success: {
-                    message: "The book contains several chapters.",
-                    effects: []
-                },
-                fail: { message: "You can't read that right now." }
             },
             onTake: { 
                 fail: { message: "You can't take that book." } 
@@ -316,13 +310,6 @@ const items: Record<ItemId, Item> = {
                 success: { message: 'A book about physics by a famous scientist.' },
                 fail: { message: "" }
             },
-            onRead: {
-                success: {
-                    message: "The book contains several chapters.",
-                    effects: []
-                },
-                fail: { message: "You can't read that right now." }
-            },
             onTake: { 
                 fail: { message: "You can't take that book." } 
             },
@@ -347,14 +334,7 @@ const items: Record<ItemId, Item> = {
                 success: { message: 'A romance novel with a cheesy cover. The title, "Justice for My Love", catches your eye.' },
                 fail: { message: "" }
             },
-            onRead: {
-                success: {
-                    message: "You open the cheesy romance novel.",
-                    effects: []
-                },
-                fail: { message: "You can't read that right now." }
-            },
-            onTake: { 
+             onTake: { 
                 fail: { message: "You can't take that book." } 
             },
         },
@@ -432,7 +412,6 @@ const npcs: Record<NpcId, NPC> = {
                     { type: 'ADD_ITEM', itemId: 'item_business_card' as ItemId },
                     { type: 'SET_FLAG', flag: 'has_received_business_card' as Flag },
                     { type: 'SHOW_MESSAGE', sender: 'narrator', senderName: 'Narrator', content: "The barista slides a business card across the counter. It's been added to your inventory.", messageType: 'image', imageId: 'item_business_card' },
-                    { type: 'SHOW_MESSAGE', sender: 'agent', content: "Good work, Burt. This could be the lead we need."},
                     { type: 'END_CONVERSATION' }
                 ]
               } 
@@ -596,44 +575,25 @@ export const game: Game = {
   setting: "Modern-day USA, 2025",
   gameType: 'Limited Open World',
   narratorName: 'Agent Sharma',
-  promptContext: `You are the AI narrator, Agent Sharma. Your primary job is to interpret your partner's (Burt's) raw text input and map it to a valid game command. You must also provide a helpful, in-character response as a collaborative partner.
+  promptContext: `You are Agent Sharma, the AI partner to FBI agent Burt Macklin (the player). Your role is to be a supportive, intelligent, and sometimes witty colleague.
 
 **CRITICAL RULES:**
-- Your tone is that of a supportive, intelligent, and sometimes witty colleague. You are equals.
-- Always refer to the player as "Burt".
-- Your goal is to translate player intent into a valid game action.
-- If the player is in an interaction (e.g., examining an object closely) and tries to interact with a *different* object, your response MUST be: "Whoa there, Burt. We're zeroed in on the [current object] right now. If you want to check something else, we need to 'exit' this first." and the command MUST be 'invalid'.
+1.  **Your Persona:** You are Burt's partner, not a robot. Your tone should be conversational and collaborative. Always refer to the player as "Burt".
+2.  **Your Core Task:** Your primary job is to interpret Burt's natural language commands and translate them into a single, valid game command from the provided list.
+3.  **DO NOT NARRATE:** Your \`agentResponse\` should **NEVER** describe the outcome of an action. The Narrator handles that. You only confirm the action or offer conversational feedback.
+    *   **CORRECT:** \`{"agentResponse": "Copy that, Burt. Taking a look at the painting now.", "commandToExecute": "examine \\"Painting on the wall\\""}\`
+    *   **INCORRECT:** \`{"agentResponse": "You see a painting. Behind it is a note.", "commandToExecute": "examine \\"Painting on the wall\\""}\`
+4.  **Handle Ambiguity:** If Burt's command is vague (e.g., "look at the book"), use the most logical default action. 'examine' is a good default.
+5.  **Interaction Trap:** If Burt is interacting with an object and tries to interact with a *different* one, you MUST use this specific response: \`{"agentResponse": "Whoa there, Burt. We're zeroed in on the [current object] right now. If you want to check something else, we need to 'exit' this first.", "commandToExecute": "invalid"}\`
+6.  **Invalid/Conversational Input:** If Burt's input is illogical ("eat the SD card") or conversational ("what now?"), gently guide him back to the case.
+    *   **Illogical:** \`{"agentResponse": "I don't think that's a good idea, Burt. We might need that as evidence. Let's rethink.", "commandToExecute": "invalid"}\`
+    *   **Conversational:** \`{"agentResponse": "Let's focus on the objective: [current chapter goal]. What's our next move?", "commandToExecute": "invalid"}\`
 
-**Your Task:**
-1.  **Analyze Intent:** Understand what what your partner, Burt, is trying to do as a game action.
-2.  **Select Command:** Choose the *best* matching command from the 'Available Game Commands' list. Use the exact names from the 'Visible Object Names' and 'Visible NPC Names' lists.
-    *   If Burt says "look at the book," "check the book," or "browse the book," the command is 'examine "The Art of the Deal"'.
-    *   If Burt says "read the book," or "open the book," the command is 'read "The Art of the Deal"'.
-    *   If Burt says "pick up the card," the command is 'take "Business Card"'.
-    *   If Burt wants to 'move the painting' or 'look behind the painting', the command is 'move "Painting on the wall"'.
-    *   If Burt says 'use the SD card' or 'use the SD card with my phone', the command is 'use "SD Card"'.
-    *   If Burt says 'talk to the barista', the command is 'talk to "Barista"'.
-    *   If Burt wants to provide a password with keywords like "password", "say", or "enter", the command MUST be in the format 'password <object> <phrase>'. For example: "The password for the notebook is JUSTICE FOR SILAS BLOOM" becomes 'password "Brown Notebook" JUSTICE FOR SILAS BLOOM'. Do NOT include quotes in the final command phrase itself.
-    *   If Burt wants to move, the command is 'go <direction or location name>'.
-    *   If Burt says "look" or "look around", the command is 'look around'.
-    *   If the chapter is complete and Burt wants to go to the next location (e.g., "let's go to the jazz club"), the command is 'go next_chapter'.
-    *   **If the input is an illogical action or not a direct attempt to perform a game action, you MUST set the 'commandToExecute' to "invalid".**
-3.  **Provide Guidance:** Write a brief, in-character response (1-2 sentences) as Agent Sharma.
-    *   If the command is **valid**, confirm the action with a neutral, professional phrase. Examples: "Alright, checking it out.", "Copy that.", "Let's see.", "Makes sense."
-    *   If the command is **invalid due to being illogical**, your response must be supportive and guide the player back. Instead of saying "You can't do that," say something like "Good thought, Burt, but that doesn't seem to work. Let's rethink our approach." or "I'm not sure that's possible right now. What else can we try?"
-    *   If the command is **invalid due to being conversational** (e.g., "what now?", "who are you?"), answer briefly if possible (e.g., "I'm Sharma. Let's focus on the case."), then pivot back to the investigation by asking a question about the current objective.
-
-**Example 1 (Valid Command):**
-*Player Input:* "I want to see what that newspaper says."
-*Your Response:* { "agentResponse": "Alright. Let's see what the paper says.", "commandToExecute": "read \"Newspaper Article\"" }
-
-**Example 2 (Invalid Command - Gentle Correction):**
-*Player Input:* "I want to eat the SD Card."
-*Your Response:* { "agentResponse": "I don't think that's a good idea, Burt. We might need that as evidence. What else can we do?", "commandToExecute": "invalid" }
-
-**Example 3 (Password):**
-*Player Input:* "I say to the notebook: JUSTICE FOR SILAS BLOOM"
-*Your Response:* { "agentResponse": "Let's see if that phrase does anything.", "commandToExecute": "password \"Brown Notebook\" JUSTICE FOR SILAS BLOOM" }
+**Your Task Flow:**
+1.  Analyze Burt's input to understand his intent.
+2.  Choose the best matching command from the 'Available Game Commands' list, using exact names from the 'Visible Names' lists.
+3.  Formulate a brief, in-character \`agentResponse\` that fits the rules above.
+4.  Return the JSON object.
 `,
   objectInteractionPromptContext: `You are Agent Sharma, observing your partner Burt as he inspects the {{objectName}}. Your job is to map his input to one of the available actions, while maintaining your persona as a supportive and curious colleague. Ask questions to guide him. Example: "What do you make of that, Burt?"`,
   storyStyleGuide: `You are a master storyteller and a brilliant editor. Your task is to transform a raw log of a text-based RPG into a captivating, well-written narrative chapter for a crime noir book.
@@ -662,5 +622,3 @@ export const game: Game = {
   chapters: chapters,
   startChapterId: 'ch1-the-cafe' as ChapterId,
 };
-
-    

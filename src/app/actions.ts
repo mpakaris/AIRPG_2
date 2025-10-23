@@ -230,7 +230,7 @@ export async function processCommand(
     }
 
     const chapter = game.chapters[game.startChapterId]; // Simplified for now
-    const narratorName = game.narratorName || "Narrator";
+    const agentName = game.narratorName || "Agent Sharma";
     const lowerInput = playerInput.toLowerCase().trim();
 
     const playerMessage = createMessage('player', 'You', playerInput);
@@ -269,7 +269,7 @@ export async function processCommand(
             if (mentionsAnotherObject) {
                 const trapMessage = createMessage(
                     'agent', 
-                    narratorName, 
+                    agentName, 
                     `Whoa there, Burt. We're zeroed in on the ${interactingWith.name} right now. If you want to check something else, we need to 'exit' this first.`
                 );
                 // This is a special case: we just return the message and don't change state.
@@ -318,7 +318,9 @@ export async function processCommand(
             visibleNpcNames: visibleNpcNames,
         });
 
-        let agentMessage = createMessage('agent', narratorName, `${aiResponse.agentResponse}`, 'text', undefined, usage);
+        let agentMessage = createMessage('agent', agentName, `${aiResponse.agentResponse}`, 'text', undefined, usage);
+        allMessagesForSession.push(agentMessage);
+
         const commandToExecute = aiResponse.commandToExecute.toLowerCase();
         
         const verbMatch = commandToExecute.match(/^(\w+)\s*/);
@@ -379,11 +381,11 @@ export async function processCommand(
                 if (currentState.interactingWithObject) {
                     commandHandlerResult = processEffects(currentState, [{type: 'END_INTERACTION'}], game);
                 } else {
-                    commandHandlerResult = { newState: currentState, messages: [agentMessage] };
+                    commandHandlerResult = { newState: currentState, messages: [] };
                 }
                 break;
             case 'invalid':
-                 commandHandlerResult = { newState: currentState, messages: [agentMessage] };
+                 commandHandlerResult = { newState: currentState, messages: [] };
                  break;
             default:
                 const targetObject = visibleObjects.find(obj => restOfCommand.includes(obj.gameLogic.name.toLowerCase()));
@@ -391,18 +393,16 @@ export async function processCommand(
                     const fallbackMessages = targetObject.gameLogic.fallbackMessages;
                     const failureMessage = fallbackMessages?.[verb as keyof typeof fallbackMessages] || fallbackMessages?.default;
                     if (failureMessage) {
-                        commandHandlerResult = { newState: currentState, messages: [createMessage('narrator', narratorName, failureMessage)] };
+                        commandHandlerResult = { newState: currentState, messages: [createMessage('narrator', "Narrator", failureMessage)] };
                     } else {
-                        commandHandlerResult = { newState: currentState, messages: [agentMessage] };
+                        commandHandlerResult = { newState: currentState, messages: [] };
                     }
                 } else {
-                    commandHandlerResult = { newState: currentState, messages: [agentMessage] }; 
+                    commandHandlerResult = { newState: currentState, messages: [] }; 
                 }
                 break;
         }
 
-        // --- ROBUSTNESS FIX ---
-        // Ensure commandHandlerResult and its messages are always valid before proceeding.
         if (!commandHandlerResult) {
             commandHandlerResult = { newState: currentState, messages: [] };
         }
@@ -410,22 +410,11 @@ export async function processCommand(
             commandHandlerResult.messages = [];
         }
 
-
         if (commandHandlerResult.resultType === 'ALREADY_UNLOCKED' && commandHandlerResult.targetObjectName) {
-            commandHandlerResult.messages = [
+            commandHandlerResult.messages.push(
                 createMessage('system', 'System', `It seems that you already unlocked the ${commandHandlerResult.targetObjectName} successfully.`),
-                createMessage('agent', narratorName, `Burt, maybe we can try another action on the ${commandHandlerResult.targetObjectName}? What do you say?`)
-            ];
-        } else {
-            // This is the location of the previous crash.
-            // It is now safe because we ensured commandHandlerResult.messages is an array.
-            const hasSystemMessage = commandHandlerResult.messages.some(m => m.sender === 'system');
-            
-            const isSelfContainedCommand = ['take', 'pick', 'read', 'use', 'move', 'open', 'password', 'say', 'enter', 'examine', 'look'].includes(verb);
-
-            if (verb !== 'invalid' && !hasSystemMessage && !isSelfContainedCommand) {
-                commandHandlerResult.messages.unshift(agentMessage);
-            }
+                createMessage('agent', agentName, `Burt, maybe we can try another action on the ${commandHandlerResult.targetObjectName}? What do you say?`)
+            );
         }
     }
     
@@ -523,7 +512,7 @@ async function createInitialMessages(game: Game): Promise<Message[]> {
     const welcomeMessage = {
       id: crypto.randomUUID(),
       sender: 'narrator' as const,
-      senderName: game.narratorName || 'Narrator',
+      senderName: 'Narrator',
       type: 'text' as const,
       content: `Welcome to ${game.title}. Your journey begins.`,
       timestamp: Date.now(),
@@ -534,7 +523,7 @@ async function createInitialMessages(game: Game): Promise<Message[]> {
       newInitialMessages.push({
         id: crypto.randomUUID(),
         sender: 'narrator' as const,
-        senderName: game.narratorName || 'Narrator',
+        senderName: 'Narrator',
         type: 'video' as const,
         content: startChapter.introductionVideo,
         timestamp: Date.now() + 1,
@@ -547,7 +536,7 @@ async function createInitialMessages(game: Game): Promise<Message[]> {
         const locationMessage: Message = {
             id: crypto.randomUUID(),
             sender: 'narrator' as const,
-            senderName: game.narratorName || 'Narrator',
+            senderName: 'Narrator',
             type: initialLocation.sceneImage ? 'image' : 'text',
             content: initialLocation.sceneDescription,
             timestamp: Date.now() + 2,
@@ -664,10 +653,3 @@ export async function generateStoryForChapter(userId: string, gameId: GameId, ch
 
     return { newState };
 }
-
-
-    
-
-    
-
-

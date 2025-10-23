@@ -1,4 +1,5 @@
 
+
 import { CommandResult } from "@/app/actions";
 import type { Game, PlayerState } from "../types";
 import { getLiveGameObject } from "./helpers";
@@ -7,7 +8,7 @@ import { normalizeName } from "@/lib/utils";
 
 export function handleTake(state: PlayerState, targetName: string, game: Game): CommandResult {
   const location = game.locations[state.currentLocationId];
-  const narratorName = game.narratorName || "Narrator";
+  const narratorName = "Narrator";
   const normalizedTargetName = normalizeName(targetName);
   
   let newState = JSON.parse(JSON.stringify(state));
@@ -54,5 +55,5 @@ export function handleTake(state: PlayerState, targetName: string, game: Game): 
     }
   }
   
-  return { newState: state, messages: [createMessage('system', 'System', `You can't take that.`)] };
+  return { newState: state, messages: [createMessage('narrator', narratorName, `You don't see a "${targetName}" here to take.`)] };
 }

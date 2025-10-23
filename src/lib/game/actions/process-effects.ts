@@ -1,4 +1,5 @@
 
+
 import type { Effect, Game, GameObjectId, ItemId, Message, NpcId, PlayerState, TokenUsage } from '../types';
 import { getLiveGameObject } from './helpers';
 
@@ -62,7 +63,7 @@ export function createMessage(
 export function processEffects(initialState: PlayerState, effects: Effect[], game: Game): { newState: PlayerState, messages: Message[] } {
     let newState = JSON.parse(JSON.stringify(initialState)); // Deep copy to avoid mutation issues
     const messages: Message[] = [];
-    const narratorName = game.narratorName || 'Narrator';
+    const narratorName = "Narrator";
 
     for (const effect of effects) {
         switch (effect.type) {
@@ -114,7 +115,7 @@ export function processEffects(initialState: PlayerState, effects: Effect[], gam
             case 'END_INTERACTION':
                 if (newState.interactingWithObject) {
                     const object = game.gameObjects[newState.interactingWithObject];
-                    messages.push(createMessage('system', 'System', `You stop examining the ${object.name}.`));
+                    messages.push(createMessage('narrator', narratorName, `You step back from the ${object.name}.`));
                     newState.interactingWithObject = null;
                 }
                 break;
