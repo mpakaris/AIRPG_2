@@ -194,7 +194,6 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         handlers: {
             onExamine: {
                 success: { message: "It's a cheap Ming dynasty vase replica. Something inside shifts when you move it, but the opening is too narrow to reach into." },
-                alternateMessage: "The vase is broken. Amidst the shards, you see a small key.",
                 fail: { message: "" }
             },
             onMove: {
@@ -209,7 +208,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         message: "With a sharp crack, the heavy stone shatters the vase. A small, ornate key is revealed among the broken pieces.",
                         effects: [
                             { type: 'SET_FLAG', flag: 'vase_is_broken' as Flag },
-                            { type: 'SET_OBJECT_STATE', objectId: 'obj_ming_vase', state: { isBroken: true } },
+                            { type: 'SET_OBJECT_STATE', objectId: 'obj_ming_vase', state: { isBroken: true, currentStateId: 'broken' } },
                             { type: 'SPAWN_ITEM', itemId: 'item_deposit_key' as ItemId, locationId: 'loc_cafe_interior' as LocationId },
                             { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'The vase is now shattered.', imageId: 'obj_ming_vase' }
                         ]
@@ -217,6 +216,14 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                     fail: { message: "The vase is already broken." }
                 }
             ]
+        },
+        stateMap: {
+            default: {
+                description: "It's a cheap Ming dynasty vase replica. Something inside shifts when you move it, but the opening is too narrow to reach into."
+            },
+            broken: {
+                description: "The vase is broken. Amidst the shards, you see a small key."
+            }
         },
         fallbackMessages: { 
             default: "That doesn't seem to work on the vase.",
@@ -237,14 +244,11 @@ const items: Record<ItemId, Item> = {
         capabilities: { isTakable: false, isReadable: true, isUsable: true, isCombinable: true, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: true },
         handlers: {
             onUse: {
-                success: {
-                    message: "You pull out your phone. The camera, messaging, and analysis apps are ready."
-                },
-                fail: { message: "You can't use the phone right now." }
+                success: { message: "You pull out your phone. The camera, messaging, and analysis apps are ready." },
+                fail: { message: "" }
             },
-            defaultFailMessage: "You need to specify what to use the phone on."
         },
-        design: { authorNotes: "Player's primary tool. This logic will be expanded." },
+        design: { authorNotes: "Player's primary tool." },
         version: { schema: "1.0", content: "1.0" }
     },
     'item_heavy_stone': {
@@ -695,7 +699,8 @@ export const game: Game = {
     *   **Illogical:** \`{"agentResponse": "I don't think that's a good idea, Burt. We might need that as evidence. Let's rethink.", "commandToExecute": "invalid"}\`
     *   **Conversational:** \`{"agentResponse": "Let's focus on the objective: [current chapter goal]. What's our next move?", "commandToExecute": "invalid"}\`
 7.  **Implicit Player Items:** Burt has standard equipment like a phone, which is always in his inventory. He doesn't need to see it to use it.
-    *   **Player says:** "put sd card in phone" -> **Your command should be:** \`use "SD Card" on "Phone"\`
+    *   **Player says:** "use sd card" -> **Your command should be:** \`use "SD Card"\`
+8.  **Physical Interaction:** If the player wants to touch, feel, or physically interact with something (e.g., "put my hand in the vase"), map this to the 'examine' command.
 
 **Your Task Flow:**
 1.  Analyze Burt's input to understand his intent.

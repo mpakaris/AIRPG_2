@@ -28,18 +28,25 @@ export function handleExamine(state: PlayerState, targetName: string, game: Game
         if (!liveObject) {
             return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${targetName}" here.`)] };
         }
-        const flag = examinedObjectFlag(liveObject.gameLogic.id);
-        const isAlreadyExamined = newState.flags.includes(flag as any);
         
         let messageContent: string;
-        const onExamine = liveObject.gameLogic.handlers.onExamine;
-
-        if (isAlreadyExamined && onExamine?.alternateMessage) {
-            messageContent = onExamine.alternateMessage;
-        } else if (onExamine?.success.message) {
-            messageContent = onExamine.success.message;
+        
+        // --- State-based description from stateMap (NEW) ---
+        if (liveObject.gameLogic.stateMap && liveObject.state.currentStateId && liveObject.gameLogic.stateMap[liveObject.state.currentStateId]) {
+            messageContent = liveObject.gameLogic.stateMap[liveObject.state.currentStateId].description || liveObject.gameLogic.description;
         } else {
-            messageContent = liveObject.gameLogic.description;
+            // --- Legacy description logic ---
+            const flag = examinedObjectFlag(liveObject.gameLogic.id);
+            const isAlreadyExamined = newState.flags.includes(flag as any);
+            const onExamine = liveObject.gameLogic.handlers.onExamine;
+
+            if (isAlreadyExamined && onExamine?.alternateMessage) {
+                messageContent = onExamine.alternateMessage;
+            } else if (onExamine?.success.message) {
+                messageContent = onExamine.success.message;
+            } else {
+                messageContent = liveObject.gameLogic.description;
+            }
         }
         
         const mainMessage = createMessage(
@@ -50,7 +57,9 @@ export function handleExamine(state: PlayerState, targetName: string, game: Game
             { id: liveObject.gameLogic.id, game, state: newState, showEvenIfExamined: false }
         );
         
-        if (!isAlreadyExamined) {
+        // Set the 'examined' flag if it's the first time
+        const flag = examinedObjectFlag(liveObject.gameLogic.id);
+        if (!newState.flags.includes(flag as any)) {
             newState.flags.push(flag as any);
         }
         
