@@ -27,16 +27,17 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
     if (itemToRead.stateMap) {
         let newState = JSON.parse(JSON.stringify(state)); // Deep copy for safety
         
-        let liveItemState = newState.itemStates[itemToRead.id];
-        if (!liveItemState) {
-            liveItemState = { 
+        // Ensure the item has a state entry in playerState
+        if (!newState.itemStates[itemToRead.id]) {
+            newState.itemStates[itemToRead.id] = { 
                 readCount: 0,
                 currentStateId: 'default'
             };
-            newState.itemStates[itemToRead.id] = liveItemState;
         }
 
+        const liveItemState = newState.itemStates[itemToRead.id];
         const currentReadCount = liveItemState.readCount || 0;
+        
         const stateMapKeys = Object.keys(itemToRead.stateMap);
 
         // Check if we've read all available excerpts.
@@ -45,6 +46,7 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
             return { newState, messages: [createMessage('agent', agentName, deflectionMessage)] };
         }
         
+        // Get the current description from the stateMap
         const currentStateKey = stateMapKeys[currentReadCount];
         const stateMapEntry = itemToRead.stateMap[currentStateKey];
 
