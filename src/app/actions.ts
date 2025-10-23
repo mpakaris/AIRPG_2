@@ -342,7 +342,7 @@ export async function processCommand(
                 commandHandlerResult = handleMove(currentState, restOfCommand, game);
                 break;
             case 'open':
-                commandHandlerResult = handleOpen(currentState, restOfCommand, game);
+                commandHandlerResult = await handleOpen(currentState, restOfCommand, game);
                 break;
             case 'take':
             case 'pick': // Alias for take
@@ -401,12 +401,24 @@ export async function processCommand(
                 break;
         }
 
+        // --- ROBUSTNESS FIX ---
+        // Ensure commandHandlerResult and its messages are always valid before proceeding.
+        if (!commandHandlerResult) {
+            commandHandlerResult = { newState: currentState, messages: [] };
+        }
+        if (!commandHandlerResult.messages) {
+            commandHandlerResult.messages = [];
+        }
+
+
         if (commandHandlerResult.resultType === 'ALREADY_UNLOCKED' && commandHandlerResult.targetObjectName) {
             commandHandlerResult.messages = [
                 createMessage('system', 'System', `It seems that you already unlocked the ${commandHandlerResult.targetObjectName} successfully.`),
                 createMessage('agent', narratorName, `Burt, maybe we can try another action on the ${commandHandlerResult.targetObjectName}? What do you say?`)
             ];
         } else {
+            // This is the location of the previous crash.
+            // It is now safe because we ensured commandHandlerResult.messages is an array.
             const hasSystemMessage = commandHandlerResult.messages.some(m => m.sender === 'system');
             
             const isSelfContainedCommand = ['take', 'pick', 'read', 'use', 'move', 'open', 'password', 'say', 'enter', 'examine', 'look'].includes(verb);
@@ -657,4 +669,5 @@ export async function generateStoryForChapter(userId: string, gameId: GameId, ch
     
 
     
+
 

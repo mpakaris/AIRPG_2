@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { CommandResult } from "@/app/actions";
@@ -22,10 +23,11 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
     if (!itemToRead.capabilities.isReadable) {
         return { newState: state, messages: [createMessage('narrator', narratorName, `There's nothing to read on the ${itemToRead.name}.`)] };
     }
+    
+    let newState = JSON.parse(JSON.stringify(state)); // Deep copy for safety
 
-    // --- LOGIC PATH A: Item uses a stateMap for reading (like a book) ---
-    if (itemToRead.stateMap) {
-        let newState = JSON.parse(JSON.stringify(state)); // Deep copy for safety
+    // --- Path A: Item uses a stateMap (like a book with excerpts) ---
+    if (itemToRead.stateMap && Object.keys(itemToRead.stateMap).length > 0) {
         
         // Ensure the item has a state entry in playerState, initializing if it doesn't exist
         if (!newState.itemStates[itemToRead.id]) {
@@ -40,7 +42,7 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
         
         const stateMapKeys = Object.keys(itemToRead.stateMap);
 
-        // Check if we've read all available excerpts.
+        // Check if we've read all available excerpts and should show the deflection message
         if (currentReadCount >= stateMapKeys.length) {
             const deflectionMessage = `Come on Burt, let's continue. You can spend hours reading this book and not come up with anything useful.`;
             return { newState, messages: [createMessage('agent', agentName, deflectionMessage)] };
@@ -62,31 +64,29 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
         newState.itemStates[itemToRead.id].readCount = currentReadCount + 1;
         
         // Return a simple message. This path explicitly avoids effects processing.
-        return { newState, messages: [createMessage('agent', narratorName, description)] };
+        const message = createMessage('agent', agentName, description);
+        return { newState, messages: [message] };
     }
 
-    // --- LOGIC PATH B: Item uses a standard onRead handler (like a note) ---
-    else if (itemToRead.handlers?.onRead) {
-        const handler = itemToRead.handlers.onRead;
+    // --- Path B: Item uses a standard onRead handler (like a note) ---
+    const handler = itemToRead.handlers?.onRead;
+    if (handler && handler.success) {
+        const successBlock = handler.success;
+        // Safely get effects, defaulting to an empty array if they don't exist.
+        const effectsToProcess = Array.isArray(successBlock.effects) ? successBlock.effects : [];
         
-        // Safely process the handler
-        if (handler && handler.success) {
-            const successBlock = handler.success;
-            // Safely get effects, defaulting to an empty array if they don't exist.
-            const effectsToProcess = Array.isArray(successBlock.effects) ? successBlock.effects : [];
-            
-            let result = processEffects(state, effectsToProcess, game);
-            
-            // Only add a message if one is defined in the success block.
-            if (successBlock.message) {
-                const message = createMessage('narrator', narratorName, successBlock.message, 'text');
-                result.messages.unshift(message);
-            }
-            
-            return result;
+        let result = processEffects(newState, effectsToProcess, game);
+        
+        // Only add a message if one is defined in the success block.
+        if (successBlock.message) {
+            const message = createMessage('narrator', narratorName, successBlock.message, 'text');
+            result.messages.unshift(message);
         }
+        
+        return result;
     }
 
     // --- Fallback: Just show the item's default description if no specific read logic is found ---
     return { newState: state, messages: [createMessage('narrator', narratorName, itemToRead.description)] };
 }
+
