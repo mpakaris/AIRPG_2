@@ -157,34 +157,78 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         id: 'obj_painting' as GameObjectId,
         name: 'Painting on the wall',
         archetype: 'Surface',
-        description: "An abstract painting hangs on the wall, its swirls of color adding a touch of modern art to the cafe's cozy atmosphere. It seems to be signed 'S.B.'",
+        description: "An abstract painting hangs on the wall. Its swirls of color add a touch of modern art to the cafe's cozy atmosphere, but it feels... off. Like it's hiding something.",
         capabilities: { openable: false, lockable: false, breakable: false, movable: true, powerable: false, container: false, readable: false, inputtable: false },
         state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
         media: { images: { default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759604943/picture_on_wall_fcx10j.png', description: 'A painting on the wall of the cafe.', hint: 'abstract painting' } } },
         handlers: {
             onExamine: {
-                success: { message: "An abstract painting hangs on the wall, its swirls of color adding a touch of modern art to the cafe's cozy atmosphere. It seems to be signed 'S.B.'" },
+                success: { message: "An abstract painting hangs on the wall. Its swirls of color add a touch of modern art to the cafe's cozy atmosphere, but it feels... off. Like it's hiding something. It's signed 'S.B.'" },
                 fail: { message: "" },
-                alternateMessage: "It's the same abstract painting signed 'S.B.'."
+                alternateMessage: "It's the same abstract painting signed 'S.B.'. It definitely seems like it could be moved."
             },
             onMove: {
-                conditions: [{ type: 'NO_FLAG', targetId: 'has_found_note_behind_painting' as Flag }],
+                conditions: [{ type: 'NO_FLAG', targetId: 'has_moved_painting' as Flag }],
                 success: {
-                    message: "You lift the painting off its hook. Taped to the back is a small, folded note.",
+                    message: "You lift the painting off its hook. Just as you suspected, a small wall safe is set into the wall behind it.",
                     effects: [
-                        { type: 'SET_FLAG', flag: 'has_found_note_behind_painting' as Flag },
-                        { type: 'ADD_ITEM', itemId: 'item_hidden_note' as ItemId }
+                        { type: 'SET_FLAG', flag: 'has_moved_painting' as Flag },
+                        { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'You see a small wall safe, previously hidden by the painting.', imageId: 'obj_wall_safe' }
                     ]
                 },
-                fail: { message: "You lift the painting again, but there's nothing else behind it." }
+                fail: { message: "You lift the painting again, but there's nothing else behind it. Just the safe." }
             }
         },
         fallbackMessages: { 
             default: "The painting is nice, but it's not a clue.",
             notMovable: "You can't move the painting, but you could try looking behind it."
         },
-        design: { authorNotes: "Contains the 'S.B.' clue for Silas Bloom and now a hidden note." },
-        version: { schema: "1.0", content: "1.1" }
+        design: { authorNotes: "Contains the 'S.B.' clue and hides the wall safe." },
+        version: { schema: "1.0", content: "1.2" }
+    },
+    'obj_wall_safe': {
+        id: 'obj_wall_safe' as GameObjectId,
+        name: 'Wall Safe',
+        archetype: 'Container',
+        description: 'A small, steel safe is set into the wall. It looks sturdy and has a keyhole.',
+        capabilities: { openable: true, lockable: true, breakable: false, movable: false, powerable: false, container: true, readable: false, inputtable: false },
+        state: { isOpen: false, isLocked: true, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
+        inventory: { items: ['item_secret_document'] as ItemId[], capacity: 1 },
+        media: {
+            images: {
+                default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761400234/closed_safe_gwxft6.png', description: 'A closed wall safe.', hint: 'wall safe' },
+                unlocked: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761400234/open_safe_w15b9c.png', description: 'An open wall safe containing a document.', hint: 'open safe' }
+            }
+        },
+        handlers: {
+            onExamine: {
+                success: { message: "A small, steel safe is set into the wall. It has a keyhole." },
+                fail: { message: "" },
+                alternateMessage: "It's a standard wall safe. Still locked."
+            },
+            onUse: [
+                {
+                    itemId: 'item_deposit_key' as ItemId,
+                    conditions: [{ type: 'NO_FLAG', targetId: 'safe_is_unlocked' as Flag }],
+                    success: {
+                        message: "The key from the coffee machine fits perfectly. You turn it, and the safe door swings open with a satisfying clunk. Inside, there's a single, thick file marked 'CONFIDENTIAL'.",
+                        effects: [
+                            { type: 'SET_FLAG', flag: 'safe_is_unlocked' as Flag },
+                            { type: 'SET_OBJECT_STATE', objectId: 'obj_wall_safe', state: { isLocked: false, isOpen: true, currentStateId: 'unlocked' } },
+                            { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'The safe is open, revealing a confidential file.', imageId: 'obj_wall_safe' }
+                        ]
+                    },
+                    fail: { message: "You've already unlocked the safe." }
+                }
+            ]
+        },
+        fallbackMessages: { 
+            default: "That doesn't work on the safe.",
+            locked: "It's locked tight. We need the right key.",
+            notMovable: "It's built into the wall. It's not going anywhere."
+        },
+        design: { authorNotes: "Final puzzle for chapter 1. Opened by the key from the coffee machine." },
+        version: { schema: "1.0", content: "1.0" }
     },
     'obj_coffee_machine': {
         id: 'obj_coffee_machine' as GameObjectId,
@@ -193,7 +237,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         description: "It's a high-end Italian model, very expensive but totally worth it. The coffee tastes amazing and the milk foam is as soft as clouds. A small compartment seems loose.",
         capabilities: { openable: false, lockable: false, breakable: true, movable: false, powerable: false, container: true, readable: false, inputtable: false },
         state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        inventory: { items: [], capacity: 1 },
+        inventory: { items: ['item_deposit_key'] as ItemId[], capacity: 1 },
         media: {
             images: {
                 default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761211151/coffee_machine_detail_frexuu.png', description: 'A high-end Italian coffee machine.', hint: 'coffee machine' },
@@ -240,7 +284,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             noEffect: "Using that on the coffee machine has no effect."
         },
         design: { authorNotes: "Breakable object containing the deposit key." },
-        version: { schema: "1.0", content: "1.0" }
+        version: { schema: "1.0", content: "1.1" }
     }
 };
 
@@ -298,6 +342,13 @@ const items: Record<ItemId, Item> = {
         archetype: 'Key',
         description: 'A small, ornate key with a number tag. It looks like it belongs to a bank deposit box.',
         capabilities: { isTakable: true, isReadable: true, isUsable: true, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+        media: {
+            image: {
+                url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761211151/deposit_box_key_f5g2k2.png',
+                description: 'A small key for a deposit box.',
+                hint: 'ornate key'
+            }
+        },
         handlers: {
             onTake: {
                 success: { message: "You pick up the small key and put it in your pocket." },
@@ -478,18 +529,32 @@ const items: Record<ItemId, Item> = {
         design: { tags: ['book', 'clue'] },
         version: { schema: "1.0", content: "1.1" }
     },
-    'item_hidden_note': {
-        id: 'item_hidden_note' as ItemId,
-        name: 'Hidden Note',
+    'item_secret_document': {
+        id: 'item_secret_document' as ItemId,
+        name: 'Secret Document',
         archetype: 'Document',
-        description: 'A small note, folded neatly. It reads: "He knows. Find the flower with a broken heart."',
-        alternateDescription: 'The note still reads: "He knows. Find the flower with a broken heart."',
+        description: "A thick manila folder simply marked 'CONFIDENTIAL' in red ink. It feels heavy.",
+        alternateDescription: "The confidential file from the safe. It's filled with complex legal and financial jargon.",
         capabilities: { isTakable: true, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
-        handlers: {
-            onTake: { success: { message: "You take the hidden note.", effects: [] }, fail: { message: "" } },
-            onRead: { success: { message: 'The note reads: "He knows. Find the flower with a broken heart."', effects: [] }, fail: { message: "" } }
+        media: {
+            image: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761400234/secret_document_t8u3gf.png', description: 'A confidential document folder.', hint: 'secret document' }
         },
-        design: { tags: ['clue', 'note'] },
+        handlers: {
+            onTake: {
+                success: { message: "You take the confidential file from the safe." },
+                fail: { message: "" }
+            },
+            onRead: {
+                success: { 
+                    message: "You open the file. It's dense with financial reports, shell corporations, and offshore accounts, all linked to a powerful holding company. It's going to take hours to untangle this web, but one name keeps reappearing in the margins: a company called 'Veridian Dynamics'. This feels big... bigger than a simple murder.",
+                    effects: [
+                        { type: 'SET_FLAG', flag: 'has_read_secret_document' as Flag },
+                    ]
+                },
+                fail: { message: "" }
+            }
+        },
+        design: { tags: ['clue', 'document', 'quest_item'] },
         version: { schema: "1.0", content: "1.0" }
     }
 };
@@ -604,7 +669,7 @@ const locations: Record<LocationId, Location> = {
         sceneDescription: 'You are inside The Daily Grind. \n\nIt\'s a bustling downtown cafe, smelling of coffee and rain. A puddle of rainwater is near the door, and a discarded magazine lies on an empty table.',
         sceneImage: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761156561/bustling_cafe_bluwgq.jpg', description: 'A view of the bustling cafe interior.', hint: 'bustling cafe' },
         coord: { x: 1, y: 1, z: 0 },
-        objects: ['obj_brown_notebook', 'obj_chalkboard_menu', 'obj_magazine', 'obj_bookshelf', 'obj_painting', 'obj_coffee_machine'] as GameObjectId[],
+        objects: ['obj_brown_notebook', 'obj_chalkboard_menu', 'obj_magazine', 'obj_bookshelf', 'obj_painting', 'obj_coffee_machine', 'obj_wall_safe'] as GameObjectId[],
         npcs: ['npc_barista', 'npc_manager'] as NpcId[],
         entryPortals: ['portal_street_to_cafe' as PortalId],
         exitPortals: ['portal_cafe_to_street' as PortalId]
@@ -675,7 +740,7 @@ const chapters: Record<ChapterId, Chapter> = {
     'ch1-the-cafe': {
         id: 'ch1-the-cafe' as ChapterId,
         title: 'A Blast from the Past',
-        goal: "Unlock the contents of the notebook.",
+        goal: "Find out what's inside the notebook and the safe.",
         introductionVideo: 'https://res.cloudinary.com/dg912bwcc/video/upload/f_mp4/v1759670681/CH_I_Intro_ccy0og.mp4',
         completionVideo: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759678377/CH_I_completion_jqtyme.mp4',
         postChapterMessage: "Looks like we've got everything from this place. I'm thinking our next stop should be the jazz club mentioned in the article.",
@@ -689,12 +754,18 @@ const chapters: Record<ChapterId, Chapter> = {
             { flag: 'has_received_business_card' as Flag, label: 'Get the Business Card' },
             { flag: 'has_unlocked_notebook' as Flag, label: 'Unlock the Notebook' },
             { flag: 'notebook_interaction_complete' as Flag, label: 'View the Notebook Contents' },
+            { flag: 'machine_is_broken' as Flag, label: 'Find the hidden key' },
+            { flag: 'safe_is_unlocked' as Flag, label: 'Unlock the wall safe' },
+            { flag: 'has_read_secret_document' as Flag, label: 'Read the secret document' },
         ],
         hints: [
             { flag: 'has_talked_to_barista' as Flag, text: "We haven't spoken to the barista yet. He might have seen who left the notebook." },
             { flag: 'has_received_business_card' as Flag, text: "The barista mentioned the man in black was a regular. Maybe he knows more about him, or has something he left behind." },
             { flag: 'has_unlocked_notebook' as Flag, text: "The notebook is locked with a phrase. We should examine everything in the cafe for clues. Maybe something on the menu or bookshelf?" },
             { flag: 'notebook_interaction_complete' as Flag, text: "We've unlocked the notebook, but we haven't checked what's inside yet. Let's open it and see what we find." },
+            { flag: 'machine_is_broken' as Flag, text: "That coffee machine looks expensive, but a part of it seems loose. Maybe we can force it open with a tool?" },
+            { flag: 'safe_is_unlocked' as Flag, text: "There's a safe behind the painting. We found a key in the coffee machine. Let's try using the key on the safe." },
+            { flag: 'has_read_secret_document' as Flag, text: "The safe is open and we have the document. We need to read it to see what's inside." },
         ],
         startLocationId: 'loc_cafe_interior' as LocationId,
         // The following are now managed by the top-level entities but kept here for compatibility during transition
@@ -726,14 +797,17 @@ export const game: Game = {
 6.  **Invalid/Conversational Input:** If Burt's input is illogical ("eat the SD card") or conversational ("what now?"), gently guide him back to the case.
     *   **Illogical:** \`{"agentResponse": "I don't think that's a good idea, Burt. We might need that as evidence. Let's rethink.", "commandToExecute": "invalid"}\`
     *   **Conversational:** \`{"agentResponse": "Let's focus on the objective: [current chapter goal]. What's our next move?", "commandToExecute": "invalid"}\`
-7.  **Implicit Player Items:** Burt has default equipment like a "Phone". He doesn't need to see it to use it.
+7.  **Implicit Player Items:** Burt has default equipment like a "Phone". He doesn't need to see it to use it. If a command implies using the phone (e.g., 'use sd card'), you should map it to the direct action.
     *   Player says: "use sd card" -> Your command should be: \`use "SD Card"\`
 8.  **Physical Interaction:** Map gentle physical interactions like "touch", "feel", or "put hand in" to the 'examine' command.
-9.  **Breaking Things:** If Burt tries to break something with his hands (e.g., "hit vase with fist"), you must guide him to use a tool.
+9.  **Breaking Things:** If the player tries to break an object without a tool (e.g., with their "fist"), your response must guide them to find a tool. If they try to use a plausible tool, route it to a 'use' command.
     *   Player says: "punch the coffee machine" -> Your response: \`{"agentResponse": "Easy there, Burt. Your fist isn't going to cut it. We'll need a tool if we want to break this.", "commandToExecute": "invalid"}\`
-    *   Player says: "hit coffee machine with stone" -> Your response: \`{"agentResponse": "Good thinking, Burt. Let's see if this works.", "commandToExecute": "use \\"Iron Pipe\\" on \\"Coffee Machine\\""}\`
+    *   Player says: "hit coffee machine with pipe" -> Your response: \`{"agentResponse": "Good thinking, Burt. Let's see if this works.", "commandToExecute": "use \\"Iron Pipe\\" on \\"Coffee Machine\\""}\`
 10. **Moving Objects:** If the player wants to 'move' an object or 'look behind' it, always map this to the 'move' command.
     *   Player says: "look behind the chalkboard" -> Your response: \`{"agentResponse": "Good idea. Let's see if anything's back there.", "commandToExecute": "move \\"Chalkboard Menu\\""}\`
+11. **Using Keys:** If a player tries to use a key on a lock, map it to the 'use <key> on <lock>' command.
+    *   Player says: "open safe with key" -> Your response: \`{"agentResponse": "Let's see if this key fits.", "commandToExecute": "use \\"Deposit Box Key\\" on \\"Wall Safe\\""}\`
+
 
 **Your Task Flow:**
 1.  Analyze Burt's input to understand his intent.
