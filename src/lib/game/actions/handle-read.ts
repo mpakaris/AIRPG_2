@@ -31,20 +31,19 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
     const effectiveHandler = handlerOverride || baseHandler;
 
     // --- BULLETPROOF SAFETY CHECKS ---
-    // This block now safely navigates the handler structure.
+    // This block safely navigates the handler structure.
     if (effectiveHandler && effectiveHandler.success) {
         const successBlock = effectiveHandler.success;
         
-        // Safely check for effects array before processing. Default to an empty array if missing.
+        // Safely check for an effects array before processing. Default to an empty array if missing.
         const effectsToProcess = (Array.isArray(successBlock.effects)) ? successBlock.effects : [];
         let result = processEffects(state, effectsToProcess, game);
         
-        // Check if there's an explicit SHOW_MESSAGE effect.
+        // Check if there was an explicit SHOW_MESSAGE effect.
         const hasMessageEffect = effectsToProcess.some(e => e.type === 'SHOW_MESSAGE');
         
-        // Only add a message if one wasn't already added by an effect.
+        // Only add a message if one wasn't already added by an effect and a message exists.
         if (!hasMessageEffect && successBlock.message) {
-            // Safely default sender to 'narrator' if not specified.
             const sender = (successBlock as any).sender || 'narrator';
             const senderName = sender === 'agent' ? (game.narratorName || 'Agent') : narratorName;
             
