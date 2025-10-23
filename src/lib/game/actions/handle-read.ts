@@ -25,7 +25,6 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
 
     const currentStateId = liveItem.state.currentStateId || 'default';
     
-    // Determine the effective handler by checking overrides first, then the base handler.
     const handlerOverride = liveItem.gameLogic.stateMap?.[currentStateId]?.overrides?.onRead;
     const baseHandler = liveItem.gameLogic.handlers?.onRead;
     const effectiveHandler = handlerOverride || baseHandler;
@@ -34,12 +33,15 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
     // This block ensures that we never crash, even if the handler, success block, or effects array are missing.
     if (effectiveHandler && effectiveHandler.success) {
         const successBlock = effectiveHandler.success;
+        // Ensure effects is an array before processing; default to empty array if missing.
         const effectsToProcess = Array.isArray(successBlock.effects) ? successBlock.effects : [];
         
         let result = processEffects(state, effectsToProcess, game);
         
+        // Check if any of the effects we just processed was a SHOW_MESSAGE effect.
         const hasMessageEffect = effectsToProcess.some(e => e.type === 'SHOW_MESSAGE');
         
+        // If no message was explicitly shown via effects, and a message exists on the success block, show it now.
         if (!hasMessageEffect && successBlock.message) {
             // Safely default sender to 'narrator' if not specified
             const sender = (successBlock as any).sender || 'narrator';
