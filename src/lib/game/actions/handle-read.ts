@@ -3,7 +3,7 @@
 
 import { CommandResult } from "@/app/actions";
 import type { Game, PlayerState } from "../types";
-import { findItemInContext } from "./helpers";
+import { findItemInContext, getLiveItem } from "./helpers";
 import { createMessage, processEffects } from "./process-effects";
 import { normalizeName } from "@/lib/utils";
 
@@ -22,22 +22,19 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
 
     const handler = itemToRead.handlers?.onRead;
 
-    // --- BULLETPROOF SAFETY CHECK ---
+    // --- BULLETPROOF SAFETY CHECKS ---
     // This block safely navigates the handler structure to prevent crashes.
     if (handler && handler.success) {
         const successBlock = handler.success;
         
-        // Safely check for an effects array. Default to an empty array if it's missing.
-        const effectsToProcess = (Array.isArray(successBlock.effects)) ? successBlock.effects : [];
+        // Safely check for an effects array before processing. Default to an empty array if missing.
+        const effectsToProcess = Array.isArray(successBlock.effects) ? successBlock.effects : [];
+        let result = processEffects(state, effectsToProcess, game);
         
-        // Process any effects that do exist.
-        const result = processEffects(state, effectsToProcess, game);
-        
-        // Check if one of the effects was a SHOW_MESSAGE.
+        // Check if there was an explicit SHOW_MESSAGE effect.
         const hasMessageEffect = effectsToProcess.some(e => e.type === 'SHOW_MESSAGE');
         
-        // If no SHOW_MESSAGE effect was processed, and a message string exists in the handler, show it.
-        // This is the primary path for simple read actions.
+        // Only add a message if one wasn't already added by an effect and a message string exists.
         if (!hasMessageEffect && successBlock.message) {
             const message = createMessage('narrator', narratorName, successBlock.message, 'text');
             result.messages.unshift(message);
@@ -45,9 +42,8 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
         
         return result;
     }
-    // --- END SAFETY CHECK ---
+    // --- END SAFETY CHECKS ---
 
     // Fallback for items that are readable but have no specific onRead handler or a malformed one.
-    // This ensures the game never crashes and provides a default behavior.
     return { newState: state, messages: [createMessage('narrator', narratorName, itemToRead.description)] };
 }
