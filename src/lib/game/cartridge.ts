@@ -179,6 +179,33 @@ const gameObjects: Record<GameObjectId, GameObject> = {
 };
 
 const items: Record<ItemId, Item> = {
+    'item_player_phone': {
+        id: 'item_player_phone' as ItemId,
+        name: 'Phone',
+        archetype: 'Gadget',
+        description: "Your standard-issue FBI smartphone. It has a camera, secure messaging, and a slot for external media.",
+        capabilities: { isTakable: false, isReadable: true, isUsable: true, isCombinable: true, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: true },
+        handlers: {
+            onUse: [
+                {
+                    itemId: 'item_sd_card' as ItemId,
+                    success: {
+                        message: "You insert the SD card into your phone and a video file opens.",
+                        effects: [
+                            { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759241547/0930_eit8he.mov', messageType: 'video'},
+                            { type: 'SHOW_MESSAGE', sender: 'agent', content: "Silas Bloom... I've never heard that name before. Talented musician, if you ask me. And that song for Rose ... sounds like they were deeply in love." },
+                            { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'Beside the SD card, you see a folded newspaper article.' },
+                            { type: 'SET_FLAG', flag: 'notebook_video_watched' as Flag }
+                        ]
+                    },
+                    fail: { message: "That doesn't seem to work." }
+                }
+            ],
+            defaultFailMessage: "You can't use the phone by itself right now."
+        },
+        design: { authorNotes: "Player's primary tool." },
+        version: { schema: "1.0", content: "1.0" }
+    },
     'item_business_card': {
         id: 'item_business_card' as ItemId,
         name: 'Business Card',
@@ -246,7 +273,7 @@ const items: Record<ItemId, Item> = {
         name: 'SD Card',
         archetype: "Media",
         description: 'A small, modern SD card, looking strangely out of place in the old notebook. It probably fits in your phone.',
-        alternateDescription: 'You can "use SD Card" to see what\'s on it.',
+        alternateDescription: 'You can use this with your phone to see what\'s on it.',
         capabilities: { isTakable: true, isReadable: true, isUsable: true, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         handlers: {
             onTake: {
@@ -254,23 +281,18 @@ const items: Record<ItemId, Item> = {
                 fail: { message: "You can't take that right now." }
             },
             onRead: {
-                success: { message: "It's a standard SD card. You'll need to 'use' it with your phone to see what's on it.", effects: [] },
+                success: { message: "It's a standard SD card. You'll need to use it with a device to see what's on it.", effects: [] },
                 fail: { message: "" }
             },
             onUse: {
-                success: {
-                    message: "You insert the SD card into your phone and a video file opens.",
-                    effects: [
-                        { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759241547/0930_eit8he.mov', messageType: 'video'},
-                        { type: 'SHOW_MESSAGE', sender: 'agent', content: "Silas Bloom... I've never heard that name before. Talented musician, if you ask me. And that song for Rose ... sounds like they were deeply in love." },
-                        { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'Beside the SD card, you see a folded newspaper article.' },
-                        { type: 'SET_FLAG', flag: 'notebook_video_watched' as Flag }
-                    ]
+                 success: {
+                    message: "You need to use this with something, like your phone.",
+                    effects: []
                 },
-                fail: { message: "You can't use the SD card right now." }
+                fail: { message: "" }
             }
         },
-        logic: { intendedUseTargets: ['player_phone'] },
+        logic: { intendedUseTargets: ['item_player_phone'] },
         design: { authorNotes: "Contains the video clue about Silas Bloom." },
         version: { schema: "1.0", content: "1.0" }
     },
@@ -589,8 +611,8 @@ export const game: Game = {
     *   **Illogical:** \`{"agentResponse": "I don't think that's a good idea, Burt. We might need that as evidence. Let's rethink.", "commandToExecute": "invalid"}\`
     *   **Conversational:** \`{"agentResponse": "Let's focus on the objective: [current chapter goal]. What's our next move?", "commandToExecute": "invalid"}\`
 7.  **Implicit Player Items:** Burt has standard equipment like a phone. He doesn't need to see a phone in the room to use it.
-    *   **Player says:** "put sd card in phone" -> **Your command should be:** \`use "SD Card"\`
-    *   **Player says:** "use sd card with my phone" -> **Your command should be:** \`use "SD Card"\`
+    *   **Player says:** "put sd card in phone" -> **Your command should be:** \`use "SD Card" on "Phone"\`
+    *   **Player says:** "use sd card with my phone" -> **Your command should be:** \`use "SD Card" on "Phone"\`
 
 
 **Your Task Flow:**
