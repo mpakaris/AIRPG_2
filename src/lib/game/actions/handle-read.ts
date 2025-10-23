@@ -27,17 +27,18 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
 
     const effectiveHandler = handlerOverride || baseHandler;
 
-    if (effectiveHandler && effectiveHandler.success) { // Safely check for success block
+    if (effectiveHandler?.success) { // Safely check for handler and success block
         const effectsToProcess = effectiveHandler.success.effects || [];
         let result = processEffects(state, effectsToProcess, game);
         
         let message;
-        // Safely check for effects array before calling .some()
-        const hasMessageEffect = Array.isArray(effectsToProcess) && effectsToProcess.some(e => e.type === 'SHOW_MESSAGE');
+        const hasMessageEffect = effectsToProcess.some(e => e.type === 'SHOW_MESSAGE');
         
         if (!hasMessageEffect && effectiveHandler.success.message) {
+            // Safely determine the sender, defaulting to 'narrator'
             const sender = (effectiveHandler.success as any).sender === 'agent' ? 'agent' : 'narrator';
-            const senderName = sender === 'agent' ? game.narratorName || 'Agent' : 'Narrator';
+            const senderName = sender === 'agent' ? (game.narratorName || 'Agent') : narratorName;
+            
             message = createMessage(
                 sender,
                 senderName,
