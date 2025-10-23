@@ -36,7 +36,7 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
         const successBlock = effectiveHandler.success;
         
         // Safely check for effects array before processing. Default to an empty array if missing.
-        const effectsToProcess = Array.isArray(successBlock.effects) ? successBlock.effects : [];
+        const effectsToProcess = (Array.isArray(successBlock.effects)) ? successBlock.effects : [];
         let result = processEffects(state, effectsToProcess, game);
         
         // Check if there's an explicit SHOW_MESSAGE effect.
