@@ -1,4 +1,5 @@
 
+
 import { CommandResult } from "@/app/actions";
 import type { Game, PlayerState } from "../types";
 import { findItemInContext, getLiveGameObject } from "./helpers";
@@ -78,3 +79,5 @@ export function handleExamine(state: PlayerState, targetName: string, game: Game
 
     return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${targetName}" here.`)] };
 }
+
+    

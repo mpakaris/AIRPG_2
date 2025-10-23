@@ -1,4 +1,5 @@
 
+
 import { CommandResult } from "@/app/actions";
 import type { Game, PlayerState } from "../types";
 import { getLiveGameObject } from "./helpers";
@@ -63,3 +64,5 @@ export function handleMove(state: PlayerState, targetName: string, game: Game): 
         return { newState: state, messages: [createMessage('narrator', narratorName, onMoveHandler.fail.message)] };
     }
 }
+
+    

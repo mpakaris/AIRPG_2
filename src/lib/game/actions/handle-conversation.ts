@@ -152,3 +152,5 @@ export async function handleConversation(state: PlayerState, playerInput: string
         messages: [createMessage(npcId, npc.name, `"${npc.goodbyeMessage || 'I have nothing to say.'}"`)]
     };
 }
+
+    

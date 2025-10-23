@@ -1,5 +1,4 @@
 
-
 import type { Effect, Game, GameObjectId, ItemId, Message, NpcId, PlayerState, TokenUsage } from '../types';
 import { getLiveGameObject } from './helpers';
 

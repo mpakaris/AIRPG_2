@@ -92,3 +92,5 @@ export function processPassword(state: PlayerState, command: string, game: Game)
         return { newState: state, messages: [createMessage('narrator', narratorName, failMessage)] };
     }
 }
+
+    

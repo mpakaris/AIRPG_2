@@ -1,4 +1,5 @@
 
+
 import { CommandResult } from "@/app/actions";
 import type { Game, PlayerState } from "../types";
 import { createMessage } from "./process-effects";
@@ -14,3 +15,5 @@ export function handleInventory(state: PlayerState, game: Game): CommandResult {
     }).filter(Boolean).join('\n');
     return { newState: state, messages: [createMessage('system', 'System', `You are carrying:\n${itemNames}`)] };
 }
+
+    

@@ -62,3 +62,5 @@ export async function handleUse(state: PlayerState, itemName: string, objectName
   // Fallback if the item exists but has no onUse handler or conditions aren't met
   return { newState: state, messages: [createMessage('system', 'System', 'You need to specify what to use that on, or it can\'t be used by itself.')] };
 }
+
+    

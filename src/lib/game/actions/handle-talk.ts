@@ -47,3 +47,5 @@ export async function handleTalk(state: PlayerState, npcName: string, game: Game
     
     return { newState: state, messages: [createMessage('system', 'System', `There is no one called "${normalizedNpcName}" here.`)] };
 }
+
+    
