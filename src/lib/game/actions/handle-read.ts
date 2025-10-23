@@ -2,7 +2,7 @@
 'use server';
 
 import { CommandResult } from "@/app/actions";
-import type { Game, PlayerState } from "../types";
+import type { Game, ItemState, PlayerState } from "../types";
 import { findItemInContext, getLiveItem } from "./helpers";
 import { createMessage, processEffects } from "./process-effects";
 
@@ -18,42 +18,50 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
         return { newState: state, messages: [createMessage('narrator', narratorName, `There's nothing to read on the ${itemToRead.name}.`)] };
     }
 
-    const liveItem = getLiveItem(itemToRead.id, state, game);
-    if (!liveItem) {
-        return { newState: state, messages: [createMessage('system', 'System', 'Error finding item state.')] };
-    }
-
-    const currentStateId = liveItem.state.currentStateId || 'default';
-    
-    // Determine the effective handler by checking the stateMap override first, then the base handler.
-    const handlerOverride = liveItem.gameLogic.stateMap?.[currentStateId]?.overrides?.onRead;
-    const baseHandler = liveItem.gameLogic.handlers?.onRead;
-    const effectiveHandler = handlerOverride || baseHandler;
-
-    // --- BULLETPROOF SAFETY CHECKS ---
-    // This block safely navigates the handler structure.
-    if (effectiveHandler && effectiveHandler.success) {
-        const successBlock = effectiveHandler.success;
-        
-        // Safely check for an effects array before processing. Default to an empty array if missing.
-        const effectsToProcess = (Array.isArray(successBlock.effects)) ? successBlock.effects : [];
-        let result = processEffects(state, effectsToProcess, game);
-        
-        // Check if there was an explicit SHOW_MESSAGE effect.
-        const hasMessageEffect = effectsToProcess.some(e => e.type === 'SHOW_MESSAGE');
-        
-        // Only add a message if one wasn't already added by an effect and a message exists.
-        if (!hasMessageEffect && successBlock.message) {
-            const sender = (successBlock as any).sender || 'narrator';
-            const senderName = sender === 'agent' ? (game.narratorName || 'Agent') : narratorName;
-            
-            const message = createMessage(sender, senderName, successBlock.message, 'text');
-            result.messages.unshift(message);
+    // If the item has a standard onRead handler and isn't a "stateful" book, use that.
+    if (itemToRead.handlers.onRead && !itemToRead.stateMap) {
+        const handler = itemToRead.handlers.onRead;
+        // Safety check for the handler structure
+        if (handler.success) {
+            const effectsToProcess = Array.isArray(handler.success.effects) ? handler.success.effects : [];
+            let result = processEffects(state, effectsToProcess, game);
+            const hasMessageEffect = effectsToProcess.some(e => e.type === 'SHOW_MESSAGE');
+            if (!hasMessageEffect && handler.success.message) {
+                result.messages.unshift(createMessage('narrator', narratorName, handler.success.message, 'text'));
+            }
+            return result;
         }
-        return result;
     }
-    // --- END SAFETY CHECKS ---
+
+    // Logic for stateful books with excerpts in stateMap
+    if (itemToRead.stateMap) {
+        let newState = JSON.parse(JSON.stringify(state)); // Deep copy for mutation
+        let liveItem = getLiveItem(itemToRead.id, newState, game);
+        if (!liveItem) {
+             return { newState: state, messages: [createMessage('system', 'System', 'Error finding item state.')] };
+        }
+
+        // Increment read count
+        const newReadCount = (liveItem.state.readCount || 0) + 1;
+        
+        // Determine which state to use. We cycle through the states.
+        const numStates = Object.keys(itemToRead.stateMap).length;
+        const stateIndex = (newReadCount - 1) % numStates;
+        const stateKey = Object.keys(itemToRead.stateMap)[stateIndex] || 'default';
+        
+        // Update the item's state in the new player state
+        if (!newState.itemStates[itemToRead.id]) {
+            newState.itemStates[itemToRead.id] = {} as ItemState;
+        }
+        newState.itemStates[itemToRead.id].readCount = newReadCount;
+        newState.itemStates[itemToRead.id].currentStateId = stateKey;
+
+        // Get the message from the stateMap
+        const messageContent = itemToRead.stateMap[stateKey]?.description || itemToRead.description;
+        
+        return { newState, messages: [createMessage('narrator', narratorName, messageContent)] };
+    }
     
-    // If no specific handler or success block is found, use the item's description as the default content.
+    // Fallback for items that are readable but have no specific handler or stateMap
     return { newState: state, messages: [createMessage('narrator', narratorName, itemToRead.description)] };
 }

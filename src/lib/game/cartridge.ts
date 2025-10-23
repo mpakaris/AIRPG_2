@@ -279,15 +279,13 @@ const items: Record<ItemId, Item> = {
         name: 'The Art of the Deal',
         archetype: 'Book',
         description: 'A book about business with a gaudy cover.',
-        alternateDescription: 'Still a book about business.',
         capabilities: { isTakable: false, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         state: { readCount: 0, currentStateId: 'default' },
-        handlers: { onTake: { success: {}, fail: { message: "You can't take that book." } }, onRead: {} },
+        handlers: { onTake: { fail: { message: "You can't take that book." } } },
         stateMap: {
-            'default': { overrides: { onRead: {
-                success: { message: "It seems to be a ghost-written book about a real estate magnate. Not relevant to the case.", effects: [] },
-                fail: { message: "" }
-            }}}
+            'default': { description: "It seems to be a ghost-written book about a real estate magnate. Not relevant to the case." },
+            'read1': { description: "Chapter 1: 'Think Big'. You decide you've thought big enough for one day." },
+            'read2': { description: "You skim another chapter. It's mostly just self-praise. This isn't helping the case." }
         },
         design: { tags: ['book', 'distraction'] },
         version: { schema: "1.0", content: "1.1" }
@@ -297,15 +295,13 @@ const items: Record<ItemId, Item> = {
         name: 'A Brief History of Time',
         archetype: 'Book',
         description: 'A book about physics by a famous scientist.',
-        alternateDescription: 'Still a book about physics.',
         capabilities: { isTakable: false, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         state: { readCount: 0, currentStateId: 'default' },
-        handlers: { onTake: { success: {}, fail: { message: "You can't take that book." } }, onRead: {} },
+        handlers: { onTake: { fail: { message: "You can't take that book." } } },
         stateMap: {
-            'default': { overrides: { onRead: {
-                success: { message: "Complex theories about spacetime. Unlikely to help you solve a murder.", effects: [] },
-                fail: { message: "" }
-            }}}
+            'default': { description: "Complex theories about spacetime. Unlikely to help you solve a murder." },
+            'read1': { description: "You read about black holes and event horizons. Your own event horizon feels like it's about five minutes away if you don't get a lead soon." },
+            'read2': { description: "The book talks about the arrow of time. You wish you could fire an arrow back in time and ask Silas Bloom what happened." }
         },
         design: { tags: ['book', 'distraction'] },
         version: { schema: "1.0", content: "1.1" }
@@ -314,16 +310,14 @@ const items: Record<ItemId, Item> = {
         id: 'item_book_justice' as ItemId,
         name: 'Justice for My Love',
         archetype: 'Book',
-        description: 'A romance novel with a cheesy cover.',
-        alternateDescription: "The cover is cheesy, but the title 'Justice for My Love' continues to stand out.",
+        description: 'A romance novel with a cheesy cover. The title, "Justice for My Love", catches your eye.',
         capabilities: { isTakable: false, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         state: { readCount: 0, currentStateId: 'default' },
-        handlers: { onTake: { success: {}, fail: { message: "You can't take that book." } }, onRead: {} },
+        handlers: { onTake: { fail: { message: "You can't take that book." } } },
         stateMap: {
-            'default': { overrides: { onRead: {
-                success: { message: "Against your better judgment, you read a page. 'His voice was like smooth jazz on a rainy night, but his eyes held a storm. She knew then that he would get justice for her, or die trying.'", effects: [] },
-                fail: { message: "" }
-            }}}
+            'default': { description: "Against your better judgment, you read a page. 'His voice was like smooth jazz on a rainy night, but his eyes held a storm. She knew then that he would get justice for her, or die trying.'" },
+            'read1': { description: "You flip to a random page. '...and in that moment, she knew their love was a clue, a puzzle box only they could unlock.' You close the book. That's enough of that." },
+            'read2': { description: "The back cover has a blurb: 'A story of love, loss, and the quest for justice.' The word 'justice' is practically leaping off the page." }
         },
         design: { tags: ['book', 'clue'] },
         version: { schema: "1.0", content: "1.1" }
