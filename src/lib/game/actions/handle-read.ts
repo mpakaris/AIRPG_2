@@ -3,7 +3,7 @@
 
 import { CommandResult } from "@/app/actions";
 import type { Game, Item, PlayerState } from "../types";
-import { findItemInContext } from "./helpers";
+import { findItemInContext, getLiveItem } from "./helpers";
 import { createMessage, processEffects } from "./process-effects";
 import { normalizeName } from "@/lib/utils";
 
@@ -22,16 +22,15 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
         return { newState: state, messages: [createMessage('narrator', narratorName, `There's nothing to read on the ${itemToRead.name}.`)] };
     }
 
-    // --- Case 1: The item has a stateMap for cycling through descriptions (e.g., books) ---
+    // --- CASE 1: The item has a stateMap for cycling through descriptions (e.g., books) ---
     if (itemToRead.stateMap && itemToRead.state) {
-        let newState = JSON.parse(JSON.stringify(state)); // Deep copy
+        let newState = JSON.parse(JSON.stringify(state)); // Deep copy for safety
         
         let liveItemState = newState.itemStates[itemToRead.id];
         if (!liveItemState) {
-            // Initialize if it doesn't exist, using defaults from cartridge
             liveItemState = { 
-                readCount: itemToRead.state.readCount || 0,
-                currentStateId: itemToRead.state.currentStateId || 'default'
+                readCount: 0,
+                currentStateId: 'default'
             };
             newState.itemStates[itemToRead.id] = liveItemState;
         }
@@ -63,7 +62,7 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
         return { newState, messages: [createMessage('narrator', narratorName, description)] };
     }
 
-    // --- Case 2: The item has a standard onRead handler with effects ---
+    // --- CASE 2: The item has a standard onRead handler with effects (like notes or documents) ---
     const handler = itemToRead.handlers?.onRead;
     if (handler && handler.success) {
         const successBlock = handler.success;
@@ -87,4 +86,3 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
     // --- Fallback: Just show the item's default description if no specific read logic is found ---
     return { newState: state, messages: [createMessage('narrator', narratorName, itemToRead.description)] };
 }
-
