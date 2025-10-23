@@ -16,12 +16,12 @@ export function handleOpen(state: PlayerState, targetName: string, game: Game): 
     );
 
     if (!targetObjectId) {
-        return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${targetName}" to open.`)] };
+        return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${normalizedTargetName}" to open.`)] };
     }
 
     const liveObject = getLiveGameObject(targetObjectId, state, game);
     if (!liveObject) {
-         return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${targetName}" to open.`)] };
+         return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${normalizedTargetName}" to open.`)] };
     }
     
     if (liveObject.state.isLocked) {
@@ -60,3 +60,4 @@ export function handleOpen(state: PlayerState, targetName: string, game: Game): 
     
     return result;
 }
+
