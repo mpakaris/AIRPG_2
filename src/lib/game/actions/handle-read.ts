@@ -25,7 +25,7 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
 
     const currentStateId = liveItem.state.currentStateId || 'default';
     
-    // Correctly look for the handler override inside the 'overrides' property of the stateMap entry.
+    // Determine the effective handler by checking the stateMap override first, then the base handler.
     const handlerOverride = liveItem.gameLogic.stateMap?.[currentStateId]?.overrides?.onRead;
     const baseHandler = liveItem.gameLogic.handlers?.onRead;
     const effectiveHandler = handlerOverride || baseHandler;
