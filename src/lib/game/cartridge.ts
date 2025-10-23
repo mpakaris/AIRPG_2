@@ -1,5 +1,4 @@
 
-
 import type { Game, GameId, ChapterId, LocationId, GameObjectId, ItemId, NpcId, Flag, WorldId, StructureId, CellId, PortalId, GameObject, Item, NPC, Location, Portal, Structure, World, Chapter } from './types';
 
 // --- Static Game Data ---
@@ -283,12 +282,11 @@ const items: Record<ItemId, Item> = {
         alternateDescription: 'Still a book about business.',
         capabilities: { isTakable: false, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         state: { readCount: 0, currentStateId: 'default' },
-        handlers: {},
-        stateMap: {
-            'default': { overrides: { onRead: { success: { message: "You open the book to a random page. It reads: 'My style of deal-making is quite simple and straightforward. I aim very high, and then I just keep pushing and pushing and pushing to get what I’m after.'", effects: [{ type: 'SET_STATE', targetId: 'item_book_deal', to: 'read_once' }] }, fail: { message: "" } } } },
-            'read_once': { overrides: { onRead: { success: { message: "Another page: 'Sometimes by losing a battle you find a new way to win the war.' It sounds vaguely profound.", effects: [{ type: 'SET_STATE', targetId: 'item_book_deal', to: 'read_twice' }] }, fail: { message: "" } } } },
-            'read_twice': { overrides: { onRead: { success: { message: "One more flip: 'What separates the winners from the losers is how a person reacts to each new twist of fate.' You close the book.", effects: [{ type: 'SET_STATE', targetId: 'item_book_deal', to: 'cooldown' }] }, fail: { message: "" } } } },
-            'cooldown': { overrides: { onRead: { success: { message: "Come on Burt, we don't have time for that. The life of a woman is at stake here", sender: 'agent', effects: [] }, fail: { message: "" } } } }
+        handlers: {
+            onRead: {
+                success: { message: "It seems to be a ghost-written book about a real estate magnate. Not relevant to the case." },
+                fail: {message: ""}
+            }
         },
         design: { tags: ['book', 'distraction'] },
         version: { schema: "1.0", content: "1.1" }
@@ -301,12 +299,11 @@ const items: Record<ItemId, Item> = {
         alternateDescription: 'Still a book about physics.',
         capabilities: { isTakable: false, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         state: { readCount: 0, currentStateId: 'default' },
-        handlers: {},
-        stateMap: {
-            'default': { overrides: { onRead: { success: { message: "You crack it open. '...if a star is massive enough, it can collapse under its own gravity and form a black hole, a region of space-time from which nothing, not even light, can escape.'", effects: [{ type: 'SET_STATE', targetId: 'item_book_time', to: 'read_once' }] }, fail: { message: "" } } } },
-            'read_once': { overrides: { onRead: { success: { message: "Flipping through, you find another passage: 'The universe doesn't allow perfection.' You can relate.", effects: [{ type: 'SET_STATE', targetId: 'item_book_time', to: 'read_twice' }] }, fail: { message: "" } } } },
-            'read_twice': { overrides: { onRead: { success: { message: "A final quote catches your eye: 'Quiet people have the loudest minds.' A chill runs down your spine.", effects: [{ type: 'SET_STATE', targetId: 'item_book_time', to: 'cooldown' }] }, fail: { message: "" } } } },
-            'cooldown': { overrides: { onRead: { success: { message: "Come on Burt, we don't have time for that. The life of a woman is at stake here", sender: 'agent', effects: [] }, fail: { message: "" } } } }
+        handlers: {
+            onRead: {
+                success: { message: "Complex theories about spacetime. Unlikely to help you solve a murder." },
+                fail: {message: ""}
+            }
         },
         design: { tags: ['book', 'distraction'] },
         version: { schema: "1.0", content: "1.1" }
@@ -319,12 +316,11 @@ const items: Record<ItemId, Item> = {
         alternateDescription: "The cover is cheesy, but the title 'Justice for My Love' continues to stand out.",
         capabilities: { isTakable: false, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         state: { readCount: 0, currentStateId: 'default' },
-        handlers: {},
-        stateMap: {
-            'default': { overrides: { onRead: { success: { message: "Against your better judgment, you read a page. 'His voice was like smooth jazz on a rainy night, but his eyes held a storm. She knew then that he would get justice for her, or die trying.'", effects: [{ type: 'SET_STATE', targetId: 'item_book_justice', to: 'read_once' }] }, fail: { message: "" } } } },
-            'read_once': { overrides: { onRead: { success: { message: "Another page: 'The city was a cold, hard place, but her love was the one piece of evidence he needed to keep going.'", effects: [{ type: 'SET_STATE', targetId: 'item_book_justice', to: 'read_twice' }] }, fail: { message: "" } } } },
-            'read_twice': { overrides: { onRead: { success: { message: "You can't believe you're doing this. 'He whispered her name like a prayer, a clue to a mystery only his heart could solve.'", effects: [{ type: 'SET_STATE', targetId: 'item_book_justice', to: 'cooldown' }] }, fail: { message: "" } } } },
-            'cooldown': { overrides: { onRead: { success: { message: "Come on Burt, we don't have time for that. The life of a woman is at stake here", sender: 'agent', effects: [] }, fail: { message: "" } } } }
+        handlers: {
+            onRead: {
+                success: { message: "Against your better judgment, you read a page. 'His voice was like smooth jazz on a rainy night, but his eyes held a storm. She knew then that he would get justice for her, or die trying.'" },
+                fail: {message: ""}
+            }
         },
         design: { tags: ['book', 'clue'] },
         version: { schema: "1.0", content: "1.1" }
