@@ -1,4 +1,5 @@
 
+
 // Branded types for stronger type safety
 export type GameId = string & { readonly __brand: 'GameId' };
 export type ChapterId = string & { readonly __brand: 'ChapterId' };
@@ -8,12 +9,26 @@ export type ItemId = string & { readonly __brand: 'ItemId' };
 export type NpcId = string & { readonly __brand: 'NpcId' };
 export type Flag = string & { readonly __brand: 'Flag' };
 export type GameType = 'Escape Game' | 'Limited Open World' | 'Open World' | 'Multi Player';
+export type ArchetypeId = string & { readonly __brand: 'ArchetypeId' };
 
 // New World-Building Types
 export type WorldId = string & { readonly __brand: 'WorldId' };
 export type CellId = string & { readonly __brand: 'CellId' };
 export type StructureId = string & { readonly __brand: 'StructureId' };
 export type PortalId = string & { readonly __brand: 'PortalId' };
+
+// --- Entity Type Classifications (for Archetypes) ---
+
+export type GameObjectType = 
+    | 'Container' | 'Portal' | 'Mechanism' | 'Surface' | 'Furniture' | 'Fixture' 
+    | 'Device' | 'Display' | 'Machinery' | 'Prop' | 'Hidden' | 'Signage' 
+    | 'LightSource' | 'AudioSource' | 'Appliance' | 'Security' | 'WeaponizedProp'
+    | 'Hazard' | 'Anchor' | 'Vehicle' | 'Structure';
+
+export type ItemType =
+    | 'Document' | 'Book' | 'Media' | 'Image' | 'Key' | 'Tool' | 'Weapon'
+    | 'Consumable' | 'Clothing' | 'Gadget' | 'Evidence' | 'Puzzle' | 'Currency'
+    | 'Valuable' | 'Chemical' | 'Component' | 'Personal' | 'Clue' | 'Mystical' | 'Quest';
 
 
 export type ImageDetails = {
@@ -39,7 +54,7 @@ export type Message = {
   usage?: TokenUsage;
 };
 
-// --- Effect System (Previously Actions) ---
+// --- Effect System ---
 export type Effect =
   | { type: 'ADD_ITEM'; itemId: ItemId }
   | { type: 'SET_FLAG'; flag: Flag }
@@ -151,6 +166,7 @@ export type GameObject = {
   id: GameObjectId;
   name: string;
   description: string;
+  archetype: GameObjectType;
 
   capabilities: {
     openable: boolean;
@@ -259,7 +275,7 @@ export type GameObject = {
 export type Item = {
   id: ItemId;
   name: string;
-  type: "item";
+  archetype: ItemType;
   description: string;
   alternateDescription?: string;
   i18nKey?: string;
@@ -391,7 +407,7 @@ export type NPC = {
   persona?: string;
   welcomeMessage: string;
   goodbyeMessage: string;
-  startConversationActions?: Effect[];
+  startConversationEffects?: Effect[];
 
   limits?: {
     maxInteractions?: number;

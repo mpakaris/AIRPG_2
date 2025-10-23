@@ -1,4 +1,5 @@
 
+
 import type { Game, GameId, ChapterId, LocationId, GameObjectId, ItemId, NpcId, Flag, WorldId, StructureId, CellId, PortalId, GameObject, Item, NPC, Location, Portal, Structure, World, Chapter } from './types';
 
 // --- Static Game Data ---
@@ -7,6 +8,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
     'obj_brown_notebook': {
         id: 'obj_brown_notebook' as GameObjectId,
         name: 'Brown Notebook',
+        archetype: 'Container',
         description: 'A worn, leather-bound notebook. It feels heavy with secrets.',
         capabilities: { openable: true, lockable: true, breakable: false, movable: true, powerable: false, container: true, readable: false, inputtable: true },
         state: { isOpen: false, isLocked: true, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
@@ -63,6 +65,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
     'obj_chalkboard_menu': {
         id: 'obj_chalkboard_menu' as GameObjectId,
         name: 'Chalkboard Menu',
+        archetype: 'Signage',
         description: "Today's special is three scones for the price of two. A deal almost as sweet as justice.",
         capabilities: { openable: false, lockable: false, breakable: true, movable: true, powerable: false, container: false, readable: true, inputtable: false },
         state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
@@ -88,6 +91,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
     'obj_magazine': {
         id: 'obj_magazine' as GameObjectId,
         name: 'Magazine',
+        archetype: 'Prop',
         description: "It's a copy of this week's local entertainment magazine. The cover story discusses the current series of murders. The usual craziness of a Metropolis.",
         capabilities: { openable: false, lockable: false, breakable: true, movable: true, powerable: false, container: false, readable: true, inputtable: false },
         state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
@@ -113,6 +117,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
     'obj_bookshelf': {
         id: 'obj_bookshelf' as GameObjectId,
         name: 'Bookshelf',
+        archetype: 'Furniture',
         description: "A small bookshelf filled with used paperbacks. You can see the titles: 'The Art of the Deal', 'A Brief History of Time', and a romance novel called 'Justice for My Love'.",
         capabilities: { openable: false, lockable: false, breakable: false, movable: true, powerable: false, container: true, readable: false, inputtable: false },
         state: { isOpen: true, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
@@ -142,6 +147,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
     'obj_painting': {
         id: 'obj_painting' as GameObjectId,
         name: 'Painting on the wall',
+        archetype: 'Surface',
         description: "An abstract painting hangs on the wall, its swirls of color adding a touch of modern art to the cafe's cozy atmosphere. It seems to be signed 'S.B.'",
         capabilities: { openable: false, lockable: false, breakable: false, movable: true, powerable: false, container: false, readable: false, inputtable: false },
         state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
@@ -177,7 +183,7 @@ const items: Record<ItemId, Item> = {
     'item_business_card': {
         id: 'item_business_card' as ItemId,
         name: 'Business Card',
-        type: "item",
+        archetype: "Personal",
         description: 'A simple business card for a musician. It reads: "S A X O - The World\'s Best Sax Player". A phone number is listed, along with a handwritten number "1943" and the name "ROSE".',
         alternateDescription: "The musician's business card. That name, 'ROSE', and the number '1943' seem significant.",
         capabilities: { isTakable: true, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
@@ -204,7 +210,7 @@ const items: Record<ItemId, Item> = {
     'item_newspaper_article': {
         id: 'item_newspaper_article' as ItemId,
         name: 'Newspaper Article',
-        type: "item",
+        archetype: "Document",
         description: 'A folded newspaper article from the 1940s. The headline is about a local musician, Silas Bloom.',
         alternateDescription: 'The old article about Silas Bloom. The mention of your family name, Macklin, still feels strange.',
         capabilities: { isTakable: true, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
@@ -239,7 +245,7 @@ const items: Record<ItemId, Item> = {
     'item_sd_card': {
         id: 'item_sd_card' as ItemId,
         name: 'SD Card',
-        type: "item",
+        archetype: "Media",
         description: 'A small, modern SD card, looking strangely out of place in the old notebook. Most likely it would fit in the slot of your phone. Curious to see what\'s inside.',
         alternateDescription: 'You can "use SD Card" to see what\'s on it.',
         capabilities: { isTakable: true, isReadable: true, isUsable: true, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
@@ -272,7 +278,7 @@ const items: Record<ItemId, Item> = {
      'item_book_deal': {
         id: 'item_book_deal' as ItemId,
         name: 'The Art of the Deal',
-        type: 'item',
+        archetype: 'Book',
         description: 'A book about business.',
         alternateDescription: 'Still a book about business.',
         capabilities: { isTakable: false, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
@@ -290,7 +296,7 @@ const items: Record<ItemId, Item> = {
     'item_book_time': {
         id: 'item_book_time' as ItemId,
         name: 'A Brief History of Time',
-        type: 'item',
+        archetype: 'Book',
         description: 'A book about physics.',
         alternateDescription: 'Still a book about physics.',
         capabilities: { isTakable: false, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
@@ -308,7 +314,7 @@ const items: Record<ItemId, Item> = {
     'item_book_justice': {
         id: 'item_book_justice' as ItemId,
         name: 'Justice for My Love',
-        type: 'item',
+        archetype: 'Book',
         description: 'A romance novel.',
         alternateDescription: "The cover is cheesy, but the title 'Justice for My Love' continues to stand out.",
         capabilities: { isTakable: false, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
@@ -326,7 +332,7 @@ const items: Record<ItemId, Item> = {
     'item_hidden_note': {
         id: 'item_hidden_note' as ItemId,
         name: 'Hidden Note',
-        type: 'item',
+        archetype: 'Document',
         description: 'A small note, folded neatly. It reads: "He knows. Find the flower with a broken heart."',
         alternateDescription: 'The note still reads: "He knows. Find the flower with a broken heart."',
         capabilities: { isTakable: true, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
@@ -620,5 +626,3 @@ export const game: Game = {
   chapters: chapters,
   startChapterId: 'ch1-the-cafe' as ChapterId,
 };
-
-    
