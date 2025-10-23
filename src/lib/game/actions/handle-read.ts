@@ -1,4 +1,6 @@
 
+'use server';
+
 import { CommandResult } from "@/app/actions";
 import type { Game, PlayerState } from "../types";
 import { findItemInContext, getLiveItem } from "./helpers";
@@ -28,25 +30,27 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
     const baseHandler = liveItem.gameLogic.handlers?.onRead;
     const effectiveHandler = handlerOverride || baseHandler;
 
-    if (effectiveHandler) {
+    // --- Definitive Safety Check ---
+    // This block ensures that we never crash, even if the handler, success block, or effects array are missing.
+    if (effectiveHandler && effectiveHandler.success) {
         const successBlock = effectiveHandler.success;
-
-        if (successBlock) {
-            const effectsToProcess = successBlock.effects || [];
-            let result = processEffects(state, effectsToProcess, game);
-            const hasMessageEffect = effectsToProcess.some(e => e.type === 'SHOW_MESSAGE');
+        const effectsToProcess = Array.isArray(successBlock.effects) ? successBlock.effects : [];
+        
+        let result = processEffects(state, effectsToProcess, game);
+        
+        const hasMessageEffect = effectsToProcess.some(e => e.type === 'SHOW_MESSAGE');
+        
+        if (!hasMessageEffect && successBlock.message) {
+            // Safely default sender to 'narrator' if not specified
+            const sender = (successBlock as any).sender || 'narrator';
+            const senderName = sender === 'agent' ? (game.narratorName || 'Agent') : narratorName;
             
-            if (!hasMessageEffect && successBlock.message) {
-                const sender = (successBlock as any).sender || 'narrator';
-                const senderName = sender === 'agent' ? (game.narratorName || 'Agent') : narratorName;
-                
-                const message = createMessage(sender, senderName, successBlock.message, 'text');
-                result.messages.unshift(message);
-            }
-            return result;
+            const message = createMessage(sender, senderName, successBlock.message, 'text');
+            result.messages.unshift(message);
         }
+        return result;
     }
     
-    // If no specific handler is found, use the item's description as the default content.
+    // If no specific handler or success block is found, use the item's description as the default content.
     return { newState: state, messages: [createMessage('narrator', narratorName, itemToRead.description)] };
 }
