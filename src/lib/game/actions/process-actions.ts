@@ -1,6 +1,6 @@
 
 
-import type { Action, Game, GameObjectId, ItemId, Message, NpcId, PlayerState, TokenUsage } from '../types';
+import type { Effect, Game, GameObjectId, ItemId, Message, NpcId, PlayerState, TokenUsage } from '../types';
 import { getLiveGameObject } from './helpers';
 
 const examinedObjectFlag = (id: string) => `examined_${id}`;
@@ -60,30 +60,30 @@ export function createMessage(
   };
 }
 
-export function processActions(initialState: PlayerState, actions: Action[], game: Game): { newState: PlayerState, messages: Message[] } {
+export function processEffects(initialState: PlayerState, effects: Effect[], game: Game): { newState: PlayerState, messages: Message[] } {
     let newState = JSON.parse(JSON.stringify(initialState)); // Deep copy to avoid mutation issues
     const messages: Message[] = [];
     const narratorName = game.narratorName || 'Narrator';
 
-    for (const action of actions) {
-        switch (action.type) {
+    for (const effect of effects) {
+        switch (effect.type) {
             case 'ADD_ITEM':
-                if (!newState.inventory.includes(action.itemId)) {
-                    newState.inventory.push(action.itemId);
+                if (!newState.inventory.includes(effect.itemId)) {
+                    newState.inventory.push(effect.itemId);
                 }
                 break;
             case 'SET_FLAG':
-                if (!newState.flags.includes(action.flag)) {
-                    newState.flags.push(action.flag);
+                if (!newState.flags.includes(effect.flag)) {
+                    newState.flags.push(effect.flag);
                 }
                 break;
             case 'SHOW_MESSAGE':
-                const messageImageId = action.imageId;
+                const messageImageId = effect.imageId;
                 const message = createMessage(
-                    action.sender,
-                    action.senderName || narratorName,
-                    action.content,
-                    action.messageType,
+                    effect.sender,
+                    effect.senderName || narratorName,
+                    effect.content,
+                    effect.messageType,
                     messageImageId ? { id: messageImageId, game, state: newState, showEvenIfExamined: true } : undefined
                 );
                 messages.push(message);
@@ -103,13 +103,13 @@ export function processActions(initialState: PlayerState, actions: Action[], gam
                 }
                 break;
             case 'START_INTERACTION':
-                newState.interactingWithObject = action.objectId;
+                newState.interactingWithObject = effect.objectId;
                 // Update state if provided
-                if (action.interactionStateId && newState.interactingWithObject) {
+                if (effect.interactionStateId && newState.interactingWithObject) {
                     if (!newState.objectStates[newState.interactingWithObject]) {
                         newState.objectStates[newState.interactingWithObject] = {};
                     }
-                    newState.objectStates[newState.interactingWithObject].currentStateId = action.interactionStateId;
+                    newState.objectStates[newState.interactingWithObject].currentStateId = effect.interactionStateId;
                 }
                 break;
             case 'END_INTERACTION':
@@ -119,28 +119,30 @@ export function processActions(initialState: PlayerState, actions: Action[], gam
                     newState.interactingWithObject = null;
                 }
                 break;
-            case 'SET_INTERACTION_STATE':
-                 if(newState.interactingWithObject) {
-                    if (!newState.objectStates[newState.interactingWithObject]) {
-                        newState.objectStates[newState.interactingWithObject] = {};
-                    }
-                    newState.objectStates[newState.interactingWithObject].currentStateId = action.state;
+            case 'SET_STATE':
+                const { targetId, to } = effect;
+                if (game.items[targetId as ItemId]) {
+                    if (!newState.itemStates[targetId as ItemId]) newState.itemStates[targetId as ItemId] = {};
+                    newState.itemStates[targetId as ItemId].currentStateId = to;
+                } else if (game.gameObjects[targetId as GameObjectId]) {
+                    if (!newState.objectStates[targetId as GameObjectId]) newState.objectStates[targetId as GameObjectId] = {};
+                    newState.objectStates[targetId as GameObjectId].currentStateId = to;
                 }
                 break;
              case 'SET_OBJECT_STATE':
-                if (!newState.objectStates[action.objectId]) {
-                    newState.objectStates[action.objectId] = {};
+                if (!newState.objectStates[effect.objectId]) {
+                    newState.objectStates[effect.objectId] = {};
                 }
-                newState.objectStates[action.objectId] = {
-                    ...newState.objectStates[action.objectId],
-                    ...action.state
+                newState.objectStates[effect.objectId] = {
+                    ...newState.objectStates[effect.objectId],
+                    ...effect.state
                 };
                 break;
             case 'DEMOTE_NPC':
-                 const npcToDemote = game.npcs[action.npcId];
+                 const npcToDemote = game.npcs[effect.npcId];
                  if (npcToDemote?.demoteRules?.then) {
-                    newState.npcStates[action.npcId] = {
-                        ...newState.npcStates[action.npcId],
+                    newState.npcStates[effect.npcId] = {
+                        ...newState.npcStates[effect.npcId],
                         stage: npcToDemote.demoteRules.then.setStage,
                         importance: npcToDemote.demoteRules.then.setImportance,
                     };

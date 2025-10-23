@@ -2,7 +2,7 @@
 import { CommandResult } from "@/app/actions";
 import type { Game, PlayerState } from "../types";
 import { getLiveGameObject } from "./helpers";
-import { createMessage, processActions } from "./process-actions";
+import { createMessage, processEffects } from "./process-effects";
 
 export function handleTake(state: PlayerState, targetName: string, game: Game): CommandResult {
   const location = game.locations[state.currentLocationId];
@@ -37,8 +37,8 @@ export function handleTake(state: PlayerState, targetName: string, game: Game): 
             const newObjectItems = currentObjectItems.filter(id => id !== itemToTake.id);
             newState.objectStates[objId].items = newObjectItems;
 
-            const actions = itemToTake.handlers.onTake?.success.actions || [];
-            const result = processActions(newState, actions, game);
+            const effects = itemToTake.handlers.onTake?.success.effects || [];
+            const result = processEffects(newState, effects, game);
             result.messages.unshift(createMessage('narrator', narratorName, itemToTake.handlers.onTake?.success.message || `You take the ${itemToTake.name}.`));
             return result;
         }

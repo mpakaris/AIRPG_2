@@ -1,6 +1,6 @@
 
 
-import type { Game, GameObject, GameObjectId, GameObjectState, Item, ItemId, NPC, NpcId, NpcState, PlayerState } from '../types';
+import type { Game, GameObject, GameObjectId, GameObjectState, Item, ItemId, ItemState, NPC, NpcId, NpcState, PlayerState } from '../types';
 
 export function getLiveGameObject(id: GameObjectId, state: PlayerState, game: Game): {gameLogic: GameObject, state: GameObjectState} | null {
     const baseObject = game.gameObjects[id];
@@ -20,6 +20,22 @@ export function getLiveGameObject(id: GameObjectId, state: PlayerState, game: Ga
     
     return { gameLogic: baseObject, state: combinedState };
 }
+
+export function getLiveItem(id: ItemId, state: PlayerState, game: Game): { gameLogic: Item, state: ItemState } | null {
+    const baseItem = game.items[id];
+    if (!baseItem) return null;
+
+    const liveState = state.itemStates[id] || {};
+    const baseState = baseItem.state || { readCount: 0, currentStateId: 'default' };
+    
+    const combinedState: ItemState = {
+        readCount: liveState.readCount ?? baseState.readCount,
+        currentStateId: liveState.currentStateId ?? baseState.currentStateId
+    };
+
+    return { gameLogic: baseItem, state: combinedState };
+}
+
 
 export function getLiveNpc(id: NpcId, state: PlayerState, baseNpc: NPC): NpcState {
     const liveState = state.npcStates[id];

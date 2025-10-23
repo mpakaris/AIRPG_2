@@ -1,8 +1,8 @@
 
 import { CommandResult } from "@/app/actions";
-import type { Game, PlayerState } from "../types";
-import { findItemInContext } from "./helpers";
-import { createMessage, processActions } from "./process-actions";
+import type { Game, Item, PlayerState } from "../types";
+import { findItemInContext, getLiveItem } from "./helpers";
+import { createMessage, processEffects } from "./process-effects";
 
 const examinedObjectFlag = (id: string) => `examined_${id}`;
 
@@ -14,34 +14,45 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
         return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${itemName}" to read.`)] };
     }
 
-    let newState = { ...state, flags: [...state.flags] };
-    const flag = examinedObjectFlag(itemToRead.id);
-    const isAlreadyRead = newState.flags.includes(flag as any);
-
-    if (isAlreadyRead) {
-        const alternateMessage = itemToRead.alternateDescription || `You've already read the ${itemToRead.name}.`;
-        return { newState, messages: [createMessage('narrator', narratorName, alternateMessage)] };
+    if (!itemToRead.capabilities.isReadable) {
+        return { newState: state, messages: [createMessage('narrator', narratorName, `There's nothing to read on the ${itemToRead.name}.`)] };
     }
 
-    if (itemToRead.handlers.onRead) {
-        let result = processActions(state, itemToRead.handlers.onRead.success.actions || [], game);
-        result.messages.unshift(createMessage('narrator', narratorName, itemToRead.handlers.onRead.success.message));
+    // --- State-driven Handler Logic ---
+    const liveItem = getLiveItem(itemToRead.id, state, game);
+    const currentStateId = liveItem.state.currentStateId || 'default';
+    
+    // Find the state-specific override handler, if it exists
+    const handlerOverride = itemToRead.stateMap?.[currentStateId]?.overrides?.onRead;
+    // Fallback to the base handler
+    const baseHandler = itemToRead.handlers.onRead;
+
+    // The effective handler is the override, or the base if no override exists for the current state.
+    const effectiveHandler = handlerOverride || baseHandler;
+
+    if (effectiveHandler) {
+        // We always use the success block for 'onRead' in this model. Conditions can be added later.
+        let result = processEffects(state, effectiveHandler.success.effects || [], game);
         
-        // Add the 'examined' flag after processing
-        if (!result.newState.flags.includes(flag as any)) {
-            result.newState.flags.push(flag as any);
+        let message;
+        // Check if the handler provided a SHOW_MESSAGE effect
+        const hasMessageEffect = effectiveHandler.success.effects?.some(e => e.type === 'SHOW_MESSAGE');
+        if (!hasMessageEffect) {
+            // If not, create one from the handler's message property
+            const sender = (effectiveHandler.success as any).sender === 'agent' ? 'agent' : 'narrator';
+            const senderName = sender === 'agent' ? game.narratorName || 'Agent' : 'Narrator';
+            message = createMessage(
+                sender,
+                senderName,
+                effectiveHandler.success.message,
+                'text'
+            );
+            result.messages.unshift(message);
         }
         
         return result;
     }
-
-    // Fallback if no specific onRead handler, but the item is readable
-    if (itemToRead.capabilities.isReadable) {
-        if (!isAlreadyRead) {
-            newState.flags.push(flag as any);
-        }
-        return { newState, messages: [createMessage('narrator', narratorName, itemToRead.description)] };
-    }
-
-    return { newState: state, messages: [createMessage('narrator', narratorName, `There's nothing to read on the ${itemToRead.name}.`)] };
+    
+    // Fallback for readable items without complex handlers
+    return { newState: state, messages: [createMessage('narrator', narratorName, itemToRead.description)] };
 }

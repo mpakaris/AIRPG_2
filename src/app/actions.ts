@@ -7,12 +7,12 @@ import {
   generateStoryFromLogs
 } from '@/ai';
 import { AVAILABLE_COMMANDS } from '@/lib/game/commands';
-import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectId, GameObjectState, ItemId, Flag, Action, Chapter, ChapterId, ImageDetails, GameId, User, TokenUsage, Story } from '@/lib/game/types';
+import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectId, GameObjectState, ItemId, Flag, Effect, Chapter, ChapterId, ImageDetails, GameId, User, TokenUsage, Story } from '@/lib/game/types';
 import { initializeFirebase } from '@/firebase';
 import { doc, setDoc, getDoc, collection, getDocs } from 'firebase/firestore';
 import { getInitialState } from '@/lib/game-state';
 import { dispatchMessage } from '@/lib/whinself-service';
-import { processActions, createMessage } from '@/lib/game/actions/process-actions';
+import { processEffects, createMessage } from '@/lib/game/actions/process-effects';
 import { getLiveGameObject } from '@/lib/game/actions/helpers';
 import { handleConversation } from '@/lib/game/actions/handle-conversation';
 import { handleExamine } from '@/lib/game/actions/handle-examine';
@@ -375,7 +375,7 @@ export async function processCommand(
             case 'close':
             case 'exit':
                 if (currentState.interactingWithObject) {
-                    commandHandlerResult = processActions(currentState, [{type: 'END_INTERACTION'}], game);
+                    commandHandlerResult = processEffects(currentState, [{type: 'END_INTERACTION'}], game);
                 } else {
                     commandHandlerResult = { newState: currentState, messages: [agentMessage] };
                 }

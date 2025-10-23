@@ -3,7 +3,7 @@
 import { generateNpcChatter, selectNpcResponse } from "@/ai";
 import { CommandResult } from "@/app/actions";
 import type { Game, NPC, NpcId, NpcState, PlayerState, Topic } from "../types";
-import { createMessage, processActions } from "./process-actions";
+import { createMessage, processEffects } from "./process-effects";
 import { getLiveNpc } from "./helpers";
 
 const CONVERSATION_END_KEYWORDS = ['goodbye', 'bye', 'leave', 'stop', 'end', 'exit', 'thank you and goodbye'];
@@ -34,7 +34,7 @@ function checkDemotion(npc: NPC, state: PlayerState, game: Game): PlayerState {
         newState.npcStates[npc.id] = { ...liveNpcState, stage: then.setStage, importance: then.setImportance };
         
         // This is a bit of a hack for now. In a full event system, this would be cleaner.
-        const demotionResult = processActions(newState, [{ type: 'DEMOTE_NPC', npcId: npc.id }], game);
+        const demotionResult = processEffects(newState, [{ type: 'DEMOTE_NPC', npcId: npc.id }], game);
         return demotionResult.newState;
     }
     
@@ -115,13 +115,13 @@ async function handleScriptedChat(npc: NPC, state: PlayerState, playerInput: str
     }
     
     const initialMessage = createMessage(npc.id, npc.name, `"${selectedTopic.response.message}"`, 'text', undefined, usage);
-    const actionsToProcess = selectedTopic.response.actions || [];
-    let actionResult = processActions(newState, actionsToProcess, game);
+    const effectsToProcess = selectedTopic.response.effects || [];
+    let effectResult = processEffects(newState, effectsToProcess, game);
     
-    actionResult.newState = checkDemotion(npc, actionResult.newState, game);
+    effectResult.newState = checkDemotion(npc, effectResult.newState, game);
 
-    actionResult.messages.unshift(initialMessage);
-    return actionResult;
+    effectResult.messages.unshift(initialMessage);
+    return effectResult;
 }
 
 
@@ -135,7 +135,7 @@ export async function handleConversation(state: PlayerState, playerInput: string
     let newState = checkDemotion(npc, { ...state }, game);
 
     if (isEndingConversation(playerInput)) {
-        return processActions(newState, [{type: 'END_CONVERSATION'}], game);
+        return processEffects(newState, [{type: 'END_CONVERSATION'}], game);
     }
     
     if (npc.dialogueType === 'scripted') {

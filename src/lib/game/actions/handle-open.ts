@@ -3,7 +3,7 @@
 import { CommandResult } from "@/app/actions";
 import type { Game, PlayerState } from "../types";
 import { getLiveGameObject } from "./helpers";
-import { createMessage, processActions } from "./process-actions";
+import { createMessage, processEffects } from "./process-effects";
 
 export function handleOpen(state: PlayerState, targetName: string, game: Game): CommandResult {
     const location = game.locations[state.currentLocationId];
@@ -48,12 +48,12 @@ export function handleOpen(state: PlayerState, targetName: string, game: Game): 
         return { newState, messages: [createMessage('narrator', narratorName, genericOpenMessage)] };
     }
     
-    // The `onOpen` handler is now responsible for setting the state via actions
-    const result = processActions(state, onOpen.success.actions || [], game);
+    // The `onOpen` handler is now responsible for setting the state via effects
+    const result = processEffects(state, onOpen.success.effects || [], game);
     
     // Prepend a default message if the handler doesn't provide one.
-    const hasMessageAction = onOpen.success.actions?.some(a => a.type === 'SHOW_MESSAGE');
-    if (!hasMessageAction) {
+    const hasMessageEffect = onOpen.success.effects?.some(a => a.type === 'SHOW_MESSAGE');
+    if (!hasMessageEffect) {
         result.messages.unshift(createMessage('narrator', narratorName, onOpen.success.message));
     }
     

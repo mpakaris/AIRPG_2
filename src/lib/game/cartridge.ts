@@ -30,7 +30,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                 conditions: [{ type: 'STATE_MATCH', targetId: 'obj_brown_notebook', expectedValue: { isLocked: false } }],
                 success: {
                     message: "The notebook is open. Inside, you see a small SD card next to a folded newspaper article.",
-                    actions: [
+                    effects: [
                         { type: 'SET_OBJECT_STATE', objectId: 'obj_brown_notebook', state: { isOpen: true } },
                         { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'The notebook is open. Inside, you see a small SD card next to a folded newspaper article.', imageId: 'obj_brown_notebook' }
                     ]
@@ -40,7 +40,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             onUnlock: {
                 success: {
                     message: "The notebook unlocks with a soft click. The cover creaks open.",
-                    actions: [
+                    effects: [
                         { type: 'SET_FLAG', flag: 'has_unlocked_notebook' as Flag },
                         { type: 'SET_OBJECT_STATE', objectId: 'obj_brown_notebook', state: { isLocked: false } }
                     ]
@@ -123,7 +123,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             onExamine: {
                 success: {
                     message: "A small bookshelf filled with used paperbacks. You can see the titles: 'The Art of the Deal', 'A Brief History of Time', and a romance novel called 'Justice for My Love'.",
-                    actions: [{ type: 'SET_FLAG', flag: 'has_seen_justice_book' as Flag }]
+                    effects: [{ type: 'SET_FLAG', flag: 'has_seen_justice_book' as Flag }]
                 },
                 fail: { message: "" },
                 alternateMessage: "The bookshelf still has that romance novel, 'Justice for My Love'."
@@ -157,7 +157,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                 conditions: [{ type: 'NO_FLAG', targetId: 'has_found_note_behind_painting' as Flag }],
                 success: {
                     message: "You lift the painting off its hook. Taped to the back is a small, folded note.",
-                    actions: [
+                    effects: [
                         { type: 'SET_FLAG', flag: 'has_found_note_behind_painting' as Flag },
                         { type: 'ADD_ITEM', itemId: 'item_hidden_note' as ItemId }
                     ]
@@ -217,7 +217,7 @@ const items: Record<ItemId, Item> = {
             onRead: {
                 success: {
                     message: 'You unfold the old newspaper clipping.',
-                    actions: [
+                    effects: [
                         { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'A newspaper article about Silas Bloom.', messageType: 'article', imageId: 'item_newspaper_article' },
                         { type: 'SHOW_MESSAGE', sender: 'agent', content: "Wait a second, Burt... the article mentions an Agent Macklin. That can't be a coincidence. Is he related to you? This could be about your own family." },
                         { type: 'SET_FLAG', flag: 'notebook_article_read' as Flag },
@@ -256,7 +256,7 @@ const items: Record<ItemId, Item> = {
             onUse: {
                 success: {
                     message: "You insert the SD card into your phone. You open the file explorer and discover one single file: A Video. It looks old. Maybe from the 1940's?",
-                    actions: [
+                    effects: [
                         { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759241547/0930_eit8he.mov', messageType: 'video'},
                         { type: 'SHOW_MESSAGE', sender: 'agent', content: "Silas Bloom... I've never heard that name before. Talented musician, if you ask me. And that song for Rose ... sounds like they were deeply in love." },
                         { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'Beside the SD card, you see a folded newspaper article.' },
@@ -277,11 +277,16 @@ const items: Record<ItemId, Item> = {
         description: 'A book about business.',
         alternateDescription: 'Still a book about business.',
         capabilities: { isTakable: false, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
-        handlers: {
-            onRead: { success: { message: "It seems to be a ghost-written book about a real estate magnate. Not relevant to the case." }, fail: {message: ""} }
+        state: { readCount: 0, currentStateId: 'default' },
+        handlers: {},
+        stateMap: {
+            'default': { overrides: { onRead: { success: { message: "You open the book to a random page. It reads: 'My style of deal-making is quite simple and straightforward. I aim very high, and then I just keep pushing and pushing and pushing to get what I’m after.'", effects: [{ type: 'SET_STATE', targetId: 'item_book_deal', to: 'read_once' }] }, fail: { message: "" } } } },
+            'read_once': { overrides: { onRead: { success: { message: "Another page: 'Sometimes by losing a battle you find a new way to win the war.' It sounds vaguely profound.", effects: [{ type: 'SET_STATE', targetId: 'item_book_deal', to: 'read_twice' }] }, fail: { message: "" } } } },
+            'read_twice': { overrides: { onRead: { success: { message: "One more flip: 'What separates the winners from the losers is how a person reacts to each new twist of fate.' You close the book.", effects: [{ type: 'SET_STATE', targetId: 'item_book_deal', to: 'cooldown' }] }, fail: { message: "" } } } },
+            'cooldown': { overrides: { onRead: { success: { message: "Come on Burt, we don't have time for that. The life of a woman is at stake here", sender: 'agent' }, fail: { message: "" } } } }
         },
         design: { tags: ['book', 'distraction'] },
-        version: { schema: "1.0", content: "1.0" }
+        version: { schema: "1.0", content: "1.1" }
     },
     'item_book_time': {
         id: 'item_book_time' as ItemId,
@@ -290,11 +295,16 @@ const items: Record<ItemId, Item> = {
         description: 'A book about physics.',
         alternateDescription: 'Still a book about physics.',
         capabilities: { isTakable: false, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
-        handlers: {
-            onRead: { success: { message: "Complex theories about spacetime. Unlikely to help you solve a murder." }, fail: {message: ""} }
+        state: { readCount: 0, currentStateId: 'default' },
+        handlers: {},
+        stateMap: {
+            'default': { overrides: { onRead: { success: { message: "You crack it open. '...if a star is massive enough, it can collapse under its own gravity and form a black hole, a region of space-time from which nothing, not even light, can escape.'", effects: [{ type: 'SET_STATE', targetId: 'item_book_time', to: 'read_once' }] }, fail: { message: "" } } } },
+            'read_once': { overrides: { onRead: { success: { message: "Flipping through, you find another passage: 'The universe doesn't allow perfection.' You can relate.", effects: [{ type: 'SET_STATE', targetId: 'item_book_time', to: 'read_twice' }] }, fail: { message: "" } } } },
+            'read_twice': { overrides: { onRead: { success: { message: "A final quote catches your eye: 'Quiet people have the loudest minds.' A chill runs down your spine.", effects: [{ type: 'SET_STATE', targetId: 'item_book_time', to: 'cooldown' }] }, fail: { message: "" } } } },
+            'cooldown': { overrides: { onRead: { success: { message: "Come on Burt, we don't have time for that. The life of a woman is at stake here", sender: 'agent' }, fail: { message: "" } } } }
         },
         design: { tags: ['book', 'distraction'] },
-        version: { schema: "1.0", content: "1.0" }
+        version: { schema: "1.0", content: "1.1" }
     },
     'item_book_justice': {
         id: 'item_book_justice' as ItemId,
@@ -303,11 +313,16 @@ const items: Record<ItemId, Item> = {
         description: 'A romance novel.',
         alternateDescription: "The cover is cheesy, but the title 'Justice for My Love' continues to stand out.",
         capabilities: { isTakable: false, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
-        handlers: {
-            onRead: { success: { message: "The cover is cheesy, but the title 'Justice for My Love' catches your eye." }, fail: {message: ""} }
+        state: { readCount: 0, currentStateId: 'default' },
+        handlers: {},
+        stateMap: {
+            'default': { overrides: { onRead: { success: { message: "Against your better judgment, you read a page. 'His voice was like smooth jazz on a rainy night, but his eyes held a storm. She knew then that he would get justice for her, or die trying.'", effects: [{ type: 'SET_STATE', targetId: 'item_book_justice', to: 'read_once' }] }, fail: { message: "" } } } },
+            'read_once': { overrides: { onRead: { success: { message: "Another page: 'The city was a cold, hard place, but her love was the one piece of evidence he needed to keep going.'", effects: [{ type: 'SET_STATE', targetId: 'item_book_justice', to: 'read_twice' }] }, fail: { message: "" } } } },
+            'read_twice': { overrides: { onRead: { success: { message: "You can't believe you're doing this. 'He whispered her name like a prayer, a clue to a mystery only his heart could solve.'", effects: [{ type: 'SET_STATE', targetId: 'item_book_justice', to: 'cooldown' }] }, fail: { message: "" } } } },
+            'cooldown': { overrides: { onRead: { success: { message: "Come on Burt, we don't have time for that. The life of a woman is at stake here", sender: 'agent' }, fail: { message: "" } } } }
         },
         design: { tags: ['book', 'clue'] },
-        version: { schema: "1.0", content: "1.0" }
+        version: { schema: "1.0", content: "1.1" }
     },
     'item_hidden_note': {
         id: 'item_hidden_note' as ItemId,
@@ -345,7 +360,7 @@ const npcs: Record<NpcId, NPC> = {
         persona: "You are a tired, cynical barista in a downtown cafe. You've seen it all and are not impressed by much. Your primary focus is on making coffee and dealing with customers as efficiently as possible. You will not discuss the case or any past events further, deflecting any questions with short, dismissive, but not overly rude answers. You just want to do your job.",
         welcomeMessage: 'What can I get for you? Or are you just here to brood? Either is fine.',
         goodbyeMessage: "Alright, I've got Pumpkin spice lattes to craft. Good luck with... whatever it is you're doing.",
-        startConversationActions: [{ type: 'SET_FLAG', flag: 'has_talked_to_barista' as Flag }],
+        startConversationEffects: [{ type: 'SET_FLAG', flag: 'has_talked_to_barista' as Flag }],
         limits: { maxInteractions: 15, interactionLimitResponse: "Seriously, I've got a line of customers. I can't keep chatting. The coffee machine calls." },
         demoteRules: {
             onFlagsAll: ['has_received_business_card' as Flag],
@@ -371,7 +386,7 @@ const npcs: Record<NpcId, NPC> = {
               once: true,
               response: { 
                 message: "You know, he left this here the other day. Said I could have it. Some business card. If you're that interested, you can take it. It's just collecting dust.",
-                actions: [
+                effects: [
                     { type: 'ADD_ITEM', itemId: 'item_business_card' as ItemId },
                     { type: 'SET_FLAG', flag: 'has_received_business_card' as Flag },
                     { type: 'SHOW_MESSAGE', sender: 'narrator', senderName: 'Narrator', content: "The barista slides a business card across the counter. It's been added to your inventory.", messageType: 'image', imageId: 'item_business_card' },
@@ -606,5 +621,3 @@ export const game: Game = {
   chapters: chapters,
   startChapterId: 'ch1-the-cafe' as ChapterId,
 };
-
-

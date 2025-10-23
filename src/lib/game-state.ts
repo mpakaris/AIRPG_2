@@ -1,6 +1,6 @@
 
 
-import type { Game, PlayerState, Chapter, ChapterId, GameObjectId, GameObjectState, PortalState, PortalId, NpcId, NpcState, LocationId } from './game/types';
+import type { Game, PlayerState, Chapter, ChapterId, GameObjectId, GameObjectState, PortalState, PortalId, NpcId, NpcState, LocationId, ItemId, ItemState } from './game/types';
 
 export function getInitialState(game: Game): PlayerState {
   
@@ -16,6 +16,17 @@ export function getInitialState(game: Game): PlayerState {
       items: gameObject.inventory?.items ? [...gameObject.inventory.items] : [],
       currentStateId: gameObject.state.currentStateId,
     };
+  }
+  
+  const initialItemStates: Record<ItemId, Partial<ItemState>> = {};
+  for (const itemId in game.items) {
+      const item = game.items[itemId as ItemId];
+      if (item.state) {
+          initialItemStates[item.id] = {
+              readCount: item.state.readCount || 0,
+              currentStateId: item.state.currentStateId || 'default'
+          };
+      }
   }
 
   // Create a clean state for all portals
@@ -55,6 +66,7 @@ export function getInitialState(game: Game): PlayerState {
     inventory: [],
     flags: [],
     objectStates: initialObjectStates,
+    itemStates: initialItemStates,
     portalStates: initialPortalStates,
     npcStates: initialNpcStates,
     stories: {},

@@ -1,7 +1,8 @@
 
+
 import { CommandResult } from "@/app/actions";
 import type { Game, NpcId, PlayerState } from "../types";
-import { createMessage, processActions } from "./process-actions";
+import { createMessage, processEffects } from "./process-effects";
 
 const examinedObjectFlag = (id: string) => `examined_${id}`;
 
@@ -16,10 +17,10 @@ export async function handleTalk(state: PlayerState, npcName: string, game: Game
         let newState = { ...state, activeConversationWith: npc.id, interactingWithObject: null };
         let messages: any[] = [];
         
-        const startActions = npc.startConversationActions || [];
-        const actionResult = processActions(newState, startActions, game);
-        newState = actionResult.newState!;
-        messages.push(...actionResult.messages);
+        const startEffects = npc.startConversationEffects || [];
+        const effectResult = processEffects(newState, startEffects, game);
+        newState = effectResult.newState!;
+        messages.push(...effectResult.messages);
 
         messages.unshift(createMessage('system', 'System', `You are now talking to ${npc.name}. Type your message to continue the conversation. To end the conversation, type 'goodbye'.`));
         

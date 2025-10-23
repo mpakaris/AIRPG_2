@@ -1,8 +1,9 @@
 
+
 import { CommandResult } from "@/app/actions";
 import type { Game, GameObject, GameObjectState, PlayerState } from "../types";
 import { getLiveGameObject } from "./helpers";
-import { createMessage, processActions } from "./process-actions";
+import { createMessage, processEffects } from "./process-effects";
 
 const examinedObjectFlag = (id: string) => `examined_${id}`;
 
@@ -68,8 +69,8 @@ export function processPassword(state: PlayerState, command: string, game: Game)
         newState.objectStates[targetObject.gameLogic.id].isLocked = false;
         newState.objectStates[targetObject.gameLogic.id].isOpen = true; // Also open it
         
-        const actions = handler?.success?.actions || [];
-        const result = processActions(newState, actions, game);
+        const effects = handler?.success?.effects || [];
+        const result = processEffects(newState, effects, game);
         
         const unlockMessage = createMessage(
             'narrator', 

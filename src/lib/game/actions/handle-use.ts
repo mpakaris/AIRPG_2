@@ -1,8 +1,9 @@
 
+
 import { CommandResult } from "@/app/actions";
 import type { Game, PlayerState } from "../types";
 import { findItemInContext, getLiveGameObject } from "./helpers";
-import { createMessage, processActions } from "./process-actions";
+import { createMessage, processEffects } from "./process-effects";
 
 export async function handleUse(state: PlayerState, itemName: string, objectName: string, game: Game): Promise<CommandResult> {
   const location = game.locations[state.currentLocationId];
@@ -29,8 +30,8 @@ export async function handleUse(state: PlayerState, itemName: string, objectName
         if(!newState.objectStates[targetObject.gameLogic.id]) newState.objectStates[targetObject.gameLogic.id] = {} as any;
         newState.objectStates[targetObject.gameLogic.id].isLocked = false;
         
-        const actions = unlockHandler.success?.actions || [];
-        const result = processActions(newState, actions, game);
+        const effects = unlockHandler.success?.effects || [];
+        const result = processEffects(newState, effects, game);
         result.messages.unshift(createMessage('narrator', narratorName, unlockHandler.success?.message || `You use the ${itemToUse.name} on the ${targetObject.gameLogic.name}. It unlocks!`));
 
         return result;
@@ -50,7 +51,7 @@ export async function handleUse(state: PlayerState, itemName: string, objectName
     });
 
     if (conditionsMet) {
-        let result = processActions(state, handler.success.actions || [], game);
+        let result = processEffects(state, handler.success.effects || [], game);
         result.messages.unshift(createMessage('narrator', narratorName, handler.success.message));
         return result;
     } else {

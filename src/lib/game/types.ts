@@ -1,5 +1,4 @@
 
-
 // Branded types for stronger type safety
 export type GameId = string & { readonly __brand: 'GameId' };
 export type ChapterId = string & { readonly __brand: 'ChapterId' };
@@ -40,15 +39,15 @@ export type Message = {
   usage?: TokenUsage;
 };
 
-// --- Action System ---
-export type Action =
+// --- Effect System (Previously Actions) ---
+export type Effect =
   | { type: 'ADD_ITEM'; itemId: ItemId }
   | { type: 'SET_FLAG'; flag: Flag }
   | { type: 'SHOW_MESSAGE'; sender: Message['sender']; senderName?: string; content: string; messageType?: Message['type']; imageId?: ItemId | NpcId | GameObjectId }
   | { type: 'END_CONVERSATION' }
   | { type: 'START_INTERACTION'; objectId: GameObjectId, interactionStateId?: string }
   | { type: 'END_INTERACTION' }
-  | { type: 'SET_INTERACTION_STATE', state: string }
+  | { type: 'SET_STATE'; targetId: GameObjectId | ItemId, to: string }
   | { type: 'SET_OBJECT_STATE', objectId: GameObjectId, state: Partial<GameObjectState> }
   | { type: 'MOVE_TO_CELL', toCellId: CellId }
   | { type: 'ENTER_PORTAL', portalId: PortalId }
@@ -71,6 +70,11 @@ export type GameObjectState = {
     items?: ItemId[];
     currentStateId?: string;
 };
+
+export type ItemState = {
+    readCount: number;
+    currentStateId: string;
+}
 
 export type PortalState = {
     isLocked: boolean;
@@ -100,6 +104,7 @@ export type PlayerState = {
   inventory: ItemId[];
   flags: Flag[];
   objectStates: Record<GameObjectId, GameObjectState>;
+  itemStates: Record<ItemId, Partial<ItemState>>;
   portalStates: Record<PortalId, PortalState>;
   npcStates: Record<NpcId, NpcState>;
   stories: Record<ChapterId, Story>;
@@ -117,14 +122,14 @@ export type Condition = {
 
 export type InteractionResult = {
   message: string;
-  actions?: Action[];
+  effects?: Effect[];
   once?: boolean; // If true, this success block can only be triggered once.
 };
 
 export type Handler = {
   conditions?: Condition[];
   success: InteractionResult;
-  fail: { message: string };
+  fail: { message: string, effects?: Effect[] };
 };
 
 export type ItemHandler = {
@@ -133,6 +138,14 @@ export type ItemHandler = {
   success: InteractionResult;
   fail: { message: string };
 };
+
+type HandlerOverrides = Partial<{
+    onExamine: Handler;
+    onRead: Handler;
+    onUse: Handler;
+    onOpen: Handler;
+    onUnlock: Handler;
+}>
 
 export type GameObject = {
   id: GameObjectId;
@@ -218,7 +231,7 @@ export type GameObject = {
         images?: Record<string, ImageDetails>;
         sounds?: Record<string, string>;
     },
-    overrideHandlers?: Partial<GameObject['handlers']>;
+    overrides?: HandlerOverrides;
   }>;
 
   fallbackMessages?: {
@@ -263,9 +276,8 @@ export type Item = {
   };
   
   state?: {
+    readCount: number;
     currentStateId: string;
-    usesRemaining: number | null;
-    stateTags: string[];
   };
 
   logic?: {
@@ -308,6 +320,10 @@ export type Item = {
     onCombine?: ItemHandler[];
     defaultFailMessage?: string;
   };
+
+  stateMap?: Record<string, {
+      overrides: HandlerOverrides;
+  }>;
 
   stacking?: {
     stackable: boolean;
@@ -375,7 +391,7 @@ export type NPC = {
   persona?: string;
   welcomeMessage: string;
   goodbyeMessage: string;
-  startConversationActions?: Action[];
+  startConversationActions?: Effect[];
 
   limits?: {
     maxInteractions?: number;
@@ -391,7 +407,7 @@ export type NPC = {
       setStage: 'demoted';
       setImportance: 'ambient';
       setFlags?: Flag[];
-      actions?: Action[];
+      effects?: Effect[];
     };
   };
 
