@@ -274,7 +274,7 @@ const items: Record<ItemId, Item> = {
         design: { authorNotes: "Contains the video clue about Silas Bloom." },
         version: { schema: "1.0", content: "1.0" }
     },
-     'item_book_deal': {
+    'item_book_deal': {
         id: 'item_book_deal' as ItemId,
         name: 'The Art of the Deal',
         archetype: 'Book',
@@ -282,15 +282,9 @@ const items: Record<ItemId, Item> = {
         alternateDescription: 'Still a book about business.',
         capabilities: { isTakable: false, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         state: { readCount: 0, currentStateId: 'default' },
-        stateMap: {
-            'default': {
-                overrides: {
-                    onRead: {
-                        success: { message: "It seems to be a ghost-written book about a real estate magnate. Not relevant to the case.", effects: [] },
-                        fail: { message: "" }
-                    }
-                }
-            }
+        handlers: {
+            onTake: { success: {}, fail: { message: "You can't take that book." } },
+            onRead: { success: { message: "It seems to be a ghost-written book about a real estate magnate. Not relevant to the case." }, fail: {} }
         },
         design: { tags: ['book', 'distraction'] },
         version: { schema: "1.0", content: "1.1" }
@@ -303,15 +297,9 @@ const items: Record<ItemId, Item> = {
         alternateDescription: 'Still a book about physics.',
         capabilities: { isTakable: false, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         state: { readCount: 0, currentStateId: 'default' },
-        stateMap: {
-            'default': {
-                overrides: {
-                    onRead: {
-                        success: { message: "Complex theories about spacetime. Unlikely to help you solve a murder.", effects: [] },
-                        fail: { message: "" }
-                    }
-                }
-            }
+        handlers: {
+            onTake: { success: {}, fail: { message: "You can't take that book." } },
+            onRead: { success: { message: "Complex theories about spacetime. Unlikely to help you solve a murder." }, fail: {} }
         },
         design: { tags: ['book', 'distraction'] },
         version: { schema: "1.0", content: "1.1" }
@@ -324,11 +312,18 @@ const items: Record<ItemId, Item> = {
         alternateDescription: "The cover is cheesy, but the title 'Justice for My Love' continues to stand out.",
         capabilities: { isTakable: false, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         state: { readCount: 0, currentStateId: 'default' },
+        handlers: {
+            onTake: { success: {}, fail: { message: "You can't take that book." } },
+            onRead: { success: {}, fail: {} }
+        },
         stateMap: {
             'default': {
                 overrides: {
                     onRead: {
-                        success: { message: "Against your better judgment, you read a page. 'His voice was like smooth jazz on a rainy night, but his eyes held a storm. She knew then that he would get justice for her, or die trying.'", effects: [] },
+                        success: { 
+                            message: "Against your better judgment, you read a page. 'His voice was like smooth jazz on a rainy night, but his eyes held a storm. She knew then that he would get justice for her, or die trying.'", 
+                            effects: [] 
+                        },
                         fail: { message: "" }
                     }
                 }
@@ -634,3 +629,5 @@ export const game: Game = {
   chapters: chapters,
   startChapterId: 'ch1-the-cafe' as ChapterId,
 };
+
+    

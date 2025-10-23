@@ -25,24 +25,24 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
 
     const currentStateId = liveItem.state.currentStateId || 'default';
     
-    // --- CORRECTED LOGIC ---
-    // The handler override is inside `overrides`, not at the root of the stateMap entry. This was the bug.
+    // Correctly look for the handler override inside the 'overrides' property of the stateMap entry.
     const handlerOverride = liveItem.gameLogic.stateMap?.[currentStateId]?.overrides?.onRead;
     const baseHandler = liveItem.gameLogic.handlers?.onRead;
     const effectiveHandler = handlerOverride || baseHandler;
-    // --- END CORRECTION ---
 
-    // --- ROBUST SAFETY CHECKS ---
-    // This block ensures we never crash, even if handlers or their properties are missing.
+    // --- BULLETPROOF SAFETY CHECKS ---
+    // This block now safely navigates the handler structure.
     if (effectiveHandler && effectiveHandler.success) {
         const successBlock = effectiveHandler.success;
         
-        // Safely check for effects array before processing.
+        // Safely check for effects array before processing. Default to an empty array if missing.
         const effectsToProcess = Array.isArray(successBlock.effects) ? successBlock.effects : [];
         let result = processEffects(state, effectsToProcess, game);
         
+        // Check if there's an explicit SHOW_MESSAGE effect.
         const hasMessageEffect = effectsToProcess.some(e => e.type === 'SHOW_MESSAGE');
         
+        // Only add a message if one wasn't already added by an effect.
         if (!hasMessageEffect && successBlock.message) {
             // Safely default sender to 'narrator' if not specified.
             const sender = (successBlock as any).sender || 'narrator';
@@ -55,6 +55,8 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
     }
     // --- END SAFETY CHECKS ---
     
-    // If no specific handler is found, use the item's description as the default content.
+    // If no specific handler or success block is found, use the item's description as the default content.
     return { newState: state, messages: [createMessage('narrator', narratorName, itemToRead.description)] };
 }
+
+    

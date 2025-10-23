@@ -1,5 +1,4 @@
 
-
 import { CommandResult } from "@/app/actions";
 import type { Game, PlayerState } from "../types";
 import { getLiveGameObject } from "./helpers";
@@ -24,8 +23,12 @@ export function handleTake(state: PlayerState, targetName: string, game: Game): 
         if (itemToTakeId) {
             const itemToTake = game.items[itemToTakeId];
 
+            if (!itemToTake) continue; // Should not happen, but for safety
+
             if (!itemToTake.capabilities.isTakable) {
-                return { newState: state, messages: [createMessage('narrator', narratorName, itemToTake.handlers.onTake?.fail.message || `You can't take the ${itemToTake.name}.`)] };
+                // Safely access the fail message
+                const failMessage = itemToTake.handlers?.onTake?.fail?.message || `You can't take the ${itemToTake.name}.`;
+                return { newState: state, messages: [createMessage('narrator', narratorName, failMessage)] };
             }
             
             if (newState.inventory.includes(itemToTake.id)) {
@@ -39,9 +42,13 @@ export function handleTake(state: PlayerState, targetName: string, game: Game): 
             const newObjectItems = currentObjectItems.filter(id => id !== itemToTake.id);
             newState.objectStates[objId].items = newObjectItems;
 
-            const effects = itemToTake.handlers.onTake?.success.effects || [];
+            // Safely access the success message and effects
+            const successHandler = itemToTake.handlers?.onTake?.success;
+            const effects = successHandler?.effects || [];
+            const successMessage = successHandler?.message || `You take the ${itemToTake.name}.`;
+            
             const result = processEffects(newState, effects, game);
-            result.messages.unshift(createMessage('narrator', narratorName, itemToTake.handlers.onTake?.success.message || `You take the ${itemToTake.name}.`));
+            result.messages.unshift(createMessage('narrator', narratorName, successMessage));
             return result;
         }
     }
@@ -49,3 +56,5 @@ export function handleTake(state: PlayerState, targetName: string, game: Game): 
   
   return { newState: state, messages: [createMessage('system', 'System', `You can't take that.`)] };
 }
+
+    
