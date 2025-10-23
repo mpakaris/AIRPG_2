@@ -3,7 +3,7 @@
 
 import { CommandResult } from "@/app/actions";
 import type { Game, Item, PlayerState } from "../types";
-import { findItemInContext, getLiveItem } from "./helpers";
+import { findItemInContext } from "./helpers";
 import { createMessage, processEffects } from "./process-effects";
 import { normalizeName } from "@/lib/utils";
 
@@ -22,7 +22,7 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
         return { newState: state, messages: [createMessage('narrator', narratorName, `There's nothing to read on the ${itemToRead.name}.`)] };
     }
 
-    // --- CASE 1: The item has a stateMap for cycling through descriptions (e.g., books) ---
+    // --- LOGIC PATH 1: Item uses a stateMap for reading (like a book with excerpts) ---
     if (itemToRead.stateMap && itemToRead.state) {
         let newState = JSON.parse(JSON.stringify(state)); // Deep copy for safety
         
@@ -44,7 +44,6 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
             return { newState, messages: [createMessage('agent', agentName, deflectionMessage)] };
         }
         
-        // Determine which state to use
         const currentStateKey = stateMapKeys[currentReadCount];
         const stateMapEntry = itemToRead.stateMap[currentStateKey];
 
@@ -58,11 +57,12 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
         
         // Update the state with the new read count for the next time
         newState.itemStates[itemToRead.id].readCount = currentReadCount + 1;
-
+        
+        // This path is safe: it only creates a simple message and does not look for .effects
         return { newState, messages: [createMessage('narrator', narratorName, description)] };
     }
 
-    // --- CASE 2: The item has a standard onRead handler with effects (like notes or documents) ---
+    // --- LOGIC PATH 2: Item uses a standard onRead handler (like a note with effects) ---
     const handler = itemToRead.handlers?.onRead;
     if (handler && handler.success) {
         const successBlock = handler.success;
