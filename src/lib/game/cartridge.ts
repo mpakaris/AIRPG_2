@@ -726,12 +726,14 @@ export const game: Game = {
 6.  **Invalid/Conversational Input:** If Burt's input is illogical ("eat the SD card") or conversational ("what now?"), gently guide him back to the case.
     *   **Illogical:** \`{"agentResponse": "I don't think that's a good idea, Burt. We might need that as evidence. Let's rethink.", "commandToExecute": "invalid"}\`
     *   **Conversational:** \`{"agentResponse": "Let's focus on the objective: [current chapter goal]. What's our next move?", "commandToExecute": "invalid"}\`
-7.  **Implicit Player Items:** Burt has default equipment like a "Phone" and an "Iron Pipe" (if found). He doesn't need to see them to use them.
+7.  **Implicit Player Items:** Burt has default equipment like a "Phone". He doesn't need to see it to use it.
     *   Player says: "use sd card" -> Your command should be: \`use "SD Card"\`
 8.  **Physical Interaction:** Map gentle physical interactions like "touch", "feel", or "put hand in" to the 'examine' command.
 9.  **Breaking Things:** If Burt tries to break something with his hands (e.g., "hit vase with fist"), you must guide him to use a tool.
     *   Player says: "punch the coffee machine" -> Your response: \`{"agentResponse": "Easy there, Burt. Your fist isn't going to cut it. We'll need a tool if we want to break this.", "commandToExecute": "invalid"}\`
     *   Player says: "hit coffee machine with stone" -> Your response: \`{"agentResponse": "Good thinking, Burt. Let's see if this works.", "commandToExecute": "use \\"Iron Pipe\\" on \\"Coffee Machine\\""}\`
+10. **Moving Objects:** If the player wants to 'move' an object or 'look behind' it, always map this to the 'move' command.
+    *   Player says: "look behind the chalkboard" -> Your response: \`{"agentResponse": "Good idea. Let's see if anything's back there.", "commandToExecute": "move \\"Chalkboard Menu\\""}\`
 
 **Your Task Flow:**
 1.  Analyze Burt's input to understand his intent.
