@@ -3,7 +3,7 @@
 
 import { CommandResult } from "@/app/actions";
 import type { Game, Item, PlayerState } from "../types";
-import { findItemInContext } from "./helpers";
+import { findItemInContext, getLiveItem } from "./helpers";
 import { createMessage, processEffects } from "./process-effects";
 import { normalizeName } from "@/lib/utils";
 
@@ -12,6 +12,7 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
     const narratorName = game.narratorName || "Narrator";
     const agentName = game.narratorName || "Agent Sharma";
     const normalizedItemName = normalizeName(itemName);
+    
     const itemToRead = findItemInContext(state, game, normalizedItemName);
 
     if (!itemToRead) {
@@ -22,8 +23,8 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
         return { newState: state, messages: [createMessage('narrator', narratorName, `There's nothing to read on the ${itemToRead.name}.`)] };
     }
 
-    // --- LOGIC PATH 1: Item uses a stateMap for reading (like a book with excerpts) ---
-    if (itemToRead.stateMap && itemToRead.state) {
+    // --- Path A: Item uses a stateMap for reading (like a book with excerpts) ---
+    if (itemToRead.stateMap) {
         let newState = JSON.parse(JSON.stringify(state)); // Deep copy for safety
         
         let liveItemState = newState.itemStates[itemToRead.id];
@@ -38,7 +39,7 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
         const currentReadCount = liveItemState.readCount || 0;
         const stateMapKeys = Object.keys(itemToRead.stateMap);
 
-        // Deflection logic: if read count exceeds available excerpts, give the canned response.
+        // Check if we've read all available excerpts.
         if (currentReadCount >= stateMapKeys.length) {
             const deflectionMessage = `Come on Burt, let's continue. You can spend hours reading this book and not come up with anything useful.`;
             return { newState, messages: [createMessage('agent', agentName, deflectionMessage)] };
@@ -58,11 +59,10 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
         // Update the state with the new read count for the next time
         newState.itemStates[itemToRead.id].readCount = currentReadCount + 1;
         
-        // This path is safe: it only creates a simple message and does not look for .effects
         return { newState, messages: [createMessage('narrator', narratorName, description)] };
     }
 
-    // --- LOGIC PATH 2: Item uses a standard onRead handler (like a note with effects) ---
+    // --- Path B: Item uses a standard onRead handler (like a note with effects) ---
     const handler = itemToRead.handlers?.onRead;
     if (handler && handler.success) {
         const successBlock = handler.success;
@@ -71,11 +71,8 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
         
         let result = processEffects(state, effectsToProcess, game);
         
-        // Safely check if a SHOW_MESSAGE effect was part of the processed effects.
-        const hasMessageEffect = effectsToProcess.some(e => e.type === 'SHOW_MESSAGE');
-
-        // Only add a message if one wasn't already added by an effect and a message exists.
-        if (!hasMessageEffect && successBlock.message) {
+        // Only add a message if a message exists in the success block.
+        if (successBlock.message) {
             const message = createMessage('narrator', narratorName, successBlock.message, 'text');
             result.messages.unshift(message);
         }
