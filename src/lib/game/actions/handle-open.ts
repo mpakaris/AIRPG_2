@@ -1,5 +1,4 @@
 
-
 import { CommandResult } from "@/app/actions";
 import type { Game, PlayerState } from "../types";
 import { findItemInContext, getLiveGameObject } from "./helpers";
@@ -61,8 +60,8 @@ export async function handleOpen(state: PlayerState, targetName: string, game: G
     // If no GameObject was found, try to find an Item (like a book)
     const itemToOpen = findItemInContext(state, game, normalizedTargetName);
     if (itemToOpen) {
-        // Conceptually, opening a readable item like a book is the same as reading it.
-        if (itemToOpen.archetype === 'Book' || itemToOpen.archetype === 'Document') {
+        // Safely check if the item is readable before calling handleRead
+        if (itemToOpen.capabilities && itemToOpen.capabilities.isReadable) {
             return handleRead(state, targetName, game);
         } else {
             return { newState: state, messages: [createMessage('narrator', narratorName, `You can't "open" the ${itemToOpen.name} in that way.`)] };
@@ -72,4 +71,3 @@ export async function handleOpen(state: PlayerState, targetName: string, game: G
     // If neither an object nor an item was found
     return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${normalizedTargetName}" to open.`)] };
 }
-
