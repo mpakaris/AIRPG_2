@@ -4,11 +4,12 @@ import { CommandResult } from "@/app/actions";
 import type { Game, PlayerState } from "../types";
 import { getLiveGameObject } from "./helpers";
 import { createMessage, processEffects } from "./process-effects";
+import { normalizeName } from "@/lib/utils";
 
 export function handleTake(state: PlayerState, targetName: string, game: Game): CommandResult {
   const location = game.locations[state.currentLocationId];
   const narratorName = game.narratorName || "Narrator";
-  const normalizedTargetName = targetName.toLowerCase().replace(/"/g, '').trim();
+  const normalizedTargetName = normalizeName(targetName);
   
   let newState = JSON.parse(JSON.stringify(state));
 
@@ -17,7 +18,7 @@ export function handleTake(state: PlayerState, targetName: string, game: Game): 
     
     if (liveObject && liveObject.state.isOpen) {
         const itemToTakeId = (liveObject.state.items || []).find(itemId => 
-            game.items[itemId]?.name.toLowerCase() === normalizedTargetName
+            normalizeName(game.items[itemId]?.name) === normalizedTargetName
         );
 
         if (itemToTakeId) {
@@ -48,5 +49,3 @@ export function handleTake(state: PlayerState, targetName: string, game: Game): 
   
   return { newState: state, messages: [createMessage('system', 'System', `You can't take that.`)] };
 }
-
-    

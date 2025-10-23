@@ -3,21 +3,22 @@
 import { CommandResult } from "@/app/actions";
 import type { Game, NpcId, PlayerState } from "../types";
 import { createMessage, processEffects } from "./process-effects";
+import { normalizeName } from "@/lib/utils";
 
 const examinedObjectFlag = (id: string) => `examined_${id}`;
 
 export async function handleTalk(state: PlayerState, npcName: string, game: Game): Promise<CommandResult> {
     const location = game.locations[state.currentLocationId];
-    const normalizedNpcName = npcName.toLowerCase().replace(/"/g, '').trim();
+    const normalizedNpcName = normalizeName(npcName);
 
     const npc = Object.values(game.npcs)
-        .find(n => n?.name.toLowerCase().includes(normalizedNpcName) && location.npcs.includes(n.id));
+        .find(n => n?.name && normalizeName(n.name).includes(normalizedNpcName) && location.npcs.includes(n.id));
 
     if (npc) {
         let newState = { ...state, activeConversationWith: npc.id, interactingWithObject: null };
         let messages: any[] = [];
         
-        const startEffects = npc.startConversationEffects || [];
+        const startEffects = npc.startConversationActions || [];
         const effectResult = processEffects(newState, startEffects, game);
         newState = effectResult.newState!;
         messages.push(...effectResult.messages);
@@ -47,5 +48,3 @@ export async function handleTalk(state: PlayerState, npcName: string, game: Game
     
     return { newState: state, messages: [createMessage('system', 'System', `There is no one called "${normalizedNpcName}" here.`)] };
 }
-
-    

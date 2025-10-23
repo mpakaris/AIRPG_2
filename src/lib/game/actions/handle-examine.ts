@@ -4,18 +4,23 @@ import { CommandResult } from "@/app/actions";
 import type { Game, PlayerState } from "../types";
 import { findItemInContext, getLiveGameObject } from "./helpers";
 import { createMessage } from "./process-effects";
+import { normalizeName } from "@/lib/utils";
 
 const examinedObjectFlag = (id: string) => `examined_${id}`;
 
 export function handleExamine(state: PlayerState, targetName: string, game: Game): CommandResult {
     const location = game.locations[state.currentLocationId];
     let newState = { ...state, flags: [...state.flags] };
-    const normalizedTargetName = targetName.toLowerCase().replace(/^"|"$/g, '').trim();
+    const normalizedTargetName = normalizeName(targetName);
     const narratorName = game.narratorName || "Narrator";
+
+    if (!normalizedTargetName) {
+        return { newState: state, messages: [createMessage('system', 'System', `You need to specify what to examine.`)] };
+    }
 
     // Try to find an object in the location first
     const targetObjectId = location.objects.find(id =>
-        game.gameObjects[id]?.name.toLowerCase().includes(normalizedTargetName)
+        normalizeName(game.gameObjects[id]?.name).includes(normalizedTargetName)
     );
 
     if (targetObjectId) {
@@ -55,7 +60,7 @@ export function handleExamine(state: PlayerState, targetName: string, game: Game
     // If not an object, try to find an item in inventory or in an open container
     const itemInContext = findItemInContext(state, game, normalizedTargetName);
     if (itemInContext) {
-        const flag = examinedObjectFlag(itemIninContext.id);
+        const flag = examinedObjectFlag(itemInContext.id);
         const isAlreadyExamined = newState.flags.includes(flag as any);
         
         const messageText = isAlreadyExamined && itemInContext.alternateDescription
@@ -79,5 +84,3 @@ export function handleExamine(state: PlayerState, targetName: string, game: Game
 
     return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${targetName}" here.`)] };
 }
-
-    

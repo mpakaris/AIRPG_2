@@ -4,6 +4,7 @@ import { CommandResult } from "@/app/actions";
 import type { Game, GameObject, GameObjectState, PlayerState } from "../types";
 import { getLiveGameObject } from "./helpers";
 import { createMessage, processEffects } from "./process-effects";
+import { normalizeName } from "@/lib/utils";
 
 const examinedObjectFlag = (id: string) => `examined_${id}`;
 
@@ -18,7 +19,7 @@ export function processPassword(state: PlayerState, command: string, game: Game)
     let targetObjectResult = objectsInLocation.find(obj => {
         if (!obj.gameLogic.input || obj.gameLogic.input.type !== 'phrase') return false;
         // Prioritize object names that appear in the command
-        return commandLower.includes(obj.gameLogic.name.toLowerCase());
+        return commandLower.includes(normalizeName(obj.gameLogic.name));
     });
 
     // If no object is explicitly mentioned, find the single, implicitly targeted object
@@ -44,7 +45,7 @@ export function processPassword(state: PlayerState, command: string, game: Game)
     }
     
     // Extract the phrase
-    const targetObjectNameLower = targetObject.gameLogic.name.toLowerCase();
+    const targetObjectNameLower = normalizeName(targetObject.gameLogic.name);
     let phrase = command;
     const objectNameIndex = phrase.toLowerCase().indexOf(targetObjectNameLower);
     if (objectNameIndex !== -1) {
@@ -54,7 +55,7 @@ export function processPassword(state: PlayerState, command: string, game: Game)
     // Remove initial command verb if present
     phrase = phrase.replace(/^\s*(password|say|enter|for|is)\s*/i, '');
     // Clean up quotes and trim
-    phrase = phrase.replace(/^"|"$/g, '').trim();
+    phrase = normalizeName(phrase);
 
     if (!phrase) {
         return { newState: state, messages: [createMessage('narrator', narratorName, 'You need to specify a password phrase.')] };
@@ -63,7 +64,7 @@ export function processPassword(state: PlayerState, command: string, game: Game)
     const expectedPhrase = targetObject.gameLogic.input?.validation;
     const handler = targetObject.gameLogic.handlers.onUnlock;
 
-    if (phrase.toLowerCase() === expectedPhrase?.toLowerCase()) {
+    if (normalizeName(phrase) === normalizeName(expectedPhrase)) {
         let newState = { ...state, objectStates: { ...state.objectStates }};
         if (!newState.objectStates[targetObject.gameLogic.id]) newState.objectStates[targetObject.gameLogic.id] = {} as any;
         newState.objectStates[targetObject.gameLogic.id].isLocked = false;
@@ -92,5 +93,3 @@ export function processPassword(state: PlayerState, command: string, game: Game)
         return { newState: state, messages: [createMessage('narrator', narratorName, failMessage)] };
     }
 }
-
-    

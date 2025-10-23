@@ -4,14 +4,15 @@ import { CommandResult } from "@/app/actions";
 import type { Game, PlayerState } from "../types";
 import { getLiveGameObject } from "./helpers";
 import { createMessage, processEffects } from "./process-effects";
+import { normalizeName } from "@/lib/utils";
 
 export function handleMove(state: PlayerState, targetName: string, game: Game): CommandResult {
     const location = game.locations[state.currentLocationId];
     const narratorName = game.narratorName || "Narrator";
-    const normalizedTargetName = targetName.toLowerCase().replace(/"/g, '').trim();
+    const normalizedTargetName = normalizeName(targetName);
 
     const targetObjectId = location.objects.find(id =>
-        game.gameObjects[id]?.name.toLowerCase().includes(normalizedTargetName)
+        normalizeName(game.gameObjects[id]?.name).includes(normalizedTargetName)
     );
 
     if (!targetObjectId) {
@@ -64,5 +65,3 @@ export function handleMove(state: PlayerState, targetName: string, game: Game): 
         return { newState: state, messages: [createMessage('narrator', narratorName, onMoveHandler.fail.message)] };
     }
 }
-
-    
