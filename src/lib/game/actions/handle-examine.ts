@@ -10,7 +10,7 @@ const examinedObjectFlag = (id: string) => `examined_${id}`;
 export function handleExamine(state: PlayerState, targetName: string, game: Game): CommandResult {
     const location = game.locations[state.currentLocationId];
     let newState = { ...state, flags: [...state.flags] };
-    const normalizedTargetName = targetName.toLowerCase().replace(/"/g, '').trim();
+    const normalizedTargetName = targetName.toLowerCase().replace(/^"|"$/g, '').trim();
     const narratorName = game.narratorName || "Narrator";
 
     // Try to find an object in the location first
@@ -53,9 +53,9 @@ export function handleExamine(state: PlayerState, targetName: string, game: Game
     }
 
     // If not an object, try to find an item in inventory or in an open container
-    const itemInContext = findItemInContext(state, game, targetName);
+    const itemInContext = findItemInContext(state, game, normalizedTargetName);
     if (itemInContext) {
-        const flag = examinedObjectFlag(itemInContext.id);
+        const flag = examinedObjectFlag(itemIninContext.id);
         const isAlreadyExamined = newState.flags.includes(flag as any);
         
         const messageText = isAlreadyExamined && itemInContext.alternateDescription
