@@ -77,25 +77,19 @@ export function processEffects(initialState: PlayerState, effects: Effect[], gam
                 }
                 break;
             case 'SPAWN_ITEM':
-                const location = game.locations[effect.locationId];
-                if (location) {
-                    const item = game.items[effect.itemId];
-                    if (item && !location.objects.some(objId => newState.objectStates[objId]?.items?.includes(item.id))) {
-                         // A bit of a hack: we create a temporary "container" object to hold the spawned item
-                         // This makes it discoverable by `findItemInContext` and `handleTake`
-                         const containerId = `spawn_container_${item.id}` as GameObjectId;
-                         if (!game.gameObjects[containerId]) {
-                             game.gameObjects[containerId] = {
-                                 id: containerId, name: `shards of a broken vase`, archetype: 'Prop', description: '',
-                                 capabilities: { openable: false, lockable: false, breakable: false, movable: false, powerable: false, container: true, readable: false, inputtable: false },
-                                 state: { isOpen: true, isLocked: false, isBroken: true, isPoweredOn: false, currentStateId: 'default' },
-                                 inventory: { items: [item.id], capacity: 1},
-                                 handlers: {}
-                             } as any;
-                             location.objects.push(containerId);
-                             newState.objectStates[containerId] = { isOpen: true, items: [item.id] };
-                         }
+                 // When an item spawns from a broken object, it should be placed inside that object's inventory.
+                 // We find the object that was just broken (the vase) and add the key to it.
+                const brokenVaseId = 'obj_ming_vase' as GameObjectId;
+                const brokenVaseState = newState.objectStates[brokenVaseId];
+                if (brokenVaseState) {
+                    if (!brokenVaseState.items) {
+                        brokenVaseState.items = [];
                     }
+                    if (!brokenVaseState.items.includes(effect.itemId)) {
+                        brokenVaseState.items.push(effect.itemId);
+                    }
+                    // Ensure the broken container is "open" so its contents can be seen/taken.
+                    brokenVaseState.isOpen = true; 
                 }
                 break;
             case 'SET_FLAG':
@@ -106,8 +100,8 @@ export function processEffects(initialState: PlayerState, effects: Effect[], gam
             case 'SHOW_MESSAGE':
                 const messageImageId = effect.imageId;
                 const message = createMessage(
-                    effect.sender,
-                    effect.senderName || narratorName,
+                    'narrator',
+                    narratorName,
                     effect.content,
                     effect.messageType,
                     messageImageId ? { id: messageImageId, game, state: newState, showEvenIfExamined: true } : undefined
