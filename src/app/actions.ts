@@ -411,7 +411,7 @@ export async function processCommand(
         }
 
         if (commandHandlerResult.resultType === 'ALREADY_UNLOCKED' && commandHandlerResult.targetObjectName) {
-            commandHandlerResult.messages.push(
+             commandHandlerResult.messages.push(
                 createMessage('system', 'System', `It seems that you already unlocked the ${commandHandlerResult.targetObjectName} successfully.`),
                 createMessage('agent', agentName, `Burt, maybe we can try another action on the ${commandHandlerResult.targetObjectName}? What do you say?`)
             );
@@ -443,7 +443,12 @@ export async function processCommand(
     await logAndSave(userId, gameId, finalResult.newState, finalResult.messages);
     
     if (process.env.NEXT_PUBLIC_NODE_ENV === 'development') {
-        for (const message of newMessagesFromServer) {
+        const messagesToSend = [
+            ...allMessagesForSession.filter(m => m.sender === 'agent' && m.timestamp >= playerMessage.timestamp),
+            ...newMessagesFromServer
+        ];
+
+        for (const message of messagesToSend) {
              if (message.sender !== 'player') {
                 await dispatchMessage(userId, message);
             }

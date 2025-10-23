@@ -9,7 +9,7 @@ import { normalizeName } from "@/lib/utils";
 const examinedObjectFlag = (id: string) => `examined_${id}`;
 
 export function processPassword(state: PlayerState, command: string, game: Game): CommandResult {
-    const narratorName = game.narratorName || "Narrator";
+    const narratorName = "Narrator";
     const location = game.locations[state.currentLocationId];
     const objectsInLocation = location.objects.map(id => getLiveGameObject(id, state, game)).filter(Boolean) as {gameLogic: GameObject, state: GameObjectState}[];
     
