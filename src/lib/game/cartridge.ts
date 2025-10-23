@@ -67,26 +67,35 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         name: 'Chalkboard Menu',
         archetype: 'Signage',
         description: "A chalkboard menu stands near the counter. It reads: Today's special is three scones for the price of two. A deal almost as sweet as justice.",
-        capabilities: { openable: false, lockable: false, breakable: true, movable: true, powerable: false, container: false, readable: true, inputtable: false },
+        capabilities: { openable: false, lockable: false, breakable: true, movable: true, powerable: false, container: true, readable: true, inputtable: false },
         state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
+        inventory: { items: ['item_iron_pipe'] as ItemId[], capacity: 1 },
         media: { images: { default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759603706/Chalkboard_h61haz.png', description: 'A chalkboard menu in a cafe.', hint: 'chalkboard menu' } } },
         handlers: {
             onExamine: {
                 success: { message: "A chalkboard menu stands near the counter. It reads: Today's special is three scones for the price of two. A deal almost as sweet as justice." },
                 fail: { message: "" },
-                alternateMessage: "The menu hasn't changed. The special is still about 'justice'."
+                alternateMessage: "The menu hasn't changed. Something seems to be propped up behind it."
             },
             onMove: {
-                success: { message: "You shift the chalkboard stand. Just a dusty floor behind it." },
-                fail: { message: "" }
+                 conditions: [{ type: 'NO_FLAG', targetId: 'has_found_pipe' as Flag }],
+                success: {
+                    message: "You move the chalkboard aside and find a heavy iron pipe leaning against the wall behind it.",
+                    effects: [
+                        { type: 'SET_FLAG', flag: 'has_found_pipe' as Flag },
+                        { type: 'SET_OBJECT_STATE', objectId: 'obj_chalkboard_menu', state: { isOpen: true } },
+                        { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'A heavy iron pipe was hidden behind the menu.', imageId: 'item_iron_pipe'}
+                    ]
+                },
+                fail: { message: "You shift the chalkboard stand, but there's nothing else behind it." }
             }
         },
         fallbackMessages: { 
             default: "Probably best to leave the menu alone. It's not part of the case.",
-            notMovable: "It's a heavy stand, but you manage to slide it aside. There's only dust and a stray sugar packet underneath."
+            notMovable: "It's a heavy stand, but you manage to slide it aside."
         },
-        design: { authorNotes: "Contains the 'justice' clue for the notebook password." },
-        version: { schema: "1.0", content: "1.0" }
+        design: { authorNotes: "Contains the 'justice' clue and hides the iron pipe." },
+        version: { schema: "1.0", content: "1.1" }
     },
     'obj_magazine': {
         id: 'obj_magazine' as GameObjectId,
@@ -184,7 +193,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         description: "It's a high-end Italian model, very expensive but totally worth it. The coffee tastes amazing and the milk foam is as soft as clouds. A small compartment seems loose.",
         capabilities: { openable: false, lockable: false, breakable: true, movable: false, powerable: false, container: true, readable: false, inputtable: false },
         state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        inventory: { items: ['item_deposit_key'] as ItemId[], capacity: 1 },
+        inventory: { items: [], capacity: 1 },
         media: {
             images: {
                 default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761211151/coffee_machine_detail_frexuu.png', description: 'A high-end Italian coffee machine.', hint: 'coffee machine' },
@@ -202,13 +211,13 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             },
             onUse: [
                 {
-                    itemId: 'item_heavy_stone' as ItemId,
+                    itemId: 'item_iron_pipe' as ItemId,
                     conditions: [{ type: 'NO_FLAG', targetId: 'machine_is_broken' as Flag }],
                     success: {
-                        message: "With a sharp crack, the heavy stone shatters the side panel of the coffee machine. A small, ornate key falls out from the broken compartment.",
+                        message: "With a sharp crack, the iron pipe shatters the side panel of the coffee machine. A small, ornate key falls out from the broken compartment.",
                         effects: [
                             { type: 'SET_FLAG', flag: 'machine_is_broken' as Flag },
-                            { type: 'SET_OBJECT_STATE', objectId: 'obj_coffee_machine', state: { isBroken: true, currentStateId: 'broken' } },
+                            { type: 'SET_OBJECT_STATE', objectId: 'obj_coffee_machine', state: { isBroken: true, isOpen: true, currentStateId: 'broken' } },
                             { type: 'SPAWN_ITEM', itemId: 'item_deposit_key' as ItemId, locationId: 'loc_cafe_interior' as LocationId },
                             { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'The side of the coffee machine is now smashed.', imageId: 'obj_coffee_machine' }
                         ]
@@ -256,14 +265,29 @@ const items: Record<ItemId, Item> = {
         design: { authorNotes: "Player's primary tool." },
         version: { schema: "1.0", content: "1.0" }
     },
-    'item_heavy_stone': {
-        id: 'item_heavy_stone' as ItemId,
-        name: 'Heavy Stone',
+    'item_iron_pipe': {
+        id: 'item_iron_pipe' as ItemId,
+        name: 'Iron Pipe',
         archetype: 'Tool',
-        description: 'A smooth, heavy stone you picked up from the street. It fits comfortably in your hand.',
+        description: 'A heavy iron pipe. Iron pipes come in handy to open or break things.',
         capabilities: { isTakable: true, isReadable: false, isUsable: true, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+        media: {
+            image: {
+                url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761261134/iron_pipe_bpcofa.png',
+                description: 'A heavy iron pipe.',
+                hint: 'iron pipe'
+            }
+        },
         handlers: {
-            defaultFailMessage: "You can't use the stone on its own."
+            onTake: {
+                success: { message: "You take the iron pipe and add it to your inventory." },
+                fail: { message: "" }
+            },
+            onExamine: {
+                success: { message: "It's a heavy iron pipe. It could be useful for forcing something open." },
+                fail: { message: ""}
+            },
+            defaultFailMessage: "Sorry Burt, you can't use the pipe by itself. You need to use it on an object."
         },
         design: { authorNotes: "Tool for breaking objects like the coffee machine." },
         version: { schema: "1.0", content: "1.0" }
@@ -702,12 +726,12 @@ export const game: Game = {
 6.  **Invalid/Conversational Input:** If Burt's input is illogical ("eat the SD card") or conversational ("what now?"), gently guide him back to the case.
     *   **Illogical:** \`{"agentResponse": "I don't think that's a good idea, Burt. We might need that as evidence. Let's rethink.", "commandToExecute": "invalid"}\`
     *   **Conversational:** \`{"agentResponse": "Let's focus on the objective: [current chapter goal]. What's our next move?", "commandToExecute": "invalid"}\`
-7.  **Implicit Player Items:** Burt has default equipment like a "Phone" and a "Heavy Stone" in his inventory. He doesn't need to see them to use them.
+7.  **Implicit Player Items:** Burt has default equipment like a "Phone" and an "Iron Pipe" (if found). He doesn't need to see them to use them.
     *   Player says: "use sd card" -> Your command should be: \`use "SD Card"\`
 8.  **Physical Interaction:** Map gentle physical interactions like "touch", "feel", or "put hand in" to the 'examine' command.
 9.  **Breaking Things:** If Burt tries to break something with his hands (e.g., "hit vase with fist"), you must guide him to use a tool.
     *   Player says: "punch the coffee machine" -> Your response: \`{"agentResponse": "Easy there, Burt. Your fist isn't going to cut it. We'll need a tool if we want to break this.", "commandToExecute": "invalid"}\`
-    *   Player says: "hit coffee machine with stone" -> Your response: \`{"agentResponse": "Good thinking, Burt. Let's see if this works.", "commandToExecute": "use \\"Heavy Stone\\" on \\"Coffee Machine\\""}\`
+    *   Player says: "hit coffee machine with stone" -> Your response: \`{"agentResponse": "Good thinking, Burt. Let's see if this works.", "commandToExecute": "use \\"Iron Pipe\\" on \\"Coffee Machine\\""}\`
 
 **Your Task Flow:**
 1.  Analyze Burt's input to understand his intent.
