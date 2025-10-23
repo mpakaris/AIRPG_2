@@ -26,10 +26,10 @@ import { handleTake } from '@/lib/game/actions/handle-take';
 import { handleTalk } from '@/lib/game/actions/handle-talk';
 import { handleUse } from '@/lib/game/actions/handle-use';
 import { processPassword } from '@/lib/game/actions/process-password';
+import { game as gameCartridge } from '@/lib/game/cartridge';
 
 const GAME_ID = 'blood-on-brass' as GameId;
 
-const examinedObjectFlag = (id: string) => `examined_${id}` as Flag;
 const chapterCompletionFlag = (chapterId: ChapterId) => `chapter_${chapterId}_complete` as Flag;
 
 export type CommandResult = {
@@ -43,10 +43,21 @@ export type CommandResult = {
 // --- Data Loading ---
 
 /**
- * Loads the entire game structure for a specific gameId from Firestore.
- * This is now the single source of truth for game data.
+ * Loads the entire game structure.
+ * In development, it loads from the local `cartridge.ts` file for speed.
+ * In test/production, it loads from Firestore.
  */
 export async function getGameData(gameId: GameId): Promise<Game | null> {
+    if (process.env.NEXT_PUBLIC_NODE_ENV === 'development') {
+        console.log("DEV MODE: Loading game data from local cartridge.ts");
+        // Ensure the imported cartridge has the correct ID, or find the correct one if needed.
+        if (gameCartridge.id === gameId) {
+            return gameCartridge;
+        }
+        return null;
+    }
+
+    console.log(`PROD/TEST MODE: Loading game data for ${gameId} from Firestore.`);
     const { firestore } = initializeFirebase();
     
     try {
@@ -63,18 +74,17 @@ export async function getGameData(gameId: GameId): Promise<Game | null> {
         // Helper function to fetch all documents from a sub-collection
         const fetchSubCollection = async (subCollectionName: string) => {
             const snap = await getDocs(collection(firestore, `games/${gameId}/${subCollectionName}`));
-            // Use the document ID as the key in the resulting object
             return Object.fromEntries(snap.docs.map(d => [d.id, d.data()]));
         };
 
         // Fetch all sub-collections in parallel
         const [
-            chaptersData,
-            locationsData,
-            gameObjectsData,
-            itemsData,
-            npcsData,
-            portalsData
+            chapters,
+            locations,
+            gameObjects,
+            items,
+            npcs,
+            portals
         ] = await Promise.all([
             fetchSubCollection('chapters'),
             fetchSubCollection('locations'),
@@ -84,12 +94,12 @@ export async function getGameData(gameId: GameId): Promise<Game | null> {
             fetchSubCollection('portals')
         ]);
 
-        gameData.chapters = chaptersData as Record<string, Chapter>;
-        gameData.locations = locationsData as Record<string, Location>;
-        gameData.gameObjects = gameObjectsData as Record<string, GameObject>;
-        gameData.items = itemsData as Record<string, Item>;
-        gameData.npcs = npcsData as Record<string, NPC>;
-        gameData.portals = portalsData as Record<string, Portal>;
+        gameData.chapters = chapters as Record<string, Chapter>;
+        gameData.locations = locations as Record<string, Location>;
+        gameData.gameObjects = gameObjects as Record<string, GameObject>;
+        gameData.items = items as Record<string, Item>;
+        gameData.npcs = npcs as Record<string, NPC>;
+        gameData.portals = portals as Record<string, Portal>;
 
         return gameData;
 
@@ -640,3 +650,6 @@ export async function generateStoryForChapter(userId: string, gameId: GameId, ch
 
     return { newState };
 }
+
+
+    
