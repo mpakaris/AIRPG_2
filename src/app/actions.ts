@@ -412,10 +412,14 @@ export async function processCommand(
     }
     
     // --- Finalization ---
-    const newMessagesFromServer = commandHandlerResult.messages;
-    allMessagesForSession.push(...newMessagesFromServer);
+    // Ensure commandHandlerResult and its messages are valid before proceeding
+    if (commandHandlerResult && commandHandlerResult.messages) {
+        // Now it's safe to push messages
+        allMessagesForSession.push(...commandHandlerResult.messages);
+    }
 
-    let finalState = commandHandlerResult.newState;
+
+    let finalState = commandHandlerResult?.newState;
 
     if (finalState) {
         const completion = checkChapterCompletion(finalState, game);
@@ -435,16 +439,13 @@ export async function processCommand(
     
     await logAndSave(userId, gameId, finalResult.newState, finalResult.messages);
     
+    // In dev, send new messages (that aren't from the player) to the webhook simulator
     if (process.env.NEXT_PUBLIC_NODE_ENV === 'development') {
-        const messagesToSend = [
-            ...allMessagesForSession.filter(m => m.sender === 'agent' && m.timestamp >= playerMessage.timestamp),
-            ...newMessagesFromServer
-        ];
-
-        for (const message of messagesToSend) {
-             if (message.sender !== 'player') {
-                await dispatchMessage(userId, message);
-            }
+        const newMessagesFromServer = finalResult.messages.filter(
+            m => m.timestamp >= playerMessage.timestamp && m.sender !== 'player'
+        );
+        for (const message of newMessagesFromServer) {
+            await dispatchMessage(userId, message);
         }
     }
     
