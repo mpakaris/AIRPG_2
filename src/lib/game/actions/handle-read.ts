@@ -28,32 +28,23 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
     const baseHandler = liveItem.gameLogic.handlers?.onRead;
     const effectiveHandler = handlerOverride || baseHandler;
 
-    // --- NEW ROBUST LOGIC ---
-    // Check if there's a valid handler with a success block to execute.
-    if (effectiveHandler && effectiveHandler.success) { 
+    if (effectiveHandler) {
         const successBlock = effectiveHandler.success;
-        const effectsToProcess = successBlock.effects || [];
-        
-        let result = processEffects(state, effectsToProcess, game);
-        
-        const hasMessageEffect = effectsToProcess.some(e => e.type === 'SHOW_MESSAGE');
-        
-        // If the handler is supposed to show a message but doesn't use an effect, create one.
-        if (!hasMessageEffect && successBlock.message) {
-            // Safely determine the sender, defaulting to 'narrator'.
-            const sender = (successBlock as any).sender === 'agent' ? 'agent' : 'narrator';
-            const senderName = sender === 'agent' ? (game.narratorName || 'Agent') : narratorName;
+
+        if (successBlock) {
+            const effectsToProcess = successBlock.effects || [];
+            let result = processEffects(state, effectsToProcess, game);
+            const hasMessageEffect = effectsToProcess.some(e => e.type === 'SHOW_MESSAGE');
             
-            const message = createMessage(
-                sender,
-                senderName,
-                successBlock.message,
-                'text'
-            );
-            result.messages.unshift(message);
+            if (!hasMessageEffect && successBlock.message) {
+                const sender = (successBlock as any).sender || 'narrator';
+                const senderName = sender === 'agent' ? (game.narratorName || 'Agent') : narratorName;
+                
+                const message = createMessage(sender, senderName, successBlock.message, 'text');
+                result.messages.unshift(message);
+            }
+            return result;
         }
-        
-        return result;
     }
     
     // If no specific handler is found, use the item's description as the default content.

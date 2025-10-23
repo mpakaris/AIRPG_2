@@ -282,10 +282,14 @@ const items: Record<ItemId, Item> = {
         alternateDescription: 'Still a book about business.',
         capabilities: { isTakable: false, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         state: { readCount: 0, currentStateId: 'default' },
-        handlers: {
-            onRead: {
-                success: { message: "It seems to be a ghost-written book about a real estate magnate. Not relevant to the case." },
-                fail: {message: ""}
+        stateMap: {
+            'default': {
+                overrides: {
+                    onRead: {
+                        success: { message: "It seems to be a ghost-written book about a real estate magnate. Not relevant to the case.", effects: [] },
+                        fail: { message: "" }
+                    }
+                }
             }
         },
         design: { tags: ['book', 'distraction'] },
@@ -299,10 +303,14 @@ const items: Record<ItemId, Item> = {
         alternateDescription: 'Still a book about physics.',
         capabilities: { isTakable: false, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         state: { readCount: 0, currentStateId: 'default' },
-        handlers: {
-            onRead: {
-                success: { message: "Complex theories about spacetime. Unlikely to help you solve a murder." },
-                fail: {message: ""}
+        stateMap: {
+            'default': {
+                overrides: {
+                    onRead: {
+                        success: { message: "Complex theories about spacetime. Unlikely to help you solve a murder.", effects: [] },
+                        fail: { message: "" }
+                    }
+                }
             }
         },
         design: { tags: ['book', 'distraction'] },
@@ -316,10 +324,14 @@ const items: Record<ItemId, Item> = {
         alternateDescription: "The cover is cheesy, but the title 'Justice for My Love' continues to stand out.",
         capabilities: { isTakable: false, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         state: { readCount: 0, currentStateId: 'default' },
-        handlers: {
-            onRead: {
-                success: { message: "Against your better judgment, you read a page. 'His voice was like smooth jazz on a rainy night, but his eyes held a storm. She knew then that he would get justice for her, or die trying.'" },
-                fail: {message: ""}
+        stateMap: {
+            'default': {
+                overrides: {
+                    onRead: {
+                        success: { message: "Against your better judgment, you read a page. 'His voice was like smooth jazz on a rainy night, but his eyes held a storm. She knew then that he would get justice for her, or die trying.'", effects: [] },
+                        fail: { message: "" }
+                    }
+                }
             }
         },
         design: { tags: ['book', 'clue'] },
