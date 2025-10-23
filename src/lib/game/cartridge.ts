@@ -196,8 +196,8 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         inventory: { items: ['item_secret_document'] as ItemId[], capacity: 1 },
         media: {
             images: {
-                default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761400234/closed_safe_gwxft6.png', description: 'A closed wall safe.', hint: 'wall safe' },
-                unlocked: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761400234/open_safe_w15b9c.png', description: 'An open wall safe containing a document.', hint: 'open safe' }
+                default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761263220/safe_behind_Painting_dbo6qc.png', description: 'A closed wall safe.', hint: 'wall safe' },
+                unlocked: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761263220/safe_behind_painting_open_tpmf0m.png', description: 'An open wall safe containing a document.', hint: 'open safe' }
             }
         },
         handlers: {
@@ -537,7 +537,7 @@ const items: Record<ItemId, Item> = {
         alternateDescription: "The confidential file from the safe. It's filled with complex legal and financial jargon.",
         capabilities: { isTakable: true, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         media: {
-            image: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761400234/secret_document_t8u3gf.png', description: 'A confidential document folder.', hint: 'secret document' }
+            image: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761263220/Confidential_File_qegnr4.png', description: 'A confidential document folder.', hint: 'secret document' }
         },
         handlers: {
             onTake: {
@@ -549,6 +549,7 @@ const items: Record<ItemId, Item> = {
                     message: "You open the file. It's dense with financial reports, shell corporations, and offshore accounts, all linked to a powerful holding company. It's going to take hours to untangle this web, but one name keeps reappearing in the margins: a company called 'Veridian Dynamics'. This feels big... bigger than a simple murder.",
                     effects: [
                         { type: 'SET_FLAG', flag: 'has_read_secret_document' as Flag },
+                        { type: 'SHOW_MESSAGE', sender: 'narrator', content: "You are looking at a confidential file.", messageType: 'image', imageId: 'item_secret_document' },
                     ]
                 },
                 fail: { message: "" }
