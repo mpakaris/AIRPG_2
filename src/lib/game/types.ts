@@ -328,7 +328,7 @@ export type Item = {
 
   handlers: {
     onTake?: Handler;
-    onUse?: Handler;
+    onUse?: Handler | ItemHandler[];
     onRead?: Handler;
     onScan?: Handler;
     onAnalyze?: Handler;
@@ -550,12 +550,17 @@ export type Portal = {
     };
 };
 
+export type Hint = {
+  flag: Flag;
+  text: string;
+};
 
 export type Chapter = {
   id: ChapterId;
   title: string;
   goal: string;
   objectives?: { flag: Flag, label: string }[];
+  hints?: Hint[];
   startLocationId: LocationId; // Can be a cell or a location
   introductionVideo?: string;
   completionVideo?: string;

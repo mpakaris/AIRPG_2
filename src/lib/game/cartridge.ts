@@ -1,4 +1,5 @@
 
+
 import type { Game, GameId, ChapterId, LocationId, GameObjectId, ItemId, NpcId, Flag, WorldId, StructureId, CellId, PortalId, GameObject, Item, NPC, Location, Portal, Structure, World, Chapter } from './types';
 
 // --- Static Game Data ---
@@ -194,8 +195,8 @@ const items: Record<ItemId, Item> = {
             },
             defaultFailMessage: "You can't use the phone by itself right now. Try using it on something specific."
         },
-        design: { authorNotes: "Player's primary tool. Its functionality will expand as the game progresses." },
-        version: { schema: "1.0", content: "1.1" }
+        design: { authorNotes: "Player's primary tool." },
+        version: { schema: "1.0", content: "1.0" }
     },
     'item_business_card': {
         id: 'item_business_card' as ItemId,
@@ -576,6 +577,12 @@ const chapters: Record<ChapterId, Chapter> = {
             { flag: 'has_unlocked_notebook' as Flag, label: 'Unlock the Notebook' },
             { flag: 'notebook_interaction_complete' as Flag, label: 'View the Notebook Contents' },
         ],
+        hints: [
+            { flag: 'has_talked_to_barista' as Flag, text: "We haven't spoken to the barista yet. He might have seen who left the notebook." },
+            { flag: 'has_received_business_card' as Flag, text: "The barista mentioned the man in black was a regular. Maybe he knows more about him, or has something he left behind." },
+            { flag: 'has_unlocked_notebook' as Flag, text: "The notebook is locked with a phrase. We should examine everything in the cafe for clues. Maybe something on the menu or bookshelf?" },
+            { flag: 'notebook_interaction_complete' as Flag, text: "We've unlocked the notebook, but we haven't checked what's inside yet. Let's open it and see what we find." },
+        ],
         startLocationId: 'loc_cafe_interior' as LocationId,
         // The following are now managed by the top-level entities but kept here for compatibility during transition
         locations: {},
@@ -606,8 +613,8 @@ export const game: Game = {
 6.  **Invalid/Conversational Input:** If Burt's input is illogical ("eat the SD card") or conversational ("what now?"), gently guide him back to the case.
     *   **Illogical:** \`{"agentResponse": "I don't think that's a good idea, Burt. We might need that as evidence. Let's rethink.", "commandToExecute": "invalid"}\`
     *   **Conversational:** \`{"agentResponse": "Let's focus on the objective: [current chapter goal]. What's our next move?", "commandToExecute": "invalid"}\`
-7.  **Implicit Player Items:** Burt has standard equipment like a phone. He doesn't need to see a phone in the room to use it.
-    *   **Player says:** "use sd card" -> **Your command should be:** \`use "SD Card"\`
+7.  **Implicit Player Items:** Burt has standard equipment like a phone. He doesn't need to see a phone in the room to use it. The command should be mapped to \`use "Item Name"\` and the engine will handle the rest.
+    *   **Player says:** "put sd card in phone" -> **Your command should be:** \`use "SD Card"\`
 
 
 **Your Task Flow:**

@@ -7,7 +7,7 @@ import {
   generateStoryFromLogs
 } from '@/ai';
 import { AVAILABLE_COMMANDS } from '@/lib/game/commands';
-import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectId, GameObjectState, ItemId, Flag, Effect, Chapter, ChapterId, ImageDetails, GameId, User, TokenUsage, Story } from '@/lib/game/types';
+import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectId, GameObjectState, ItemId, Flag, Effect, Chapter, ChapterId, ImageDetails, GameId, User, TokenUsage, Story, Portal } from '@/lib/game/types';
 import { initializeFirebase } from '@/firebase';
 import { doc, setDoc, getDoc, collection, getDocs } from 'firebase/firestore';
 import { getInitialState } from '@/lib/game-state';
@@ -27,6 +27,7 @@ import { handleTalk } from '@/lib/game/actions/handle-talk';
 import { handleUse } from '@/lib/game/actions/handle-use';
 import { processPassword } from '@/lib/game/actions/process-password';
 import { game as gameCartridge } from '@/lib/game/cartridge';
+import { handleHelp } from '@/lib/game/actions/handle-help';
 
 const GAME_ID = 'blood-on-brass' as GameId;
 
@@ -253,6 +254,9 @@ export async function processCommand(
         }
         commandHandlerResult = { newState, messages };
     }
+    else if (lowerInput === '/help' || lowerInput === 'help' || lowerInput === 'hint' || lowerInput === `what's next?`) {
+        commandHandlerResult = handleHelp(currentState, game);
+    }
     // Conversation commands
     else if (currentState.activeConversationWith) {
         commandHandlerResult = await handleConversation(currentState, playerInput, game);
@@ -387,6 +391,9 @@ export async function processCommand(
             case 'invalid':
                  commandHandlerResult = { newState: currentState, messages: [] };
                  break;
+            case 'help':
+                commandHandlerResult = handleHelp(currentState, game);
+                break;
             default:
                 const targetObject = visibleObjects.find(obj => restOfCommand.includes(obj.gameLogic.name.toLowerCase()));
                 if (targetObject && targetObject.gameLogic.fallbackMessages) {
@@ -401,20 +408,6 @@ export async function processCommand(
                     commandHandlerResult = { newState: currentState, messages: [] }; 
                 }
                 break;
-        }
-
-        if (!commandHandlerResult) {
-            commandHandlerResult = { newState: currentState, messages: [] };
-        }
-        if (!commandHandlerResult.messages) {
-            commandHandlerResult.messages = [];
-        }
-
-        if (commandHandlerResult.resultType === 'ALREADY_UNLOCKED' && commandHandlerResult.targetObjectName) {
-             commandHandlerResult.messages.push(
-                createMessage('system', 'System', `It seems that you already unlocked the ${commandHandlerResult.targetObjectName} successfully.`),
-                createMessage('agent', agentName, `Burt, maybe we can try another action on the ${commandHandlerResult.targetObjectName}? What do you say?`)
-            );
         }
     }
     
