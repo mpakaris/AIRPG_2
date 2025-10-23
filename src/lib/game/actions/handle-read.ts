@@ -22,23 +22,20 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
     const liveItem = getLiveItem(itemToRead.id, state, game);
     const currentStateId = liveItem.state.currentStateId || 'default';
     
-    // Find the state-specific override handler, if it exists
     const handlerOverride = itemToRead.stateMap?.[currentStateId]?.overrides?.onRead;
-    // Fallback to the base handler
     const baseHandler = itemToRead.handlers.onRead;
 
-    // The effective handler is the override, or the base if no override exists for the current state.
     const effectiveHandler = handlerOverride || baseHandler;
 
-    if (effectiveHandler) {
-        // We always use the success block for 'onRead' in this model. Conditions can be added later.
-        let result = processEffects(state, effectiveHandler.success.effects || [], game);
+    if (effectiveHandler && effectiveHandler.success) { // Safely check for success block
+        const effectsToProcess = effectiveHandler.success.effects || [];
+        let result = processEffects(state, effectsToProcess, game);
         
         let message;
-        // Check if the handler provided a SHOW_MESSAGE effect
-        const hasMessageEffect = Array.isArray(effectiveHandler.success.effects) && effectiveHandler.success.effects.some(e => e.type === 'SHOW_MESSAGE');
-        if (!hasMessageEffect) {
-            // If not, create one from the handler's message property
+        // Safely check for effects array before calling .some()
+        const hasMessageEffect = Array.isArray(effectsToProcess) && effectsToProcess.some(e => e.type === 'SHOW_MESSAGE');
+        
+        if (!hasMessageEffect && effectiveHandler.success.message) {
             const sender = (effectiveHandler.success as any).sender === 'agent' ? 'agent' : 'narrator';
             const senderName = sender === 'agent' ? game.narratorName || 'Agent' : 'Narrator';
             message = createMessage(
