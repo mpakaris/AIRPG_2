@@ -36,25 +36,31 @@ export async function handleOpen(state: PlayerState, targetName: string, game: G
         }
         
         if (!liveObject.gameLogic.capabilities.openable) {
-            return { newState: state, messages: [createMessage('narrator', narratorName, `You can't open the ${liveObject.gameLogic.name}.`)] };
+            const notOpenableMessage = liveObject.gameLogic.fallbackMessages?.notOpenable || `You can't open the ${liveObject.gameLogic.name}.`;
+            return { newState: state, messages: [createMessage('narrator', narratorName, notOpenableMessage)] };
         }
 
         const onOpen = liveObject.gameLogic.handlers.onOpen;
 
-        if (!onOpen || !onOpen.success || !onOpen.success.effects) {
-            const genericOpenMessage = `You open the ${liveObject.gameLogic.name}.`;
-            const newState = { ...state, objectStates: { ...state.objectStates, [liveObject.gameLogic.id]: { ...liveObject.state, isOpen: true } } };
-            return { newState, messages: [createMessage('narrator', narratorName, genericOpenMessage)] };
+        // --- BULLETPROOF SAFETY CHECKS ---
+        if (onOpen && onOpen.success) {
+            const successBlock = onOpen.success;
+            const effectsToProcess = Array.isArray(successBlock.effects) ? successBlock.effects : [];
+            
+            let result = processEffects(state, effectsToProcess, game);
+            
+            const hasMessageEffect = effectsToProcess.some(a => a.type === 'SHOW_MESSAGE');
+            if (!hasMessageEffect && successBlock.message) {
+                result.messages.unshift(createMessage('narrator', narratorName, successBlock.message));
+            }
+            
+            return result;
         }
-        
-        const result = processEffects(state, onOpen.success.effects || [], game);
-        
-        const hasMessageEffect = onOpen.success.effects.some(a => a.type === 'SHOW_MESSAGE');
-        if (!hasMessageEffect) {
-            result.messages.unshift(createMessage('narrator', narratorName, onOpen.success.message));
-        }
-        
-        return result;
+
+        // Fallback for objects that are openable but have no specific onOpen handler
+        const genericOpenMessage = `You open the ${liveObject.gameLogic.name}.`;
+        const newState = { ...state, objectStates: { ...state.objectStates, [liveObject.gameLogic.id]: { ...liveObject.state, isOpen: true } } };
+        return { newState, messages: [createMessage('narrator', narratorName, genericOpenMessage)] };
     }
 
     // If no GameObject was found, try to find an Item (like a book)
@@ -71,3 +77,4 @@ export async function handleOpen(state: PlayerState, targetName: string, game: G
     // If neither an object nor an item was found
     return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${normalizedTargetName}" to open.`)] };
 }
+
