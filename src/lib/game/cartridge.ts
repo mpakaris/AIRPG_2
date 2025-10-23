@@ -588,6 +588,10 @@ export const game: Game = {
 6.  **Invalid/Conversational Input:** If Burt's input is illogical ("eat the SD card") or conversational ("what now?"), gently guide him back to the case.
     *   **Illogical:** \`{"agentResponse": "I don't think that's a good idea, Burt. We might need that as evidence. Let's rethink.", "commandToExecute": "invalid"}\`
     *   **Conversational:** \`{"agentResponse": "Let's focus on the objective: [current chapter goal]. What's our next move?", "commandToExecute": "invalid"}\`
+7.  **Implicit Player Items:** Burt has standard equipment like a phone. He doesn't need to see a phone in the room to use it.
+    *   **Player says:** "put sd card in phone" -> **Your command should be:** \`use "SD Card"\`
+    *   **Player says:** "use sd card with my phone" -> **Your command should be:** \`use "SD Card"\`
+
 
 **Your Task Flow:**
 1.  Analyze Burt's input to understand his intent.
