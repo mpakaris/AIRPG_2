@@ -2,8 +2,8 @@
 'use server';
 
 import { CommandResult } from "@/app/actions";
-import type { Game, ItemState, PlayerState } from "../types";
-import { findItemInContext, getLiveItem } from "./helpers";
+import type { Game, PlayerState } from "../types";
+import { findItemInContext } from "./helpers";
 import { createMessage, processEffects } from "./process-effects";
 import { normalizeName } from "@/lib/utils";
 
@@ -20,38 +20,33 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
         return { newState: state, messages: [createMessage('narrator', narratorName, `There's nothing to read on the ${itemToRead.name}.`)] };
     }
 
-    const onReadHandler = itemToRead.handlers?.onRead;
-    
-    // --- Logic for stateful books with excerpts in stateMap ---
-    if (itemToRead.stateMap && itemToRead.archetype === 'Book') {
-        let newState = JSON.parse(JSON.stringify(state)); // Deep copy for mutation
+    const handler = itemToRead.handlers?.onRead;
+
+    // --- BULLETPROOF SAFETY CHECK ---
+    // This logic safely handles the handler, its success block, and its effects.
+    if (handler && handler.success) {
+        const successBlock = handler.success;
         
-        if (!newState.itemStates[itemToRead.id]) {
-            newState.itemStates[itemToRead.id] = { readCount: 0, currentStateId: 'default' };
+        // Safely get the effects array, defaulting to an empty array if it doesn't exist.
+        // This permanently prevents the ".some()" crash.
+        const effectsToProcess = Array.isArray(successBlock.effects) ? successBlock.effects : [];
+        
+        // Process any effects that do exist.
+        const result = processEffects(state, effectsToProcess, game);
+        
+        // Check if any of the processed effects were of type SHOW_MESSAGE.
+        const hasMessageEffect = effectsToProcess.some(e => e.type === 'SHOW_MESSAGE');
+        
+        // If no SHOW_MESSAGE effect was processed, and a message string exists, show it.
+        if (!hasMessageEffect && successBlock.message) {
+            const message = createMessage('narrator', narratorName, successBlock.message);
+            result.messages.unshift(message);
         }
         
-        const liveItemState = newState.itemStates[itemToRead.id];
-        const newReadCount = (liveItemState.readCount || 0) + 1;
-        
-        const stateKeys = Object.keys(itemToRead.stateMap);
-        const numStates = stateKeys.length;
-        const stateIndex = (newReadCount - 1) % numStates;
-        const stateKey = stateKeys[stateIndex] || 'default';
-        
-        newState.itemStates[itemToRead.id].readCount = newReadCount;
-        newState.itemStates[itemToRead.id].currentStateId = stateKey;
-
-        const messageContent = itemToRead.stateMap[stateKey]?.description || itemToRead.description;
-        
-        return { newState, messages: [createMessage('narrator', narratorName, messageContent)] };
+        return result;
     }
+    // --- END SAFETY CHECK ---
 
-    // --- Fallback logic for all other readable items ---
-    if (onReadHandler && onReadHandler.success) {
-        // This is the robust way: delegate to processEffects
-        return processEffects(state, onReadHandler.success.effects || [], game);
-    }
-    
-    // Default fallback for readable items with no specific handler.
+    // Fallback for items that are readable but have no specific onRead handler.
     return { newState: state, messages: [createMessage('narrator', narratorName, itemToRead.description)] };
 }
