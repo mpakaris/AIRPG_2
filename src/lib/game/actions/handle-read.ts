@@ -27,7 +27,7 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
 
     const effectiveHandler = handlerOverride || baseHandler;
 
-    if (effectiveHandler?.success) { // Safely check for handler and success block
+    if (effectiveHandler?.success) { 
         const effectsToProcess = effectiveHandler.success.effects || [];
         let result = processEffects(state, effectsToProcess, game);
         
