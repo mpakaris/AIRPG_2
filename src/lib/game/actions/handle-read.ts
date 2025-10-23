@@ -36,7 +36,7 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
         
         let message;
         // Check if the handler provided a SHOW_MESSAGE effect
-        const hasMessageEffect = effectiveHandler.success.effects?.some(e => e.type === 'SHOW_MESSAGE');
+        const hasMessageEffect = Array.isArray(effectiveHandler.success.effects) && effectiveHandler.success.effects.some(e => e.type === 'SHOW_MESSAGE');
         if (!hasMessageEffect) {
             // If not, create one from the handler's message property
             const sender = (effectiveHandler.success as any).sender === 'agent' ? 'agent' : 'narrator';
