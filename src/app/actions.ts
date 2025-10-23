@@ -6,11 +6,10 @@ import {
   guidePlayerWithNarrator,
   generateStoryFromLogs
 } from '@/ai';
-import { game as gameCartridge } from '@/lib/game/cartridge';
 import { AVAILABLE_COMMANDS } from '@/lib/game/commands';
 import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectId, GameObjectState, ItemId, Flag, Action, Chapter, ChapterId, ImageDetails, GameId, User, TokenUsage, Story } from '@/lib/game/types';
 import { initializeFirebase } from '@/firebase';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, collection, getDocs } from 'firebase/firestore';
 import { getInitialState } from '@/lib/game-state';
 import { dispatchMessage } from '@/lib/whinself-service';
 import { processActions, createMessage } from '@/lib/game/actions/process-actions';
@@ -28,6 +27,8 @@ import { handleTalk } from '@/lib/game/actions/handle-talk';
 import { handleUse } from '@/lib/game/actions/handle-use';
 import { processPassword } from '@/lib/game/actions/process-password';
 
+const GAME_ID = 'blood-on-brass' as GameId;
+
 const examinedObjectFlag = (id: string) => `examined_${id}` as Flag;
 const chapterCompletionFlag = (chapterId: ChapterId) => `chapter_${chapterId}_complete` as Flag;
 
@@ -37,6 +38,66 @@ export type CommandResult = {
   resultType?: 'ALREADY_UNLOCKED';
   targetObjectName?: string;
 };
+
+
+// --- Data Loading ---
+
+/**
+ * Loads the entire game structure for a specific gameId from Firestore.
+ * This is now the single source of truth for game data.
+ */
+export async function getGameData(gameId: GameId): Promise<Game | null> {
+    const { firestore } = initializeFirebase();
+    
+    try {
+        const gameRef = doc(firestore, 'games', gameId);
+        const gameSnap = await getDoc(gameRef);
+
+        if (!gameSnap.exists()) {
+            console.error(`Game with ID ${gameId} not found in Firestore.`);
+            return null;
+        }
+
+        const gameData = gameSnap.data() as Game;
+
+        // Helper function to fetch all documents from a sub-collection
+        const fetchSubCollection = async (subCollectionName: string) => {
+            const snap = await getDocs(collection(firestore, `games/${gameId}/${subCollectionName}`));
+            // Use the document ID as the key in the resulting object
+            return Object.fromEntries(snap.docs.map(d => [d.id, d.data()]));
+        };
+
+        // Fetch all sub-collections in parallel
+        const [
+            chaptersData,
+            locationsData,
+            gameObjectsData,
+            itemsData,
+            npcsData,
+            portalsData
+        ] = await Promise.all([
+            fetchSubCollection('chapters'),
+            fetchSubCollection('locations'),
+            fetchSubCollection('game_objects'),
+            fetchSubCollection('items'),
+            fetchSubCollection('npcs'),
+            fetchSubCollection('portals')
+        ]);
+
+        gameData.chapters = chaptersData as Record<string, Chapter>;
+        gameData.locations = locationsData as Record<string, Location>;
+        gameData.gameObjects = gameObjectsData as Record<string, GameObject>;
+        gameData.items = itemsData as Record<string, Item>;
+        gameData.npcs = npcsData as Record<string, NPC>;
+        gameData.portals = portalsData as Record<string, Portal>;
+
+        return gameData;
+
+    } catch(error) {
+        console.error("Error fetching game data from Firestore:", error);
+        return null;
+    }
+}
 
 
 // --- Chapter & Game Completion ---
@@ -77,21 +138,25 @@ export async function findOrCreateUser(userId: string): Promise<{ user: User | n
     
     try {
         const userSnap = await getDoc(userRef);
+        const game = await getGameData(GAME_ID);
+        if (!game) {
+            return { user: null, isNew: false, error: "Game data could not be loaded." };
+        }
 
         if (!userSnap.exists()) {
             const newUser: User = {
                 id: userId,
                 username: `Player_${userId.substring(userId.length - 4)}`,
-                purchasedGames: [gameCartridge.id],
+                purchasedGames: [game.id],
                 createdAt: Date.now(),
             };
             await setDoc(userRef, newUser);
             console.log(`New user created: ${userId}. Initializing game state.`);
             
             // Immediately create and save initial game state and logs for the new user.
-            const freshState = getInitialState(gameCartridge);
-            const initialMessages = createInitialMessages();
-            await logAndSave(userId, gameCartridge.id, freshState, initialMessages);
+            const freshState = getInitialState(game);
+            const initialMessages = await createInitialMessages(game);
+            await logAndSave(userId, game.id, freshState, initialMessages);
 
             return { user: newUser, isNew: true };
         } else {
@@ -112,7 +177,12 @@ export async function processCommand(
   userId: string,
   playerInput: string
 ): Promise<{newState: PlayerState, messages: Message[]}> {
-  const game = gameCartridge;
+  const game = await getGameData(GAME_ID);
+  
+  if (!game) {
+      throw new Error("Critical: Game data could not be loaded. Cannot process command.");
+  }
+
   const gameId = game.id;
   let allMessagesForSession: Message[] = [];
   let currentState: PlayerState;
@@ -145,7 +215,7 @@ export async function processCommand(
     if (logSnap.exists()) {
         allMessagesForSession = logSnap.data()?.messages || [];
     } else {
-        allMessagesForSession = createInitialMessages();
+        allMessagesForSession = await createInitialMessages(game);
     }
 
     const chapter = game.chapters[game.startChapterId]; // Simplified for now
@@ -306,6 +376,7 @@ export async function processCommand(
             default:
                 const targetObject = visibleObjects.find(obj => restOfCommand.includes(obj.gameLogic.name.toLowerCase()));
                 if (targetObject && targetObject.gameLogic.fallbackMessages) {
+                    const fallbackMessages = targetObject.gameLogic.fallbackMessages;
                     const failureMessage = fallbackMessages?.[verb as keyof typeof fallbackMessages] || fallbackMessages?.default;
                     if (failureMessage) {
                         commandHandlerResult = { newState: currentState, messages: [createMessage('narrator', narratorName, failureMessage)] };
@@ -377,7 +448,15 @@ export async function processCommand(
     
     const stateRef = doc(firestore, 'player_states', `${userId}_${gameId}`);
     const stateSnap = await getDoc(stateRef);
-    const stateToSave = stateSnap.exists() ? stateSnap.data() as PlayerState : getInitialState(game);
+    
+    let stateToSave: PlayerState;
+    if (stateSnap.exists()) {
+        stateToSave = stateSnap.data() as PlayerState;
+    } else {
+        const game = await getGameData(GAME_ID);
+        if (!game) throw new Error("Could not load game data to create initial state.");
+        stateToSave = getInitialState(game);
+    }
 
     await logAndSave(userId, gameId, stateToSave, messagesWithError);
     
@@ -393,10 +472,13 @@ export async function resetGame(userId: string): Promise<{newState: PlayerState,
     if (!userId) {
         throw new Error("User ID is required to reset the game.");
     }
-    const game = gameCartridge;
+    const game = await getGameData(GAME_ID);
+    if (!game) {
+        throw new Error("Could not load game data to reset game.");
+    }
     const gameId = game.id;
     const freshState = getInitialState(game);
-    const initialMessages = createInitialMessages();
+    const initialMessages = await createInitialMessages(game);
 
     await logAndSave(userId, gameId, freshState, initialMessages);
 
@@ -409,8 +491,7 @@ export async function resetGame(userId: string): Promise<{newState: PlayerState,
     return { newState: freshState, messages: initialMessages };
 }
 
-function createInitialMessages(): Message[] {
-    const game = gameCartridge;
+async function createInitialMessages(game: Game): Promise<Message[]> {
     const initialGameState = getInitialState(game);
     const startChapter = game.chapters[initialGameState.currentChapterId];
     const newInitialMessages: Message[] = [];
@@ -509,15 +590,21 @@ export async function generateStoryForChapter(userId: string, gameId: GameId, ch
     const stateRef = doc(firestore, 'player_states', `${userId}_${gameId}`);
     const logRef = doc(firestore, 'logs', `${userId}_${gameId}`);
 
-    const [stateSnap, logSnap] = await Promise.all([getDoc(stateRef), getDoc(logRef)]);
+    const [stateSnap, logSnap, game] = await Promise.all([
+        getDoc(stateRef), 
+        getDoc(logRef),
+        getGameData(gameId)
+    ]);
 
     if (!stateSnap.exists() || !logSnap.exists()) {
         throw new Error("Player state or logs not found. Cannot generate story.");
     }
+    if (!game) {
+        throw new Error("Game data could not be loaded. Cannot generate story.");
+    }
 
     const playerState = stateSnap.data() as PlayerState;
     const allMessages = logSnap.data()?.messages as Message[];
-    const game = gameCartridge;
     const chapter = game.chapters[chapterId];
 
     if (!chapter) {

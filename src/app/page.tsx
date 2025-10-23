@@ -1,26 +1,29 @@
 
+
 import { GameClient } from '@/components/game/GameClient';
-import { game as gameCartridge } from '@/lib/game/cartridge';
 import { getInitialState } from '@/lib/game-state';
-import type { PlayerState, Message, ChapterId } from '@/lib/game/types';
+import type { PlayerState, Message, ChapterId, Game, GameId } from '@/lib/game/types';
 import { initializeFirebase } from '@/firebase';
 import { doc, getDoc } from 'firebase/firestore';
+import { getGameData } from './actions';
 
-async function getInitialData(userId: string | null): Promise<{ playerState: PlayerState, messages: Message[] }> {
-    const initialGameState = getInitialState(gameCartridge);
+const GAME_ID = 'blood-on-brass' as GameId;
+
+async function getInitialData(userId: string | null, game: Game): Promise<{ playerState: PlayerState, messages: Message[] }> {
+    const initialGameState = getInitialState(game);
     
     // In test/prod, we always start with a clean slate on the server.
     // The client will fetch the correct state after authentication.
     if (!userId) {
         return { 
             playerState: initialGameState, 
-            messages: createInitialMessages(initialGameState)
+            messages: await createInitialMessages(game, initialGameState)
         };
     }
 
     // In development, we pre-load the dev user's state on the server.
     const { firestore } = initializeFirebase();
-    const gameId = gameCartridge.id;
+    const gameId = game.id;
 
     const stateRef = doc(firestore, 'player_states', `${userId}_${gameId}`);
     const logRef = doc(firestore, 'logs', `${userId}_${gameId}`);
@@ -40,14 +43,13 @@ async function getInitialData(userId: string | null): Promise<{ playerState: Pla
         messages = logSnap.data()?.messages || [];
     } else {
         // If logs don't exist for the dev user, create them.
-        messages = createInitialMessages(playerState);
+        messages = await createInitialMessages(game, playerState);
     }
 
     return { playerState, messages };
 }
 
-function createInitialMessages(playerState: PlayerState): Message[] {
-    const game = gameCartridge;
+async function createInitialMessages(game: Game, playerState: PlayerState): Promise<Message[]> {
     const startChapter = game.chapters[game.startChapterId];
     const newInitialMessages: Message[] = [];
   
@@ -94,13 +96,18 @@ function createInitialMessages(playerState: PlayerState): Message[] {
 
 
 export default async function Home() {
+  const game = await getGameData(GAME_ID);
+  if (!game) {
+      return <div>Error: Could not load game data. Please ensure the database is seeded correctly.</div>
+  }
+
   // In development, we can pre-load the dev user's state on the server.
   // In test/prod, the user ID is determined on the client, so we pass null and let the client handle it.
   const initialUserId = process.env.NEXT_PUBLIC_NODE_ENV === 'development'
       ? process.env.NEXT_PUBLIC_DEV_USER_ID || null
       : null;
 
-  const { playerState, messages } = await getInitialData(initialUserId);
+  const { playerState, messages } = await getInitialData(initialUserId, game);
 
-  return <GameClient game={gameCartridge} initialGameState={playerState} initialMessages={messages} />;
+  return <GameClient game={game} initialGameState={playerState} initialMessages={messages} />;
 }

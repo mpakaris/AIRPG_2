@@ -3,10 +3,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { findOrCreateUser } from '@/app/actions';
-import type { PlayerState, Message } from '@/lib/game/types';
+import type { PlayerState, Message, GameId } from '@/lib/game/types';
 import { initializeFirebase } from '@/firebase';
 import { doc, getDoc } from 'firebase/firestore';
-import { game as gameCartridge } from '@/lib/game/cartridge';
 
 interface UserState {
     playerState: PlayerState;
@@ -14,14 +13,14 @@ interface UserState {
 }
 
 const USER_ID_STORAGE_KEY = 'textcraft-user-id';
+const GAME_ID = 'blood-on-brass' as GameId;
 
 // This function is client-side only.
 async function fetchUserData(userId: string): Promise<UserState | null> {
     const { firestore } = initializeFirebase();
-    const gameId = gameCartridge.id;
 
-    const stateRef = doc(firestore, 'player_states', `${userId}_${gameId}`);
-    const logRef = doc(firestore, 'logs', `${userId}_${gameId}`);
+    const stateRef = doc(firestore, 'player_states', `${userId}_${GAME_ID}`);
+    const logRef = doc(firestore, 'logs', `${userId}_${GAME_ID}`);
 
     try {
         const [stateSnap, logSnap] = await Promise.all([getDoc(stateRef), getDoc(logRef)]);

@@ -1,8 +1,10 @@
 
 import { NextResponse } from 'next/server';
-import { processCommand, logAndSave } from '@/app/actions';
+import { processCommand, logAndSave, getGameData } from '@/app/actions';
 import { dispatchMessage } from '@/lib/whinself-service';
-import { game as gameCartridge } from '@/lib/game/cartridge';
+import { GameId } from '@/lib/game/types';
+
+const GAME_ID = 'blood-on-brass' as GameId;
 
 /**
  * This is the primary webhook for receiving messages from Whinself.
@@ -46,7 +48,7 @@ export async function POST(request: Request) {
       // In a real scenario, you'd merge messages. Here we are just logging the latest turn.
       // The web client will get its updates via its own state management.
       const messagesToLog = [...result.messages, playerMessage];
-      await logAndSave(userId, gameCartridge.id, result.newState, messagesToLog);
+      await logAndSave(userId, GAME_ID, result.newState, messagesToLog);
     }
 
     return new NextResponse(JSON.stringify({ status: 'ok', message: 'Message processed and response sent.' }), { status: 200 });
