@@ -31,6 +31,7 @@ import { game as gameCartridge } from '@/lib/game/cartridge';
 const GAME_ID = 'blood-on-brass' as GameId;
 
 const chapterCompletionFlag = (chapterId: ChapterId) => `chapter_${chapterId}_complete` as Flag;
+const examinedObjectFlag = (id: string) => `examined_${id}` as Flag;
 
 export type CommandResult = {
   newState: PlayerState | null;
@@ -285,9 +286,10 @@ export async function processCommand(
         const visibleObjects = location.objects.map(id => getLiveGameObject(id, currentState, game)).filter(Boolean) as {gameLogic: GameObject, state: GameObjectState}[];
         const visibleObjectNames = visibleObjects.map(obj => obj.gameLogic.name);
 
-        // Add items inside open containers to the list of visible names
+        // Add items inside open containers to the list of visible names, but ONLY if the container has been examined first.
         for (const obj of visibleObjects) {
-            if (obj.state.isOpen && obj.state.items) {
+            const hasBeenExamined = currentState.flags.includes(examinedObjectFlag(obj.gameLogic.id));
+            if (obj.state.isOpen && hasBeenExamined && obj.state.items) {
                 for (const itemId of obj.state.items) {
                     const item = game.items[itemId];
                     if (item) {
@@ -655,3 +657,4 @@ export async function generateStoryForChapter(userId: string, gameId: GameId, ch
     
 
     
+
