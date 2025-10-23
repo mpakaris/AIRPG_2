@@ -41,7 +41,7 @@ export async function handleOpen(state: PlayerState, targetName: string, game: G
 
         const onOpen = liveObject.gameLogic.handlers.onOpen;
 
-        if (!onOpen) {
+        if (!onOpen || !onOpen.success || !onOpen.success.effects) {
             const genericOpenMessage = `You open the ${liveObject.gameLogic.name}.`;
             const newState = { ...state, objectStates: { ...state.objectStates, [liveObject.gameLogic.id]: { ...liveObject.state, isOpen: true } } };
             return { newState, messages: [createMessage('narrator', narratorName, genericOpenMessage)] };
@@ -49,7 +49,7 @@ export async function handleOpen(state: PlayerState, targetName: string, game: G
         
         const result = processEffects(state, onOpen.success.effects || [], game);
         
-        const hasMessageEffect = onOpen.success.effects?.some(a => a.type === 'SHOW_MESSAGE');
+        const hasMessageEffect = onOpen.success.effects.some(a => a.type === 'SHOW_MESSAGE');
         if (!hasMessageEffect) {
             result.messages.unshift(createMessage('narrator', narratorName, onOpen.success.message));
         }

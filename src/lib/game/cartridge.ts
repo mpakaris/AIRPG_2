@@ -282,14 +282,17 @@ const items: Record<ItemId, Item> = {
         capabilities: { isTakable: false, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         state: { readCount: 0, currentStateId: 'default' },
         handlers: {
-            onTake: { fail: { message: "You can't take that book." } },
-            onRead: { 
-                success: { 
-                    message: "It seems to be a ghost-written book about a real estate magnate. Not relevant to the case.",
-                    effects: [] 
-                },
+            onExamine: {
+                success: { message: 'A book about business with a gaudy cover.' },
                 fail: { message: "" }
-            }
+            },
+            onRead: {
+                success: { effects: [{ type: 'SHOW_MESSAGE', sender: 'narrator', content: '' }] },
+                fail: { message: "" }
+            },
+            onTake: { 
+                fail: { message: "You can't take that book." } 
+            },
         },
         stateMap: {
             'default': { description: "It seems to be a ghost-written book about a real estate magnate. Not relevant to the case." },
@@ -307,14 +310,17 @@ const items: Record<ItemId, Item> = {
         capabilities: { isTakable: false, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         state: { readCount: 0, currentStateId: 'default' },
         handlers: {
-            onTake: { fail: { message: "You can't take that book." } },
-            onRead: {
-                success: { 
-                    message: "Complex theories about spacetime. Unlikely to help you solve a murder.",
-                    effects: [] 
-                },
+            onExamine: {
+                success: { message: 'A book about physics by a famous scientist.' },
                 fail: { message: "" }
-            }
+            },
+            onRead: {
+                success: { effects: [{ type: 'SHOW_MESSAGE', sender: 'narrator', content: '' }] },
+                fail: { message: "" }
+            },
+            onTake: { 
+                fail: { message: "You can't take that book." } 
+            },
         },
         stateMap: {
             'default': { description: "Complex theories about spacetime. Unlikely to help you solve a murder." },
@@ -332,14 +338,17 @@ const items: Record<ItemId, Item> = {
         capabilities: { isTakable: false, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         state: { readCount: 0, currentStateId: 'default' },
         handlers: {
-            onTake: { fail: { message: "You can't take that book." } },
-            onRead: {
-                success: { 
-                    message: "Against your better judgment, you read a page. 'His voice was like smooth jazz on a rainy night, but his eyes held a storm. She knew then that he would get justice for her, or die trying.'",
-                    effects: [] 
-                },
+            onExamine: {
+                success: { message: 'A romance novel with a cheesy cover. The title, "Justice for My Love", catches your eye.' },
                 fail: { message: "" }
-            }
+            },
+            onRead: {
+                success: { effects: [{ type: 'SHOW_MESSAGE', sender: 'narrator', content: '' }] },
+                fail: { message: "" }
+            },
+            onTake: { 
+                fail: { message: "You can't take that book." } 
+            },
         },
         stateMap: {
             'default': { description: "Against your better judgment, you read a page. 'His voice was like smooth jazz on a rainy night, but his eyes held a storm. She knew then that he would get justice for her, or die trying.'" },
@@ -590,10 +599,9 @@ export const game: Game = {
 **Your Task:**
 1.  **Analyze Intent:** Understand what what your partner, Burt, is trying to do as a game action.
 2.  **Select Command:** Choose the *best* matching command from the 'Available Game Commands' list. Use the exact names from the 'Visible Object Names' and 'Visible NPC Names' lists.
-    *   If Burt says "look at the book," the command is 'examine "The Art of the Deal"'.
-    *   If Burt wants to 'open' an object, the command is 'open "Brown Notebook"'.
+    *   If Burt says "look at the book," "check the book," or "browse the book," the command is 'examine "The Art of the Deal"'.
+    *   If Burt says "read the book," or "open the book," the command is 'read "The Art of the Deal"'.
     *   If Burt says "pick up the card," the command is 'take "Business Card"'.
-    *   If Burt says 'read the article', the command is 'read "Newspaper Article"'.
     *   If Burt wants to 'move the painting' or 'look behind the painting', the command is 'move "Painting on the wall"'.
     *   If Burt says 'use the SD card' or 'use the SD card with my phone', the command is 'use "SD Card"'.
     *   If Burt says 'talk to the barista', the command is 'talk to "Barista"'.
