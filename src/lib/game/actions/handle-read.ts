@@ -2,7 +2,7 @@
 'use server';
 
 import { CommandResult } from "@/app/actions";
-import type { Game, PlayerState } from "../types";
+import type { Game, Item, ItemId, PlayerState } from "../types";
 import { findItemInContext, getLiveItem } from "./helpers";
 import { createMessage, processEffects } from "./process-effects";
 import { normalizeName } from "@/lib/utils";
@@ -20,30 +20,50 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
         return { newState: state, messages: [createMessage('narrator', narratorName, `There's nothing to read on the ${itemToRead.name}.`)] };
     }
 
-    const handler = itemToRead.handlers?.onRead;
-
-    // --- BULLETPROOF SAFETY CHECKS ---
-    // This block safely navigates the handler structure to prevent crashes.
-    if (handler && handler.success) {
-        const successBlock = handler.success;
+    // --- Case 1: The item has a stateMap for cycling through descriptions ---
+    if (itemToRead.stateMap && itemToRead.state) {
+        let newState = JSON.parse(JSON.stringify(state)); // Deep copy
         
-        // Safely check for an effects array before processing. Default to an empty array if missing.
-        const effectsToProcess = Array.isArray(successBlock.effects) ? successBlock.effects : [];
+        let liveItemState = newState.itemStates[itemToRead.id];
+        if (!liveItemState) {
+            // Initialize if it doesn't exist
+            liveItemState = { readCount: 0, currentStateId: 'read0' };
+            newState.itemStates[itemToRead.id] = liveItemState;
+        }
+
+        const currentReadCount = liveItemState.readCount || 0;
+        const nextReadCount = currentReadCount + 1;
+        
+        // Determine which state to use, cycling through the available states
+        const stateMapKeys = Object.keys(itemToRead.stateMap);
+        const currentStateKey = `read${currentReadCount % stateMapKeys.length}` as keyof typeof itemToRead.stateMap;
+        
+        const description = itemToRead.stateMap[currentStateKey]?.description || "You read the book, but learn nothing new.";
+
+        // Update the state
+        newState.itemStates[itemToRead.id].readCount = nextReadCount;
+
+        return { newState, messages: [createMessage('narrator', narratorName, description)] };
+    }
+
+    // --- Case 2: The item has a standard onRead handler with effects ---
+    const handler = itemToRead.handlers?.onRead;
+    if (handler && handler.success) {
+        const effectsToProcess = Array.isArray(handler.success.effects) ? handler.success.effects : [];
         let result = processEffects(state, effectsToProcess, game);
         
-        // Check if there was an explicit SHOW_MESSAGE effect.
         const hasMessageEffect = effectsToProcess.some(e => e.type === 'SHOW_MESSAGE');
-        
-        // Only add a message if one wasn't already added by an effect and a message string exists.
-        if (!hasMessageEffect && successBlock.message) {
-            const message = createMessage('narrator', narratorName, successBlock.message, 'text');
+
+        if (!hasMessageEffect && handler.success.message) {
+            const message = createMessage('narrator', narratorName, handler.success.message, 'text');
             result.messages.unshift(message);
         }
         
         return result;
     }
-    // --- END SAFETY CHECKS ---
 
-    // Fallback for items that are readable but have no specific onRead handler or a malformed one.
+    // --- Fallback: Just show the item's default description ---
     return { newState: state, messages: [createMessage('narrator', narratorName, itemToRead.description)] };
 }
+
+    

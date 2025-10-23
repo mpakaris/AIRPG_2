@@ -287,15 +287,18 @@ const items: Record<ItemId, Item> = {
                 fail: { message: "" }
             },
             onRead: {
-                success: { effects: [{ type: 'SHOW_MESSAGE', sender: 'narrator', content: '' }] },
-                fail: { message: "" }
+                success: {
+                    message: "The book contains several chapters.",
+                    effects: []
+                },
+                fail: { message: "You can't read that right now." }
             },
             onTake: { 
                 fail: { message: "You can't take that book." } 
             },
         },
         stateMap: {
-            'default': { description: "It seems to be a ghost-written book about a real estate magnate. Not relevant to the case." },
+            'read0': { description: "It seems to be a ghost-written book about a real estate magnate. Not relevant to the case." },
             'read1': { description: "Chapter 1: 'Think Big'. You decide you've thought big enough for one day." },
             'read2': { description: "You skim another chapter. It's mostly just self-praise. This isn't helping the case." }
         },
@@ -315,15 +318,18 @@ const items: Record<ItemId, Item> = {
                 fail: { message: "" }
             },
             onRead: {
-                success: { effects: [{ type: 'SHOW_MESSAGE', sender: 'narrator', content: '' }] },
-                fail: { message: "" }
+                success: {
+                    message: "The book contains several chapters.",
+                    effects: []
+                },
+                fail: { message: "You can't read that right now." }
             },
             onTake: { 
                 fail: { message: "You can't take that book." } 
             },
         },
         stateMap: {
-            'default': { description: "Complex theories about spacetime. Unlikely to help you solve a murder." },
+            'read0': { description: "Complex theories about spacetime. Unlikely to help you solve a murder." },
             'read1': { description: "You read about black holes and event horizons. Your own event horizon feels like it's about five minutes away if you don't get a lead soon." },
             'read2': { description: "The book talks about the arrow of time. You wish you could fire an arrow back in time and ask Silas Bloom what happened." }
         },
@@ -343,15 +349,18 @@ const items: Record<ItemId, Item> = {
                 fail: { message: "" }
             },
             onRead: {
-                success: { effects: [{ type: 'SHOW_MESSAGE', sender: 'narrator', content: '' }] },
-                fail: { message: "" }
+                success: {
+                    message: "You open the cheesy romance novel.",
+                    effects: []
+                },
+                fail: { message: "You can't read that right now." }
             },
             onTake: { 
                 fail: { message: "You can't take that book." } 
             },
         },
         stateMap: {
-            'default': { description: "Against your better judgment, you read a page. 'His voice was like smooth jazz on a rainy night, but his eyes held a storm. She knew then that he would get justice for her, or die trying.'" },
+            'read0': { description: "Against your better judgment, you read a page. 'His voice was like smooth jazz on a rainy night, but his eyes held a storm. She knew then that he would get justice for her, or die trying.'" },
             'read1': { description: "You flip to a random page. '...and in that moment, she knew their love was a clue, a puzzle box only they could unlock.' You close the book. That's enough of that." },
             'read2': { description: "The back cover has a blurb: 'A story of love, loss, and the quest for justice.' The word 'justice' is practically leaping off the page." }
         },
@@ -654,3 +663,5 @@ export const game: Game = {
   chapters: chapters,
   startChapterId: 'ch1-the-cafe' as ChapterId,
 };
+
+    
