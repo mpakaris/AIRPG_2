@@ -1,10 +1,8 @@
 
 import { CommandResult } from "@/app/actions";
-import type { Game, Item, PlayerState } from "../types";
+import type { Game, PlayerState } from "../types";
 import { findItemInContext, getLiveItem } from "./helpers";
 import { createMessage, processEffects } from "./process-effects";
-
-const examinedObjectFlag = (id: string) => `examined_${id}`;
 
 export async function handleRead(state: PlayerState, itemName: string, game: Game): Promise<CommandResult> {
     const narratorName = game.narratorName || "Narrator";
@@ -18,31 +16,33 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
         return { newState: state, messages: [createMessage('narrator', narratorName, `There's nothing to read on the ${itemToRead.name}.`)] };
     }
 
-    // --- State-driven Handler Logic ---
     const liveItem = getLiveItem(itemToRead.id, state, game);
-    const currentStateId = liveItem.state.currentStateId || 'default';
-    
-    const handlerOverride = itemToRead.stateMap?.[currentStateId]?.overrides?.onRead;
-    const baseHandler = itemToRead.handlers.onRead;
+    if (!liveItem) {
+        // Should not happen if findItemInContext works
+        return { newState: state, messages: [createMessage('system', 'System', 'Error finding item state.')] };
+    }
 
+    const currentStateId = liveItem.state.currentStateId || 'default';
+    const handlerOverride = itemToRead.stateMap?.[currentStateId]?.overrides?.onRead;
+    const baseHandler = itemToRead.handlers?.onRead;
     const effectiveHandler = handlerOverride || baseHandler;
 
     if (effectiveHandler?.success) { 
-        const effectsToProcess = effectiveHandler.success.effects || [];
+        const successBlock = effectiveHandler.success;
+        const effectsToProcess = successBlock.effects || [];
+        
         let result = processEffects(state, effectsToProcess, game);
         
-        let message;
         const hasMessageEffect = effectsToProcess.some(e => e.type === 'SHOW_MESSAGE');
         
-        if (!hasMessageEffect && effectiveHandler.success.message) {
-            // Safely determine the sender, defaulting to 'narrator'
-            const sender = (effectiveHandler.success as any).sender === 'agent' ? 'agent' : 'narrator';
+        if (!hasMessageEffect && successBlock.message) {
+            const sender = (successBlock as any).sender === 'agent' ? 'agent' : 'narrator';
             const senderName = sender === 'agent' ? (game.narratorName || 'Agent') : narratorName;
             
-            message = createMessage(
+            const message = createMessage(
                 sender,
                 senderName,
-                effectiveHandler.success.message,
+                successBlock.message,
                 'text'
             );
             result.messages.unshift(message);
@@ -51,6 +51,6 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
         return result;
     }
     
-    // Fallback for readable items without complex handlers
+    // Fallback for readable items without complex handlers, now uses description as content.
     return { newState: state, messages: [createMessage('narrator', narratorName, itemToRead.description)] };
 }

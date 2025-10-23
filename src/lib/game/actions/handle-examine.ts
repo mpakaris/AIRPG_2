@@ -2,7 +2,7 @@
 
 import { CommandResult } from "@/app/actions";
 import type { Game, PlayerState } from "../types";
-import { findItemInContext, getLiveGameObject } from "./helpers";
+import { findItemInContext, getLiveGameObject, getLiveItem } from "./helpers";
 import { createMessage } from "./process-effects";
 import { normalizeName } from "@/lib/utils";
 
@@ -60,26 +60,32 @@ export function handleExamine(state: PlayerState, targetName: string, game: Game
     // If not an object, try to find an item in inventory or in an open container
     const itemInContext = findItemInContext(state, game, normalizedTargetName);
     if (itemInContext) {
-        const flag = examinedObjectFlag(itemInContext.id);
+        const liveItem = getLiveItem(itemInContext.id, state, game);
+        if (!liveItem) {
+             return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${targetName}" here.`)] };
+        }
+
+        const flag = examinedObjectFlag(liveItem.gameLogic.id);
         const isAlreadyExamined = newState.flags.includes(flag as any);
         
-        const messageText = isAlreadyExamined && itemInContext.alternateDescription
-            ? itemInContext.alternateDescription
-            : itemInContext.description;
+        // ** FIX: 'examine' now ONLY provides the physical description from the item itself **
+        const messageText = isAlreadyExamined && liveItem.gameLogic.alternateDescription
+            ? liveItem.gameLogic.alternateDescription
+            : liveItem.gameLogic.description;
 
         const message = createMessage(
             'narrator', 
             narratorName, 
             messageText,
             'image',
-            { id: itemInContext.id, game, state: newState, showEvenIfExamined: false }
+            { id: liveItem.gameLogic.id, game, state: newState, showEvenIfExamined: false }
         );
         
         if (!isAlreadyExamined) {
             newState.flags.push(flag as any);
         }
 
-        return { newState, messages: [createMessage('agent', narratorName, `Okay, let's check out the ${itemInContext.name}.`), message] };
+        return { newState, messages: [createMessage('agent', narratorName, `Okay, let's check out the ${liveItem.gameLogic.name}.`), message] };
     }
 
     return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${targetName}" here.`)] };
