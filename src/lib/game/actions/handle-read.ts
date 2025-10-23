@@ -31,11 +31,12 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
 
     // --- Definitive Safety Check ---
     // This block ensures that we never crash, even if the handler, success block, or effects array are missing.
+    // It checks every level of the object before trying to access nested properties.
     if (effectiveHandler && effectiveHandler.success) {
         const successBlock = effectiveHandler.success;
-        // Ensure effects is an array before processing; default to empty array if missing.
-        const effectsToProcess = Array.isArray(successBlock.effects) ? successBlock.effects : [];
         
+        // Safely check for effects array before processing.
+        const effectsToProcess = Array.isArray(successBlock.effects) ? successBlock.effects : [];
         let result = processEffects(state, effectsToProcess, game);
         
         // Check if any of the effects we just processed was a SHOW_MESSAGE effect.
@@ -43,7 +44,7 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
         
         // If no message was explicitly shown via effects, and a message exists on the success block, show it now.
         if (!hasMessageEffect && successBlock.message) {
-            // Safely default sender to 'narrator' if not specified
+            // Safely default sender to 'narrator' if not specified.
             const sender = (successBlock as any).sender || 'narrator';
             const senderName = sender === 'agent' ? (game.narratorName || 'Agent') : narratorName;
             
