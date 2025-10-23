@@ -247,6 +247,7 @@ const items: Record<ItemId, Item> = {
                 success: { message: "You pull out your phone. The camera, messaging, and analysis apps are ready." },
                 fail: { message: "" }
             },
+            defaultFailMessage: "You can't use the phone like that."
         },
         design: { authorNotes: "Player's primary tool." },
         version: { schema: "1.0", content: "1.0" }
@@ -374,7 +375,6 @@ const items: Record<ItemId, Item> = {
                 fail: { message: "You can't use the SD card right now." }
             }
         },
-        logic: { intendedUseTargets: ['item_player_phone'] },
         design: { authorNotes: "Contains the video clue about Silas Bloom." },
         version: { schema: "1.0", content: "1.1" }
     },
@@ -698,9 +698,12 @@ export const game: Game = {
 6.  **Invalid/Conversational Input:** If Burt's input is illogical ("eat the SD card") or conversational ("what now?"), gently guide him back to the case.
     *   **Illogical:** \`{"agentResponse": "I don't think that's a good idea, Burt. We might need that as evidence. Let's rethink.", "commandToExecute": "invalid"}\`
     *   **Conversational:** \`{"agentResponse": "Let's focus on the objective: [current chapter goal]. What's our next move?", "commandToExecute": "invalid"}\`
-7.  **Implicit Player Items:** Burt has standard equipment like a phone, which is always in his inventory. He doesn't need to see it to use it.
-    *   **Player says:** "use sd card" -> **Your command should be:** \`use "SD Card"\`
-8.  **Physical Interaction:** If the player wants to touch, feel, or physically interact with something (e.g., "put my hand in the vase"), map this to the 'examine' command.
+7.  **Implicit Player Items:** Burt has default equipment like a "Phone" and a "Heavy Stone" in his inventory. He doesn't need to see them to use them.
+    *   Player says: "use sd card" -> Your command should be: \`use "SD Card"\`
+8.  **Physical Interaction:** Map gentle physical interactions like "touch", "feel", or "put hand in" to the 'examine' command.
+9.  **Breaking Things:** If Burt tries to break something with his hands (e.g., "hit vase with fist"), you must guide him to use a tool.
+    *   Player says: "punch the vase" -> Your response: \`{"agentResponse": "Easy there, Burt. Your fist isn't going to cut it. We'll need a tool if we want to break this.", "commandToExecute": "invalid"}\`
+    *   Player says: "hit vase with stone" -> Your response: \`{"agentResponse": "Good thinking, Burt. Let's see if this works.", "commandToExecute": "use \\"Heavy Stone\\" on \\"Ming Vase\\""}\`
 
 **Your Task Flow:**
 1.  Analyze Burt's input to understand his intent.
