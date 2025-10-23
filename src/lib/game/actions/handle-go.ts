@@ -1,7 +1,7 @@
 
 import { CommandResult } from "@/app/actions";
 import type { Game, Location, PlayerState, ChapterId, Flag } from "../types";
-import { createMessage } from "./process-actions";
+import { createMessage } from "./process-effects";
 
 const chapterCompletionFlag = (chapterId: ChapterId) => `chapter_${chapterId}_complete` as Flag;
 

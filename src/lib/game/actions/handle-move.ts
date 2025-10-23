@@ -2,7 +2,7 @@
 import { CommandResult } from "@/app/actions";
 import type { Game, PlayerState } from "../types";
 import { getLiveGameObject } from "./helpers";
-import { createMessage, processActions } from "./process-actions";
+import { createMessage, processEffects } from "./process-effects";
 
 export function handleMove(state: PlayerState, targetName: string, game: Game): CommandResult {
     const location = game.locations[state.currentLocationId];
@@ -51,7 +51,7 @@ export function handleMove(state: PlayerState, targetName: string, game: Game): 
             console.error(`ERROR: onMove handler for ${liveObject.gameLogic.id} is missing a 'success' block.`);
             return { newState: state, messages: [createMessage('narrator', narratorName, `You move the ${liveObject.gameLogic.name} around, but find nothing of interest.`)]};
         }
-        const result = processActions(state, onMoveHandler.success.actions || [], game);
+        const result = processEffects(state, onMoveHandler.success.effects || [], game);
         result.messages.unshift(createMessage('narrator', narratorName, onMoveHandler.success.message));
         return result;
     } else {

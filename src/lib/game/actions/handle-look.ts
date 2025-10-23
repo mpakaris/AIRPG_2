@@ -1,6 +1,6 @@
 import { CommandResult } from "@/app/actions";
 import type { Game, PlayerState } from "../types";
-import { createMessage } from "./process-actions";
+import { createMessage } from "./process-effects";
 
 export function handleLook(state: PlayerState, game: Game, summary: string): CommandResult {
   const narratorName = game.narratorName || "Narrator";
