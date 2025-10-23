@@ -176,6 +176,55 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         },
         design: { authorNotes: "Contains the 'S.B.' clue for Silas Bloom and now a hidden note." },
         version: { schema: "1.0", content: "1.1" }
+    },
+    'obj_ming_vase': {
+        id: 'obj_ming_vase' as GameObjectId,
+        name: 'Ming Vase',
+        archetype: 'Prop',
+        description: "A Vase from the ming dynasty. Looks like a cheap copy from the chinese market though. Closer look reveals that there may be some item inside. Possibly, that there is a way to get closer to it.",
+        capabilities: { openable: false, lockable: false, breakable: true, movable: true, powerable: false, container: true, readable: false, inputtable: false },
+        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
+        inventory: { items: ['item_deposit_key'] as ItemId[], capacity: 1 },
+        media: {
+            images: {
+                default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761211151/coffee_machine_detail_frexuu.png', description: 'A cheap-looking Ming vase.', hint: 'vase ming' },
+                broken: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761211151/coffee_machine_detail_broken_slkpfd.png', description: 'The shattered remains of a vase.', hint: 'broken vase' }
+            }
+        },
+        handlers: {
+            onExamine: {
+                success: { message: "It's a cheap Ming dynasty vase replica. Something inside shifts when you move it, but the opening is too narrow to reach into." },
+                alternateMessage: "The vase is broken. Amidst the shards, you see a small key.",
+                fail: { message: "" }
+            },
+            onMove: {
+                success: { message: "You carefully move the vase. It's heavy and something rattles inside. You don't want to drop it." },
+                fail: { message: "" }
+            },
+            onUse: [
+                {
+                    itemId: 'item_heavy_stone' as ItemId,
+                    conditions: [{ type: 'NO_FLAG', targetId: 'vase_is_broken' as Flag }],
+                    success: {
+                        message: "With a sharp crack, the heavy stone shatters the vase. A small, ornate key is revealed among the broken pieces.",
+                        effects: [
+                            { type: 'SET_FLAG', flag: 'vase_is_broken' as Flag },
+                            { type: 'SET_OBJECT_STATE', objectId: 'obj_ming_vase', state: { isBroken: true } },
+                            { type: 'SPAWN_ITEM', itemId: 'item_deposit_key' as ItemId, locationId: 'loc_cafe_interior' as LocationId },
+                            { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'The vase is now shattered.', imageId: 'obj_ming_vase' }
+                        ]
+                    },
+                    fail: { message: "The vase is already broken." }
+                }
+            ]
+        },
+        fallbackMessages: { 
+            default: "That doesn't seem to work on the vase.",
+            notOpenable: "You can't open it. The neck is too narrow.",
+            noEffect: "Using that on the vase has no effect."
+        },
+        design: { authorNotes: "Breakable object containing the deposit key." },
+        version: { schema: "1.0", content: "1.0" }
     }
 };
 
@@ -193,9 +242,41 @@ const items: Record<ItemId, Item> = {
                 },
                 fail: { message: "You can't use the phone right now." }
             },
-            defaultFailMessage: "You can't use the phone by itself right now. Try using it on something specific."
+            defaultFailMessage: "You need to specify what to use the phone on."
         },
-        design: { authorNotes: "Player's primary tool." },
+        design: { authorNotes: "Player's primary tool. This logic will be expanded." },
+        version: { schema: "1.0", content: "1.0" }
+    },
+    'item_heavy_stone': {
+        id: 'item_heavy_stone' as ItemId,
+        name: 'Heavy Stone',
+        archetype: 'Tool',
+        description: 'A smooth, heavy stone you picked up from the street. It fits comfortably in your hand.',
+        capabilities: { isTakable: true, isReadable: false, isUsable: true, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+        handlers: {
+            defaultFailMessage: "You can't use the stone on its own."
+        },
+        design: { authorNotes: "Tool for breaking objects like the vase." },
+        version: { schema: "1.0", content: "1.0" }
+    },
+    'item_deposit_key': {
+        id: 'item_deposit_key' as ItemId,
+        name: 'Deposit Box Key',
+        archetype: 'Key',
+        description: 'A small, ornate key with a number tag. It looks like it belongs to a bank deposit box.',
+        capabilities: { isTakable: true, isReadable: true, isUsable: true, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+        handlers: {
+            onTake: {
+                success: { message: "You pick up the small key and put it in your pocket." },
+                fail: { message: "You can't take that right now." }
+            },
+            onRead: {
+                success: { message: "The tag on the key reads 'Metropolis Bank - Box 713'."},
+                fail: { message: "" }
+            },
+            defaultFailMessage: "You need to use this key on a lock."
+        },
+        design: { authorNotes: "Clue item found inside the broken vase." },
         version: { schema: "1.0", content: "1.0" }
     },
     'item_business_card': {
@@ -491,7 +572,7 @@ const locations: Record<LocationId, Location> = {
         sceneDescription: 'You are inside The Daily Grind. \n\nIt\'s a bustling downtown cafe, smelling of coffee and rain. A puddle of rainwater is near the door, and a discarded magazine lies on an empty table.',
         sceneImage: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761156561/bustling_cafe_bluwgq.jpg', description: 'A view of the bustling cafe interior.', hint: 'bustling cafe' },
         coord: { x: 1, y: 1, z: 0 },
-        objects: ['obj_brown_notebook', 'obj_chalkboard_menu', 'obj_magazine', 'obj_bookshelf', 'obj_painting'] as GameObjectId[],
+        objects: ['obj_brown_notebook', 'obj_chalkboard_menu', 'obj_magazine', 'obj_bookshelf', 'obj_painting', 'obj_ming_vase'] as GameObjectId[],
         npcs: ['npc_barista', 'npc_manager'] as NpcId[],
         entryPortals: ['portal_street_to_cafe' as PortalId],
         exitPortals: ['portal_cafe_to_street' as PortalId]
@@ -613,9 +694,8 @@ export const game: Game = {
 6.  **Invalid/Conversational Input:** If Burt's input is illogical ("eat the SD card") or conversational ("what now?"), gently guide him back to the case.
     *   **Illogical:** \`{"agentResponse": "I don't think that's a good idea, Burt. We might need that as evidence. Let's rethink.", "commandToExecute": "invalid"}\`
     *   **Conversational:** \`{"agentResponse": "Let's focus on the objective: [current chapter goal]. What's our next move?", "commandToExecute": "invalid"}\`
-7.  **Implicit Player Items:** Burt has standard equipment like a phone. He doesn't need to see a phone in the room to use it. The command should be mapped to \`use "Item Name"\` and the engine will handle the rest.
-    *   **Player says:** "put sd card in phone" -> **Your command should be:** \`use "SD Card"\`
-
+7.  **Implicit Player Items:** Burt has standard equipment like a phone, which is always in his inventory. He doesn't need to see it to use it.
+    *   **Player says:** "put sd card in phone" -> **Your command should be:** \`use "SD Card" on "Phone"\`
 
 **Your Task Flow:**
 1.  Analyze Burt's input to understand his intent.

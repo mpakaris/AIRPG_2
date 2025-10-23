@@ -1,6 +1,6 @@
 
 
-import type { Effect, Game, GameObjectId, ItemId, Message, NpcId, PlayerState, TokenUsage } from '../types';
+import type { Effect, Game, GameObjectId, ItemId, Message, NpcId, PlayerState, TokenUsage, LocationId } from '../types';
 import { getLiveGameObject } from './helpers';
 
 const examinedObjectFlag = (id: string) => `examined_${id}`;
@@ -34,10 +34,14 @@ export function createMessage(
             
             if (gameObject?.media?.images) {
                 const liveObject = getLiveGameObject(gameObject.id, state, game);
-                if (liveObject && liveObject.state.isLocked === false && gameObject.media.images.unlocked) {
-                    image = gameObject.media.images.unlocked;
-                } else {
-                    image = gameObject.media.images.default;
+                if (liveObject) {
+                    if (liveObject.state.isBroken && gameObject.media.images.broken) {
+                        image = gameObject.media.images.broken;
+                    } else if (liveObject.state.isLocked === false && gameObject.media.images.unlocked) {
+                        image = gameObject.media.images.unlocked;
+                    } else {
+                        image = gameObject.media.images.default;
+                    }
                 }
             } else if (item?.media?.image) {
                 image = item.media.image;
@@ -70,6 +74,28 @@ export function processEffects(initialState: PlayerState, effects: Effect[], gam
             case 'ADD_ITEM':
                 if (!newState.inventory.includes(effect.itemId)) {
                     newState.inventory.push(effect.itemId);
+                }
+                break;
+            case 'SPAWN_ITEM':
+                const location = game.locations[effect.locationId];
+                if (location) {
+                    const item = game.items[effect.itemId];
+                    if (item && !location.objects.some(objId => newState.objectStates[objId]?.items?.includes(item.id))) {
+                         // A bit of a hack: we create a temporary "container" object to hold the spawned item
+                         // This makes it discoverable by `findItemInContext` and `handleTake`
+                         const containerId = `spawn_container_${item.id}` as GameObjectId;
+                         if (!game.gameObjects[containerId]) {
+                             game.gameObjects[containerId] = {
+                                 id: containerId, name: `shards of a broken vase`, archetype: 'Prop', description: '',
+                                 capabilities: { openable: false, lockable: false, breakable: false, movable: false, powerable: false, container: true, readable: false, inputtable: false },
+                                 state: { isOpen: true, isLocked: false, isBroken: true, isPoweredOn: false, currentStateId: 'default' },
+                                 inventory: { items: [item.id], capacity: 1},
+                                 handlers: {}
+                             } as any;
+                             location.objects.push(containerId);
+                             newState.objectStates[containerId] = { isOpen: true, items: [item.id] };
+                         }
+                    }
                 }
                 break;
             case 'SET_FLAG':

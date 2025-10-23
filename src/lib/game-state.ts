@@ -59,7 +59,7 @@ export function getInitialState(game: Game): PlayerState {
       throw new Error(`Start chapter "${game.startChapterId}" not found in game data.`);
   }
 
-  const startingInventory: ItemId[] = ['item_player_phone' as ItemId];
+  const startingInventory: ItemId[] = ['item_player_phone' as ItemId, 'item_heavy_stone' as ItemId];
 
   return {
     currentGameId: game.id,

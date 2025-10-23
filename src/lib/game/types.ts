@@ -57,6 +57,9 @@ export type Message = {
 // --- Effect System ---
 export type Effect =
   | { type: 'ADD_ITEM'; itemId: ItemId }
+  | { type: 'SPAWN_ITEM'; itemId: ItemId, locationId: LocationId }
+  | { type: 'REMOVE_ITEM'; itemId: ItemId } // From inventory
+  | { type: 'DESTROY_ITEM'; itemId: ItemId } // From world
   | { type: 'SET_FLAG'; flag: Flag }
   | { type: 'SHOW_MESSAGE'; sender: Message['sender']; senderName?: string; content: string; messageType?: Message['type']; imageId?: ItemId | NpcId | GameObjectId }
   | { type: 'END_CONVERSATION' }
@@ -338,7 +341,8 @@ export type Item = {
   };
 
   stateMap?: Record<string, {
-      overrides: HandlerOverrides;
+      description: string;
+      overrides?: HandlerOverrides;
   }>;
 
   stacking?: {
