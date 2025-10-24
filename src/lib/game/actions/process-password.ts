@@ -10,6 +10,7 @@ const examinedObjectFlag = (id: string) => `examined_${id}`;
 
 export function processPassword(state: PlayerState, command: string, game: Game): CommandResult {
     const narratorName = "Narrator";
+    const agentName = game.narratorName || 'Agent Sharma';
     const location = game.locations[state.currentLocationId];
     const objectsInLocation = location.objects.map(id => getLiveGameObject(id, state, game)).filter(Boolean) as {gameLogic: GameObject, state: GameObjectState}[];
     
@@ -36,11 +37,10 @@ export function processPassword(state: PlayerState, command: string, game: Game)
 
     // Check if the object is already unlocked
     if (!targetObject.state.isLocked) {
+        // If already unlocked, bypass the AI and return a direct message.
         return { 
             newState: state, 
-            messages: [],
-            resultType: 'ALREADY_UNLOCKED',
-            targetObjectName: targetObject.gameLogic.name
+            messages: [createMessage('agent', agentName, `No need, Burt. We already unlocked the ${targetObject.gameLogic.name}.`)]
         };
     }
     
