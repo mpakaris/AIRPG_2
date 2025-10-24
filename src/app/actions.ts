@@ -323,7 +323,8 @@ export async function processCommand(
             case 'examine':
             case 'look':
                 if(restOfCommand === 'around') {
-                     commandHandlerResult = await handleLook(currentState, game);
+                     const location = game.locations[currentState.currentLocationId];
+                     commandHandlerResult = handleLook(currentState, game, location.sceneDescription);
                 } else if (restOfCommand.startsWith('behind')) {
                     const target = restOfCommand.replace('behind ', '').trim();
                     commandHandlerResult = handleMove(currentState, target, game);
@@ -518,8 +519,8 @@ export async function createInitialMessages(playerState: PlayerState, game: Game
         timestamp: Date.now() + 1,
       });
     }
-
-    const lookResult = await handleLook(playerState, game);
+    const initialLocation = game.locations[playerState.currentLocationId];
+    const lookResult = await handleLook(playerState, game, initialLocation.sceneDescription);
     newInitialMessages.push(...lookResult.messages);
   
     return newInitialMessages;
@@ -628,5 +629,6 @@ export async function generateStoryForChapter(userId: string, gameId: GameId, ch
 
     return { newState };
 }
+
 
 
