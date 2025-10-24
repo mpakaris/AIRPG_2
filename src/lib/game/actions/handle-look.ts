@@ -33,5 +33,5 @@ export async function handleLook(state: PlayerState, game: Game, summary: string
     });
   }
 
-  return { newState: state, messages: [createMessage('narrator', narratorName, fullDescription.trim())] };
+  return { newState: state, messages: [createMessage('narrator', narratorName, fullDescription.trim(), 'text')] };
 }
