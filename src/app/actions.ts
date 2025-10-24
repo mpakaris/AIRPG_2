@@ -189,7 +189,10 @@ export async function processCommand(
   userId: string,
   playerInput: string
 ): Promise<{newState: PlayerState, messages: Message[]}> {
-  const game = await getGameData(GAME_ID);
+    // Safety guard to prevent crashes on undefined input
+    const safePlayerInput = playerInput || '';
+
+    const game = await getGameData(GAME_ID);
   
   if (!game) {
       throw new Error("Critical: Game data could not be loaded. Cannot process command.");
@@ -232,11 +235,11 @@ export async function processCommand(
 
     const chapter = game.chapters[game.startChapterId]; // Simplified for now
     const agentName = game.narratorName || "Agent Sharma";
-    const lowerInput = (playerInput || '').toLowerCase().trim();
+    const lowerInput = safePlayerInput.toLowerCase().trim();
 
     let playerMessage: Message | null = null;
-    if (playerInput) {
-        playerMessage = createMessage('player', 'You', playerInput);
+    if (safePlayerInput) {
+        playerMessage = createMessage('player', 'You', safePlayerInput);
         allMessagesForSession.push(playerMessage);
     }
     
@@ -262,7 +265,7 @@ export async function processCommand(
     }
     // Conversation commands
     else if (currentState.activeConversationWith) {
-        commandHandlerResult = await handleConversation(currentState, playerInput, game);
+        commandHandlerResult = await handleConversation(currentState, safePlayerInput, game);
     }
     
     // Main command parsing logic
@@ -301,7 +304,7 @@ export async function processCommand(
                 npcStates: undefined,
                 stories: undefined
             }, null, 2),
-            playerCommand: playerInput,
+            playerCommand: safePlayerInput,
             availableCommands: AVAILABLE_COMMANDS.join(', '),
             visibleObjectNames: visibleObjectNames,
             visibleNpcNames: visibleNpcNames,
@@ -371,10 +374,6 @@ export async function processCommand(
                 } else {
                     commandHandlerResult = { newState: currentState, messages: [] };
                 }
-                break;
-            case 'restart':
-                const resetResult = await resetGame(userId);
-                commandHandlerResult = { newState: resetResult.newState, messages: resetResult.messages };
                 break;
             case 'invalid':
                  commandHandlerResult = { newState: currentState, messages: [] };
@@ -629,4 +628,5 @@ export async function generateStoryForChapter(userId: string, gameId: GameId, ch
 
     return { newState };
 }
+
 
