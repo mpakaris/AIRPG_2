@@ -9,7 +9,6 @@ import { normalizeName } from "@/lib/utils";
 const examinedObjectFlag = (id: string) => `examined_${id}`;
 
 export function handleExamine(state: PlayerState, targetName: string, game: Game): CommandResult {
-    const location = game.locations[state.currentLocationId];
     let newState = { ...state, flags: [...state.flags] };
     const normalizedTargetName = normalizeName(targetName);
     const narratorName = "Narrator";
@@ -17,9 +16,13 @@ export function handleExamine(state: PlayerState, targetName: string, game: Game
     if (!normalizedTargetName) {
         return { newState: state, messages: [createMessage('system', 'System', `You need to specify what to examine.`)] };
     }
+    
+    // --- CORRECTED LOGIC ---
+    // Get the dynamic list of visible objects from the player's state, not the static game data.
+    const visibleObjectIds = newState.locationStates[newState.currentLocationId]?.objects || [];
 
     // Try to find an object in the location first
-    const targetObjectId = location.objects.find(id =>
+    const targetObjectId = visibleObjectIds.find(id =>
         normalizeName(game.gameObjects[id]?.name).includes(normalizedTargetName)
     );
 
@@ -31,7 +34,7 @@ export function handleExamine(state: PlayerState, targetName: string, game: Game
         
         let messageContent: string;
         
-        // --- State-based description from stateMap (NEW) ---
+        // --- State-based description from stateMap ---
         if (liveObject.gameLogic.stateMap && liveObject.state.currentStateId && liveObject.gameLogic.stateMap[liveObject.state.currentStateId]) {
             messageContent = liveObject.gameLogic.stateMap[liveObject.state.currentStateId].description || liveObject.gameLogic.description;
         } else {
