@@ -232,10 +232,13 @@ export async function processCommand(
 
     const chapter = game.chapters[game.startChapterId]; // Simplified for now
     const agentName = game.narratorName || "Agent Sharma";
-    const lowerInput = playerInput.toLowerCase().trim();
+    const lowerInput = (playerInput || '').toLowerCase().trim();
 
-    const playerMessage = createMessage('player', 'You', playerInput);
-    allMessagesForSession.push(playerMessage);
+    let playerMessage: Message | null = null;
+    if (playerInput) {
+        playerMessage = createMessage('player', 'You', playerInput);
+        allMessagesForSession.push(playerMessage);
+    }
     
     let commandHandlerResult: CommandResult | null = null;
 
@@ -425,12 +428,12 @@ export async function processCommand(
     await logAndSave(userId, gameId, finalResult.newState, finalResult.messages);
     
     // In dev, send new messages (that aren't from the player) to the webhook simulator
-    if (process.env.NEXT_PUBLIC_NODE_ENV === 'development') {
+    if (process.env.NEXT_PUBLIC_NODE_ENV === 'development' && playerMessage) {
         // Filter out restart messages from being double-sent
         const isRestart = lowerInput === 'restart' || lowerInput === 'start over';
         if (!isRestart) {
             const newMessagesFromServer = finalResult.messages.filter(
-                m => m.timestamp >= playerMessage.timestamp && m.sender !== 'player'
+                m => m.timestamp >= playerMessage!.timestamp && m.sender !== 'player'
             );
             for (const message of newMessagesFromServer) {
                 await dispatchMessage(userId, message);
@@ -517,8 +520,8 @@ export async function createInitialMessages(playerState: PlayerState, game: Game
       });
     }
 
-    const { messages: lookMessages } = await handleLook(playerState, game);
-    newInitialMessages.push(...lookMessages);
+    const lookResult = await handleLook(playerState, game);
+    newInitialMessages.push(...lookResult.messages);
   
     return newInitialMessages;
   };
@@ -626,3 +629,4 @@ export async function generateStoryForChapter(userId: string, gameId: GameId, ch
 
     return { newState };
 }
+

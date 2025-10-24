@@ -162,7 +162,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         media: { images: { default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759604943/picture_on_wall_fcx10j.png', description: 'A painting on the wall of the cafe.', hint: 'abstract painting' } } },
         handlers: {
             onExamine: {
-                success: { message: "An abstract painting hangs on the wall. Its swirls of color add a touch of modern art to the cafe's cozy atmosphere, but it feels... off. Like it's hiding something. It's signed 'S.B.'" },
+                success: { message: "An abstract painting hangs on the wall. Its swirls of color add a touch of modern art to the cafe's cozy atmosphere, but it feels... off. Like it's a bit crooked, or was placed there in a rush. It's signed 'S.B.'" },
                 fail: { message: "" },
                 alternateMessage: "It's the same abstract painting signed 'S.B.'. It definitely seems like it could be moved."
             },
@@ -213,7 +213,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         message: "The key from the coffee machine fits perfectly. You turn it, and the safe door swings open with a satisfying clunk. Inside, there's a single, thick file marked 'CONFIDENTIAL'.",
                         effects: [
                             { type: 'SET_FLAG', flag: 'safe_is_unlocked' as Flag },
-                            { type: 'SET_OBJECT_STATE', objectId: 'obj_wall_safe', state: { isLocked: false, isOpen: true, currentStateId: 'unlocked_with_document' } },
+                            { type: 'SET_OBJECT_STATE', objectId: 'obj_wall_safe', state: { isLocked: false, isOpen: true, currentStateId: 'unlocked' } },
                         ]
                     },
                     fail: { message: "You've already unlocked the safe." }
@@ -224,7 +224,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             'default': { // Locked state
                 description: "A small, steel safe is set into the wall. It's locked.",
             },
-            'unlocked_with_document': {
+            'unlocked': {
                 description: "The safe is open. Inside, you see a thick confidential file.",
                 overrides: {
                     onExamine: {
@@ -267,7 +267,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         },
         handlers: {
             onExamine: {
-                success: { message: "The barista polishes it lovingly. Up close, you notice a small service compartment on the side seems to be stuck or jammed shut." },
+                success: { message: "The barista polishes it lovingly. Up close, you notice a small service compartment on the side seems to be stuck or jammed shut. It looks fragile." },
                 fail: { message: "" }
             },
             onMove: {
@@ -840,8 +840,8 @@ export const game: Game = {
 7.  **Implicit Player Items:** Burt has default equipment like a "Phone". He doesn't need to see it to use it. If a command implies using the phone (e.g., 'use sd card'), you should map it to the direct action.
 8.  **Direct Password Attempts:** If the player's input IS the password phrase for a known locked object, map it to the 'password' command.
     *   Player says: "Justice for Silas Bloom" -> Your response: \`{"agentResponse": "Worth a shot, Burt. Let's try that phrase.", "commandToExecute": "password \\"Brown Notebook\\" justice for silas bloom"}\`
-9.  **Restart Command:** If the player says "restart" or "start over", map their command to the \`restart\` command.
-    *   Player says: "start over" -> Your response: \`{"agentResponse": "Copy that. Resetting the simulation.", "commandToExecute": "restart"}\`
+9.  **Restart Command:** If the player says "restart" or "start over", your response should be to confirm the action, and the command must be 'invalid' as players cannot restart the game.
+    *   Player says: "start over" -> Your response: \`{"agentResponse": "Sorry Burt, we can't restart the simulation. We have to see this through.", "commandToExecute": "invalid"}\`
 10. **Mini-game Help:** If the player asks about the "mini game" or "puzzle link", deflect gracefully.
     *   Player says: "how do I play the mini game?" -> Your response: \`{"agentResponse": "The link for that puzzle is in the object's description, Burt. Just 'examine' it again to see it.", "commandToExecute": "invalid"}\`
 
