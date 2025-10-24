@@ -97,6 +97,12 @@ export function processEffects(initialState: PlayerState, effects: Effect[], gam
                     newState.flags.push(effect.flag);
                 }
                 break;
+            case 'REVEAL_OBJECT':
+                const locationState = newState.locationStates[newState.currentLocationId];
+                if (locationState && !locationState.objects.includes(effect.objectId)) {
+                    locationState.objects.push(effect.objectId);
+                }
+                break;
             case 'SHOW_MESSAGE':
                 const messageImageId = effect.imageId;
                 const message = createMessage(

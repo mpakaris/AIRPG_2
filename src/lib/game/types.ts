@@ -1,5 +1,4 @@
 
-
 // Branded types for stronger type safety
 export type GameId = string & { readonly __brand: 'GameId' };
 export type ChapterId = string & { readonly __brand: 'ChapterId' };
@@ -61,6 +60,7 @@ export type Effect =
   | { type: 'REMOVE_ITEM'; itemId: ItemId } // From inventory
   | { type: 'DESTROY_ITEM'; itemId: ItemId } // From world
   | { type: 'SET_FLAG'; flag: Flag }
+  | { type: 'REVEAL_OBJECT'; objectId: GameObjectId }
   | { type: 'SHOW_MESSAGE'; sender: Message['sender']; senderName?: string; content: string; messageType?: Message['type']; imageId?: ItemId | NpcId | GameObjectId }
   | { type: 'END_CONVERSATION' }
   | { type: 'START_INTERACTION'; objectId: GameObjectId, interactionStateId?: string }
@@ -108,6 +108,10 @@ export type NpcState = {
     interactionCount: number;
 }
 
+export type LocationState = {
+    objects: GameObjectId[];
+}
+
 export type User = {
     id: string; // This can be a phone number or a dev ID
     username: string;
@@ -122,6 +126,7 @@ export type PlayerState = {
   inventory: ItemId[];
   flags: Flag[];
   objectStates: Record<GameObjectId, GameObjectState>;
+  locationStates: Record<LocationId, LocationState>;
   itemStates: Record<ItemId, Partial<ItemState>>;
   portalStates: Record<PortalId, PortalState>;
   npcStates: Record<NpcId, NpcState>;

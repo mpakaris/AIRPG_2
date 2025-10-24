@@ -7,7 +7,7 @@ import {
   generateStoryFromLogs
 } from '@/ai';
 import { AVAILABLE_COMMANDS } from '@/lib/game/commands';
-import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectId, GameObjectState, ItemId, Flag, Effect, Chapter, ChapterId, ImageDetails, GameId, User, TokenUsage, Story, Portal } from '@/lib/game/types';
+import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectId, GameObjectState, ItemId, Flag, Effect, Chapter, ChapterId, ImageDetails, GameId, User, TokenUsage, Story, Portal, LocationState } from '@/lib/game/types';
 import { initializeFirebase } from '@/firebase';
 import { doc, setDoc, getDoc, collection, getDocs } from 'firebase/firestore';
 import { getInitialState } from '@/lib/game-state';
@@ -287,7 +287,8 @@ export async function processCommand(
         const location = game.locations[currentState.currentLocationId];
         
         // --- Start AI Context Preparation ---
-        const visibleObjects = location.objects.map(id => getLiveGameObject(id, currentState, game)).filter(Boolean) as {gameLogic: GameObject, state: GameObjectState}[];
+        const locationState: LocationState = currentState.locationStates[currentState.currentLocationId] || { objects: location.objects };
+        const visibleObjects = locationState.objects.map(id => getLiveGameObject(id, currentState, game)).filter(Boolean) as {gameLogic: GameObject, state: GameObjectState}[];
         const visibleObjectNames = visibleObjects.map(obj => obj.gameLogic.name);
 
         // Add items inside open containers to the list of visible names, but ONLY if the container has been examined first.
@@ -312,6 +313,7 @@ export async function processCommand(
                 ...currentState,
                 // Sanitize large objects from gamestate to save tokens
                 objectStates: undefined,
+                locationStates: undefined,
                 portalStates: undefined,
                 npcStates: undefined,
                 stories: undefined

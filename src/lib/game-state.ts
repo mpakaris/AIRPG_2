@@ -1,6 +1,6 @@
 
 
-import type { Game, PlayerState, Chapter, ChapterId, GameObjectId, GameObjectState, PortalState, PortalId, NpcId, NpcState, LocationId, ItemId, ItemState } from './game/types';
+import type { Game, PlayerState, Chapter, ChapterId, GameObjectId, GameObjectState, PortalState, PortalId, NpcId, NpcState, LocationId, ItemId, ItemState, LocationState } from './game/types';
 
 export function getInitialState(game: Game): PlayerState {
   
@@ -53,6 +53,14 @@ export function getInitialState(game: Game): PlayerState {
     };
   }
 
+  const initialLocationStates: Record<LocationId, LocationState> = {};
+    for (const locationId in game.locations) {
+        const location = game.locations[locationId as LocationId];
+        initialLocationStates[location.locationId] = {
+            objects: [...location.objects]
+        };
+    }
+
   // Find the starting location, which could be a cell or a location
   const startChapter = game.chapters[game.startChapterId];
   if (!startChapter) {
@@ -68,6 +76,7 @@ export function getInitialState(game: Game): PlayerState {
     inventory: startingInventory,
     flags: [],
     objectStates: initialObjectStates,
+    locationStates: initialLocationStates,
     itemStates: initialItemStates,
     portalStates: initialPortalStates,
     npcStates: initialNpcStates,

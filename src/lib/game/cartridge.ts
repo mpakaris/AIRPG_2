@@ -173,6 +173,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                     message: "You lift the painting off its hook. Just as you suspected, a small wall safe is set into the wall behind it.",
                     effects: [
                         { type: 'SET_FLAG', flag: 'has_moved_painting' as Flag },
+                        { type: 'REVEAL_OBJECT', objectId: 'obj_wall_safe' as GameObjectId },
                         { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'You see a small wall safe, previously hidden by the painting.', imageId: 'obj_wall_safe' }
                     ]
                 },
@@ -670,7 +671,7 @@ const locations: Record<LocationId, Location> = {
         sceneDescription: 'You are inside The Daily Grind. \n\nIt\'s a bustling downtown cafe, smelling of coffee and rain. A puddle of rainwater is near the door, and a discarded magazine lies on an empty table.',
         sceneImage: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761156561/bustling_cafe_bluwgq.jpg', description: 'A view of the bustling cafe interior.', hint: 'bustling cafe' },
         coord: { x: 1, y: 1, z: 0 },
-        objects: ['obj_brown_notebook', 'obj_chalkboard_menu', 'obj_magazine', 'obj_bookshelf', 'obj_painting', 'obj_coffee_machine', 'obj_wall_safe'] as GameObjectId[],
+        objects: ['obj_brown_notebook', 'obj_chalkboard_menu', 'obj_magazine', 'obj_bookshelf', 'obj_painting', 'obj_coffee_machine'] as GameObjectId[],
         npcs: ['npc_barista', 'npc_manager'] as NpcId[],
         entryPortals: ['portal_street_to_cafe' as PortalId],
         exitPortals: ['portal_cafe_to_street' as PortalId]
