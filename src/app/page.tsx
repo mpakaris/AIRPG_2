@@ -2,10 +2,11 @@
 
 import { GameClient } from '@/components/game/GameClient';
 import { getInitialState } from '@/lib/game-state';
-import type { PlayerState, Message, ChapterId, Game, GameId } from '@/lib/game/types';
+import type { PlayerState, Message, Game, GameId } from '@/lib/game/types';
 import { initializeFirebase } from '@/firebase';
 import { doc, getDoc } from 'firebase/firestore';
-import { getGameData } from './actions';
+import { getGameData, createInitialMessages } from './actions';
+import { handleLook } from '@/lib/game/actions/handle-look';
 
 const GAME_ID = 'blood-on-brass' as GameId;
 
@@ -17,7 +18,7 @@ async function getInitialData(userId: string | null, game: Game): Promise<{ play
     if (!userId) {
         return { 
             playerState: initialGameState, 
-            messages: await createInitialMessages(game, initialGameState)
+            messages: await createInitialMessages(initialGameState, game)
         };
     }
 
@@ -43,56 +44,11 @@ async function getInitialData(userId: string | null, game: Game): Promise<{ play
         messages = logSnap.data()?.messages || [];
     } else {
         // If logs don't exist for the dev user, create them.
-        messages = await createInitialMessages(game, playerState);
+        messages = await createInitialMessages(playerState, game);
     }
 
     return { playerState, messages };
 }
-
-async function createInitialMessages(game: Game, playerState: PlayerState): Promise<Message[]> {
-    const startChapter = game.chapters[game.startChapterId];
-    const newInitialMessages: Message[] = [];
-  
-    const welcomeMessage = {
-      id: crypto.randomUUID(),
-      sender: 'narrator' as const,
-      senderName: game.narratorName || 'Narrator',
-      type: 'text' as const,
-      content: `Welcome to ${game.title}. Your journey begins.`,
-      timestamp: Date.now(),
-    };
-    newInitialMessages.push(welcomeMessage);
-
-    if (startChapter.introductionVideo) {
-      newInitialMessages.push({
-        id: crypto.randomUUID(),
-        sender: 'narrator' as const,
-        senderName: game.narratorName || 'Narrator',
-        type: 'video' as const,
-        content: startChapter.introductionVideo,
-        timestamp: Date.now() + 1,
-      });
-    }
-  
-    // Add initial location description
-    const initialLocation = game.locations[playerState.currentLocationId];
-    if (initialLocation) {
-        const locationMessage: Message = {
-            id: crypto.randomUUID(),
-            sender: 'narrator' as const,
-            senderName: game.narratorName || 'Narrator',
-            type: initialLocation.sceneImage ? 'image' : 'text',
-            content: initialLocation.sceneDescription,
-            timestamp: Date.now() + 2,
-        };
-        if (initialLocation.sceneImage) {
-            locationMessage.image = initialLocation.sceneImage;
-        }
-        newInitialMessages.push(locationMessage);
-    }
-
-    return newInitialMessages;
-};
 
 
 export default async function Home() {

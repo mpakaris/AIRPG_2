@@ -323,8 +323,7 @@ export async function processCommand(
             case 'examine':
             case 'look':
                 if(restOfCommand === 'around') {
-                     const location = game.locations[currentState.currentLocationId];
-                     commandHandlerResult = handleLook(currentState, game, location.sceneDescription);
+                     commandHandlerResult = await handleLook(currentState, game);
                 } else if (restOfCommand.startsWith('behind')) {
                     const target = restOfCommand.replace('behind ', '').trim();
                     commandHandlerResult = handleMove(currentState, target, game);
@@ -519,12 +518,21 @@ export async function createInitialMessages(playerState: PlayerState, game: Game
         timestamp: Date.now() + 1,
       });
     }
+    
     const initialLocation = game.locations[playerState.currentLocationId];
-    const lookResult = await handleLook(playerState, game, initialLocation.sceneDescription);
-    newInitialMessages.push(...lookResult.messages);
+    if (initialLocation) {
+        const locationMessage = createMessage(
+            'narrator', 
+            game.narratorName || 'Narrator', 
+            initialLocation.sceneDescription,
+            initialLocation.sceneImage ? 'image' : 'text',
+            initialLocation.sceneImage ? { id: initialLocation.locationId, game, state: playerState } : undefined
+        );
+        newInitialMessages.push(locationMessage);
+    }
   
     return newInitialMessages;
-  };
+};
 
 
 export async function logAndSave(
@@ -629,6 +637,3 @@ export async function generateStoryForChapter(userId: string, gameId: GameId, ch
 
     return { newState };
 }
-
-
-
