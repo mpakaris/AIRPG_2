@@ -23,7 +23,8 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initia
   const [playerState, setPlayerState] = useState<PlayerState>(initialGameState);
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [commandInputValue, setCommandInputValue] = useState('');
-  const [isCommandPending, startTransition] = useTransition();
+  const [isCommandPending, startCommandTransition] = useTransition();
+  const [isResetting, startResetTransition] = useTransition();
   const { toast } = useToast();
 
   const showSidebar = true;
@@ -42,7 +43,7 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initia
       toast({ variant: 'destructive', title: 'Error', description: 'Cannot reset game without a user.' });
       return;
     }
-    startTransition(async () => {
+    startResetTransition(async () => {
         try {
             const result = await resetGame(userId);
             setPlayerState(result.newState);
@@ -72,7 +73,7 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initia
     
     setCommandInputValue(''); // Clear input after submission
 
-    startTransition(async () => {
+    startCommandTransition(async () => {
       try {
         const result = await processCommand(userId, command);
         
@@ -138,7 +139,7 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initia
             <GameScreen
             messages={messages}
             onCommandSubmit={handleCommandSubmit}
-            isLoading={isCommandPending}
+            isLoading={isCommandPending || isResetting}
             game={game}
             playerState={playerState}
             commandInputValue={commandInputValue}

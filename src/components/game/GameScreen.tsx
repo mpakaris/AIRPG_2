@@ -187,7 +187,12 @@ export const GameScreen: FC<GameScreenProps> = ({ messages, onCommandSubmit, isL
     const chapter = game.chapters[game.startChapterId]; // Simplified for now
     const location = game.locations[playerState.currentLocationId];
   return (
-    <div className="flex h-screen flex-col bg-background">
+    <div className="relative flex h-screen flex-col bg-background">
+        {isLoading && (
+            <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+                <LoaderCircle className="h-12 w-12 animate-spin text-primary" />
+            </div>
+        )}
         <header className="flex h-16 items-center justify-between border-b bg-card px-4 shadow-sm">
             <div className="flex items-center gap-4">
                 <SidebarTrigger>
