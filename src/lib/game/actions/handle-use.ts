@@ -1,12 +1,11 @@
 
 import { CommandResult } from "@/app/actions";
-import type { Game, PlayerState } from "../types";
+import type { Game, GameObjectId, PlayerState } from "../types";
 import { findItemInContext, getLiveGameObject } from "./helpers";
 import { createMessage, processEffects } from "./process-effects";
 import { normalizeName } from "@/lib/utils";
 
 export async function handleUse(state: PlayerState, itemName: string, targetName: string, game: Game): Promise<CommandResult> {
-  const location = game.locations[state.currentLocationId];
   const narratorName = "Narrator";
   const normalizedItemName = normalizeName(itemName);
   const normalizedTargetName = normalizeName(targetName);
@@ -18,12 +17,17 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
   
   // Case 1: Using an item on a specific object ("use item on object")
   if (normalizedTargetName) {
-    // Try to find a GameObject in the location
-    const targetObjectId = Object.keys(game.gameObjects).find(objId => normalizeName(game.gameObjects[objId as keyof typeof game.gameObjects]?.name).includes(normalizedTargetName));
-    const isTargetInLocation = targetObjectId && location.objects.includes(targetObjectId as any);
+    // --- CORRECTED LOGIC ---
+    // Get the dynamic list of visible objects from the player's state.
+    const visibleObjectIds = state.locationStates[state.currentLocationId]?.objects || [];
+    
+    // Find the target object from the visible list
+    const targetObjectId = visibleObjectIds.find(id =>
+        normalizeName(game.gameObjects[id]?.name).includes(normalizedTargetName)
+    );
 
-    if (isTargetInLocation) {
-        const targetObject = getLiveGameObject(targetObjectId as any, state, game);
+    if (targetObjectId) {
+        const targetObject = getLiveGameObject(targetObjectId as GameObjectId, state, game);
         if (targetObject) {
             const useHandlers = targetObject.gameLogic.handlers.onUse;
             if (Array.isArray(useHandlers)) {
