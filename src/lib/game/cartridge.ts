@@ -72,7 +72,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         media: { images: { default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759603706/Chalkboard_h61haz.png', description: 'A chalkboard menu in a cafe.', hint: 'chalkboard menu' } } },
         handlers: {
             onExamine: {
-                success: { message: "A chalkboard menu stands near the counter. It reads: Today's special is three scones for the price of two. A deal almost as sweet as justice." },
+                success: { message: "A chalkboard menu stands near the counter. It reads: Today's special is three scones for the price of two. A deal almost as sweet as justice. Something seems to be positioned behind the Chalkboard." },
                 fail: { message: "" },
                 alternateMessage: "The menu hasn't changed. Something seems to be propped up behind it."
             },
