@@ -22,7 +22,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         input: { type: 'phrase', validation: 'Justice for Silas Bloom', hint: 'Stuck? Maybe this will help: https://airpg-minigames.vercel.app/games/the-notebook', attempts: null, lockout: null },
         handlers: {
             onExamine: {
-                success: { message: "You examine the worn and old, leather-bound notebook. It seems to be locked with a phrase." },
+                success: { message: "You examine the worn and old, leather-bound notebook. It seems to be locked tight. Nothing a password phrase wont solve." },
                 fail: { message: "" },
                 alternateMessage: "The notebook is open. Inside, you see a small SD card next to a folded newspaper article."
             },
