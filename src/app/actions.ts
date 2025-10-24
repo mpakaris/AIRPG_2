@@ -32,7 +32,7 @@ import { handleHelp } from '@/lib/game/actions/handle-help';
 const GAME_ID = 'blood-on-brass' as GameId;
 
 const chapterCompletionFlag = (chapterId: ChapterId) => `chapter_${chapterId}_complete` as Flag;
-const examinedObjectFlag = (id: string) => `examined_${id}` as Flag;
+const examinedObjectFlag = (id: string) => `examined_${id}`;
 
 export type CommandResult = {
   newState: PlayerState | null;
@@ -167,7 +167,7 @@ export async function findOrCreateUser(userId: string): Promise<{ user: User | n
             
             // Immediately create and save initial game state and logs for the new user.
             const freshState = getInitialState(game);
-            const initialMessages = await createInitialMessages(game);
+            const initialMessages = await createInitialMessages(freshState, game);
             await logAndSave(userId, game.id, freshState, initialMessages);
 
             return { user: newUser, isNew: true };
@@ -227,7 +227,7 @@ export async function processCommand(
     if (logSnap.exists()) {
         allMessagesForSession = logSnap.data()?.messages || [];
     } else {
-        allMessagesForSession = await createInitialMessages(game);
+        allMessagesForSession = await createInitialMessages(currentState, game);
     }
 
     const chapter = game.chapters[game.startChapterId]; // Simplified for now
@@ -260,26 +260,6 @@ export async function processCommand(
     // Conversation commands
     else if (currentState.activeConversationWith) {
         commandHandlerResult = await handleConversation(currentState, playerInput, game);
-    }
-    // Interaction Trap Guardrail
-    else if (currentState.interactingWithObject) {
-        const liveObject = getLiveGameObject(currentState.interactingWithObject, currentState, game);
-        if (liveObject) {
-            const interactingWith = liveObject.gameLogic;
-            const mentionsAnotherObject = Object.values(game.gameObjects).some(obj => 
-                obj.id !== interactingWith.id && lowerInput.includes(obj.name.toLowerCase())
-            );
-
-            if (mentionsAnotherObject) {
-                const trapMessage = createMessage(
-                    'agent', 
-                    agentName, 
-                    `Whoa there, Burt. We're zeroed in on the ${interactingWith.name} right now. If you want to check something else, we need to 'exit' this first.`
-                );
-                // This is a special case: we just return the message and don't change state.
-                return { newState: currentState, messages: [playerMessage, trapMessage] };
-            }
-        }
     }
     
     // Main command parsing logic
@@ -337,8 +317,7 @@ export async function processCommand(
             case 'examine':
             case 'look':
                 if(restOfCommand === 'around') {
-                     const lookAroundSummary = `${location.sceneDescription}\n\nYou can see the following objects:\n${visibleObjectNames.map(name => `• ${name}`).join('\n')}\n\nYou see the following people here:\n${visibleNpcNames.map(name => `• ${name}`).join('\n')}`;
-                     commandHandlerResult = handleLook(currentState, game, lookAroundSummary);
+                     commandHandlerResult = await handleLook(currentState, game);
                 } else if (restOfCommand.startsWith('behind')) {
                     const target = restOfCommand.replace('behind ', '').trim();
                     commandHandlerResult = handleMove(currentState, target, game);
@@ -389,6 +368,10 @@ export async function processCommand(
                 } else {
                     commandHandlerResult = { newState: currentState, messages: [] };
                 }
+                break;
+            case 'restart':
+                const resetResult = await resetGame(userId);
+                commandHandlerResult = { newState: resetResult.newState, messages: resetResult.messages };
                 break;
             case 'invalid':
                  commandHandlerResult = { newState: currentState, messages: [] };
@@ -443,11 +426,15 @@ export async function processCommand(
     
     // In dev, send new messages (that aren't from the player) to the webhook simulator
     if (process.env.NEXT_PUBLIC_NODE_ENV === 'development') {
-        const newMessagesFromServer = finalResult.messages.filter(
-            m => m.timestamp >= playerMessage.timestamp && m.sender !== 'player'
-        );
-        for (const message of newMessagesFromServer) {
-            await dispatchMessage(userId, message);
+        // Filter out restart messages from being double-sent
+        const isRestart = lowerInput === 'restart' || lowerInput === 'start over';
+        if (!isRestart) {
+            const newMessagesFromServer = finalResult.messages.filter(
+                m => m.timestamp >= playerMessage.timestamp && m.sender !== 'player'
+            );
+            for (const message of newMessagesFromServer) {
+                await dispatchMessage(userId, message);
+            }
         }
     }
     
@@ -492,7 +479,7 @@ export async function resetGame(userId: string): Promise<{newState: PlayerState,
     }
     const gameId = game.id;
     const freshState = getInitialState(game);
-    const initialMessages = await createInitialMessages(game);
+    const initialMessages = await createInitialMessages(freshState, game);
 
     await logAndSave(userId, gameId, freshState, initialMessages);
 
@@ -505,15 +492,14 @@ export async function resetGame(userId: string): Promise<{newState: PlayerState,
     return { newState: freshState, messages: initialMessages };
 }
 
-async function createInitialMessages(game: Game): Promise<Message[]> {
-    const initialGameState = getInitialState(game);
-    const startChapter = game.chapters[initialGameState.currentChapterId];
+export async function createInitialMessages(playerState: PlayerState, game: Game): Promise<Message[]> {
+    const startChapter = game.chapters[playerState.currentChapterId];
     const newInitialMessages: Message[] = [];
   
     const welcomeMessage = {
       id: crypto.randomUUID(),
       sender: 'narrator' as const,
-      senderName: 'Narrator',
+      senderName: game.narratorName || 'Narrator',
       type: 'text' as const,
       content: `Welcome to ${game.title}. Your journey begins.`,
       timestamp: Date.now(),
@@ -524,29 +510,15 @@ async function createInitialMessages(game: Game): Promise<Message[]> {
       newInitialMessages.push({
         id: crypto.randomUUID(),
         sender: 'narrator' as const,
-        senderName: 'Narrator',
+        senderName: game.narratorName || 'Narrator',
         type: 'video' as const,
         content: startChapter.introductionVideo,
         timestamp: Date.now() + 1,
       });
     }
 
-    // Add initial location description
-    const initialLocation = game.locations[initialGameState.currentLocationId];
-    if (initialLocation) {
-        const locationMessage: Message = {
-            id: crypto.randomUUID(),
-            sender: 'narrator' as const,
-            senderName: 'Narrator',
-            type: initialLocation.sceneImage ? 'image' : 'text',
-            content: initialLocation.sceneDescription,
-            timestamp: Date.now() + 2,
-        };
-        if (initialLocation.sceneImage) {
-            locationMessage.image = initialLocation.sceneImage;
-        }
-        newInitialMessages.push(locationMessage);
-    }
+    const { messages: lookMessages } = await handleLook(playerState, game);
+    newInitialMessages.push(...lookMessages);
   
     return newInitialMessages;
   };

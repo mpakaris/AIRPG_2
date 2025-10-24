@@ -9,7 +9,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         id: 'obj_brown_notebook' as GameObjectId,
         name: 'Brown Notebook',
         archetype: 'Container',
-        description: 'A worn, leather-bound notebook. It feels heavy with secrets.',
+        description: 'A worn, leather-bound notebook rests on a table.',
         capabilities: { openable: true, lockable: true, breakable: false, movable: true, powerable: false, container: true, readable: false, inputtable: true },
         state: { isOpen: false, isLocked: true, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
         inventory: { items: ['item_sd_card', 'item_newspaper_article'] as ItemId[], capacity: 2, allowTags: [], denyTags: [] },
@@ -66,7 +66,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         id: 'obj_chalkboard_menu' as GameObjectId,
         name: 'Chalkboard Menu',
         archetype: 'Signage',
-        description: "A chalkboard menu stands near the counter. It reads: Today's special is three scones for the price of two. A deal almost as sweet as justice.",
+        description: "There's a chalkboard menu near the counter with today's specials.",
         capabilities: { openable: false, lockable: false, breakable: true, movable: true, powerable: false, container: true, readable: true, inputtable: false },
         state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
         inventory: { items: ['item_iron_pipe'] as ItemId[], capacity: 1 },
@@ -101,7 +101,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         id: 'obj_magazine' as GameObjectId,
         name: 'Magazine',
         archetype: 'Prop',
-        description: "You glance at a copy of this week's local entertainment magazine. The cover story discusses the current series of murders. The usual craziness of a Metropolis.",
+        description: 'A discarded magazine lies on an empty table.',
         capabilities: { openable: false, lockable: false, breakable: true, movable: true, powerable: false, container: false, readable: true, inputtable: false },
         state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
         media: { images: { default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759603706/Newspaper_p85m1h.png', description: 'A magazine on a table.', hint: 'magazine' } } },
@@ -127,7 +127,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         id: 'obj_bookshelf' as GameObjectId,
         name: 'Bookshelf',
         archetype: 'Furniture',
-        description: "You turn to a small bookshelf filled with used paperbacks. The titles include: 'The Art of the Deal', 'A Brief History of Time', and a romance novel called 'Justice for My Love'.",
+        description: "A small bookshelf filled with used paperbacks is tucked into a corner.",
         capabilities: { openable: false, lockable: false, breakable: false, movable: true, powerable: false, container: true, readable: false, inputtable: false },
         state: { isOpen: true, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
         inventory: { items: ['item_book_deal', 'item_book_time', 'item_book_justice'] as ItemId[], capacity: null },
@@ -157,7 +157,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         id: 'obj_painting' as GameObjectId,
         name: 'Painting on the wall',
         archetype: 'Surface',
-        description: "An abstract painting hangs on the wall. Its swirls of color add a touch of modern art to the cafe's cozy atmosphere, but it feels... off. Like it's hiding something.",
+        description: 'An abstract painting hangs on the wall.',
         capabilities: { openable: false, lockable: false, breakable: false, movable: true, powerable: false, container: false, readable: false, inputtable: false },
         state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
         media: { images: { default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759604943/picture_on_wall_fcx10j.png', description: 'A painting on the wall of the cafe.', hint: 'abstract painting' } } },
@@ -191,7 +191,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         id: 'obj_wall_safe' as GameObjectId,
         name: 'Wall Safe',
         archetype: 'Container',
-        description: 'A small, steel safe is set into the wall. It looks sturdy and has a keyhole.',
+        description: 'A small, steel safe is set into the wall.',
         capabilities: { openable: true, lockable: true, breakable: false, movable: false, powerable: false, container: true, readable: false, inputtable: false },
         state: { isOpen: false, isLocked: true, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
         inventory: { items: ['item_secret_document'] as ItemId[], capacity: 1 },
@@ -203,7 +203,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         },
         handlers: {
             onExamine: {
-                success: { message: "A small, steel safe is set into the wall. It has a keyhole." },
+                success: { message: "Up close, the safe looks old but very sturdy. It has a single, small keyhole." },
                 fail: { message: "" }
             },
             onUse: [
@@ -234,7 +234,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         id: 'obj_coffee_machine' as GameObjectId,
         name: 'Coffee Machine',
         archetype: 'Device',
-        description: "It's a high-end Italian model, very expensive but totally worth it. The coffee tastes amazing and the milk foam is as soft as clouds. A small compartment seems loose.",
+        description: "It's a high-end Italian coffee machine, gleaming under the cafe lights.",
         capabilities: { openable: false, lockable: false, breakable: true, movable: false, powerable: false, container: true, readable: false, inputtable: false },
         state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
         inventory: { items: ['item_deposit_key'] as ItemId[], capacity: 1 },
@@ -246,7 +246,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         },
         handlers: {
             onExamine: {
-                success: { message: "It's a high-end Italian coffee machine. The barista polishes it lovingly. A small service compartment on the side seems to be stuck." },
+                success: { message: "The barista polishes it lovingly. Up close, you notice a small service compartment on the side seems to be stuck or jammed shut." },
                 fail: { message: "" }
             },
             onMove: {
@@ -667,13 +667,31 @@ const locations: Record<LocationId, Location> = {
     'loc_cafe_interior': {
         locationId: 'loc_cafe_interior' as LocationId,
         name: 'The Cafe Interior',
-        sceneDescription: 'You are inside The Daily Grind. \n\nIt\'s a bustling downtown cafe, smelling of coffee and rain. A puddle of rainwater is near the door, and a discarded magazine lies on an empty table.',
+        sceneDescription: 'You are inside The Daily Grind. It\'s a bustling downtown cafe, smelling of coffee and rain.',
         sceneImage: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761156561/bustling_cafe_bluwgq.jpg', description: 'A view of the bustling cafe interior.', hint: 'bustling cafe' },
         coord: { x: 1, y: 1, z: 0 },
         objects: ['obj_brown_notebook', 'obj_chalkboard_menu', 'obj_magazine', 'obj_bookshelf', 'obj_painting', 'obj_coffee_machine'] as GameObjectId[],
         npcs: ['npc_barista', 'npc_manager'] as NpcId[],
         entryPortals: ['portal_street_to_cafe' as PortalId],
-        exitPortals: ['portal_cafe_to_street' as PortalId]
+        exitPortals: ['portal_cafe_to_street' as PortalId],
+        zones: [
+            {
+                title: 'At the main counter',
+                objectIds: ['obj_chalkboard_menu', 'obj_coffee_machine']
+            },
+            {
+                title: 'On the wall',
+                objectIds: ['obj_painting', 'obj_wall_safe']
+            },
+            {
+                title: 'On a nearby table',
+                objectIds: ['obj_brown_notebook', 'obj_magazine']
+            },
+            {
+                title: 'In the corner',
+                objectIds: ['obj_bookshelf']
+            }
+        ]
     }
 };
 
@@ -794,20 +812,17 @@ export const game: Game = {
     *   **CORRECT:** \`{"agentResponse": "Copy that, Burt. Taking a look at the painting now.", "commandToExecute": "examine \\"Painting on the wall\\""}\`
     *   **INCORRECT:** \`{"agentResponse": "You see a painting. Behind it is a note.", "commandToExecute": "examine \\"Painting on the wall\\""}\`
 4.  **Handle Ambiguity:** If Burt's command is vague (e.g., "look at the book"), use the most logical default action. 'examine' is a good default.
-5.  **Interaction Trap:** If Burt is interacting with an object and tries to interact with a *different* one, you MUST use this specific response: \`{"agentResponse": "Whoa there, Burt. We're zeroed in on the [current object] right now. If you want to check something else, we need to 'exit' this first.", "commandToExecute": "invalid"}\`
+5.  **Interaction Trap:** If Burt is currently interacting with an object (e.g., after using 'go to notebook') and tries to interact with a *different* one, you MUST use this specific response: \`{"agentResponse": "Whoa there, Burt. We're zeroed in on the {{objectName}} right now. If you want to check something else, we need to 'exit' this first.", "commandToExecute": "invalid"}\`
 6.  **Invalid/Conversational Input:** If Burt's input is illogical ("eat the SD card") or conversational ("what now?"), gently guide him back to the case.
     *   **Illogical:** \`{"agentResponse": "I don't think that's a good idea, Burt. We might need that as evidence. Let's rethink.", "commandToExecute": "invalid"}\`
-    *   **Conversational:** \`{"agentResponse": "Let's focus on the objective: [current chapter goal]. What's our next move?", "commandToExecute": "invalid"}\`
+    *   **Conversational:** \`{"agentResponse": "Let's focus on the objective: {{chapterGoal}}. What's our next move?", "commandToExecute": "invalid"}\`
 7.  **Implicit Player Items:** Burt has default equipment like a "Phone". He doesn't need to see it to use it. If a command implies using the phone (e.g., 'use sd card'), you should map it to the direct action.
-    *   Player says: "use sd card" -> Your command should be: \`use "SD Card"\`
-8.  **Physical Interaction:** Map gentle physical interactions like "put hand in", "touch", or "feel" to the 'examine' command.
-9.  **Breaking Things:** If the player tries to break an object without a tool (e.g., with their "fist"), your response must guide them to find a tool. If they try to use a plausible tool, route it to a 'use' command.
-    *   Player says: "punch the coffee machine" -> Your response: \`{"agentResponse": "Easy there, Burt. Your fist isn't going to cut it. We'll need a tool if we want to break this.", "commandToExecute": "invalid"}\`
-    *   Player says: "hit coffee machine with pipe" -> Your response: \`{"agentResponse": "Good thinking, Burt. Let's see if this works.", "commandToExecute": "use \\"Iron Pipe\\" on \\"Coffee Machine\\""}\`
-10. **Moving Objects:** If the player wants to 'move' an object or 'look behind' it, always map this to the 'move' command.
-    *   Player says: "look behind the chalkboard" -> Your response: \`{"agentResponse": "Good idea. Let's see if anything's back there.", "commandToExecute": "move \\"Chalkboard Menu\\""}\`
-11. **Using Keys:** If a player tries to use a key on a lock, map it to the 'use <key> on <lock>' command.
-    *   Player says: "open safe with key" -> Your response: \`{"agentResponse": "Let's see if this key fits.", "commandToExecute": "use \\"Deposit Box Key\\" on \\"Wall Safe\\""}\`
+8.  **Direct Password Attempts:** If the player's input IS the password phrase for a known locked object, map it to the 'password' command.
+    *   Player says: "Justice for Silas Bloom" -> Your response: \`{"agentResponse": "Worth a shot, Burt. Let's try that phrase.", "commandToExecute": "password \\"Brown Notebook\\" justice for silas bloom"}\`
+9.  **Restart Command:** If the player says "restart" or "start over", map their command to the `restart` command.
+    *   Player says: "start over" -> Your response: \`{"agentResponse": "Copy that. Resetting the simulation.", "commandToExecute": "restart"}\`
+10. **Mini-game Help:** If the player asks about the "mini game" or "puzzle link", deflect gracefully.
+    *   Player says: "how do I play the mini game?" -> Your response: \`{"agentResponse": "The link for that puzzle is in the object's description, Burt. Just 'examine' it again to see it.", "commandToExecute": "invalid"}\`
 
 
 **Your Task Flow:**
