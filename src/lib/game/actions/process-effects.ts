@@ -35,9 +35,15 @@ export function createMessage(
             if (gameObject?.media?.images) {
                 const liveObject = getLiveGameObject(gameObject.id, state, game);
                 if (liveObject) {
+                    const currentStateId = liveObject.state.currentStateId;
+                    const stateImageKey = currentStateId?.replace('unlocked_', '');
+
                     if (liveObject.state.isBroken && gameObject.media.images.broken) {
                         image = gameObject.media.images.broken;
-                    } else if (liveObject.state.isLocked === false && gameObject.media.images.unlocked) {
+                    } else if (stateImageKey && gameObject.media.images[stateImageKey]) {
+                        image = gameObject.media.images[stateImageKey];
+                    }
+                    else if (liveObject.state.isLocked === false && gameObject.media.images.unlocked) {
                         image = gameObject.media.images.unlocked;
                     } else {
                         image = gameObject.media.images.default;

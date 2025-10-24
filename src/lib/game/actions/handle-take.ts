@@ -1,7 +1,7 @@
 
 
 import { CommandResult } from "@/app/actions";
-import type { Game, PlayerState } from "../types";
+import type { Game, GameObjectId, PlayerState } from "../types";
 import { findItemInContext, getLiveGameObject } from "./helpers";
 import { createMessage, processEffects } from "./process-effects";
 import { normalizeName } from "@/lib/utils";
@@ -29,12 +29,14 @@ export function handleTake(state: PlayerState, targetName: string, game: Game): 
 
   // Find which container the item is in and remove it
   let itemFoundAndRemoved = false;
+  let containerId: GameObjectId | null = null;
   const visibleObjectIds = newState.locationStates[newState.currentLocationId]?.objects || [];
   for (const objId of visibleObjectIds) {
     const liveObject = getLiveGameObject(objId, newState, game);
     if (liveObject && liveObject.state.isOpen) {
       const currentObjectItems = liveObject.state.items || [];
       if (currentObjectItems.includes(itemToTake.id)) {
+        containerId = objId;
         const newObjectItems = currentObjectItems.filter(id => id !== itemToTake.id);
         newState.objectStates[objId].items = newObjectItems;
         itemFoundAndRemoved = true;
@@ -44,13 +46,19 @@ export function handleTake(state: PlayerState, targetName: string, game: Game): 
   }
 
   if (!itemFoundAndRemoved) {
-      // This case should ideally not be reached if findItemInContext works correctly,
-      // but it's a good safeguard.
       return { newState: state, messages: [createMessage('narrator', narratorName, `You see the ${itemToTake.name}, but can't seem to pick it up.`)] };
   }
 
   // Add item to player's inventory
   newState.inventory.push(itemToTake.id);
+
+  // Special logic for the safe: if it's now empty, change its state
+  if (containerId === 'obj_wall_safe') {
+      const safeState = newState.objectStates[containerId];
+      if (safeState && safeState.items && safeState.items.length === 0) {
+          safeState.currentStateId = 'unlocked_empty';
+      }
+  }
 
   // Process success effects
   const successHandler = itemToTake.handlers?.onTake?.success;
@@ -61,4 +69,3 @@ export function handleTake(state: PlayerState, targetName: string, game: Game): 
   result.messages.unshift(createMessage('narrator', narratorName, successMessage));
   return result;
 }
-

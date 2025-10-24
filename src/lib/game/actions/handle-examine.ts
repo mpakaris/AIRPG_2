@@ -33,20 +33,33 @@ export function handleExamine(state: PlayerState, targetName: string, game: Game
         }
         
         let messageContent: string;
-        
-        // --- State-based description from stateMap ---
-        if (liveObject.gameLogic.stateMap && liveObject.state.currentStateId && liveObject.gameLogic.stateMap[liveObject.state.currentStateId]) {
-            messageContent = liveObject.gameLogic.stateMap[liveObject.state.currentStateId].description || liveObject.gameLogic.description;
-        } else {
-            // --- Legacy description logic ---
-            const flag = examinedObjectFlag(liveObject.gameLogic.id);
-            const isAlreadyExamined = newState.flags.includes(flag as any);
-            const onExamine = liveObject.gameLogic.handlers.onExamine;
+        let imageToDisplay = liveObject.gameLogic.media?.images?.default; // Default image
 
-            if (isAlreadyExamined && onExamine?.alternateMessage) {
-                messageContent = onExamine.alternateMessage;
-            } else if (onExamine?.success.message) {
-                messageContent = onExamine.success.message;
+        // Check if player is interacting closely
+        const isInteracting = state.interactingWithObject === liveObject.gameLogic.id;
+
+        // --- StateMap Logic ---
+        const currentStateId = liveObject.state.currentStateId;
+        const stateMapEntry = currentStateId ? liveObject.gameLogic.stateMap?.[currentStateId] : undefined;
+
+        if (stateMapEntry) {
+            // Get description from stateMap, prioritizing interaction-specific overrides
+            if (isInteracting && stateMapEntry.overrides?.onExamine) {
+                messageContent = stateMapEntry.overrides.onExamine.success.message;
+            } else {
+                messageContent = stateMapEntry.description || liveObject.gameLogic.description;
+            }
+            // Get image from stateMap
+            const stateImageKey = currentStateId.replace('unlocked_', '');
+            if (liveObject.gameLogic.media?.images?.[stateImageKey]) {
+                imageToDisplay = liveObject.gameLogic.media.images[stateImageKey];
+            }
+        } 
+        // --- Legacy Handler Logic ---
+        else {
+            const onExamine = liveObject.gameLogic.handlers.onExamine;
+            if (isInteracting && onExamine?.success.message) {
+                 messageContent = onExamine.success.message;
             } else {
                 messageContent = liveObject.gameLogic.description;
             }
@@ -56,8 +69,8 @@ export function handleExamine(state: PlayerState, targetName: string, game: Game
             'narrator',
             narratorName,
             messageContent,
-            'image',
-            { id: liveObject.gameLogic.id, game, state: newState, showEvenIfExamined: false }
+            imageToDisplay ? 'image' : 'text',
+            imageToDisplay ? { id: liveObject.gameLogic.id, game, state: newState, showEvenIfExamined: true } : undefined
         );
         
         // Set the 'examined' flag if it's the first time

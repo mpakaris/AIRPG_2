@@ -1,5 +1,4 @@
 
-
 import type { Game, GameId, ChapterId, LocationId, GameObjectId, ItemId, NpcId, Flag, WorldId, StructureId, CellId, PortalId, GameObject, Item, NPC, Location, Portal, Structure, World, Chapter } from './types';
 
 // --- Static Game Data ---
@@ -198,7 +197,8 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         media: {
             images: {
                 default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761263220/safe_behind_Painting_dbo6qc.png', description: 'A closed wall safe.', hint: 'wall safe' },
-                unlocked: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761263220/safe_behind_painting_open_tpmf0m.png', description: 'An open wall safe containing a document.', hint: 'open safe' }
+                unlocked: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761263220/safe_behind_painting_open_tpmf0m.png', description: 'An open wall safe containing a document.', hint: 'open safe' },
+                empty: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761293940/safe_behind_painting_open_empty_pn2js2.png', description: 'An open, empty wall safe.', hint: 'empty safe' }
             }
         },
         handlers: {
@@ -209,18 +209,39 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             onUse: [
                 {
                     itemId: 'item_deposit_key' as ItemId,
-                    conditions: [{ type: 'NO_FLAG', targetId: 'safe_is_unlocked' as Flag }],
                     success: {
                         message: "The key from the coffee machine fits perfectly. You turn it, and the safe door swings open with a satisfying clunk. Inside, there's a single, thick file marked 'CONFIDENTIAL'.",
                         effects: [
                             { type: 'SET_FLAG', flag: 'safe_is_unlocked' as Flag },
-                            { type: 'SET_OBJECT_STATE', objectId: 'obj_wall_safe', state: { isLocked: false, isOpen: true, currentStateId: 'unlocked' } },
-                            { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'The safe is open, revealing a confidential file.', imageId: 'obj_wall_safe' }
+                            { type: 'SET_OBJECT_STATE', objectId: 'obj_wall_safe', state: { isLocked: false, isOpen: true, currentStateId: 'unlocked_with_document' } },
                         ]
                     },
                     fail: { message: "You've already unlocked the safe." }
                 }
             ]
+        },
+        stateMap: {
+            'default': { // Locked state
+                description: "A small, steel safe is set into the wall. It's locked.",
+            },
+            'unlocked_with_document': {
+                description: "The safe is open. Inside, you see a thick confidential file.",
+                overrides: {
+                    onExamine: {
+                        success: { message: "The safe is open. Inside, you see a thick confidential file." },
+                        fail: { message: "" }
+                    }
+                }
+            },
+            'unlocked_empty': {
+                description: "You already cracked that safe open. There is nothing left behind.",
+                overrides: {
+                    onExamine: {
+                        success: { message: "You already cracked that safe open. There is nothing left behind." },
+                        fail: { message: "" }
+                    }
+                }
+            }
         },
         fallbackMessages: { 
             default: "That doesn't work on the safe.",
@@ -228,7 +249,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             notMovable: "It's built into the wall. It's not going anywhere."
         },
         design: { authorNotes: "Final puzzle for chapter 1. Opened by the key from the coffee machine." },
-        version: { schema: "1.0", content: "1.0" }
+        version: { schema: "1.0", content: "1.1" }
     },
     'obj_coffee_machine': {
         id: 'obj_coffee_machine' as GameObjectId,
@@ -819,7 +840,7 @@ export const game: Game = {
 7.  **Implicit Player Items:** Burt has default equipment like a "Phone". He doesn't need to see it to use it. If a command implies using the phone (e.g., 'use sd card'), you should map it to the direct action.
 8.  **Direct Password Attempts:** If the player's input IS the password phrase for a known locked object, map it to the 'password' command.
     *   Player says: "Justice for Silas Bloom" -> Your response: \`{"agentResponse": "Worth a shot, Burt. Let's try that phrase.", "commandToExecute": "password \\"Brown Notebook\\" justice for silas bloom"}\`
-9.  **Restart Command:** If the player says "restart" or "start over", map their command to the `restart` command.
+9.  **Restart Command:** If the player says "restart" or "start over", map their command to the \`restart\` command.
     *   Player says: "start over" -> Your response: \`{"agentResponse": "Copy that. Resetting the simulation.", "commandToExecute": "restart"}\`
 10. **Mini-game Help:** If the player asks about the "mini game" or "puzzle link", deflect gracefully.
     *   Player says: "how do I play the mini game?" -> Your response: \`{"agentResponse": "The link for that puzzle is in the object's description, Burt. Just 'examine' it again to see it.", "commandToExecute": "invalid"}\`
