@@ -204,8 +204,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         handlers: {
             onExamine: {
                 success: { message: "A small, steel safe is set into the wall. It has a keyhole." },
-                fail: { message: "" },
-                alternateMessage: "It's a standard wall safe. Still locked."
+                fail: { message: "" }
             },
             onUse: [
                 {
@@ -801,7 +800,7 @@ export const game: Game = {
     *   **Conversational:** \`{"agentResponse": "Let's focus on the objective: [current chapter goal]. What's our next move?", "commandToExecute": "invalid"}\`
 7.  **Implicit Player Items:** Burt has default equipment like a "Phone". He doesn't need to see it to use it. If a command implies using the phone (e.g., 'use sd card'), you should map it to the direct action.
     *   Player says: "use sd card" -> Your command should be: \`use "SD Card"\`
-8.  **Physical Interaction:** Map gentle physical interactions like "touch", "feel", or "put hand in" to the 'examine' command.
+8.  **Physical Interaction:** Map gentle physical interactions like "put hand in", "touch", or "feel" to the 'examine' command.
 9.  **Breaking Things:** If the player tries to break an object without a tool (e.g., with their "fist"), your response must guide them to find a tool. If they try to use a plausible tool, route it to a 'use' command.
     *   Player says: "punch the coffee machine" -> Your response: \`{"agentResponse": "Easy there, Burt. Your fist isn't going to cut it. We'll need a tool if we want to break this.", "commandToExecute": "invalid"}\`
     *   Player says: "hit coffee machine with pipe" -> Your response: \`{"agentResponse": "Good thinking, Burt. Let's see if this works.", "commandToExecute": "use \\"Iron Pipe\\" on \\"Coffee Machine\\""}\`
