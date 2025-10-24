@@ -8,12 +8,15 @@ import { normalizeName } from "@/lib/utils";
 import { handleRead } from "./handle-read";
 
 export async function handleOpen(state: PlayerState, targetName: string, game: Game): Promise<CommandResult> {
-    const location = game.locations[state.currentLocationId];
     const narratorName = "Narrator";
     const normalizedTargetName = normalizeName(targetName);
 
+    // --- CORRECTED LOGIC ---
+    // Get the dynamic list of visible objects from the player's state.
+    const visibleObjectIds = state.locationStates[state.currentLocationId]?.objects || [];
+
     // First, try to find a GameObject with that name
-    const targetObjectId = location.objects.find(id =>
+    const targetObjectId = visibleObjectIds.find(id =>
         normalizeName(game.gameObjects[id]?.name).includes(normalizedTargetName)
     );
 
@@ -77,3 +80,4 @@ export async function handleOpen(state: PlayerState, targetName: string, game: G
     // If neither an object nor an item was found
     return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${normalizedTargetName}" to open.`)] };
 }
+
