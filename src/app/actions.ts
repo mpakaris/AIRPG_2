@@ -323,7 +323,8 @@ export async function processCommand(
             case 'examine':
             case 'look':
                 if(restOfCommand === 'around') {
-                     commandHandlerResult = await handleLook(currentState, game);
+                     const location = game.locations[currentState.currentLocationId];
+                     commandHandlerResult = await handleLook(currentState, game, location.sceneDescription);
                 } else if (restOfCommand.startsWith('behind')) {
                     const target = restOfCommand.replace('behind ', '').trim();
                     commandHandlerResult = handleMove(currentState, target, game);
@@ -637,3 +638,5 @@ export async function generateStoryForChapter(userId: string, gameId: GameId, ch
 
     return { newState };
 }
+
+    
