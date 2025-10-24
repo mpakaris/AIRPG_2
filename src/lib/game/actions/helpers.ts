@@ -68,7 +68,8 @@ export function findItemInContext(state: PlayerState, game: Game, targetName: st
     }
 
     // 2. Check items inside all open objects in the current location
-    for (const objId of location.objects) {
+    const visibleObjectIds = state.locationStates[state.currentLocationId]?.objects || [];
+    for (const objId of visibleObjectIds) {
          const liveObject = getLiveGameObject(objId, state, game);
          if (liveObject && liveObject.state.isOpen) {
             const itemsInContainer = liveObject.state.items || [];
