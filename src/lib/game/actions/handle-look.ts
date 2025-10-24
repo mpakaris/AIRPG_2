@@ -3,8 +3,8 @@
 
 import { type CommandResult } from "@/app/actions";
 import type { Game, PlayerState } from "../types";
-import { createMessage } from "@/lib/game/actions/process-effects";
-import { getLiveGameObject } from "@/lib/game/actions/helpers";
+import { createMessage } from "./process-effects";
+import { getLiveGameObject } from "./helpers";
 
 export async function handleLook(state: PlayerState, game: Game, summary: string): Promise<CommandResult> {
   const narratorName = "Narrator";
