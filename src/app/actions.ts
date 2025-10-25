@@ -284,6 +284,27 @@ export async function processCommand(
                     commandHandlerResult = await handleUse(currentState, restOfCommand, '', game);
                 }
                 break;
+            case 'open':
+                commandHandlerResult = await handleOpen(currentState, restOfCommand, game);
+                break;
+            case 'read':
+                commandHandlerResult = await handleRead(currentState, restOfCommand.replace(/"/g, ''), game);
+                break;
+            case 'password':
+            case 'say':
+            case 'enter':
+                commandHandlerResult = await processPassword(currentState, commandToExecute, game);
+                break;
+            case 'close':
+            case 'exit':
+                if (currentState.interactingWithObject) {
+                    commandHandlerResult = await processEffects(currentState, [{type: 'END_INTERACTION'}], game);
+                } else if (currentState.activeConversationWith) {
+                    commandHandlerResult = await processEffects(currentState, [{type: 'END_CONVERSATION'}], game);
+                } else {
+                    commandHandlerResult = { newState: currentState, messages: [] };
+                }
+                break;
         }
     }
 
@@ -332,6 +353,7 @@ export async function processCommand(
 
         const commandToExecute = aiResponse.commandToExecute.toLowerCase();
         
+        // We re-route the AI's chosen command back through the simple parser logic.
         const verbMatch = commandToExecute.match(/^(\w+)\s*/);
         const verb = verbMatch ? verbMatch[1] : commandToExecute;
         const restOfCommand = commandToExecute.substring((verbMatch ? verbMatch[0].length : verb.length)).trim();

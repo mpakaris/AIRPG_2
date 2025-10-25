@@ -1,3 +1,4 @@
+
 'use server';
 
 import type { Game, PlayerState, CommandResult } from "@/lib/game/types";
@@ -12,7 +13,7 @@ export async function handleMove(state: PlayerState, targetName: string, game: G
     const normalizedTargetName = normalizeName(targetName);
 
     const targetObjectId = location.objects.find(id =>
-        normalizeName(game.gameObjects[id]?.name).includes(normalizedTargetName)
+        game.gameObjects[id] && normalizeName(game.gameObjects[id].name).includes(normalizedTargetName)
     );
 
     if (!targetObjectId) {
