@@ -10,8 +10,9 @@ import { initializeFirebase } from '@/firebase';
 import { doc, setDoc, getDoc, collection, getDocs } from 'firebase/firestore';
 import { getInitialState } from '@/lib/game-state';
 import { dispatchMessage } from '@/lib/whinself-service';
-import { processEffects, createMessage } from '@/lib/game/actions/process-effects';
-import { getLiveGameObject } from '@/lib/game/actions/helpers';
+import { processEffects } from '@/lib/game/actions/process-effects';
+import { createMessage } from '@/lib/game/utils/effects';
+import { getLiveGameObject } from '@/lib/game/utils/helpers';
 import { handleConversation } from '@/lib/game/actions/handle-conversation';
 import { handleExamine } from '@/lib/game/actions/handle-examine';
 import { handleGo } from '@/lib/game/actions/handle-go';
@@ -373,7 +374,7 @@ export async function processCommand(
             case 'close':
             case 'exit':
                 if (currentState.interactingWithObject) {
-                    commandHandlerResult = processEffects(currentState, [{type: 'END_INTERACTION'}], game);
+                    commandHandlerResult = await processEffects(currentState, [{type: 'END_INTERACTION'}], game);
                 } else {
                     commandHandlerResult = { newState: currentState, messages: [] };
                 }

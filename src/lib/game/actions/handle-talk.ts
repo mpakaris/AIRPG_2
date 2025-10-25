@@ -1,8 +1,7 @@
-
 'use server';
 
-import type { CommandResult, NpcId, Game, PlayerState } from "@/lib/game/types";
-import { createMessage, processEffects } from "@/lib/game/actions/process-effects";
+import type { NpcId, Game, PlayerState, CommandResult } from "@/lib/game/types";
+import { createMessage, processEffects } from "@/lib/game/utils/effects";
 import { normalizeName } from "@/lib/utils";
 
 const examinedObjectFlag = (id: string) => `examined_${id}`;
@@ -19,7 +18,7 @@ export async function handleTalk(state: PlayerState, npcName: string, game: Game
         let messages: any[] = [];
         
         const startEffects = npc.startConversationEffects || [];
-        const effectResult = processEffects(newState, startEffects, game);
+        const effectResult = await processEffects(newState, startEffects, game);
         newState = effectResult.newState!;
         messages.push(...effectResult.messages);
 

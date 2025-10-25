@@ -1,9 +1,8 @@
-
 'use server';
 
-import type { CommandResult, GameObjectId, Game, PlayerState } from "@/lib/game/types";
-import { findItemInContext, getLiveGameObject } from "@/lib/game/actions/helpers";
-import { createMessage, processEffects } from "@/lib/game/actions/process-effects";
+import type { GameObjectId, Game, PlayerState, CommandResult } from "@/lib/game/types";
+import { findItemInContext, getLiveGameObject } from "@/lib/game/utils/helpers";
+import { createMessage, processEffects } from "@/lib/game/utils/effects";
 import { normalizeName } from "@/lib/utils";
 
 export async function handleTake(state: PlayerState, targetName: string, game: Game): Promise<CommandResult> {
@@ -65,7 +64,7 @@ export async function handleTake(state: PlayerState, targetName: string, game: G
   const effects = successHandler?.effects || [];
   const successMessage = successHandler?.message || `You take the ${itemToTake.name}.`;
   
-  const result = processEffects(newState, effects, game);
+  const result = await processEffects(newState, effects, game);
   result.messages.unshift(createMessage('narrator', narratorName, successMessage));
   return result;
 }

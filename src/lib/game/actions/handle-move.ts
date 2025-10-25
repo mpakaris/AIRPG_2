@@ -1,9 +1,8 @@
-
 'use server';
 
-import type { CommandResult, Game, PlayerState } from "@/lib/game/types";
-import { getLiveGameObject } from "@/lib/game/actions/helpers";
-import { createMessage, processEffects } from "@/lib/game/actions/process-effects";
+import type { Game, PlayerState, CommandResult } from "@/lib/game/types";
+import { getLiveGameObject } from "@/lib/game/utils/helpers";
+import { createMessage, processEffects } from "@/lib/game/utils/effects";
 import { normalizeName } from "@/lib/utils";
 
 export async function handleMove(state: PlayerState, targetName: string, game: Game): Promise<CommandResult> {
@@ -53,7 +52,7 @@ export async function handleMove(state: PlayerState, targetName: string, game: G
             console.error(`ERROR: onMove handler for ${liveObject.gameLogic.id} is missing a 'success' block.`);
             return { newState: state, messages: [createMessage('narrator', narratorName, `You move the ${liveObject.gameLogic.name} around, but find nothing of interest.`)]};
         }
-        const result = processEffects(state, onMoveHandler.success.effects || [], game);
+        const result = await processEffects(state, onMoveHandler.success.effects || [], game);
         result.messages.unshift(createMessage('narrator', narratorName, onMoveHandler.success.message));
         return result;
     } else {

@@ -1,9 +1,8 @@
-
 'use server';
 
-import type { CommandResult, Game, GameObject, GameObjectState, PlayerState } from "@/lib/game/types";
-import { getLiveGameObject } from "@/lib/game/actions/helpers";
-import { createMessage, processEffects } from "@/lib/game/actions/process-effects";
+import type { Game, GameObject, GameObjectState, PlayerState, CommandResult } from "@/lib/game/types";
+import { getLiveGameObject } from "@/lib/game/utils/helpers";
+import { createMessage, processEffects } from "@/lib/game/utils/effects";
 import { normalizeName } from "@/lib/utils";
 
 const examinedObjectFlag = (id: string) => `examined_${id}`;
@@ -71,7 +70,7 @@ export async function processPassword(state: PlayerState, command: string, game:
         newState.objectStates[targetObject.gameLogic.id].isOpen = true; // Also open it
         
         const effects = handler?.success?.effects || [];
-        const result = processEffects(newState, effects, game);
+        const result = await processEffects(newState, effects, game);
         
         const unlockMessage = createMessage(
             'narrator', 

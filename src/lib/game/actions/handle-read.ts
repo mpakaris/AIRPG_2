@@ -1,9 +1,8 @@
-
 'use server';
 
-import type { CommandResult, Game, PlayerState } from "@/lib/game/types";
-import { findItemInContext } from "@/lib/game/actions/helpers";
-import { createMessage, processEffects } from "@/lib/game/actions/process-effects";
+import type { Game, PlayerState, CommandResult } from "@/lib/game/types";
+import { findItemInContext } from "@/lib/game/utils/helpers";
+import { createMessage, processEffects } from "@/lib/game/utils/effects";
 import { normalizeName } from "@/lib/utils";
 
 
@@ -57,7 +56,7 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
     const handler = itemToRead.handlers?.onRead;
     if (handler && handler.success) {
         const effectsToProcess = Array.isArray(handler.success.effects) ? handler.success.effects : [];
-        let result = processEffects(newState, effectsToProcess, game);
+        let result = await processEffects(newState, effectsToProcess, game);
         
         if (handler.success.message) {
             const message = createMessage('narrator', narratorName, handler.success.message, 'text');

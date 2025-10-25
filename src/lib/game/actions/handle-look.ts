@@ -1,8 +1,8 @@
 'use server';
 
-import type { CommandResult, Game, PlayerState } from "@/lib/game/types";
-import { createMessage } from "@/lib/game/actions/process-effects";
-import { getLiveGameObject } from "@/lib/game/actions/helpers";
+import type { Game, PlayerState, CommandResult } from "@/lib/game/types";
+import { createMessage } from "@/lib/game/utils/effects";
+import { getLiveGameObject } from "@/lib/game/utils/helpers";
 
 export async function handleLook(state: PlayerState, game: Game, summary: string): Promise<CommandResult> {
   const narratorName = "Narrator";

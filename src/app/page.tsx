@@ -1,3 +1,4 @@
+
 import { GameClient } from '@/components/game/GameClient';
 import { getInitialState } from '@/lib/game-state';
 import type { PlayerState, Message, Game, GameId } from '@/lib/game/types';

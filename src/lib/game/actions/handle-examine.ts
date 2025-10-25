@@ -1,9 +1,8 @@
-
 'use server';
 
-import type { CommandResult, Game, PlayerState } from "@/lib/game/types";
-import { findItemInContext, getLiveGameObject, getLiveItem } from "@/lib/game/actions/helpers";
-import { createMessage } from "@/lib/game/actions/process-effects";
+import type { Game, PlayerState, CommandResult } from "@/lib/game/types";
+import { findItemInContext, getLiveGameObject, getLiveItem } from "@/lib/game/utils/helpers";
+import { createMessage } from "@/lib/game/utils/effects";
 import { normalizeName } from "@/lib/utils";
 
 const examinedObjectFlag = (id: string) => `examined_${id}`;

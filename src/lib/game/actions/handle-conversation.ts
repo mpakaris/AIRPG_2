@@ -1,8 +1,9 @@
+'use server';
+
 import { generateNpcChatter, selectNpcResponse } from "@/ai";
-import type { CommandResult } from "@/lib/game/types";
-import type { Game, NPC, NpcId, NpcState, PlayerState, Topic } from "../types";
-import { createMessage, processEffects } from "./process-effects";
-import { getLiveNpc } from "./helpers";
+import type { Game, NPC, NpcId, NpcState, PlayerState, Topic, CommandResult } from "@/lib/game/types";
+import { createMessage, processEffects } from "@/lib/game/utils/effects";
+import { getLiveNpc } from "@/lib/game/utils/helpers";
 
 const CONVERSATION_END_KEYWORDS = ['goodbye', 'bye', 'leave', 'stop', 'end', 'exit', 'thank you and goodbye'];
 
@@ -14,7 +15,7 @@ function isEndingConversation(input: string): boolean {
     });
 }
 
-function checkDemotion(npc: NPC, state: PlayerState, game: Game): PlayerState {
+async function checkDemotion(npc: NPC, state: PlayerState, game: Game): Promise<PlayerState> {
     let liveNpcState = getLiveNpc(npc.id, state, npc);
     if (liveNpcState.stage === 'demoted' || !npc.demoteRules) {
         return state;
@@ -32,7 +33,7 @@ function checkDemotion(npc: NPC, state: PlayerState, game: Game): PlayerState {
         newState.npcStates[npc.id] = { ...liveNpcState, stage: then.setStage, importance: then.setImportance };
         
         // This is a bit of a hack for now. In a full event system, this would be cleaner.
-        const demotionResult = processEffects(newState, [{ type: 'DEMOTE_NPC', npcId: npc.id }], game);
+        const demotionResult = await processEffects(newState, [{ type: 'DEMOTE_NPC', npcId: npc.id }], game);
         return demotionResult.newState;
     }
     
@@ -114,9 +115,9 @@ async function handleScriptedChat(npc: NPC, state: PlayerState, playerInput: str
     
     const initialMessage = createMessage(npc.id, npc.name, `"${selectedTopic.response.message}"`, 'text', undefined, usage);
     const effectsToProcess = selectedTopic.response.effects || [];
-    let effectResult = processEffects(newState, effectsToProcess, game);
+    let effectResult = await processEffects(newState, effectsToProcess, game);
     
-    effectResult.newState = checkDemotion(npc, effectResult.newState, game);
+    effectResult.newState = await checkDemotion(npc, effectResult.newState, game);
 
     effectResult.messages.unshift(initialMessage);
     return effectResult;
@@ -130,10 +131,10 @@ export async function handleConversation(state: PlayerState, playerInput: string
 
     const npcId = state.activeConversationWith;
     const npc = game.npcs[npcId];
-    let newState = checkDemotion(npc, { ...state }, game);
+    let newState = await checkDemotion(npc, { ...state }, game);
 
     if (isEndingConversation(playerInput)) {
-        return processEffects(newState, [{type: 'END_CONVERSATION'}], game);
+        return await processEffects(newState, [{type: 'END_CONVERSATION'}], game);
     }
     
     if (npc.dialogueType === 'scripted') {

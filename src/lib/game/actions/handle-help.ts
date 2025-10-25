@@ -1,8 +1,7 @@
-
 'use server';
 
 import type { CommandResult, Game, PlayerState } from "@/lib/game/types";
-import { createMessage } from "@/lib/game/actions/process-effects";
+import { createMessage } from "@/lib/game/utils/effects";
 
 export async function handleHelp(state: PlayerState, game: Game): Promise<CommandResult> {
     const chapter = game.chapters[state.currentChapterId];

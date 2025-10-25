@@ -1,9 +1,8 @@
-
 'use server';
 
-import type { CommandResult, Game, PlayerState } from "@/lib/game/types";
-import { findItemInContext, getLiveGameObject } from "@/lib/game/actions/helpers";
-import { createMessage, processEffects } from "@/lib/game/actions/process-effects";
+import type { Game, PlayerState, CommandResult } from "@/lib/game/types";
+import { findItemInContext, getLiveGameObject } from "@/lib/game/utils/helpers";
+import { createMessage, processEffects } from "@/lib/game/utils/effects";
 import { normalizeName } from "@/lib/utils";
 import { handleRead } from "@/lib/game/actions/handle-read";
 
@@ -47,7 +46,7 @@ export async function handleOpen(state: PlayerState, targetName: string, game: G
             const successBlock = onOpen.success;
             const effectsToProcess = Array.isArray(successBlock.effects) ? successBlock.effects : [];
             
-            let result = processEffects(state, effectsToProcess, game);
+            let result = await processEffects(state, effectsToProcess, game);
             
             if (successBlock.message) {
                 result.messages.unshift(createMessage('narrator', narratorName, successBlock.message));

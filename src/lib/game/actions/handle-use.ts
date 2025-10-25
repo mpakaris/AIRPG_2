@@ -1,9 +1,8 @@
-
 'use server';
 
-import type { CommandResult, GameObjectId, Game, PlayerState } from "@/lib/game/types";
-import { findItemInContext, getLiveGameObject } from "@/lib/game/actions/helpers";
-import { createMessage, processEffects } from "@/lib/game/actions/process-effects";
+import type { GameObjectId, Game, PlayerState, CommandResult } from "@/lib/game/types";
+import { findItemInContext, getLiveGameObject } from "@/lib/game/utils/helpers";
+import { createMessage, processEffects } from "@/lib/game/utils/effects";
 import { normalizeName } from "@/lib/utils";
 
 export async function handleUse(state: PlayerState, itemName: string, targetName: string, game: Game): Promise<CommandResult> {
@@ -39,7 +38,7 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
                     });
                     
                     if (conditionsMet) {
-                        const result = processEffects(state, success.effects || [], game);
+                        const result = await processEffects(state, success.effects || [], game);
                         result.messages.unshift(createMessage('narrator', narratorName, success.message));
                         return result;
                     } else {
@@ -55,7 +54,7 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
                 newState.objectStates[targetObject.gameLogic.id].isLocked = false;
                 
                 const effects = unlockHandler.success?.effects || [];
-                const result = processEffects(newState, effects, game);
+                const result = await processEffects(newState, effects, game);
                 result.messages.unshift(createMessage('narrator', narratorName, unlockHandler.success?.message || `You use the ${itemToUse.name} on the ${targetObject.gameLogic.name}. It unlocks!`));
 
                 return result;
@@ -77,7 +76,7 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
                 });
                 
                 if(conditionsMet) {
-                    const result = processEffects(state, success.effects || [], game);
+                    const result = await processEffects(state, success.effects || [], game);
                     result.messages.unshift(createMessage('narrator', narratorName, success.message));
                     return result;
                 } else {
@@ -101,7 +100,7 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
     });
 
     if (conditionsMet) {
-        let result = processEffects(state, success.effects || [], game);
+        let result = await processEffects(state, success.effects || [], game);
         result.messages.unshift(createMessage('narrator', narratorName, success.message));
         return result;
     } else {
