@@ -43,9 +43,14 @@ export async function processEffects(initialState: PlayerState, effects: Effect[
                 }
                 break;
             case 'REVEAL_OBJECT':
-                const locationState = newState.locationStates[newState.currentLocationId];
-                if (locationState && !locationState.objects.includes(effect.objectId)) {
-                    locationState.objects.push(effect.objectId);
+                const locationId = newState.currentLocationId;
+                if (newState.locationStates[locationId] && !newState.locationStates[locationId].objects.includes(effect.objectId)) {
+                    // Create a new array to ensure state change is detected
+                    const newObjects = [...newState.locationStates[locationId].objects, effect.objectId];
+                    newState.locationStates[locationId] = {
+                        ...newState.locationStates[locationId],
+                        objects: newObjects
+                    };
                 }
                 break;
             case 'SHOW_MESSAGE':

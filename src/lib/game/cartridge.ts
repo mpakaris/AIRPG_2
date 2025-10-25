@@ -259,7 +259,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         description: "It's a high-end Italian coffee machine, gleaming under the cafe lights.",
         capabilities: { openable: false, lockable: false, breakable: true, movable: false, powerable: false, container: true, readable: false, inputtable: false },
         state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        inventory: { items: [], capacity: 1 },
+        inventory: { items: ['item_deposit_key' as ItemId], capacity: 1 },
         media: {
             images: {
                 default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761211151/coffee_machine_detail_frexuu.png', description: 'A high-end Italian coffee machine.', hint: 'coffee machine' },
@@ -283,7 +283,6 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         message: "With a sharp crack, the iron pipe shatters the side panel of the coffee machine. A small, ornate key falls out from the broken compartment.",
                         effects: [
                             { type: 'SET_FLAG', flag: 'machine_is_broken' as Flag },
-                            { type: 'SPAWN_ITEM', itemId: 'item_deposit_key' as ItemId, containerId: 'obj_coffee_machine' as GameObjectId },
                             { type: 'SET_OBJECT_STATE', objectId: 'obj_coffee_machine', state: { isBroken: true, isOpen: true, currentStateId: 'broken' } },
                             { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'The side of the coffee machine is now smashed.', imageId: 'obj_coffee_machine' }
                         ]
