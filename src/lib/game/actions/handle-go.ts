@@ -1,7 +1,7 @@
 'use server';
 
 import type { CommandResult, Game, Location, PlayerState, ChapterId, Flag } from "@/lib/game/types";
-import { createMessage } from "@/lib/game/utils/effects";
+import { createMessage } from "@/lib/utils";
 
 const chapterCompletionFlag = (chapterId: ChapterId) => `chapter_${chapterId}_complete` as Flag;
 

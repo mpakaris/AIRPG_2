@@ -2,7 +2,8 @@
 
 import type { Game, PlayerState, CommandResult } from "@/lib/game/types";
 import { findItemInContext, getLiveGameObject } from "@/lib/game/utils/helpers";
-import { createMessage, processEffects } from "@/lib/game/utils/effects";
+import { createMessage } from "@/lib/utils";
+import { processEffects } from "@/lib/game/actions/process-effects";
 import { normalizeName } from "@/lib/utils";
 import { handleRead } from "@/lib/game/actions/handle-read";
 

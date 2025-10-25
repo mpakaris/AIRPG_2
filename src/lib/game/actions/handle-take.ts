@@ -2,7 +2,8 @@
 
 import type { GameObjectId, Game, PlayerState, CommandResult } from "@/lib/game/types";
 import { findItemInContext, getLiveGameObject } from "@/lib/game/utils/helpers";
-import { createMessage, processEffects } from "@/lib/game/utils/effects";
+import { createMessage } from "@/lib/utils";
+import { processEffects } from "@/lib/game/actions/process-effects";
 import { normalizeName } from "@/lib/utils";
 
 export async function handleTake(state: PlayerState, targetName: string, game: Game): Promise<CommandResult> {
@@ -26,7 +27,6 @@ export async function handleTake(state: PlayerState, targetName: string, game: G
     return { newState: state, messages: [createMessage('narrator', narratorName, failMessage)] };
   }
 
-  // Find which container the item is in and remove it
   let itemFoundAndRemoved = false;
   let containerId: GameObjectId | null = null;
   const visibleObjectIds = newState.locationStates[newState.currentLocationId]?.objects || [];
@@ -48,10 +48,8 @@ export async function handleTake(state: PlayerState, targetName: string, game: G
       return { newState: state, messages: [createMessage('narrator', narratorName, `You see the ${itemToTake.name}, but can't seem to pick it up.`)] };
   }
 
-  // Add item to player's inventory
   newState.inventory.push(itemToTake.id);
 
-  // Special logic for the safe: if it's now empty, change its state
   if (containerId === 'obj_wall_safe') {
       const safeState = newState.objectStates[containerId];
       if (safeState && safeState.items && safeState.items.length === 0) {
@@ -59,7 +57,6 @@ export async function handleTake(state: PlayerState, targetName: string, game: G
       }
   }
 
-  // Process success effects
   const successHandler = itemToTake.handlers?.onTake?.success;
   const effects = successHandler?.effects || [];
   const successMessage = successHandler?.message || `You take the ${itemToTake.name}.`;

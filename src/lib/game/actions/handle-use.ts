@@ -2,7 +2,8 @@
 
 import type { GameObjectId, Game, PlayerState, CommandResult } from "@/lib/game/types";
 import { findItemInContext, getLiveGameObject } from "@/lib/game/utils/helpers";
-import { createMessage, processEffects } from "@/lib/game/utils/effects";
+import { createMessage } from "@/lib/utils";
+import { processEffects } from "@/lib/game/actions/process-effects";
 import { normalizeName } from "@/lib/utils";
 
 export async function handleUse(state: PlayerState, itemName: string, targetName: string, game: Game): Promise<CommandResult> {
@@ -15,7 +16,6 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
     return { newState: state, messages: [createMessage('system', 'System', `You don't have a "${itemName}".`)] };
   }
   
-  // Case 1: Using an item on a specific object ("use item on object")
   if (normalizedTargetName) {
     const visibleObjectIds = state.locationStates[state.currentLocationId]?.objects || [];
     
@@ -89,7 +89,6 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
     return { newState: state, messages: [createMessage('narrator', narratorName, `You can't use the "${itemName}" on the "${targetName}".`)] };
   }
   
-  // Case 2: Using an item by itself (like "use SD Card" or "use phone")
   const onUseHandler = itemToUse.handlers.onUse;
   if (onUseHandler && !Array.isArray(onUseHandler)) {
     const { conditions, success, fail } = onUseHandler;

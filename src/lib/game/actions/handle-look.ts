@@ -1,7 +1,7 @@
 'use server';
 
 import type { Game, PlayerState, CommandResult } from "@/lib/game/types";
-import { createMessage } from "@/lib/game/utils/effects";
+import { createMessage } from "@/lib/utils";
 import { getLiveGameObject } from "@/lib/game/utils/helpers";
 
 export async function handleLook(state: PlayerState, game: Game, summary: string): Promise<CommandResult> {

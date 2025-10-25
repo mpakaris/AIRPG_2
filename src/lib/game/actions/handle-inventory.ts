@@ -1,7 +1,7 @@
 'use server';
 
 import type { CommandResult, Game, PlayerState } from "@/lib/game/types";
-import { createMessage } from "@/lib/game/utils/effects";
+import { createMessage } from "@/lib/utils";
 
 export async function handleInventory(state: PlayerState, game: Game): Promise<CommandResult> {
     if (state.inventory.length === 0) {

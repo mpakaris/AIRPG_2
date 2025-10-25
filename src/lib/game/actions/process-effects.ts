@@ -1,14 +1,14 @@
 'use server';
 
 import type { Effect, Game, GameObjectId, ItemId, Message, NpcId, PlayerState, TokenUsage, LocationId, CommandResult } from '@/lib/game/types';
-import { createMessage } from '@/lib/game/utils/effects';
+import { createMessage } from '@/lib/utils';
 
-const examinedObjectFlag = (id: string) => `examined_${id}`;
 
 export async function processEffects(initialState: PlayerState, effects: Effect[], game: Game): Promise<CommandResult> {
     let newState = JSON.parse(JSON.stringify(initialState)); // Deep copy to avoid mutation issues
     const messages: Message[] = [];
     const narratorName = "Narrator";
+    const examinedObjectFlag = (id: string) => `examined_${id}`;
 
     for (const effect of effects) {
         switch (effect.type) {
@@ -89,10 +89,10 @@ export async function processEffects(initialState: PlayerState, effects: Effect[
             case 'SET_STATE':
                 const { targetId, to } = effect;
                 if (game.items[targetId as ItemId]) {
-                    if (!newState.itemStates[targetId as ItemId]) newState.itemStates[targetId as ItemId] = {};
+                    if (!newState.itemStates[targetId as ItemId]) newState.itemStates[targetId as ItemId] = {} as any;
                     newState.itemStates[targetId as ItemId].currentStateId = to;
                 } else if (game.gameObjects[targetId as GameObjectId]) {
-                    if (!newState.objectStates[targetId as GameObjectId]) newState.objectStates[targetId as GameObjectId] = {};
+                    if (!newState.objectStates[targetId as GameObjectId]) newState.objectStates[targetId as GameObjectId] = {} as any;
                     newState.objectStates[targetId as GameObjectId].currentStateId = to;
                 }
                 break;

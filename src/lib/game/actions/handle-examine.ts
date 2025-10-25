@@ -2,7 +2,7 @@
 
 import type { Game, PlayerState, CommandResult } from "@/lib/game/types";
 import { findItemInContext, getLiveGameObject, getLiveItem } from "@/lib/game/utils/helpers";
-import { createMessage } from "@/lib/game/utils/effects";
+import { createMessage } from "@/lib/utils";
 import { normalizeName } from "@/lib/utils";
 
 const examinedObjectFlag = (id: string) => `examined_${id}`;

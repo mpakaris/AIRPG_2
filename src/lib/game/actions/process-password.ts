@@ -2,7 +2,8 @@
 
 import type { Game, GameObject, GameObjectState, PlayerState, CommandResult } from "@/lib/game/types";
 import { getLiveGameObject } from "@/lib/game/utils/helpers";
-import { createMessage, processEffects } from "@/lib/game/utils/effects";
+import { createMessage } from "@/lib/utils";
+import { processEffects } from "@/lib/game/actions/process-effects";
 import { normalizeName } from "@/lib/utils";
 
 const examinedObjectFlag = (id: string) => `examined_${id}`;
@@ -15,14 +16,11 @@ export async function processPassword(state: PlayerState, command: string, game:
     
     const commandLower = command.toLowerCase();
 
-    // Find the target object
     let targetObjectResult = objectsInLocation.find(obj => {
         if (!obj.gameLogic.input || obj.gameLogic.input.type !== 'phrase') return false;
-        // Prioritize object names that appear in the command
         return commandLower.includes(normalizeName(obj.gameLogic.name));
     });
 
-    // If no object is explicitly mentioned, find the single, implicitly targeted object
     if (!targetObjectResult) {
         const passwordObjects = objectsInLocation.filter(obj => obj.state.isLocked && obj.gameLogic.input?.type === 'phrase');
         if (passwordObjects.length === 1) {
@@ -34,16 +32,13 @@ export async function processPassword(state: PlayerState, command: string, game:
 
     const targetObject = targetObjectResult;
 
-    // Check if the object is already unlocked
     if (!targetObject.state.isLocked) {
-        // If already unlocked, bypass the AI and return a direct message.
         return { 
             newState: state, 
             messages: [createMessage('agent', agentName, `No need, Burt. We already unlocked the ${targetObject.gameLogic.name}.`)]
         };
     }
     
-    // Extract the phrase
     const targetObjectNameLower = normalizeName(targetObject.gameLogic.name);
     let phrase = command;
     const objectNameIndex = phrase.toLowerCase().indexOf(targetObjectNameLower);
@@ -51,9 +46,7 @@ export async function processPassword(state: PlayerState, command: string, game:
         phrase = phrase.substring(objectNameIndex + targetObjectNameLower.length);
     }
     
-    // Remove initial command verb if present
     phrase = phrase.replace(/^\s*(password|say|enter|for|is)\s*/i, '');
-    // Clean up quotes and trim
     phrase = normalizeName(phrase);
 
     if (!phrase) {
@@ -67,7 +60,7 @@ export async function processPassword(state: PlayerState, command: string, game:
         let newState = { ...state, objectStates: { ...state.objectStates }};
         if (!newState.objectStates[targetObject.gameLogic.id]) newState.objectStates[targetObject.gameLogic.id] = {} as any;
         newState.objectStates[targetObject.gameLogic.id].isLocked = false;
-        newState.objectStates[targetObject.gameLogic.id].isOpen = true; // Also open it
+        newState.objectStates[targetObject.gameLogic.id].isOpen = true; 
         
         const effects = handler?.success?.effects || [];
         const result = await processEffects(newState, effects, game);

@@ -2,7 +2,8 @@
 
 import { generateNpcChatter, selectNpcResponse } from "@/ai";
 import type { Game, NPC, NpcId, NpcState, PlayerState, Topic, CommandResult } from "@/lib/game/types";
-import { createMessage, processEffects } from "@/lib/game/utils/effects";
+import { createMessage } from "@/lib/utils";
+import { processEffects } from "@/lib/game/actions/process-effects";
 import { getLiveNpc } from "@/lib/game/utils/helpers";
 
 const CONVERSATION_END_KEYWORDS = ['goodbye', 'bye', 'leave', 'stop', 'end', 'exit', 'thank you and goodbye'];
@@ -32,7 +33,6 @@ async function checkDemotion(npc: NPC, state: PlayerState, game: Game): Promise<
         let newState = { ...state, npcStates: { ...state.npcStates } };
         newState.npcStates[npc.id] = { ...liveNpcState, stage: then.setStage, importance: then.setImportance };
         
-        // This is a bit of a hack for now. In a full event system, this would be cleaner.
         const demotionResult = await processEffects(newState, [{ type: 'DEMOTE_NPC', npcId: npc.id }], game);
         return demotionResult.newState;
     }
@@ -145,7 +145,6 @@ export async function handleConversation(state: PlayerState, playerInput: string
         return handleFreeformChat(npc, newState, playerInput, game);
     }
 
-    // Fallback if dialogueType is not set
     return {
         newState: newState,
         messages: [createMessage(npcId, npc.name, `"${npc.goodbyeMessage || 'I have nothing to say.'}"`)]

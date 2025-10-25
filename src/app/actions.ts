@@ -5,13 +5,12 @@ import {
   generateStoryFromLogs
 } from '@/ai';
 import { AVAILABLE_COMMANDS } from '@/lib/game/commands';
-import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectId, GameObjectState, ItemId, Flag, Effect, Chapter, ChapterId, ImageDetails, GameId, User, TokenUsage, Story, Portal, LocationState, CommandResult } from '@/lib/game/types';
+import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectId, GameObjectState, ItemId, Flag, Effect, Chapter, ChapterId, ImageDetails, GameId, User, TokenUsage, Story, Portal, LocationState, CommandResult, CellId } from '@/lib/game/types';
 import { initializeFirebase } from '@/firebase';
 import { doc, setDoc, getDoc, collection, getDocs } from 'firebase/firestore';
 import { getInitialState } from '@/lib/game-state';
 import { dispatchMessage } from '@/lib/whinself-service';
-import { processEffects } from '@/lib/game/actions/process-effects';
-import { createMessage } from '@/lib/game/utils/effects';
+import { createMessage } from '@/lib/utils';
 import { getLiveGameObject } from '@/lib/game/utils/helpers';
 import { handleConversation } from '@/lib/game/actions/handle-conversation';
 import { handleExamine } from '@/lib/game/actions/handle-examine';
@@ -27,20 +26,17 @@ import { handleUse } from '@/lib/game/actions/handle-use';
 import { processPassword } from '@/lib/game/actions/process-password';
 import { game as gameCartridge } from '@/lib/game/cartridge';
 import { handleHelp } from '@/lib/game/actions/handle-help';
+import { processEffects } from '@/lib/game/actions/process-effects';
+
 
 const GAME_ID = 'blood-on-brass' as GameId;
 
+
 // --- Data Loading ---
 
-/**
- * Loads the entire game structure.
- * In development, it loads from the local `cartridge.ts` file for speed.
- * In test/production, it loads from Firestore.
- */
 export async function getGameData(gameId: GameId): Promise<Game | null> {
     if (process.env.NEXT_PUBLIC_NODE_ENV === 'development') {
         console.log("DEV MODE: Loading game data from local cartridge.ts");
-        // Ensure the imported cartridge has the correct ID, or find the correct one if needed.
         if (gameCartridge.id === gameId) {
             return gameCartridge;
         }
@@ -61,13 +57,11 @@ export async function getGameData(gameId: GameId): Promise<Game | null> {
 
         const gameData = gameSnap.data() as Game;
 
-        // Helper function to fetch all documents from a sub-collection
         const fetchSubCollection = async (subCollectionName: string) => {
             const snap = await getDocs(collection(firestore, `games/${gameId}/${subCollectionName}`));
             return Object.fromEntries(snap.docs.map(d => [d.id, d.data()]));
         };
 
-        // Fetch all sub-collections in parallel
         const [
             chapters,
             locations,
@@ -154,7 +148,6 @@ export async function findOrCreateUser(userId: string): Promise<{ user: User | n
             await setDoc(userRef, newUser);
             console.log(`New user created: ${userId}. Initializing game state.`);
             
-            // Immediately create and save initial game state and logs for the new user.
             const freshState = getInitialState(game);
             const initialMessages = await createInitialMessages(freshState, game);
             await logAndSave(userId, game.id, freshState, initialMessages);
@@ -191,7 +184,6 @@ export async function processCommand(
   userId: string,
   playerInput: string
 ): Promise<CommandResult> {
-    // Safety guard to prevent crashes on undefined input
     const safePlayerInput = playerInput || '';
 
     const game = await getGameData(GAME_ID);
@@ -276,12 +268,10 @@ export async function processCommand(
     if (!commandHandlerResult) {
         const location = game.locations[currentState.currentLocationId];
         
-        // --- Start AI Context Preparation ---
         const locationState: LocationState = currentState.locationStates[currentState.currentLocationId] || { objects: location.objects };
         const visibleObjects = locationState.objects.map(id => getLiveGameObject(id, currentState, game)).filter(Boolean) as {gameLogic: GameObject, state: GameObjectState}[];
         const visibleObjectNames = visibleObjects.map(obj => obj.gameLogic.name);
 
-        // Add items inside open containers to the list of visible names, but ONLY if the container has been examined first.
         for (const obj of visibleObjects) {
             const hasBeenExamined = currentState.flags.includes(examinedObjectFlag(obj.gameLogic.id));
             if (obj.state.isOpen && hasBeenExamined && obj.state.items) {
@@ -295,13 +285,11 @@ export async function processCommand(
         }
         
         const visibleNpcNames = location.npcs.map(id => game.npcs[id]?.name).filter(Boolean) as string[];
-        // --- End AI Context Preparation ---
 
         const { output: aiResponse, usage } = await guidePlayerWithNarrator({
             promptContext: game.promptContext || '',
             gameState: JSON.stringify({
                 ...currentState,
-                // Sanitize large objects from gamestate to save tokens
                 objectStates: undefined,
                 locationStates: undefined,
                 portalStates: undefined,
@@ -342,7 +330,7 @@ export async function processCommand(
                 commandHandlerResult = await handleOpen(currentState, restOfCommand, game);
                 break;
             case 'take':
-            case 'pick': // Alias for take
+            case 'pick': 
                 const target = restOfCommand.startsWith('up ') ? restOfCommand.substring(3) : restOfCommand;
                 commandHandlerResult = await handleTake(currentState, target, game);
                 break;
@@ -402,10 +390,7 @@ export async function processCommand(
         }
     }
     
-    // --- Finalization ---
-    // Ensure commandHandlerResult and its messages are valid before proceeding
     if (commandHandlerResult && commandHandlerResult.messages) {
-        // Now it's safe to push messages
         allMessagesForSession.push(...commandHandlerResult.messages);
     }
 
@@ -431,9 +416,7 @@ export async function processCommand(
     
     await logAndSave(userId, gameId, finalResult.newState, finalResult.messages);
     
-    // In dev, send new messages (that aren't from the player) to the webhook simulator
     if (process.env.NEXT_PUBLIC_NODE_ENV === 'development' && playerMessage) {
-        // Filter out restart messages from being double-sent
         const isRestart = lowerInput === 'restart' || lowerInput === 'start over';
         if (!isRestart) {
             const newMessagesFromServer = finalResult.messages.filter(

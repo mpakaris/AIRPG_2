@@ -2,7 +2,8 @@
 
 import type { Game, PlayerState, CommandResult } from "@/lib/game/types";
 import { getLiveGameObject } from "@/lib/game/utils/helpers";
-import { createMessage, processEffects } from "@/lib/game/utils/effects";
+import { createMessage } from "@/lib/utils";
+import { processEffects } from "@/lib/game/actions/process-effects";
 import { normalizeName } from "@/lib/utils";
 
 export async function handleMove(state: PlayerState, targetName: string, game: Game): Promise<CommandResult> {
@@ -34,7 +35,6 @@ export async function handleMove(state: PlayerState, targetName: string, game: G
         return { newState: state, messages: [createMessage('narrator', narratorName, `You move the ${liveObject.gameLogic.name} around, but find nothing of interest.`)] };
     }
 
-    // Check conditions
     const conditionsMet = (onMoveHandler.conditions || []).every(cond => {
         if (cond.type === 'HAS_FLAG') {
             return state.flags.includes(cond.targetId as any);
@@ -42,12 +42,10 @@ export async function handleMove(state: PlayerState, targetName: string, game: G
         if (cond.type === 'NO_FLAG') {
             return !state.flags.includes(cond.targetId as any);
         }
-        // Add other condition types as needed
         return true;
     });
 
     if (conditionsMet) {
-        // Safety check for incomplete game data
         if (!onMoveHandler.success) {
             console.error(`ERROR: onMove handler for ${liveObject.gameLogic.id} is missing a 'success' block.`);
             return { newState: state, messages: [createMessage('narrator', narratorName, `You move the ${liveObject.gameLogic.name} around, but find nothing of interest.`)]};
@@ -56,7 +54,6 @@ export async function handleMove(state: PlayerState, targetName: string, game: G
         result.messages.unshift(createMessage('narrator', narratorName, onMoveHandler.success.message));
         return result;
     } else {
-        // Safety check for incomplete game data
         if (!onMoveHandler.fail) {
             console.error(`ERROR: onMove handler for ${liveObject.gameLogic.id} is missing a 'fail' block.`);
             return { newState: state, messages: [createMessage('system', 'System', 'Action failed due to incomplete game data.')]};
