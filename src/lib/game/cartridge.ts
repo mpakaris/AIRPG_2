@@ -72,17 +72,17 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         media: { images: { default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759603706/Chalkboard_h61haz.png', description: 'A chalkboard menu in a cafe.', hint: 'chalkboard menu' } } },
         handlers: {
             onExamine: {
-                success: { message: "A chalkboard menu stands near the counter. It reads: Today's special is three scones for the price of two. A deal almost as sweet as justice. Something seems to be positioned behind the Chalkboard." },
+                success: { message: "A chalkboard menu stands near the counter. It reads: Today's special is three scones for the price of two. A deal almost as sweet as justice. Something seems to be propped up behind it." },
                 fail: { message: "" },
-                alternateMessage: "The menu hasn't changed. Something seems to be propped up behind it."
+                alternateMessage: "The menu hasn't changed, but you still feel like there's something behind it."
             },
             onMove: {
-                 conditions: [{ type: 'NO_FLAG', targetId: 'has_found_pipe' as Flag }],
+                 conditions: [{ type: 'NO_FLAG', targetId: 'has_moved_chalkboard' as Flag }],
                 success: {
                     message: "You move the chalkboard aside and find a heavy iron pipe leaning against the wall behind it.",
                     effects: [
-                        { type: 'SET_FLAG', flag: 'has_found_pipe' as Flag },
-                        { type: 'SET_OBJECT_STATE', objectId: 'obj_chalkboard_menu', state: { isOpen: true } },
+                        { type: 'SET_FLAG', flag: 'has_moved_chalkboard' as Flag },
+                        { type: 'SET_OBJECT_STATE', objectId: 'obj_chalkboard_menu', state: { currentStateId: 'moved' } },
                         { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'A heavy iron pipe was hidden behind the menu.', imageId: 'item_iron_pipe'}
                     ]
                 },
@@ -94,7 +94,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             notMovable: "It's a heavy stand, but you manage to slide it aside."
         },
         design: { authorNotes: "Contains the 'justice' clue and hides the iron pipe." },
-        version: { schema: "1.0", content: "1.1" }
+        version: { schema: "1.0", content: "1.2" }
     },
     'obj_magazine': {
         id: 'obj_magazine' as GameObjectId,
@@ -879,3 +879,5 @@ export const game: Game = {
   chapters: chapters,
   startChapterId: 'ch1-the-cafe' as ChapterId,
 };
+
+    

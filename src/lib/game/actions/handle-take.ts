@@ -1,9 +1,10 @@
+
 'use server';
 
-import type { GameObjectId, Game, PlayerState, CommandResult } from "@/lib/game/types";
+import type { GameObjectId, Game, PlayerState, CommandResult, ItemId } from "@/lib/game/types";
 import { findItemInContext, getLiveGameObject } from "@/lib/game/utils/helpers";
 import { createMessage } from "@/lib/utils";
-import { processEffects } from "@/lib/game/actions/process-effects";
+import { processEffects } from "./process-effects";
 import { normalizeName } from "@/lib/utils";
 
 export async function handleTake(state: PlayerState, targetName: string, game: Game): Promise<CommandResult> {
@@ -11,6 +12,22 @@ export async function handleTake(state: PlayerState, targetName: string, game: G
   const normalizedTargetName = normalizeName(targetName);
   
   let newState = JSON.parse(JSON.stringify(state));
+
+  // Special case for iron pipe
+  if (normalizedTargetName.includes('pipe')) {
+    const hasMovedChalkboard = newState.flags.includes('has_moved_chalkboard');
+    const hasPipe = newState.inventory.includes('item_iron_pipe' as ItemId);
+    if(hasPipe) {
+        return { newState: state, messages: [createMessage('system', 'System', `You already have the iron pipe.`)] };
+    }
+    if (!hasMovedChalkboard) {
+        return { newState: state, messages: [createMessage('narrator', narratorName, `You don't see an iron pipe here.`)] };
+    }
+    // If chalkboard is moved and player doesn't have pipe, they can take it.
+    newState.inventory.push('item_iron_pipe' as ItemId);
+    const itemToTake = game.items['item_iron_pipe' as ItemId];
+    return { newState, messages: [createMessage('narrator', narratorName, `You take the ${itemToTake.name}.`)] };
+  }
 
   const itemToTake = findItemInContext(newState, game, normalizedTargetName);
 
@@ -65,3 +82,5 @@ export async function handleTake(state: PlayerState, targetName: string, game: G
   result.messages.unshift(createMessage('narrator', narratorName, successMessage));
   return result;
 }
+
+    
