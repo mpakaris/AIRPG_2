@@ -1,6 +1,6 @@
 
 
-import { CommandResult } from "@/app/actions";
+import type { CommandResult } from "@/lib/game/types";
 import type { Game, Location, PlayerState, ChapterId, Flag } from "../types";
 import { createMessage } from "./process-effects";
 
@@ -79,5 +79,7 @@ export function handleGo(state: PlayerState, targetName: string, game: Game): Co
 
     return { newState: state, messages: [createMessage('system', 'System', `You can't go there.`)] };
 }
+
+    
 
     

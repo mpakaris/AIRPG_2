@@ -1,7 +1,7 @@
 
 'use server';
 
-import { type CommandResult } from "@/app/actions";
+import { type CommandResult } from "@/lib/game/types";
 import type { Game, PlayerState } from "../types";
 import { createMessage } from "./process-effects";
 import { getLiveGameObject } from "./helpers";
@@ -35,3 +35,5 @@ export async function handleLook(state: PlayerState, game: Game, summary: string
 
   return { newState: state, messages: [createMessage('narrator', narratorName, fullDescription.trim(), 'text')] };
 }
+
+    

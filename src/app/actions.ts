@@ -7,7 +7,7 @@ import {
   generateStoryFromLogs
 } from '@/ai';
 import { AVAILABLE_COMMANDS } from '@/lib/game/commands';
-import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectId, GameObjectState, ItemId, Flag, Effect, Chapter, ChapterId, ImageDetails, GameId, User, TokenUsage, Story, Portal, LocationState } from '@/lib/game/types';
+import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectId, GameObjectState, ItemId, Flag, Effect, Chapter, ChapterId, ImageDetails, GameId, User, TokenUsage, Story, Portal, LocationState, CommandResult } from '@/lib/game/types';
 import { initializeFirebase } from '@/firebase';
 import { doc, setDoc, getDoc, collection, getDocs } from 'firebase/firestore';
 import { getInitialState } from '@/lib/game-state';
@@ -33,13 +33,6 @@ const GAME_ID = 'blood-on-brass' as GameId;
 
 const chapterCompletionFlag = (chapterId: ChapterId) => `chapter_${chapterId}_complete` as Flag;
 const examinedObjectFlag = (id: string) => `examined_${id}`;
-
-export type CommandResult = {
-  newState: PlayerState | null;
-  messages: Message[];
-  resultType?: 'ALREADY_UNLOCKED';
-  targetObjectName?: string;
-};
 
 
 // --- Data Loading ---
@@ -322,9 +315,9 @@ export async function processCommand(
         switch (verb) {
             case 'examine':
             case 'look':
-                if(restOfCommand === 'around') {
-                     const location = game.locations[currentState.currentLocationId];
-                     commandHandlerResult = await handleLook(currentState, game, location.sceneDescription);
+                if (restOfCommand === 'around') {
+                    const location = game.locations[currentState.currentLocationId];
+                    commandHandlerResult = await handleLook(currentState, game, location.sceneDescription);
                 } else if (restOfCommand.startsWith('behind')) {
                     const target = restOfCommand.replace('behind ', '').trim();
                     commandHandlerResult = handleMove(currentState, target, game);
@@ -638,5 +631,7 @@ export async function generateStoryForChapter(userId: string, gameId: GameId, ch
 
     return { newState };
 }
+
+    
 
     

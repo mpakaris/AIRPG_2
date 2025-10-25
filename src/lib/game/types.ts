@@ -1,4 +1,5 @@
 
+
 // Branded types for stronger type safety
 export type GameId = string & { readonly __brand: 'GameId' };
 export type ChapterId = string & { readonly __brand: 'ChapterId' };
@@ -51,6 +52,13 @@ export type Message = {
   image?: ImageDetails;
   timestamp: number;
   usage?: TokenUsage;
+};
+
+export type CommandResult = {
+  newState: PlayerState | null;
+  messages: Message[];
+  resultType?: 'ALREADY_UNLOCKED';
+  targetObjectName?: string;
 };
 
 // --- Effect System ---
@@ -537,6 +545,7 @@ export type Location = {
   npcs: NpcId[];
   onEnterLocation?: Handler;
   onExitLocation?: Handler;
+  zones?: { title: string, objectIds: GameObjectId[] }[];
 };
 
 export type Portal = {
@@ -609,3 +618,6 @@ export type Game = {
   chapters: Record<ChapterId, Chapter>;
   startChapterId: ChapterId;
 };
+
+
+    

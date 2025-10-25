@@ -2,7 +2,7 @@
 
 'use server';
 
-import { CommandResult } from "@/app/actions";
+import type { CommandResult } from "@/lib/game/types";
 import type { Game, PlayerState } from "../types";
 import { findItemInContext } from "./helpers";
 import { createMessage, processEffects } from "./process-effects";
@@ -74,3 +74,5 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
     // --- Fallback: Just show the item's default description ---
     return { newState: state, messages: [createMessage('narrator', narratorName, itemToRead.description)] };
 }
+
+    

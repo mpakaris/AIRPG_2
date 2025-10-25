@@ -1,6 +1,6 @@
 
 
-import { CommandResult } from "@/app/actions";
+import type { CommandResult } from "@/lib/game/types";
 import type { Game, GameObjectId, PlayerState } from "../types";
 import { findItemInContext, getLiveGameObject } from "./helpers";
 import { createMessage, processEffects } from "./process-effects";
@@ -69,3 +69,5 @@ export function handleTake(state: PlayerState, targetName: string, game: Game): 
   result.messages.unshift(createMessage('narrator', narratorName, successMessage));
   return result;
 }
+
+    

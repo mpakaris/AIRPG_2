@@ -1,6 +1,6 @@
 
 
-import { CommandResult } from "@/app/actions";
+import type { CommandResult } from "@/lib/game/types";
 import type { Game, GameObject, GameObjectState, PlayerState } from "../types";
 import { getLiveGameObject } from "./helpers";
 import { createMessage, processEffects } from "./process-effects";
@@ -93,3 +93,5 @@ export function processPassword(state: PlayerState, command: string, game: Game)
         return { newState: state, messages: [createMessage('narrator', narratorName, failMessage)] };
     }
 }
+
+    

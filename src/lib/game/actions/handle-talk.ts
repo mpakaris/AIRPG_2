@@ -1,6 +1,6 @@
 
 
-import { CommandResult } from "@/app/actions";
+import type { CommandResult } from "@/lib/game/types";
 import type { Game, NpcId, PlayerState } from "../types";
 import { createMessage, processEffects } from "./process-effects";
 import { normalizeName } from "@/lib/utils";
@@ -48,3 +48,5 @@ export async function handleTalk(state: PlayerState, npcName: string, game: Game
     
     return { newState: state, messages: [createMessage('narrator', 'Narrator', `There is no one called "${normalizedNpcName}" here.`)] };
 }
+
+    
