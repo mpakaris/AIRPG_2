@@ -1,7 +1,7 @@
 
 'use server';
 
-import type { GameObjectId, Game, PlayerState, CommandResult } from "@/lib/game/types";
+import type { GameObjectId, Game, PlayerState, CommandResult, Item } from "@/lib/game/types";
 import { findItemInContext, getLiveGameObject } from "@/lib/game/utils/helpers";
 import { createMessage } from "@/lib/utils";
 import { processEffects } from "@/lib/game/actions/process-effects";
@@ -11,14 +11,23 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
   const narratorName = "Narrator";
   const normalizedItemName = normalizeName(itemName);
 
-  const itemToUse = findItemInContext(state, game, normalizedItemName);
-  if (!itemToUse) {
-    return { newState: state, messages: [createMessage('system', 'System', `You don't have a "${itemName}".`)] };
+  const itemInContext = findItemInContext(state, game, normalizedItemName);
+  
+  if (!itemInContext) {
+    return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${itemName}" to use.`)] };
+  }
+
+  const { item: itemToUse, source } = itemInContext;
+
+  // Issue 1 Fix: Check if the item is actually in the inventory before allowing use.
+  if (source.type !== 'inventory') {
+      return { newState: state, messages: [createMessage('system', 'System', `You can only use items that are in your inventory. Use "take ${itemToUse.name}" to pick it up first.`)] };
   }
   
   if (targetName) {
     const normalizedTargetName = normalizeName(targetName);
-    const visibleObjectIds = state.locationStates[state.currentLocationId]?.objects || [];
+    const locationState = state.locationStates[state.currentLocationId] || { objects: game.locations[state.currentLocationId].objects };
+    const visibleObjectIds = locationState.objects;
     
     const targetObjectId = visibleObjectIds.find(id =>
         normalizeName(game.gameObjects[id]?.name).includes(normalizedTargetName)
@@ -51,8 +60,8 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
         return { newState: state, messages: [createMessage('narrator', narratorName, `You can't use the "${itemName}" on the "${targetName}".`)] };
     }
 
-    const targetItem = findItemInContext(state, game, normalizedTargetName);
-    if(targetItem) {
+    const targetItemResult = findItemInContext(state, game, normalizedTargetName);
+    if(targetItemResult) {
         // Logic for combining items would go here if implemented
         return { newState: state, messages: [createMessage('narrator', narratorName, `You can't use the "${itemName}" on the "${targetName}".`)] };
     }
