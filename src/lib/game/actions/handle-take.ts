@@ -13,20 +13,23 @@ export async function handleTake(state: PlayerState, targetName: string, game: G
   
   let newState = JSON.parse(JSON.stringify(state));
 
-  // Special case for iron pipe
+  // Check if player is trying to take the iron pipe
   if (normalizedTargetName.includes('pipe')) {
     const hasMovedChalkboard = newState.flags.includes('has_moved_chalkboard');
     const hasPipe = newState.inventory.includes('item_iron_pipe' as ItemId);
-    if(hasPipe) {
+    
+    if (hasPipe) {
         return { newState: state, messages: [createMessage('system', 'System', `You already have the iron pipe.`)] };
     }
+    
     if (!hasMovedChalkboard) {
         return { newState: state, messages: [createMessage('narrator', narratorName, `You don't see an iron pipe here.`)] };
     }
-    // If chalkboard is moved and player doesn't have pipe, they can take it.
+    
+    // If chalkboard has been moved and player doesn't have the pipe, they can take it.
     newState.inventory.push('item_iron_pipe' as ItemId);
     const itemToTake = game.items['item_iron_pipe' as ItemId];
-    return { newState, messages: [createMessage('narrator', narratorName, `You take the ${itemToTake.name}.`)] };
+    return { newState, messages: [createMessage('narrator', narratorName, `You take the ${itemToTake.name}. It feels heavy and solid in your hand.`)] };
   }
 
   const itemToTake = findItemInContext(newState, game, normalizedTargetName);
@@ -62,7 +65,9 @@ export async function handleTake(state: PlayerState, targetName: string, game: G
   }
 
   if (!itemFoundAndRemoved) {
-      return { newState: state, messages: [createMessage('narrator', narratorName, `You see the ${itemToTake.name}, but can't seem to pick it up.`)] };
+      // This case might happen if the item is "visible" but not in an open container,
+      // which indicates a logic issue in how context is determined. For now, a generic message.
+      return { newState: state, messages: [createMessage('narrator', narratorName, `You see the ${itemToTake.name}, but can't seem to pick it up from where it is.`)] };
   }
 
   newState.inventory.push(itemToTake.id);
@@ -82,5 +87,3 @@ export async function handleTake(state: PlayerState, targetName: string, game: G
   result.messages.unshift(createMessage('narrator', narratorName, successMessage));
   return result;
 }
-
-    

@@ -257,15 +257,50 @@ export async function processCommand(
         }
         commandHandlerResult = { newState, messages };
     }
-    else if (lowerInput === '/help' || lowerInput === 'help' || lowerInput === 'hint' || lowerInput === `what's next?`) {
-        commandHandlerResult = await handleHelp(currentState, game);
-    }
     // Conversation commands
     else if (currentState.activeConversationWith) {
         commandHandlerResult = await handleConversation(currentState, safePlayerInput, game);
     }
     
-    // Main command parsing logic
+    // --- Simple Command Parser ---
+    if (!commandHandlerResult) {
+        const verbMatch = lowerInput.match(/^(\w+)\s*/);
+        const verb = verbMatch ? verbMatch[1] : lowerInput;
+        const restOfCommand = lowerInput.substring((verbMatch ? verbMatch[0].length : verb.length)).trim();
+
+        switch (verb) {
+            case 'examine':
+            case 'look':
+                if (restOfCommand === 'around') {
+                    commandHandlerResult = await handleLook(currentState, game);
+                } else if (restOfCommand.startsWith('behind')) {
+                    const target = restOfCommand.replace('behind ', '').trim();
+                    commandHandlerResult = await handleMove(currentState, target, game);
+                } else {
+                     commandHandlerResult = await handleExamine(currentState, restOfCommand.replace('at ', ''), game);
+                }
+                break;
+            case 'take':
+            case 'pick':
+                 const target = restOfCommand.startsWith('up ') ? restOfCommand.substring(3) : restOfCommand;
+                 commandHandlerResult = await handleTake(currentState, target, game);
+                 break;
+            case 'inventory':
+                 commandHandlerResult = await handleInventory(currentState, game);
+                 break;
+            case 'help':
+            case 'hint':
+                commandHandlerResult = await handleHelp(currentState, game);
+                break;
+             case 'talk':
+                 commandHandlerResult = await handleTalk(currentState, restOfCommand.replace('to ', ''), game);
+                 break;
+             // Add other simple commands here if needed
+        }
+    }
+
+
+    // --- AI Command Parser (Fallback) ---
     if (!commandHandlerResult) {
         const location = game.locations[currentState.currentLocationId];
         
