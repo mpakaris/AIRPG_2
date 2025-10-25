@@ -1,7 +1,9 @@
+'use server';
+
 import type { CommandResult } from "@/lib/game/types";
 import type { Game, GameObjectId, PlayerState } from "../types";
-import { findItemInContext, getLiveGameObject } from "./helpers";
-import { createMessage, processEffects } from "./process-effects";
+import { findItemInContext, getLiveGameObject } from "@/lib/game/actions/helpers";
+import { createMessage, processEffects } from "@/lib/game/actions/process-effects";
 import { normalizeName } from "@/lib/utils";
 
 export async function handleUse(state: PlayerState, itemName: string, targetName: string, game: Game): Promise<CommandResult> {
@@ -16,11 +18,8 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
   
   // Case 1: Using an item on a specific object ("use item on object")
   if (normalizedTargetName) {
-    // --- CORRECTED LOGIC ---
-    // Get the dynamic list of visible objects from the player's state.
     const visibleObjectIds = state.locationStates[state.currentLocationId]?.objects || [];
     
-    // Find the target object from the visible list
     const targetObjectId = visibleObjectIds.find(id =>
         normalizeName(game.gameObjects[id]?.name).includes(normalizedTargetName)
     );
@@ -64,10 +63,8 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
         }
     }
 
-    // If no GameObject found, try to find another Item in context (inventory)
     const targetItem = findItemInContext(state, game, normalizedTargetName);
     if(targetItem) {
-        // This is an item-on-item use case. We check the TARGET item's handlers to see how it reacts.
         const useHandlers = targetItem.handlers?.onUse;
         if(Array.isArray(useHandlers)) {
             const specificHandler = useHandlers.find(h => 'itemId' in h && h.itemId === itemToUse.id);

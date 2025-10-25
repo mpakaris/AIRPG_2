@@ -1,11 +1,13 @@
+'use server';
+
 import type { CommandResult } from "@/lib/game/types";
 import type { Game, NpcId, PlayerState } from "../types";
-import { createMessage, processEffects } from "./process-effects";
+import { createMessage, processEffects } from "@/lib/game/actions/process-effects";
 import { normalizeName } from "@/lib/utils";
 
 const examinedObjectFlag = (id: string) => `examined_${id}`;
 
-export async function handleTalk(state: PlayerState, npcName: string, game: Game): CommandResult {
+export async function handleTalk(state: PlayerState, npcName: string, game: Game): Promise<CommandResult> {
     const location = game.locations[state.currentLocationId];
     const normalizedNpcName = normalizeName(npcName);
 

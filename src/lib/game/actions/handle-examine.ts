@@ -1,12 +1,14 @@
+'use server';
+
 import type { CommandResult } from "@/lib/game/types";
 import type { Game, PlayerState } from "../types";
-import { findItemInContext, getLiveGameObject, getLiveItem } from "./helpers";
-import { createMessage } from "./process-effects";
+import { findItemInContext, getLiveGameObject, getLiveItem } from "@/lib/game/actions/helpers";
+import { createMessage } from "@/lib/game/actions/process-effects";
 import { normalizeName } from "@/lib/utils";
 
 const examinedObjectFlag = (id: string) => `examined_${id}`;
 
-export function handleExamine(state: PlayerState, targetName: string, game: Game): CommandResult {
+export async function handleExamine(state: PlayerState, targetName: string, game: Game): Promise<CommandResult> {
     let newState = { ...state, flags: [...state.flags] };
     const normalizedTargetName = normalizeName(targetName);
     const narratorName = "Narrator";
@@ -15,11 +17,8 @@ export function handleExamine(state: PlayerState, targetName: string, game: Game
         return { newState: state, messages: [createMessage('system', 'System', `You need to specify what to examine.`)] };
     }
     
-    // --- CORRECTED LOGIC ---
-    // Get the dynamic list of visible objects from the player's state, not the static game data.
     const visibleObjectIds = newState.locationStates[newState.currentLocationId]?.objects || [];
 
-    // Try to find an object in the location first
     const targetObjectId = visibleObjectIds.find(id =>
         normalizeName(game.gameObjects[id]?.name).includes(normalizedTargetName)
     );
@@ -31,29 +30,24 @@ export function handleExamine(state: PlayerState, targetName: string, game: Game
         }
         
         let messageContent: string;
-        let imageToDisplay = liveObject.gameLogic.media?.images?.default; // Default image
+        let imageToDisplay = liveObject.gameLogic.media?.images?.default;
 
-        // Check if player is interacting closely
         const isInteracting = state.interactingWithObject === liveObject.gameLogic.id;
 
-        // --- StateMap Logic ---
         const currentStateId = liveObject.state.currentStateId;
         const stateMapEntry = currentStateId ? liveObject.gameLogic.stateMap?.[currentStateId] : undefined;
 
         if (stateMapEntry) {
-            // Get description from stateMap, prioritizing interaction-specific overrides
             if (isInteracting && stateMapEntry.overrides?.onExamine) {
                 messageContent = stateMapEntry.overrides.onExamine.success.message;
             } else {
                 messageContent = stateMapEntry.description || liveObject.gameLogic.description;
             }
-            // Get image from stateMap
             const stateImageKey = currentStateId.replace('unlocked_', '');
             if (liveObject.gameLogic.media?.images?.[stateImageKey]) {
                 imageToDisplay = liveObject.gameLogic.media.images[stateImageKey];
             }
         } 
-        // --- Legacy Handler Logic ---
         else {
             const onExamine = liveObject.gameLogic.handlers.onExamine;
             if (isInteracting && onExamine?.success.message) {
@@ -71,7 +65,6 @@ export function handleExamine(state: PlayerState, targetName: string, game: Game
             imageToDisplay ? { id: liveObject.gameLogic.id, game, state: newState, showEvenIfExamined: true } : undefined
         );
         
-        // Set the 'examined' flag if it's the first time
         const flag = examinedObjectFlag(liveObject.gameLogic.id);
         if (!newState.flags.includes(flag as any)) {
             newState.flags.push(flag as any);
@@ -80,7 +73,6 @@ export function handleExamine(state: PlayerState, targetName: string, game: Game
         return { newState, messages: [mainMessage] };
     }
 
-    // If not an object, try to find an item in inventory or in an open container
     const itemInContext = findItemInContext(state, game, normalizedTargetName);
     if (itemInContext) {
         const liveItem = getLiveItem(itemInContext.id, state, game);

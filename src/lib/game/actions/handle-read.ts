@@ -2,8 +2,8 @@
 
 import type { CommandResult } from "@/lib/game/types";
 import type { Game, PlayerState } from "../types";
-import { findItemInContext } from "./helpers";
-import { createMessage, processEffects } from "./process-effects";
+import { findItemInContext } from "@/lib/game/actions/helpers";
+import { createMessage, processEffects } from "@/lib/game/actions/process-effects";
 import { normalizeName } from "@/lib/utils";
 
 
@@ -24,7 +24,6 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
     
     let newState = JSON.parse(JSON.stringify(state)); // Deep copy for safety
 
-    // --- Path A: Item uses a stateMap (like a book with excerpts) ---
     if (itemToRead.stateMap && Object.keys(itemToRead.stateMap).length > 0) {
         
         if (!newState.itemStates[itemToRead.id]) {
@@ -55,7 +54,6 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
         return { newState, messages: [message] };
     }
 
-    // --- Path B: Item uses a standard onRead handler (like a note) ---
     const handler = itemToRead.handlers?.onRead;
     if (handler && handler.success) {
         const effectsToProcess = Array.isArray(handler.success.effects) ? handler.success.effects : [];
@@ -69,6 +67,5 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
         return result;
     }
 
-    // --- Fallback: Just show the item's default description ---
     return { newState: state, messages: [createMessage('narrator', narratorName, itemToRead.description)] };
 }

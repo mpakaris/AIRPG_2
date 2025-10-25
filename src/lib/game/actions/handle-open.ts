@@ -1,19 +1,18 @@
+'use server';
+
 import type { CommandResult } from "@/lib/game/types";
 import type { Game, PlayerState } from "../types";
-import { findItemInContext, getLiveGameObject } from "./helpers";
-import { createMessage, processEffects } from "./process-effects";
+import { findItemInContext, getLiveGameObject } from "@/lib/game/actions/helpers";
+import { createMessage, processEffects } from "@/lib/game/actions/process-effects";
 import { normalizeName } from "@/lib/utils";
-import { handleRead } from "./handle-read";
+import { handleRead } from "@/lib/game/actions/handle-read";
 
 export async function handleOpen(state: PlayerState, targetName: string, game: Game): Promise<CommandResult> {
     const narratorName = "Narrator";
     const normalizedTargetName = normalizeName(targetName);
 
-    // --- CORRECTED LOGIC ---
-    // Get the dynamic list of visible objects from the player's state.
     const visibleObjectIds = state.locationStates[state.currentLocationId]?.objects || [];
 
-    // First, try to find a GameObject with that name
     const targetObjectId = visibleObjectIds.find(id =>
         normalizeName(game.gameObjects[id]?.name).includes(normalizedTargetName)
     );
@@ -44,7 +43,6 @@ export async function handleOpen(state: PlayerState, targetName: string, game: G
 
         const onOpen = liveObject.gameLogic.handlers.onOpen;
 
-        // --- BULLETPROOF SAFETY CHECKS ---
         if (onOpen && onOpen.success) {
             const successBlock = onOpen.success;
             const effectsToProcess = Array.isArray(successBlock.effects) ? successBlock.effects : [];
@@ -58,16 +56,13 @@ export async function handleOpen(state: PlayerState, targetName: string, game: G
             return result;
         }
 
-        // Fallback for objects that are openable but have no specific onOpen handler
         const genericOpenMessage = `You open the ${liveObject.gameLogic.name}.`;
         const newState = { ...state, objectStates: { ...state.objectStates, [liveObject.gameLogic.id]: { ...liveObject.state, isOpen: true } } };
         return { newState, messages: [createMessage('narrator', narratorName, genericOpenMessage)] };
     }
 
-    // If no GameObject was found, try to find an Item (like a book)
     const itemToOpen = findItemInContext(state, game, normalizedTargetName);
     if (itemToOpen) {
-        // Safely check if the item is readable before calling handleRead
         if (itemToOpen.capabilities && itemToOpen.capabilities.isReadable) {
             return handleRead(state, targetName, game);
         } else {
@@ -75,6 +70,5 @@ export async function handleOpen(state: PlayerState, targetName: string, game: G
         }
     }
 
-    // If neither an object nor an item was found
     return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${normalizedTargetName}" to open.`)] };
 }

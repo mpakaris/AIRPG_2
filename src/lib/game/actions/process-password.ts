@@ -1,7 +1,9 @@
+'use server';
+
 import type { CommandResult } from "@/lib/game/types";
 import type { Game, GameObject, GameObjectState, PlayerState } from "../types";
-import { getLiveGameObject } from "./helpers";
-import { createMessage, processEffects } from "./process-effects";
+import { getLiveGameObject } from "@/lib/game/actions/helpers";
+import { createMessage, processEffects } from "@/lib/game/actions/process-effects";
 import { normalizeName } from "@/lib/utils";
 
 const examinedObjectFlag = (id: string) => `examined_${id}`;

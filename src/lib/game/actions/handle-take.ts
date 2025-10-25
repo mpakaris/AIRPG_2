@@ -1,7 +1,9 @@
+'use server';
+
 import type { CommandResult } from "@/lib/game/types";
 import type { Game, GameObjectId, PlayerState } from "../types";
-import { findItemInContext, getLiveGameObject } from "./helpers";
-import { createMessage, processEffects } from "./process-effects";
+import { findItemInContext, getLiveGameObject } from "@/lib/game/actions/helpers";
+import { createMessage, processEffects } from "@/lib/game/actions/process-effects";
 import { normalizeName } from "@/lib/utils";
 
 export async function handleTake(state: PlayerState, targetName: string, game: Game): Promise<CommandResult> {

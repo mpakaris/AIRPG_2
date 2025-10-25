@@ -1,4 +1,4 @@
-
+'use client';
 
 import type { Game, GameObject, GameObjectId, GameObjectState, Item, ItemId, ItemState, NPC, NpcId, NpcState, PlayerState } from '../types';
 import { normalizeName } from '@/lib/utils';

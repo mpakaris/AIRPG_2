@@ -1,7 +1,8 @@
 
+'use client';
 
-import type { Effect, Game, GameObjectId, ItemId, Message, NpcId, PlayerState, TokenUsage, LocationId } from '../types';
-import { getLiveGameObject } from './helpers';
+import type { Effect, Game, GameObjectId, ItemId, Message, NpcId, PlayerState, TokenUsage, LocationId, CommandResult } from '../types';
+import { getLiveGameObject } from "@/lib/game/actions/helpers";
 
 const examinedObjectFlag = (id: string) => `examined_${id}`;
 
@@ -70,7 +71,7 @@ export function createMessage(
   };
 }
 
-export function processEffects(initialState: PlayerState, effects: Effect[], game: Game): { newState: PlayerState, messages: Message[] } {
+export function processEffects(initialState: PlayerState, effects: Effect[], game: Game): CommandResult {
     let newState = JSON.parse(JSON.stringify(initialState)); // Deep copy to avoid mutation issues
     const messages: Message[] = [];
     const narratorName = "Narrator";
