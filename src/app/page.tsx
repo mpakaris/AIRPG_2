@@ -1,19 +1,15 @@
-
-
 import { GameClient } from '@/components/game/GameClient';
 import { getInitialState } from '@/lib/game-state';
 import type { PlayerState, Message, Game, GameId } from '@/lib/game/types';
 import { initializeFirebase } from '@/firebase';
 import { doc, getDoc } from 'firebase/firestore';
-import { getGameData, createInitialMessages } from './actions';
+import { getGameData, createInitialMessages } from '@/app/actions';
 
 const GAME_ID = 'blood-on-brass' as GameId;
 
 async function getInitialData(userId: string | null, game: Game): Promise<{ playerState: PlayerState, messages: Message[] }> {
     const initialGameState = getInitialState(game);
     
-    // In test/prod, we always start with a clean slate on the server.
-    // The client will fetch the correct state after authentication.
     if (!userId) {
         return { 
             playerState: initialGameState, 
@@ -21,7 +17,6 @@ async function getInitialData(userId: string | null, game: Game): Promise<{ play
         };
     }
 
-    // In development, we pre-load the dev user's state on the server.
     const { firestore } = initializeFirebase();
     const gameId = game.id;
 
@@ -42,7 +37,6 @@ async function getInitialData(userId: string | null, game: Game): Promise<{ play
     if (logSnap.exists() && logSnap.data()?.messages?.length > 0) {
         messages = logSnap.data()?.messages || [];
     } else {
-        // If logs don't exist for the dev user, create them.
         messages = await createInitialMessages(playerState, game);
     }
 
@@ -56,8 +50,6 @@ export default async function Home() {
       return <div>Error: Could not load game data. Please ensure the database is seeded correctly.</div>
   }
 
-  // In development, we can pre-load the dev user's state on the server.
-  // In test/prod, the user ID is determined on the client, so we pass null and let the client handle it.
   const initialUserId = process.env.NEXT_PUBLIC_NODE_ENV === 'development'
       ? process.env.NEXT_PUBLIC_DEV_USER_ID || null
       : null;

@@ -1,4 +1,3 @@
-
 'use server';
 
 import { 
@@ -29,10 +28,6 @@ import { game as gameCartridge } from '@/lib/game/cartridge';
 import { handleHelp } from '@/lib/game/actions/handle-help';
 
 const GAME_ID = 'blood-on-brass' as GameId;
-
-const chapterCompletionFlag = (chapterId: ChapterId) => `chapter_${chapterId}_complete` as Flag;
-const examinedObjectFlag = (id: string) => `examined_${id}`;
-
 
 // --- Data Loading ---
 
@@ -108,7 +103,8 @@ export async function getGameData(gameId: GameId): Promise<Game | null> {
 
 function checkChapterCompletion(state: PlayerState, game: Game): { isComplete: boolean; messages: Message[] } {
     const chapter = game.chapters[game.startChapterId]; // Simplified for now
-    const isAlreadyComplete = state.flags.includes(chapterCompletionFlag(game.startChapterId));
+    const chapterCompletionFlagValue = `chapter_${game.startChapterId}_complete` as Flag;
+    const isAlreadyComplete = state.flags.includes(chapterCompletionFlagValue);
 
     if (isAlreadyComplete || !chapter.objectives || chapter.objectives.length === 0) {
         return { isComplete: isAlreadyComplete, messages: [] }; 
@@ -175,12 +171,25 @@ export async function findOrCreateUser(userId: string): Promise<{ user: User | n
 }
 
 
+export async function createInitialMessages(state: PlayerState, game: Game): Promise<Message[]> {
+    const chapter = game.chapters[game.startChapterId];
+    const location = game.locations[state.currentLocationId];
+    const narratorName = game.narratorName || "Narrator";
+    const messages: Message[] = [];
+    if (chapter.introductionVideo) {
+        messages.push(createMessage('narrator', narratorName, chapter.introductionVideo, 'video'));
+    }
+    messages.push(createMessage('narrator', narratorName, location.sceneDescription));
+    return messages;
+}
+
+
 // --- Main Action ---
 
 export async function processCommand(
   userId: string,
   playerInput: string
-): Promise<{newState: PlayerState, messages: Message[]}> {
+): Promise<CommandResult> {
     // Safety guard to prevent crashes on undefined input
     const safePlayerInput = playerInput || '';
 
@@ -219,7 +228,7 @@ export async function processCommand(
         currentState = getInitialState(game);
     }
     
-    if (logSnap.exists()) {
+    if (logSnap.exists() && logSnap.data()?.messages?.length > 0) {
         allMessagesForSession = logSnap.data()?.messages || [];
     } else {
         allMessagesForSession = await createInitialMessages(currentState, game);
@@ -236,6 +245,8 @@ export async function processCommand(
     }
     
     let commandHandlerResult: CommandResult | null = null;
+    const examinedObjectFlag = (id: string) => `examined_${id}`;
+
 
     // Dev commands
     if (lowerInput.startsWith('dev:complete_')) {
@@ -315,7 +326,6 @@ export async function processCommand(
             case 'examine':
             case 'look':
                 if (restOfCommand === 'around') {
-                    const location = game.locations[currentState.currentLocationId];
                     commandHandlerResult = await handleLook(currentState, game, location.sceneDescription);
                 } else if (restOfCommand.startsWith('behind')) {
                     const target = restOfCommand.replace('behind ', '').trim();
@@ -404,15 +414,16 @@ export async function processCommand(
     if (finalState) {
         const completion = checkChapterCompletion(finalState, game);
         if (completion.isComplete) {
-            const isNewlyComplete = !currentState.flags.includes(chapterCompletionFlag(game.startChapterId));
+            const chapterCompletionFlagValue = `chapter_${game.startChapterId}_complete` as Flag;
+            const isNewlyComplete = !currentState.flags.includes(chapterCompletionFlagValue);
             if (isNewlyComplete) {
-                finalState.flags = [...finalState.flags, chapterCompletionFlag(game.startChapterId)];
+                finalState.flags = [...finalState.flags, chapterCompletionFlagValue];
                 allMessagesForSession.push(...completion.messages);
             }
         }
     }
     
-    const finalResult = {
+    const finalResult: CommandResult = {
         newState: finalState || currentState,
         messages: allMessagesForSession,
     };
@@ -464,7 +475,7 @@ export async function processCommand(
   }
 }
 
-export async function resetGame(userId: string): Promise<{newState: PlayerState, messages: Message[]}> {
+export async function resetGame(userId: string): Promise<CommandResult> {
     if (!userId) {
         throw new Error("User ID is required to reset the game.");
     }
@@ -486,47 +497,6 @@ export async function resetGame(userId: string): Promise<{newState: PlayerState,
 
     return { newState: freshState, messages: initialMessages };
 }
-
-export async function createInitialMessages(playerState: PlayerState, game: Game): Promise<Message[]> {
-    const startChapter = game.chapters[playerState.currentChapterId];
-    const newInitialMessages: Message[] = [];
-  
-    const welcomeMessage = {
-      id: crypto.randomUUID(),
-      sender: 'narrator' as const,
-      senderName: game.narratorName || 'Narrator',
-      type: 'text' as const,
-      content: `Welcome to ${game.title}. Your journey begins.`,
-      timestamp: Date.now(),
-    };
-    newInitialMessages.push(welcomeMessage);
-
-    if (startChapter.introductionVideo) {
-      newInitialMessages.push({
-        id: crypto.randomUUID(),
-        sender: 'narrator' as const,
-        senderName: game.narratorName || 'Narrator',
-        type: 'video' as const,
-        content: startChapter.introductionVideo,
-        timestamp: Date.now() + 1,
-      });
-    }
-    
-    const initialLocation = game.locations[playerState.currentLocationId];
-    if (initialLocation) {
-        const locationMessage = createMessage(
-            'narrator', 
-            game.narratorName || 'Narrator', 
-            initialLocation.sceneDescription,
-            initialLocation.sceneImage ? 'image' : 'text',
-            initialLocation.sceneImage ? { id: initialLocation.locationId, game, state: playerState } : undefined
-        );
-        newInitialMessages.push(locationMessage);
-    }
-  
-    return newInitialMessages;
-};
-
 
 export async function logAndSave(
   userId: string,

@@ -1,8 +1,7 @@
 
 'use server';
 
-import type { CommandResult } from "@/lib/game/types";
-import type { Game, PlayerState } from "@/lib/game/types";
+import type { CommandResult, Game, PlayerState } from "@/lib/game/types";
 import { createMessage } from "@/lib/game/actions/process-effects";
 
 export async function handleInventory(state: PlayerState, game: Game): Promise<CommandResult> {

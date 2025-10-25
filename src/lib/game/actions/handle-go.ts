@@ -1,9 +1,8 @@
 
 'use server';
 
-import type { CommandResult } from '@/lib/game/types';
-import type { Game, Location, PlayerState, ChapterId, Flag } from '@/lib/game/types';
-import { createMessage } from '@/lib/game/actions/process-effects';
+import type { CommandResult, Game, Location, PlayerState, ChapterId, Flag } from "@/lib/game/types";
+import { createMessage } from "@/lib/game/actions/process-effects";
 
 const chapterCompletionFlag = (chapterId: ChapterId) => `chapter_${chapterId}_complete` as Flag;
 
@@ -68,7 +67,7 @@ export async function handleGo(state: PlayerState, targetName: string, game: Gam
     }
     
     if (targetLocation) {
-        const newState = { ...state, currentLocationId: targetLocation.locationId, activeConversationWith: null, interactingWithObject: null };
+        const newState: PlayerState = { ...state, currentLocationId: targetLocation.locationId, activeConversationWith: null, interactingWithObject: null };
         return {
             newState,
             messages: [

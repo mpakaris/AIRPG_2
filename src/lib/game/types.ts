@@ -54,10 +54,8 @@ export type Message = {
 };
 
 export type CommandResult = {
-  newState: PlayerState | null;
+  newState: PlayerState;
   messages: Message[];
-  resultType?: 'ALREADY_UNLOCKED';
-  targetObjectName?: string;
 };
 
 // --- Effect System ---
