@@ -74,7 +74,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             onExamine: {
                 success: { message: "A chalkboard menu stands near the counter. It reads: Today's special is three scones for the price of two. A deal almost as sweet as justice. Something seems to be propped up behind it." },
                 fail: { message: "" },
-                alternateMessage: "The menu hasn't changed, but you still feel like there's something behind it."
+                alternateMessage: "You've already moved the chalkboard. The dusty floor behind it is empty now."
             },
             onMove: {
                  conditions: [{ type: 'NO_FLAG', targetId: 'has_moved_chalkboard' as Flag }],
@@ -879,3 +879,5 @@ export const game: Game = {
   chapters: chapters,
   startChapterId: 'ch1-the-cafe' as ChapterId,
 };
+
+    
