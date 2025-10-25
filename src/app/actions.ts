@@ -228,7 +228,6 @@ export async function processCommand(
         allMessagesForSession = await createInitialMessages(currentState, game);
     }
 
-    const chapter = game.chapters[game.startChapterId]; // Simplified for now
     const agentName = game.narratorName || "Agent Sharma";
     const lowerInput = safePlayerInput.toLowerCase().trim();
 
@@ -239,8 +238,6 @@ export async function processCommand(
     }
     
     let commandHandlerResult: CommandResult | null = null;
-    const examinedObjectFlag = (id: string) => `examined_${id}`;
-
 
     // Dev commands
     if (lowerInput.startsWith('dev:complete_')) {
@@ -280,6 +277,9 @@ export async function processCommand(
                      commandHandlerResult = await handleExamine(currentState, restOfCommand.replace('at ', ''), game);
                 }
                 break;
+            case 'move':
+                commandHandlerResult = await handleMove(currentState, restOfCommand, game);
+                break;
             case 'take':
             case 'pick':
                  const target = restOfCommand.startsWith('up ') ? restOfCommand.substring(3) : restOfCommand;
@@ -303,6 +303,7 @@ export async function processCommand(
     // --- AI Command Parser (Fallback) ---
     if (!commandHandlerResult) {
         const location = game.locations[currentState.currentLocationId];
+        const examinedObjectFlag = (id: string) => `examined_${id}`;
         
         const locationState: LocationState = currentState.locationStates[currentState.currentLocationId] || { objects: location.objects };
         const visibleObjects = locationState.objects.map(id => getLiveGameObject(id, currentState, game)).filter(Boolean) as {gameLogic: GameObject, state: GameObjectState}[];
