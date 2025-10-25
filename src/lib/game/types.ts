@@ -1,5 +1,3 @@
-
-
 // Branded types for stronger type safety
 export type GameId = string & { readonly __brand: 'GameId' };
 export type ChapterId = string & { readonly __brand: 'ChapterId' };
@@ -618,6 +616,3 @@ export type Game = {
   chapters: Record<ChapterId, Chapter>;
   startChapterId: ChapterId;
 };
-
-
-    

@@ -1,5 +1,3 @@
-
-
 'use server';
 
 import type { CommandResult } from "@/lib/game/types";
@@ -74,5 +72,3 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
     // --- Fallback: Just show the item's default description ---
     return { newState: state, messages: [createMessage('narrator', narratorName, itemToRead.description)] };
 }
-
-    

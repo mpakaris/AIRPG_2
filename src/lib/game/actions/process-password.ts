@@ -1,5 +1,3 @@
-
-
 import type { CommandResult } from "@/lib/game/types";
 import type { Game, GameObject, GameObjectState, PlayerState } from "../types";
 import { getLiveGameObject } from "./helpers";
@@ -8,7 +6,7 @@ import { normalizeName } from "@/lib/utils";
 
 const examinedObjectFlag = (id: string) => `examined_${id}`;
 
-export function processPassword(state: PlayerState, command: string, game: Game): CommandResult {
+export async function processPassword(state: PlayerState, command: string, game: Game): Promise<CommandResult> {
     const narratorName = "Narrator";
     const agentName = game.narratorName || 'Agent Sharma';
     const location = game.locations[state.currentLocationId];
@@ -93,5 +91,3 @@ export function processPassword(state: PlayerState, command: string, game: Game)
         return { newState: state, messages: [createMessage('narrator', narratorName, failMessage)] };
     }
 }
-
-    

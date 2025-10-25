@@ -1,12 +1,10 @@
-
-
 import type { CommandResult } from "@/lib/game/types";
 import type { Game, PlayerState } from "../types";
 import { getLiveGameObject } from "./helpers";
 import { createMessage, processEffects } from "./process-effects";
 import { normalizeName } from "@/lib/utils";
 
-export function handleMove(state: PlayerState, targetName: string, game: Game): CommandResult {
+export async function handleMove(state: PlayerState, targetName: string, game: Game): Promise<CommandResult> {
     const location = game.locations[state.currentLocationId];
     const narratorName = "Narrator";
     const normalizedTargetName = normalizeName(targetName);
@@ -65,5 +63,3 @@ export function handleMove(state: PlayerState, targetName: string, game: Game): 
         return { newState: state, messages: [createMessage('narrator', narratorName, onMoveHandler.fail.message)] };
     }
 }
-
-    

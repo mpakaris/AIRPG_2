@@ -1,12 +1,10 @@
-
-
 import type { CommandResult } from "@/lib/game/types";
 import type { Game, GameObjectId, PlayerState } from "../types";
 import { findItemInContext, getLiveGameObject } from "./helpers";
 import { createMessage, processEffects } from "./process-effects";
 import { normalizeName } from "@/lib/utils";
 
-export function handleTake(state: PlayerState, targetName: string, game: Game): CommandResult {
+export async function handleTake(state: PlayerState, targetName: string, game: Game): Promise<CommandResult> {
   const narratorName = "Narrator";
   const normalizedTargetName = normalizeName(targetName);
   
@@ -69,5 +67,3 @@ export function handleTake(state: PlayerState, targetName: string, game: Game): 
   result.messages.unshift(createMessage('narrator', narratorName, successMessage));
   return result;
 }
-
-    

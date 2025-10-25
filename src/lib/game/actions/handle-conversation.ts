@@ -1,5 +1,3 @@
-
-
 import { generateNpcChatter, selectNpcResponse } from "@/ai";
 import type { CommandResult } from "@/lib/game/types";
 import type { Game, NPC, NpcId, NpcState, PlayerState, Topic } from "../types";
@@ -152,7 +150,3 @@ export async function handleConversation(state: PlayerState, playerInput: string
         messages: [createMessage(npcId, npc.name, `"${npc.goodbyeMessage || 'I have nothing to say.'}"`)]
     };
 }
-
-    
-
-    

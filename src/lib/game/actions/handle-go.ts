@@ -1,8 +1,8 @@
+'use server';
 
-
-import type { CommandResult } from "@/lib/game/types";
-import type { Game, Location, PlayerState, ChapterId, Flag } from "../types";
-import { createMessage } from "./process-effects";
+import type { CommandResult } from '@/lib/game/types';
+import type { Game, Location, PlayerState, ChapterId, Flag } from '../types';
+import { createMessage } from './process-effects';
 
 const chapterCompletionFlag = (chapterId: ChapterId) => `chapter_${chapterId}_complete` as Flag;
 
@@ -24,7 +24,7 @@ function checkChapterCompletion(state: PlayerState, game: Game): { isComplete: b
 }
 
 
-export function handleGo(state: PlayerState, targetName: string, game: Game): CommandResult {
+export async function handleGo(state: PlayerState, targetName: string, game: Game): Promise<CommandResult> {
     const chapter = game.chapters[game.startChapterId]; // simplified
     const currentLocation = game.locations[state.currentLocationId];
     targetName = targetName.toLowerCase();
@@ -79,7 +79,3 @@ export function handleGo(state: PlayerState, targetName: string, game: Game): Co
 
     return { newState: state, messages: [createMessage('system', 'System', `You can't go there.`)] };
 }
-
-    
-
-    

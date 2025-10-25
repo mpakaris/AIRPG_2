@@ -1,5 +1,3 @@
-
-
 import type { CommandResult } from "@/lib/game/types";
 import type { Game, PlayerState } from "../types";
 import { findItemInContext, getLiveGameObject } from "./helpers";
@@ -80,6 +78,3 @@ export async function handleOpen(state: PlayerState, targetName: string, game: G
     // If neither an object nor an item was found
     return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${normalizedTargetName}" to open.`)] };
 }
-
-
-    

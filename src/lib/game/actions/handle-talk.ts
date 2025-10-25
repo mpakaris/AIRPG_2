@@ -1,5 +1,3 @@
-
-
 import type { CommandResult } from "@/lib/game/types";
 import type { Game, NpcId, PlayerState } from "../types";
 import { createMessage, processEffects } from "./process-effects";
@@ -7,7 +5,7 @@ import { normalizeName } from "@/lib/utils";
 
 const examinedObjectFlag = (id: string) => `examined_${id}`;
 
-export async function handleTalk(state: PlayerState, npcName: string, game: Game): Promise<CommandResult> {
+export async function handleTalk(state: PlayerState, npcName: string, game: Game): CommandResult {
     const location = game.locations[state.currentLocationId];
     const normalizedNpcName = normalizeName(npcName);
 
@@ -48,5 +46,3 @@ export async function handleTalk(state: PlayerState, npcName: string, game: Game
     
     return { newState: state, messages: [createMessage('narrator', 'Narrator', `There is no one called "${normalizedNpcName}" here.`)] };
 }
-
-    

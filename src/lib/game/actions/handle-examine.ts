@@ -1,5 +1,3 @@
-
-
 import type { CommandResult } from "@/lib/game/types";
 import type { Game, PlayerState } from "../types";
 import { findItemInContext, getLiveGameObject, getLiveItem } from "./helpers";
@@ -114,5 +112,3 @@ export function handleExamine(state: PlayerState, targetName: string, game: Game
 
     return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${targetName}" here.`)] };
 }
-
-    

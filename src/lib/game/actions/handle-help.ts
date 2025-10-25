@@ -1,10 +1,8 @@
-
-
 import type { CommandResult } from "@/lib/game/types";
 import type { Game, PlayerState } from "../types";
 import { createMessage } from "./process-effects";
 
-export function handleHelp(state: PlayerState, game: Game): CommandResult {
+export async function handleHelp(state: PlayerState, game: Game): Promise<CommandResult> {
     const chapter = game.chapters[state.currentChapterId];
     const agentName = game.narratorName || "Agent Sharma";
 
@@ -28,5 +26,3 @@ export function handleHelp(state: PlayerState, game: Game): CommandResult {
     // Fallback if a hint is missing for an objective
     return { newState: state, messages: [createMessage('agent', agentName, `Let's focus on figuring out: ${nextObjective.label}. What's our next move?`)] };
 }
-
-    

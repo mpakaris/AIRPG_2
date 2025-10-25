@@ -1,4 +1,3 @@
-
 import type { CommandResult } from "@/lib/game/types";
 import type { Game, GameObjectId, PlayerState } from "../types";
 import { findItemInContext, getLiveGameObject } from "./helpers";
@@ -116,5 +115,3 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
   const defaultFail = itemToUse.handlers?.defaultFailMessage || 'You need to specify what to use that on, or it can\'t be used by itself.';
   return { newState: state, messages: [createMessage('narrator', narratorName, defaultFail)] };
 }
-
-    

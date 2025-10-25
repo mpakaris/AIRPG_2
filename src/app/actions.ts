@@ -1,5 +1,3 @@
-
-
 'use server';
 
 import { 
@@ -254,7 +252,7 @@ export async function processCommand(
         commandHandlerResult = { newState, messages };
     }
     else if (lowerInput === '/help' || lowerInput === 'help' || lowerInput === 'hint' || lowerInput === `what's next?`) {
-        commandHandlerResult = handleHelp(currentState, game);
+        commandHandlerResult = await handleHelp(currentState, game);
     }
     // Conversation commands
     else if (currentState.activeConversationWith) {
@@ -320,13 +318,13 @@ export async function processCommand(
                     commandHandlerResult = await handleLook(currentState, game, location.sceneDescription);
                 } else if (restOfCommand.startsWith('behind')) {
                     const target = restOfCommand.replace('behind ', '').trim();
-                    commandHandlerResult = handleMove(currentState, target, game);
+                    commandHandlerResult = await handleMove(currentState, target, game);
                 } else {
-                     commandHandlerResult = handleExamine(currentState, restOfCommand.replace('at ', ''), game);
+                     commandHandlerResult = await handleExamine(currentState, restOfCommand.replace('at ', ''), game);
                 }
                 break;
             case 'move':
-                commandHandlerResult = handleMove(currentState, restOfCommand, game);
+                commandHandlerResult = await handleMove(currentState, restOfCommand, game);
                 break;
             case 'open':
                 commandHandlerResult = await handleOpen(currentState, restOfCommand, game);
@@ -334,10 +332,10 @@ export async function processCommand(
             case 'take':
             case 'pick': // Alias for take
                 const target = restOfCommand.startsWith('up ') ? restOfCommand.substring(3) : restOfCommand;
-                commandHandlerResult = handleTake(currentState, target, game);
+                commandHandlerResult = await handleTake(currentState, target, game);
                 break;
             case 'go':
-                commandHandlerResult = handleGo(currentState, restOfCommand.replace('to ', ''), game);
+                commandHandlerResult = await handleGo(currentState, restOfCommand.replace('to ', ''), game);
                 break;
             case 'use':
                 const useOnMatch = restOfCommand.match(/"(.*?)"\s+on\s+"(.*?)"/);
@@ -354,12 +352,12 @@ export async function processCommand(
                  commandHandlerResult = await handleTalk(currentState, restOfCommand.replace('to ', ''), game);
                  break;
             case 'inventory':
-                commandHandlerResult = handleInventory(currentState, game);
+                commandHandlerResult = await handleInventory(currentState, game);
                 break;
             case 'password':
             case 'say':
             case 'enter':
-                commandHandlerResult = processPassword(currentState, commandToExecute, game);
+                commandHandlerResult = await processPassword(currentState, commandToExecute, game);
                 break;
             case 'close':
             case 'exit':
@@ -373,7 +371,7 @@ export async function processCommand(
                  commandHandlerResult = { newState: currentState, messages: [] };
                  break;
             case 'help':
-                commandHandlerResult = handleHelp(currentState, game);
+                commandHandlerResult = await handleHelp(currentState, game);
                 break;
             default:
                 const targetObject = visibleObjects.find(obj => restOfCommand.includes(obj.gameLogic.name.toLowerCase()));
@@ -631,7 +629,3 @@ export async function generateStoryForChapter(userId: string, gameId: GameId, ch
 
     return { newState };
 }
-
-    
-
-    
