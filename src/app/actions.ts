@@ -239,28 +239,10 @@ export async function processCommand(
     
     let commandHandlerResult: CommandResult | null = null;
 
-    // Dev commands
-    if (lowerInput.startsWith('dev:complete_')) {
-        const chapterId = lowerInput.replace('dev:complete_', '') as ChapterId;
-        const targetChapter = game.chapters[chapterId];
-        let messages = [createMessage('system', 'System', `DEV: ${targetChapter.title} flags set to complete.`)];
-        let newState = { ...currentState };
-        if (targetChapter) {
-            targetChapter.objectives?.forEach(obj => {
-                if (!newState.flags.includes(obj.flag)) {
-                    newState.flags = [...newState.flags, obj.flag];
-                }
-            });
-        }
-        commandHandlerResult = { newState, messages };
-    }
-    // Conversation commands
-    else if (currentState.activeConversationWith) {
-        commandHandlerResult = await handleConversation(currentState, safePlayerInput, game);
-    }
-    
     // --- Simple Command Parser ---
-    if (!commandHandlerResult) {
+    if (currentState.activeConversationWith) {
+        commandHandlerResult = await handleConversation(currentState, safePlayerInput, game);
+    } else {
         const verbMatch = lowerInput.match(/^(\w+)\s*/);
         const verb = verbMatch ? verbMatch[1] : lowerInput;
         const restOfCommand = lowerInput.substring((verbMatch ? verbMatch[0].length : verb.length)).trim();
