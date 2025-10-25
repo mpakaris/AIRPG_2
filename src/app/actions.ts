@@ -252,21 +252,20 @@ export async function processCommand(
             case 'look':
                 if (restOfCommand === 'around') {
                     commandHandlerResult = await handleLook(currentState, game);
-                } else if (restOfCommand.startsWith('behind')) {
-                    const target = restOfCommand.replace('behind ', '').trim();
-                    commandHandlerResult = await handleMove(currentState, target, game);
-                } else {
+                } else if (restOfCommand.startsWith('at ')) {
                      commandHandlerResult = await handleExamine(currentState, restOfCommand.replace('at ', ''), game);
+                } else {
+                     commandHandlerResult = await handleExamine(currentState, restOfCommand, game);
                 }
                 break;
             case 'move':
                 commandHandlerResult = await handleMove(currentState, restOfCommand, game);
                 break;
             case 'take':
-            case 'pick':
-                 const target = restOfCommand.startsWith('up ') ? restOfCommand.substring(3) : restOfCommand;
-                 commandHandlerResult = await handleTake(currentState, target, game);
-                 break;
+            case 'pick': 
+                const target = restOfCommand.startsWith('up ') ? restOfCommand.substring(3) : restOfCommand;
+                commandHandlerResult = await handleTake(currentState, target, game);
+                break;
             case 'inventory':
                  commandHandlerResult = await handleInventory(currentState, game);
                  break;
@@ -277,7 +276,14 @@ export async function processCommand(
              case 'talk':
                  commandHandlerResult = await handleTalk(currentState, restOfCommand.replace('to ', ''), game);
                  break;
-             // Add other simple commands here if needed
+             case 'use':
+                const useOnMatch = restOfCommand.match(/^(.*?)\s+on\s+(.*)$/);
+                if (useOnMatch) {
+                    commandHandlerResult = await handleUse(currentState, useOnMatch[1].trim(), useOnMatch[2].trim(), game);
+                } else {
+                    commandHandlerResult = await handleUse(currentState, restOfCommand, '', game);
+                }
+                break;
         }
     }
 
@@ -335,11 +341,8 @@ export async function processCommand(
             case 'look':
                 if (restOfCommand === 'around') {
                     commandHandlerResult = await handleLook(currentState, game);
-                } else if (restOfCommand.startsWith('behind')) {
-                    const target = restOfCommand.replace('behind ', '').trim();
-                    commandHandlerResult = await handleMove(currentState, target, game);
                 } else {
-                     commandHandlerResult = await handleExamine(currentState, restOfCommand.replace('at ', ''), game);
+                     commandHandlerResult = await handleExamine(currentState, restOfCommand.replace(/^at\s+/, ''), game);
                 }
                 break;
             case 'move':
@@ -357,11 +360,11 @@ export async function processCommand(
                 commandHandlerResult = await handleGo(currentState, restOfCommand.replace('to ', ''), game);
                 break;
             case 'use':
-                const useOnMatch = restOfCommand.match(/"(.*?)"\s+on\s+"(.*?)"/);
+                const useOnMatch = restOfCommand.match(/^(.*?)\s+on\s+(.*)$/);
                 if (useOnMatch) {
                     commandHandlerResult = await handleUse(currentState, useOnMatch[1].trim(), useOnMatch[2].trim(), game);
                 } else {
-                    commandHandlerResult = await handleUse(currentState, restOfCommand.replace(/"/g, ''), '', game);
+                    commandHandlerResult = await handleUse(currentState, restOfCommand, '', game);
                 }
                 break;
             case 'read':
