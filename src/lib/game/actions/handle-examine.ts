@@ -1,8 +1,9 @@
 'use server';
 
-import type { Game, PlayerState, CommandResult } from "@/lib/game/types";
+import type { Game, PlayerState, CommandResult, GameObject, GameObjectState, Item, ItemId } from "@/lib/game/types";
 import { findItemInContext, getLiveGameObject, getLiveItem } from "@/lib/game/utils/helpers";
-import { createMessage, normalizeName } from "@/lib/utils";
+import { createMessage } from "@/lib/utils";
+import { normalizeName } from "@/lib/utils";
 
 
 const examinedObjectFlag = (id: string) => `examined_${id}`;
@@ -16,7 +17,7 @@ export async function handleExamine(state: PlayerState, targetName: string, game
         return { newState: state, messages: [createMessage('system', 'System', `You need to specify what to examine.`)] };
     }
     
-    // First, try to find the item in inventory or visible containers
+    // Check for item (in inventory or in an open container)
     const itemInContext = findItemInContext(state, game, normalizedTarget);
     if (itemInContext) {
         const liveItem = getLiveItem(itemInContext.id, state, game);
@@ -33,7 +34,7 @@ export async function handleExamine(state: PlayerState, targetName: string, game
         if (onExamineHandler) {
             if (isAlreadyExamined && onExamineHandler.alternateMessage) {
                 messageText = onExamineHandler.alternateMessage;
-            } else {
+            } else if (onExamineHandler.success) {
                 messageText = onExamineHandler.success.message;
             }
         } else if (isAlreadyExamined && liveItem.gameLogic.alternateDescription) {
@@ -56,7 +57,10 @@ export async function handleExamine(state: PlayerState, targetName: string, game
     }
     
     // If not an item, check for a game object in the location
-    const visibleObjectIds = newState.locationStates[newState.currentLocationId]?.objects || [];
+    const location = game.locations[state.currentLocationId];
+    if (!location) return { newState: state, messages: [createMessage('system', 'System', `Error: Current location not found.`)] };
+    
+    const visibleObjectIds = state.locationStates[state.currentLocationId]?.objects || location.objects;
     const targetObjectId = visibleObjectIds.find(id =>
         normalizeName(game.gameObjects[id]?.name).includes(normalizedTarget)
     );
@@ -68,15 +72,12 @@ export async function handleExamine(state: PlayerState, targetName: string, game
         }
         
         let messageContent: string;
-        let imageToDisplay = liveObject.gameLogic.media?.images?.default;
         
         const isInteracting = state.interactingWithObject === liveObject.gameLogic.id;
         const flag = examinedObjectFlag(liveObject.gameLogic.id);
         const hasBeenExamined = newState.flags.includes(flag as any);
-
         const onExamineHandler = liveObject.gameLogic.handlers.onExamine;
         
-        // Prioritize the specific handler message over the generic description
         if (onExamineHandler) {
             if (hasBeenExamined && onExamineHandler.alternateMessage) {
                 messageContent = onExamineHandler.alternateMessage;
@@ -84,7 +85,6 @@ export async function handleExamine(state: PlayerState, targetName: string, game
                 messageContent = onExamineHandler.success.message;
             }
         } else {
-            // Fallback to stateMap or default description
             const currentStateId = liveObject.state.currentStateId;
             const stateMapEntry = currentStateId ? liveObject.gameLogic.stateMap?.[currentStateId] : undefined;
 
@@ -93,10 +93,6 @@ export async function handleExamine(state: PlayerState, targetName: string, game
                     messageContent = stateMapEntry.overrides.onExamine.success.message;
                 } else {
                     messageContent = stateMapEntry.description || liveObject.gameLogic.description;
-                }
-                const stateImageKey = currentStateId.replace('unlocked_', '');
-                if (liveObject.gameLogic.media?.images?.[stateImageKey]) {
-                    imageToDisplay = liveObject.gameLogic.media.images[stateImageKey];
                 }
             } else {
                 messageContent = liveObject.gameLogic.description;

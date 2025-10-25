@@ -2,6 +2,7 @@
 
 import type { Effect, Game, GameObjectId, ItemId, Message, NpcId, PlayerState, TokenUsage, LocationId, CommandResult } from '@/lib/game/types';
 import { createMessage } from '@/lib/utils';
+import { getLiveGameObject } from '../utils/helpers';
 
 
 export async function processEffects(initialState: PlayerState, effects: Effect[], game: Game): Promise<CommandResult> {
@@ -18,20 +19,22 @@ export async function processEffects(initialState: PlayerState, effects: Effect[
                 }
                 break;
             case 'SPAWN_ITEM':
-                 // When an item spawns from a broken object, it should be placed inside that object's inventory.
-                 // We find the object that was just broken (the coffee machine) and add the key to it.
-                const brokenMachineId = 'obj_coffee_machine' as GameObjectId;
-                const brokenMachineState = newState.objectStates[brokenMachineId];
-                if (brokenMachineState) {
-                    if (!brokenMachineState.items) {
-                        brokenMachineState.items = [];
-                    }
-                    if (!brokenMachineState.items.includes(effect.itemId)) {
-                        brokenMachineState.items.push(effect.itemId);
-                    }
-                    // Ensure the broken container is "open" so its contents can be seen/taken.
-                    brokenMachineState.isOpen = true; 
+                const locationStateForSpawn = newState.locationStates[effect.locationId];
+                const objectToSpawnIn = getLiveGameObject('obj_chalkboard_menu', newState, game);
+                if (objectToSpawnIn && objectToSpawnIn.state.items && !objectToSpawnIn.state.items.includes(effect.itemId)) {
+                    // This is a temporary solution to put the pipe "in" the chalkboard.
+                    // A better system would allow items to spawn directly into a location's "loose item" list.
+                    objectToSpawnIn.state.items.push(effect.itemId);
+                    newState.objectStates['obj_chalkboard_menu' as GameObjectId] = objectToSpawnIn.state;
                 }
+                break;
+            case 'REMOVE_ITEM':
+                if (!newState.inventory.includes(effect.itemId)) {
+                    newState.inventory = newState.inventory.filter((i: ItemId) => i !== effect.itemId);
+                }
+                break;
+            case 'DESTROY_ITEM':
+                // Logic to remove item from world/game state entirely would go here.
                 break;
             case 'SET_FLAG':
                 if (!newState.flags.includes(effect.flag)) {
