@@ -1,3 +1,4 @@
+
 'use server';
 
 import { 
@@ -315,7 +316,7 @@ export async function processCommand(
             case 'examine':
             case 'look':
                 if (restOfCommand === 'around') {
-                    commandHandlerResult = await handleLook(currentState, game, location.sceneDescription);
+                    commandHandlerResult = await handleLook(currentState, game);
                 } else if (restOfCommand.startsWith('behind')) {
                     const target = restOfCommand.replace('behind ', '').trim();
                     commandHandlerResult = await handleMove(currentState, target, game);

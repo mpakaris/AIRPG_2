@@ -1,13 +1,14 @@
+
 'use server';
 
 import type { Game, PlayerState, CommandResult } from "@/lib/game/types";
 import { createMessage } from "@/lib/utils";
 import { getLiveGameObject } from "@/lib/game/utils/helpers";
 
-export async function handleLook(state: PlayerState, game: Game, summary: string): Promise<CommandResult> {
+export async function handleLook(state: PlayerState, game: Game): Promise<CommandResult> {
   const narratorName = "Narrator";
   const location = game.locations[state.currentLocationId];
-  let fullDescription = summary.trim();
+  let fullDescription = location.sceneDescription.trim();
 
   const locationState = state.locationStates[state.currentLocationId] || { objects: location.objects };
   const visibleObjectIds = locationState.objects;
