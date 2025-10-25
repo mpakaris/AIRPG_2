@@ -1,6 +1,9 @@
+
+'use server';
+
 import type { CommandResult } from "@/lib/game/types";
-import type { Game, PlayerState } from "../types";
-import { createMessage } from "./process-effects";
+import type { Game, PlayerState } from "@/lib/game/types";
+import { createMessage } from "@/lib/game/actions/process-effects";
 
 export async function handleInventory(state: PlayerState, game: Game): Promise<CommandResult> {
     if (state.inventory.length === 0) {

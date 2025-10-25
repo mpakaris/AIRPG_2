@@ -6,7 +6,6 @@ import type { PlayerState, Message, Game, GameId } from '@/lib/game/types';
 import { initializeFirebase } from '@/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { getGameData, createInitialMessages } from './actions';
-import { handleLook } from '@/lib/game/actions/handle-look';
 
 const GAME_ID = 'blood-on-brass' as GameId;
 

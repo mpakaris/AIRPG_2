@@ -1,7 +1,8 @@
+
 'use server';
 
 import type { CommandResult } from "@/lib/game/types";
-import type { Game, NpcId, PlayerState } from "../types";
+import type { Game, NpcId, PlayerState } from "@/lib/game/types";
 import { createMessage, processEffects } from "@/lib/game/actions/process-effects";
 import { normalizeName } from "@/lib/utils";
 

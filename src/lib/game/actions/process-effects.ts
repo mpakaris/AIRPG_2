@@ -1,7 +1,7 @@
 
 'use client';
 
-import type { Effect, Game, GameObjectId, ItemId, Message, NpcId, PlayerState, TokenUsage, LocationId, CommandResult } from '../types';
+import type { Effect, Game, GameObjectId, ItemId, Message, NpcId, PlayerState, TokenUsage, LocationId, CommandResult } from '@/lib/game/types';
 import { getLiveGameObject } from "@/lib/game/actions/helpers";
 
 const examinedObjectFlag = (id: string) => `examined_${id}`;
