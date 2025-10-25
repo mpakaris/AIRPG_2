@@ -11,58 +11,53 @@ export async function handleTake(state: PlayerState, targetName: string, game: G
   const narratorName = "Narrator";
   const normalizedTargetName = normalizeName(targetName);
   
-  let newState = JSON.parse(JSON.stringify(state));
-
-  const itemToTake = findItemInContext(newState, game, normalizedTargetName);
-
-  if (!itemToTake) {
-    return { newState: state, messages: [createMessage('narrator', narratorName, `You don't see a "${targetName}" here to take.`)] };
+  if (!normalizedTargetName) {
+      return { newState: state, messages: [createMessage('system', 'System', 'You need to specify what to take.')] };
   }
   
-  if (newState.inventory.includes(itemToTake.id)) {
-    return { newState: state, messages: [createMessage('system', 'System', `You already have the ${itemToTake.name}.`)] };
+  let newState = JSON.parse(JSON.stringify(state));
+
+  const itemInContext = findItemInContext(newState, game, normalizedTargetName);
+
+  if (!itemInContext) {
+    return { newState: state, messages: [createMessage('narrator', narratorName, `You don't see a "${targetName}" here to take.`)] };
   }
 
-  if (!itemToTake.capabilities.isTakable) {
-    const failMessage = itemToTake.handlers?.onTake?.fail?.message || `You can't take the ${itemToTake.name}.`;
+  const { item, source } = itemInContext;
+  
+  if (newState.inventory.includes(item.id)) {
+    return { newState: state, messages: [createMessage('system', 'System', `You already have the ${item.name}.`)] };
+  }
+
+  if (!item.capabilities.isTakable) {
+    const failMessage = item.handlers?.onTake?.fail?.message || `You can't take the ${item.name}.`;
     return { newState: state, messages: [createMessage('narrator', narratorName, failMessage)] };
   }
 
-  let itemFoundAndRemoved = false;
-  let containerId: GameObjectId | null = null;
-  const visibleObjectIds = newState.locationStates[newState.currentLocationId]?.objects || [];
-
-  for (const objId of visibleObjectIds) {
-    const liveObject = getLiveGameObject(objId, newState, game);
-    if (liveObject && liveObject.state.isOpen) {
-      const currentObjectItems = liveObject.state.items || [];
-      if (currentObjectItems.includes(itemToTake.id)) {
-        containerId = objId;
-        const newObjectItems = currentObjectItems.filter(id => id !== itemToTake.id);
-        newState.objectStates[objId].items = newObjectItems;
-        itemFoundAndRemoved = true;
-        break; 
-      }
+  // If item was found in a container, remove it from there
+  if (source && source.type === 'object') {
+    const containerId = source.id;
+    const containerState = newState.objectStates[containerId];
+    if (containerState && containerState.items) {
+      containerState.items = containerState.items.filter((id: ItemId) => id !== item.id);
     }
+  } else if (source && source.type === 'location') {
+    // If we support items being directly in locations, logic to remove it would go here.
+    // For now, our model has items inside objects.
+  } else {
+    // This case handles items that are 'spawned' but not yet in a container.
+    // The findItemInContext function logic needs to support this.
+    // For now, we assume all takeable items are in containers.
+    // If the source is null but the item was found, it means it was in the world but not in a container.
+    // This shouldn't happen with our current logic, but we handle it gracefully.
   }
 
-  if (!itemFoundAndRemoved) {
-      return { newState: state, messages: [createMessage('narrator', narratorName, `You see the ${itemToTake.name}, but can't seem to pick it up from where it is.`)] };
-  }
+  // Add item to player inventory
+  newState.inventory.push(item.id);
 
-  newState.inventory.push(itemToTake.id);
-
-  // Specific state change for the safe after it's emptied
-  if (containerId === 'obj_wall_safe') {
-      const safeState = newState.objectStates[containerId];
-      if (safeState && safeState.items && safeState.items.length === 0) {
-          safeState.currentStateId = 'unlocked_empty';
-      }
-  }
-
-  const successHandler = itemToTake.handlers?.onTake?.success;
+  const successHandler = item.handlers?.onTake?.success;
   const effects = successHandler?.effects || [];
-  const successMessage = successHandler?.message || `You take the ${itemToTake.name}.`;
+  const successMessage = successHandler?.message || `You take the ${item.name}.`;
   
   const result = await processEffects(newState, effects, game);
   result.messages.unshift(createMessage('narrator', narratorName, successMessage));

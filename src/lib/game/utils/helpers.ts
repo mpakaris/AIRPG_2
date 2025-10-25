@@ -1,5 +1,5 @@
 
-import type { Game, GameObject, GameObjectId, GameObjectState, Item, ItemId, ItemState, NPC, NpcId, NpcState, PlayerState } from '@/lib/game/types';
+import type { Game, GameObject, GameObjectId, GameObjectState, Item, ItemId, ItemState, NPC, NpcId, NpcState, PlayerState, LocationId } from '@/lib/game/types';
 import { normalizeName } from '@/lib/utils';
 
 export function getLiveGameObject(id: GameObjectId, state: PlayerState, game: Game): {gameLogic: GameObject, state: GameObjectState} | null {
@@ -54,15 +54,15 @@ export function getLiveNpc(id: NpcId, state: PlayerState, baseNpc: NPC): NpcStat
 }
 
 
-export function findItemInContext(state: PlayerState, game: Game, targetName: string): Item | null {
+export function findItemInContext(state: PlayerState, game: Game, targetName: string): { item: Item, source: { type: 'inventory' } | { type: 'object', id: GameObjectId } | { type: 'location', id: LocationId } } | null {
     const normalizedTargetName = normalizeName(targetName);
 
     // 1. Check inventory
     const itemInInventory = state.inventory
         .map(id => game.items[id])
-        .find(item => item && normalizedTargetName.includes(normalizeName(item.name)));
+        .find(item => item && normalizeName(item.name).includes(normalizedTargetName));
     if (itemInInventory) {
-        return itemInInventory;
+        return { item: itemInInventory, source: { type: 'inventory' } };
     }
 
     // 2. Check items inside all open objects in the current location
@@ -73,8 +73,8 @@ export function findItemInContext(state: PlayerState, game: Game, targetName: st
             const itemsInContainer = liveObject.state.items || [];
             for (const itemId of itemsInContainer) {
                 const item = game.items[itemId];
-                if (item && normalizedTargetName.includes(normalizeName(item.name))) {
-                    return item;
+                if (item && normalizeName(item.name).includes(normalizedTargetName)) {
+                    return { item, source: { type: 'object', id: objId } };
                 }
             }
          }

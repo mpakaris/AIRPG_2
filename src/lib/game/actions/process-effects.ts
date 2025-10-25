@@ -19,10 +19,15 @@ export async function processEffects(initialState: PlayerState, effects: Effect[
                     newState.inventory.push(effect.itemId);
                 }
                 break;
-            // The SPAWN_ITEM effect is deprecated in favor of placing items in container inventories.
-            // This case is kept for legacy compatibility but should not be used for new development.
             case 'SPAWN_ITEM':
-                 console.warn("DEPRECATED: 'SPAWN_ITEM' effect used. Consider placing items in container inventories instead.");
+                if (effect.containerId) {
+                    const containerState = newState.objectStates[effect.containerId];
+                    if (containerState && containerState.items && !containerState.items.includes(effect.itemId)) {
+                        containerState.items.push(effect.itemId);
+                    }
+                } else {
+                    console.error(`SPAWN_ITEM effect for ${effect.itemId} is missing a containerId.`);
+                }
                 break;
             case 'REMOVE_ITEM':
                 if (!newState.inventory.includes(effect.itemId)) {

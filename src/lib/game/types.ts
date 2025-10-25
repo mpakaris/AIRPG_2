@@ -61,7 +61,7 @@ export type CommandResult = {
 // --- Effect System ---
 export type Effect =
   | { type: 'ADD_ITEM'; itemId: ItemId }
-  | { type: 'SPAWN_ITEM'; itemId: ItemId, locationId: LocationId }
+  | { type: 'SPAWN_ITEM'; itemId: ItemId; containerId: GameObjectId }
   | { type: 'REMOVE_ITEM'; itemId: ItemId } // From inventory
   | { type: 'DESTROY_ITEM'; itemId: ItemId } // From world
   | { type: 'SET_FLAG'; flag: Flag }

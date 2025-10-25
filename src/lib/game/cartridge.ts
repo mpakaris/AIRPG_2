@@ -68,7 +68,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         description: "There's a chalkboard menu near the counter with today's specials.",
         capabilities: { openable: true, lockable: false, breakable: true, movable: true, powerable: false, container: true, readable: true, inputtable: false },
         state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        inventory: { items: ['item_iron_pipe'] as ItemId[], capacity: 1 },
+        inventory: { items: [], capacity: 1 },
         media: { images: { default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759603706/Chalkboard_h61haz.png', description: 'A chalkboard menu in a cafe.', hint: 'chalkboard menu' } } },
         handlers: {
             onExamine: {
@@ -82,6 +82,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                     message: "You move the chalkboard aside and find a heavy iron pipe leaning against the wall behind it.",
                     effects: [
                         { type: 'SET_FLAG', flag: 'has_moved_chalkboard' as Flag },
+                        { type: 'SPAWN_ITEM', itemId: 'item_iron_pipe' as ItemId, containerId: 'obj_chalkboard_menu' as GameObjectId },
                         { type: 'SET_OBJECT_STATE', objectId: 'obj_chalkboard_menu', state: { currentStateId: 'moved', isOpen: true } },
                         { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'A heavy iron pipe was hidden behind the menu.', imageId: 'item_iron_pipe'}
                     ]
@@ -258,7 +259,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         description: "It's a high-end Italian coffee machine, gleaming under the cafe lights.",
         capabilities: { openable: false, lockable: false, breakable: true, movable: false, powerable: false, container: true, readable: false, inputtable: false },
         state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        inventory: { items: ['item_deposit_key'] as ItemId[], capacity: 1 },
+        inventory: { items: [], capacity: 1 },
         media: {
             images: {
                 default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761211151/coffee_machine_detail_frexuu.png', description: 'A high-end Italian coffee machine.', hint: 'coffee machine' },
@@ -282,6 +283,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         message: "With a sharp crack, the iron pipe shatters the side panel of the coffee machine. A small, ornate key falls out from the broken compartment.",
                         effects: [
                             { type: 'SET_FLAG', flag: 'machine_is_broken' as Flag },
+                            { type: 'SPAWN_ITEM', itemId: 'item_deposit_key' as ItemId, containerId: 'obj_coffee_machine' as GameObjectId },
                             { type: 'SET_OBJECT_STATE', objectId: 'obj_coffee_machine', state: { isBroken: true, isOpen: true, currentStateId: 'broken' } },
                             { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'The side of the coffee machine is now smashed.', imageId: 'obj_coffee_machine' }
                         ]
@@ -878,5 +880,3 @@ export const game: Game = {
   chapters: chapters,
   startChapterId: 'ch1-the-cafe' as ChapterId,
 };
-
-    
