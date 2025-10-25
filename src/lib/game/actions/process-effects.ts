@@ -1,3 +1,4 @@
+
 'use server';
 
 import type { Effect, Game, GameObjectId, ItemId, Message, NpcId, PlayerState, TokenUsage, LocationId, CommandResult } from '@/lib/game/types';
@@ -18,15 +19,10 @@ export async function processEffects(initialState: PlayerState, effects: Effect[
                     newState.inventory.push(effect.itemId);
                 }
                 break;
+            // The SPAWN_ITEM effect is deprecated in favor of placing items in container inventories.
+            // This case is kept for legacy compatibility but should not be used for new development.
             case 'SPAWN_ITEM':
-                const locationStateForSpawn = newState.locationStates[effect.locationId];
-                const objectToSpawnIn = getLiveGameObject('obj_chalkboard_menu', newState, game);
-                if (objectToSpawnIn && objectToSpawnIn.state.items && !objectToSpawnIn.state.items.includes(effect.itemId)) {
-                    // This is a temporary solution to put the pipe "in" the chalkboard.
-                    // A better system would allow items to spawn directly into a location's "loose item" list.
-                    objectToSpawnIn.state.items.push(effect.itemId);
-                    newState.objectStates['obj_chalkboard_menu' as GameObjectId] = objectToSpawnIn.state;
-                }
+                 console.warn("DEPRECATED: 'SPAWN_ITEM' effect used. Consider placing items in container inventories instead.");
                 break;
             case 'REMOVE_ITEM':
                 if (!newState.inventory.includes(effect.itemId)) {

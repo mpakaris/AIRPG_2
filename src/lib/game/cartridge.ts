@@ -68,7 +68,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         description: "There's a chalkboard menu near the counter with today's specials.",
         capabilities: { openable: true, lockable: false, breakable: true, movable: true, powerable: false, container: true, readable: true, inputtable: false },
         state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        inventory: { items: [] as ItemId[], capacity: 1 },
+        inventory: { items: ['item_iron_pipe'] as ItemId[], capacity: 1 },
         media: { images: { default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759603706/Chalkboard_h61haz.png', description: 'A chalkboard menu in a cafe.', hint: 'chalkboard menu' } } },
         handlers: {
             onExamine: {
@@ -83,7 +83,6 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                     effects: [
                         { type: 'SET_FLAG', flag: 'has_moved_chalkboard' as Flag },
                         { type: 'SET_OBJECT_STATE', objectId: 'obj_chalkboard_menu', state: { currentStateId: 'moved', isOpen: true } },
-                        { type: 'SPAWN_ITEM', itemId: 'item_iron_pipe' as ItemId, locationId: 'loc_cafe_interior' as LocationId },
                         { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'A heavy iron pipe was hidden behind the menu.', imageId: 'item_iron_pipe'}
                     ]
                 },
@@ -259,7 +258,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         description: "It's a high-end Italian coffee machine, gleaming under the cafe lights.",
         capabilities: { openable: false, lockable: false, breakable: true, movable: false, powerable: false, container: true, readable: false, inputtable: false },
         state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        inventory: { items: [], capacity: 1 },
+        inventory: { items: ['item_deposit_key'] as ItemId[], capacity: 1 },
         media: {
             images: {
                 default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761211151/coffee_machine_detail_frexuu.png', description: 'A high-end Italian coffee machine.', hint: 'coffee machine' },
@@ -284,7 +283,6 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         effects: [
                             { type: 'SET_FLAG', flag: 'machine_is_broken' as Flag },
                             { type: 'SET_OBJECT_STATE', objectId: 'obj_coffee_machine', state: { isBroken: true, isOpen: true, currentStateId: 'broken' } },
-                            { type: 'SPAWN_ITEM', itemId: 'item_deposit_key' as ItemId, locationId: 'loc_cafe_interior' as LocationId },
                             { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'The side of the coffee machine is now smashed.', imageId: 'obj_coffee_machine' }
                         ]
                     },
@@ -346,7 +344,7 @@ const items: Record<ItemId, Item> = {
         },
         handlers: {
             onTake: {
-                success: { message: "You take the iron pipe and add it to your inventory." },
+                success: { message: "You take the Iron Pipe. It feels heavy and solid in your hand." },
                 fail: { message: "" }
             },
             onExamine: {
