@@ -20,17 +20,24 @@ export async function processEffects(initialState: PlayerState, effects: Effect[
                 }
                 break;
             case 'SPAWN_ITEM':
-                if (effect.containerId) {
-                    const containerState = newState.objectStates[effect.containerId];
-                    if (containerState && containerState.items && !containerState.items.includes(effect.itemId)) {
-                        containerState.items.push(effect.itemId);
+                const containerId = effect.containerId;
+                if (containerId) {
+                    if (!newState.objectStates[containerId]) {
+                        newState.objectStates[containerId] = {};
+                    }
+                    if (!newState.objectStates[containerId].items) {
+                        newState.objectStates[containerId].items = [];
+                    }
+                    if (!newState.objectStates[containerId].items!.includes(effect.itemId)) {
+                        const newItems = [...newState.objectStates[containerId].items!, effect.itemId];
+                        newState.objectStates[containerId].items = newItems;
                     }
                 } else {
                     console.error(`SPAWN_ITEM effect for ${effect.itemId} is missing a containerId.`);
                 }
                 break;
             case 'REMOVE_ITEM':
-                if (!newState.inventory.includes(effect.itemId)) {
+                if (newState.inventory.includes(effect.itemId)) {
                     newState.inventory = newState.inventory.filter((i: ItemId) => i !== effect.itemId);
                 }
                 break;
@@ -43,12 +50,11 @@ export async function processEffects(initialState: PlayerState, effects: Effect[
                 }
                 break;
             case 'REVEAL_OBJECT':
-                const locationId = newState.currentLocationId;
-                if (newState.locationStates[locationId] && !newState.locationStates[locationId].objects.includes(effect.objectId)) {
-                    // Create a new array to ensure state change is detected
-                    const newObjects = [...newState.locationStates[locationId].objects, effect.objectId];
-                    newState.locationStates[locationId] = {
-                        ...newState.locationStates[locationId],
+                const revealLocationId = newState.currentLocationId;
+                if (newState.locationStates[revealLocationId] && !newState.locationStates[revealLocationId].objects.includes(effect.objectId)) {
+                    const newObjects = [...newState.locationStates[revealLocationId].objects, effect.objectId];
+                    newState.locationStates[revealLocationId] = {
+                        ...newState.locationStates[revealLocationId],
                         objects: newObjects
                     };
                 }
