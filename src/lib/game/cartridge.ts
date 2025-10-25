@@ -8,7 +8,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         id: 'obj_brown_notebook' as GameObjectId,
         name: 'Brown Notebook',
         archetype: 'Container',
-        description: 'A worn, leather-bound notebook rests on a table.',
+        description: 'A very worn, leather-bound notebook rests on a table.',
         capabilities: { openable: true, lockable: true, breakable: false, movable: true, powerable: false, container: true, readable: false, inputtable: true },
         state: { isOpen: false, isLocked: true, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
         inventory: { items: ['item_sd_card', 'item_newspaper_article'] as ItemId[], capacity: 2, allowTags: [], denyTags: [] },
