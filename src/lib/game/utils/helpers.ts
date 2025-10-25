@@ -1,3 +1,4 @@
+
 import type { Game, GameObject, GameObjectId, GameObjectState, Item, ItemId, ItemState, NPC, NpcId, NpcState, PlayerState } from '@/lib/game/types';
 import { normalizeName } from '@/lib/utils';
 
@@ -54,13 +55,12 @@ export function getLiveNpc(id: NpcId, state: PlayerState, baseNpc: NPC): NpcStat
 
 
 export function findItemInContext(state: PlayerState, game: Game, targetName: string): Item | null {
-    const location = game.locations[state.currentLocationId];
     const normalizedTargetName = normalizeName(targetName);
 
     // 1. Check inventory
     const itemInInventory = state.inventory
         .map(id => game.items[id])
-        .find(item => item && normalizeName(item.name).includes(normalizedTargetName));
+        .find(item => item && normalizedTargetName.includes(normalizeName(item.name)));
     if (itemInInventory) {
         return itemInInventory;
     }
@@ -73,7 +73,7 @@ export function findItemInContext(state: PlayerState, game: Game, targetName: st
             const itemsInContainer = liveObject.state.items || [];
             for (const itemId of itemsInContainer) {
                 const item = game.items[itemId];
-                if (item && normalizeName(item.name).includes(normalizedTargetName)) {
+                if (item && normalizedTargetName.includes(normalizeName(item.name))) {
                     return item;
                 }
             }

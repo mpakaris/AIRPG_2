@@ -9,7 +9,11 @@ export function cn(...inputs: ClassValue[]) {
 
 export function normalizeName(name: string): string {
   if (!name) return '';
-  return name.toLowerCase().replace(/^"|"$/g, '').trim();
+  return name
+    .toLowerCase()
+    .replace(/^(a|an|the)\s+/, '') // remove leading articles
+    .replace(/^"|"$/g, '') // remove surrounding quotes
+    .trim();
 }
 
 const examinedObjectFlag = (id: string) => `examined_${id}`;
