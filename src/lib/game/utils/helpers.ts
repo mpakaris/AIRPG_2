@@ -81,6 +81,7 @@ export function findItemInContext(state: PlayerState, game: Game, targetName: st
     for (const objId of visibleObjectIds) {
         const liveObject = getLiveGameObject(objId, state, game);
         if (liveObject && liveObject.state.isOpen) {
+            // Check the items currently in the object's live state
             const itemsInContainer = liveObject.state.items || [];
             for (const itemId of itemsInContainer) {
                 const item = game.items[itemId];
@@ -93,5 +94,3 @@ export function findItemInContext(state: PlayerState, game: Game, targetName: st
 
     return null;
 }
-
-    

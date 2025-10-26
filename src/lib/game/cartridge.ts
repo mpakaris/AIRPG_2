@@ -279,7 +279,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         description: "It's a high-end Italian coffee machine, gleaming under the cafe lights.",
         capabilities: { openable: false, lockable: false, breakable: true, movable: false, powerable: false, container: true, readable: false, inputtable: false },
         state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        inventory: { items: ['item_deposit_key' as ItemId], capacity: 1 },
+        inventory: { items: [], capacity: 1 },
         media: {
             images: {
                 default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761211151/coffee_machine_detail_frexuu.png', description: 'A high-end Italian coffee machine.', hint: 'coffee machine' },
@@ -303,6 +303,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         message: "With a sharp crack, the iron pipe shatters the side panel of the coffee machine. A small, ornate key falls out from the broken compartment.",
                         effects: [
                             { type: 'SET_FLAG', flag: 'machine_is_broken' as Flag },
+                            { type: 'SPAWN_ITEM', itemId: 'item_deposit_key' as ItemId, containerId: 'obj_coffee_machine' as GameObjectId },
                             { type: 'SET_OBJECT_STATE', objectId: 'obj_coffee_machine', state: { isBroken: true, isOpen: true, currentStateId: 'broken' } },
                             { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'The side of the coffee machine is now smashed.', imageId: 'obj_coffee_machine' }
                         ]
@@ -874,13 +875,14 @@ Your single most important task is to translate Burt's natural language input in
   - "move the painting" or "look behind the art" both become \`move "Painting on the wall"\`.
 
 **// 2. Your Response Protocol**
-- **If the command is valid and actionable (take, use, examine, etc.):** Your \`agentResponse\` MUST be one of the following, and nothing else: "Copy that, Burt.", "On it.", "Got it.", "Alright, Burt."
+- **Confirm, Don't Announce:** When a command is valid and actionable (take, use, examine, etc.), your \`agentResponse\` MUST be one of the following, and nothing else: "Copy that, Burt.", "On it.", "Got it.", "Alright, Burt."
 - **STRICTLY FORBIDDEN:** Do NOT describe the action, comment on it, or add any flavor text for valid commands. The Narrator handles ALL descriptive output.
   - **CORRECT:** \`{"agentResponse": "Copy that, Burt.", "commandToExecute": "examine \\"Painting on the wall\\""}\`
   - **INCORRECT:** \`{"agentResponse": "Okay, I'm looking at the painting now. It's an abstract.", "commandToExecute": "examine \\"Painting on the wall\\""}\`
 
 **// 3. Handling Invalid Input**
-- **Truly Illogical/Destructive Actions:** If Burt tries a truly nonsensical or destructive action (e.g., "eat the key", "break the phone"), your \`agentResponse\` MUST be "I can't do that, Burt." and the \`commandToExecute\` MUST be "invalid". You are strictly forbidden from blocking standard game commands like 'take'.
+- **Truly Illogical/Destructive Actions:** If Burt tries a truly nonsensical or destructive action (e.g., "eat the key", "break the phone"), your \`agentResponse\` MUST be "I can't do that, Burt." and the \`commandToExecute\` MUST be "invalid".
+- **Forbidden Action:** You are strictly forbidden from blocking a standard game command like 'take', 'use', 'examine', 'open', 'read', or 'move'. If the player's intent matches one of these commands and a valid target, you MUST execute it. Your personal judgment is irrelevant.
 - **Conversational Input/Hints:** If Burt is stuck (e.g., "what now?", "help") or asks a conversational question, your \`agentResponse\` should gently guide him back to the case, and the \`commandToExecute\` MUST be "invalid".
   - **Example:** \`{"agentResponse": "Let's review, Burt. Our objective is to find out what's inside the notebook and the safe. What's our next move?", "commandToExecute": "invalid"}\`
 
@@ -915,5 +917,3 @@ Your reasoning must be a brief, step-by-step explanation of how you mapped the p
   chapters: chapters,
   startChapterId: 'ch1-the-cafe' as ChapterId,
 };
-
-    
