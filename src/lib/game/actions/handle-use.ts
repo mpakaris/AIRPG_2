@@ -58,6 +58,13 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
         }
         return { newState: state, messages: [createMessage('narrator', narratorName, `You can't use the "${itemName}" on the "${targetName}".`)] };
     }
+    
+    // Check if the object exists at all, even if not visible.
+    const objectExistsInGame = Object.values(game.gameObjects).some(obj => normalizeName(obj.name).includes(normalizedTargetName));
+    if (objectExistsInGame) {
+        return { newState: state, messages: [createMessage('narrator', narratorName, `You can't see a "${targetName}" here.`)] };
+    }
+
 
     const targetItemResult = findItemInContext(state, game, normalizedTargetName);
     if(targetItemResult) {
