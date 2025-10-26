@@ -57,7 +57,7 @@ export function getLiveNpc(id: NpcId, state: PlayerState, baseNpc: NPC): NpcStat
 export function findItemInContext(state: PlayerState, game: Game, targetName: string): { item: Item, source: { type: 'inventory' } | { type: 'object', id: GameObjectId } | { type: 'location', id: LocationId } } | null {
     const normalizedTargetName = normalizeName(targetName);
 
-    const checkItem = (item: Item) => {
+    const checkItem = (item: Item | undefined) => {
         if (!item) return false;
         const itemName = normalizeName(item.name);
         const itemTags = item.design?.tags?.map(normalizeName) || [];
@@ -73,18 +73,20 @@ export function findItemInContext(state: PlayerState, game: Game, targetName: st
     }
 
     // 2. Check items inside all open objects in the current location
-    const visibleObjectIds = state.locationStates[state.currentLocationId]?.objects || [];
-    for (const objId of visibleObjectIds) {
-         const liveObject = getLiveGameObject(objId, state, game);
-         if (liveObject && liveObject.state.isOpen) {
-            const itemsInContainer = liveObject.state.items || [];
-            for (const itemId of itemsInContainer) {
-                const item = game.items[itemId];
-                if (checkItem(item)) {
-                    return { item, source: { type: 'object', id: objId } };
+    const locationState = state.locationStates[state.currentLocationId];
+    if (locationState) {
+        for (const objId of locationState.objects) {
+            const liveObject = getLiveGameObject(objId, state, game);
+            if (liveObject && liveObject.state.isOpen) {
+                const itemsInContainer = liveObject.state.items || [];
+                for (const itemId of itemsInContainer) {
+                    const item = game.items[itemId];
+                    if (checkItem(item)) {
+                        return { item, source: { type: 'object', id: objId } };
+                    }
                 }
             }
-         }
+        }
     }
 
     return null;

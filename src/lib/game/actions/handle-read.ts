@@ -13,10 +13,14 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
     const agentName = game.narratorName || "Agent Sharma";
     const normalizedItemName = normalizeName(itemName);
     
+    if (!normalizedItemName) {
+        return { newState: state, messages: [createMessage('system', 'System', `You need to specify what to read.`)] };
+    }
+
     const itemInContext = findItemInContext(state, game, normalizedItemName);
 
     if (!itemInContext) {
-        return { newState: state, messages: [createMessage('system', 'System', `You don't have an item called "${itemName}" to read.`)] };
+        return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${itemName}" to read here.`)] };
     }
     
     const itemToRead = itemInContext.item;
