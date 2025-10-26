@@ -25,6 +25,7 @@ export type GuidePlayerWithNarratorInput = z.infer<typeof GuidePlayerWithNarrato
 const GuidePlayerWithNarratorOutputSchema = z.object({
   agentResponse: z.string().describe("The AI narrator's response to the player, guiding them and providing feedback."),
   commandToExecute: z.string().describe('The command that engine should execute based on the player input and game state.'),
+  reasoning: z.string().describe("A brief, step-by-step explanation of how you arrived at this command, starting from the player's input."),
 });
 export type GuidePlayerWithNarratorOutput = z.infer<typeof GuidePlayerWithNarratorOutputSchema>;
 

@@ -58,7 +58,10 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             locked: "It's locked.",
             noEffect: "Using that on the notebook has no effect."
         },
-        design: { authorNotes: "Central puzzle item for Chapter 1." },
+        design: { 
+            authorNotes: "Central puzzle item for Chapter 1.",
+            tags: ['notebook', 'book']
+        },
         version: { schema: "1.0", content: "1.0" }
     },
     'obj_chalkboard_menu': {
@@ -94,7 +97,10 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             default: "Probably best to leave the menu alone. It's not part of the case.",
             notMovable: "It's a heavy stand, but you manage to slide it aside."
         },
-        design: { authorNotes: "Contains the 'justice' clue and hides the iron pipe." },
+        design: { 
+            authorNotes: "Contains the 'justice' clue and hides the iron pipe.",
+            tags: ['chalkboard', 'menu', 'board']
+        },
         version: { schema: "1.0", content: "1.2" }
     },
     'obj_magazine': {
@@ -120,7 +126,10 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             default: "The magazine is old news. Let's stick to the facts of our case.",
             notMovable: "You shift the magazine, revealing a sticky coffee ring. Not the clue you were hoping for."
         },
-        design: { authorNotes: "Flavor item to build atmosphere." },
+        design: { 
+            authorNotes: "Flavor item to build atmosphere.",
+            tags: ['magazine', 'paper']
+        },
         version: { schema: "1.0", content: "1.0" }
     },
     'obj_bookshelf': {
@@ -150,7 +159,10 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             default: "It's just a bookshelf. Let's not get sidetracked.",
             notMovable: "It's too heavy to move by yourself."
         },
-        design: { authorNotes: "Contains the other 'justice' clue for the notebook." },
+        design: { 
+            authorNotes: "Contains the other 'justice' clue for the notebook.",
+            tags: ['books', 'shelf']
+        },
         version: { schema: "1.0", content: "1.0" }
     },
     'obj_painting': {
@@ -184,7 +196,10 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             default: "The painting is nice, but it's not a clue.",
             notMovable: "You can't move the painting, but you could try looking behind it."
         },
-        design: { authorNotes: "Contains the 'S.B.' clue and hides the wall safe." },
+        design: { 
+            authorNotes: "Contains the 'S.B.' clue and hides the wall safe.",
+            tags: ['painting', 'art']
+        },
         version: { schema: "1.0", content: "1.2" }
     },
     'obj_wall_safe': {
@@ -251,7 +266,10 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             locked: "It's locked tight. We need the right key.",
             notMovable: "It's built into the wall. It's not going anywhere."
         },
-        design: { authorNotes: "Final puzzle for chapter 1. Opened by the key from the coffee machine." },
+        design: { 
+            authorNotes: "Final puzzle for chapter 1. Opened by the key from the coffee machine.",
+            tags: ['safe']
+        },
         version: { schema: "1.0", content: "1.1" }
     },
     'obj_coffee_machine': {
@@ -306,7 +324,10 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             notOpenable: "You can't open it. The compartment is jammed shut.",
             noEffect: "Using that on the coffee machine has no effect."
         },
-        design: { authorNotes: "Breakable object containing the deposit key." },
+        design: { 
+            authorNotes: "Breakable object containing the deposit key.",
+            tags: ['machine', 'coffee']
+        },
         version: { schema: "1.0", content: "1.1" }
     }
 };
@@ -329,7 +350,10 @@ const items: Record<ItemId, Item> = {
             },
             defaultFailMessage: "You can't use the phone like that."
         },
-        design: { authorNotes: "Player's primary tool." },
+        design: { 
+            authorNotes: "Player's primary tool.",
+            tags: ['phone']
+        },
         version: { schema: "1.0", content: "1.0" }
     },
     'item_iron_pipe': {
@@ -356,7 +380,10 @@ const items: Record<ItemId, Item> = {
             },
             defaultFailMessage: "Sorry Burt, you can't use the pipe by itself. You need to use it on an object."
         },
-        design: { authorNotes: "Tool for breaking objects like the coffee machine." },
+        design: { 
+            authorNotes: "Tool for breaking objects like the coffee machine.",
+            tags: ['pipe']
+        },
         version: { schema: "1.0", content: "1.0" }
     },
     'item_deposit_key': {
@@ -383,7 +410,10 @@ const items: Record<ItemId, Item> = {
             },
             defaultFailMessage: "You need to use this key on a lock."
         },
-        design: { authorNotes: "Clue item found inside the broken coffee machine." },
+        design: { 
+            authorNotes: "Clue item found inside the broken coffee machine.",
+            tags: ['key']
+        },
         version: { schema: "1.0", content: "1.0" }
     },
     'item_business_card': {
@@ -410,7 +440,10 @@ const items: Record<ItemId, Item> = {
                 hint: 'business card'
             }
         },
-        design: { authorNotes: "Connects to the saxophonist and provides the 'Rose' and '1943' clues." },
+        design: { 
+            authorNotes: "Connects to the saxophonist and provides the 'Rose' and '1943' clues.",
+            tags: ['card']
+        },
         version: { schema: "1.0", content: "1.0" }
     },
     'item_newspaper_article': {
@@ -445,7 +478,10 @@ const items: Record<ItemId, Item> = {
                 hint: 'newspaper article'
             }
         },
-        design: { authorNotes: "Provides the main backstory and a personal connection for the player." },
+        design: { 
+            authorNotes: "Provides the main backstory and a personal connection for the player.",
+            tags: ['article', 'newspaper', 'clipping']
+        },
         version: { schema: "1.0", content: "1.0" }
     },
     'item_sd_card': {
@@ -477,7 +513,10 @@ const items: Record<ItemId, Item> = {
                 fail: { message: "You can't use the SD card right now." }
             }
         },
-        design: { authorNotes: "Contains the video clue about Silas Bloom." },
+        design: { 
+            authorNotes: "Contains the video clue about Silas Bloom.",
+            tags: ['sd card', 'card']
+        },
         version: { schema: "1.0", content: "1.1" }
     },
     'item_book_deal': {
@@ -578,7 +617,7 @@ const items: Record<ItemId, Item> = {
                 fail: { message: "" }
             }
         },
-        design: { tags: ['clue', 'document', 'quest_item'] },
+        design: { tags: ['clue', 'document', 'file', 'confidential file'] },
         version: { schema: "1.0", content: "1.0" }
     }
 };
@@ -829,30 +868,27 @@ export const game: Game = {
   promptContext: `You are Agent Sharma, the AI partner to FBI agent Burt Macklin (the player). Your role is to be a supportive, intelligent, and sometimes witty colleague.
 
 **CRITICAL RULES:**
-1.  **Your Persona:** You are Burt's partner, not a robot. Your tone should be conversational and collaborative. Always refer to the player as "Burt".
+1.  **Your Persona:** You are Burt's partner, not a robot. Your tone is conversational and collaborative. Always refer to the player as "Burt".
 2.  **Your Core Task:** Your primary job is to interpret Burt's natural language commands and translate them into a single, valid game command from the provided list.
 3.  **DO NOT NARRATE:** Your \`agentResponse\` should **NEVER** describe the outcome of an action. The Narrator handles that. You only confirm the action or offer conversational feedback.
     *   **CORRECT:** \`{"agentResponse": "Copy that, Burt. Taking a look at the painting now.", "commandToExecute": "examine \\"Painting on the wall\\""}\`
     *   **INCORRECT:** \`{"agentResponse": "You see a painting. Behind it is a note.", "commandToExecute": "examine \\"Painting on the wall\\""}\`
-4.  **Handle Ambiguity:** If Burt's command is vague (e.g., "look at the book"), use the most logical default action. 'examine' is a good default.
-5.  **Interaction Trap:** If Burt is currently interacting with an object (e.g., after using 'go to notebook') and tries to interact with a *different* one, you MUST use this specific response: \`{"agentResponse": "Whoa there, Burt. We're zeroed in on the {{objectName}} right now. If you want to check something else, we need to 'exit' this first.", "commandToExecute": "invalid"}\`
-6.  **Invalid/Conversational Input:** If Burt's input is illogical ("eat the SD card") or conversational ("what now?"), gently guide him back to the case.
+4.  **Handle Ambiguity & Synonyms:** The player might use different words for the same thing. Use your reasoning to map them to the correct target. "look at the book" and "examine notebook" should both map to \`examine "Brown Notebook"\`.
+5.  **Understand Intent:** The player might use different sentence structures for the same action. Your job is to parse their *intent*.
+    *   "open the safe with the key" should become \`use "Deposit Box Key" on "Wall Safe"\`
+    *   "use my key to open the safe" should also become \`use "Deposit Box Key" on "Wall Safe"\`
+6.  **Interaction Trap:** If Burt is currently interacting with an object and tries to interact with a *different* one, you MUST use this specific response: \`{"agentResponse": "Whoa there, Burt. We're zeroed in on the {{objectName}} right now. If you want to check something else, we need to 'exit' this first.", "commandToExecute": "invalid"}\`
+7.  **Invalid/Conversational Input:** If Burt's input is illogical ("eat the SD card") or conversational ("what now?"), gently guide him back to the case.
     *   **Illogical:** \`{"agentResponse": "I don't think that's a good idea, Burt. We might need that as evidence. Let's rethink.", "commandToExecute": "invalid"}\`
     *   **Conversational:** \`{"agentResponse": "Let's focus on the objective: {{chapterGoal}}. What's our next move?", "commandToExecute": "invalid"}\`
-7.  **Implicit Player Items:** Burt has default equipment like a "Phone". He doesn't need to see it to use it. If a command implies using the phone (e.g., 'use sd card'), you should map it to the direct action.
-8.  **Direct Password Attempts:** If the player's input IS the password phrase for a known locked object, map it to the 'password' command.
-    *   Player says: "Justice for Silas Bloom" -> Your response: \`{"agentResponse": "Worth a shot, Burt. Let's try that phrase.", "commandToExecute": "password \\"Brown Notebook\\" justice for silas bloom"}\`
-9.  **Restart Command:** If the player says "restart" or "start over", your response should be to confirm the action, and the command must be 'invalid' as players cannot restart the game.
-    *   Player says: "start over" -> Your response: \`{"agentResponse": "Sorry Burt, we can't restart the simulation. We have to see this through.", "commandToExecute": "invalid"}\`
-10. **Mini-game Help:** If the player asks about the "mini game" or "puzzle link", deflect gracefully.
-    *   Player says: "how do I play the mini game?" -> Your response: \`{"agentResponse": "The link for that puzzle is in the object's description, Burt. Just 'examine' it again to see it.", "commandToExecute": "invalid"}\`
-
 
 **Your Task Flow:**
-1.  Analyze Burt's input to understand his intent.
-2.  Choose the best matching command from the 'Available Game Commands' list, using exact names from the 'Visible Names' lists.
-3.  Formulate a brief, in-character \`agentResponse\` that fits the rules above.
-4.  Return the JSON object.
+1.  **Analyze Intent:** Read the "Player's Input" and determine the core action (verb) and the target(s) (nouns).
+2.  **Identify Targets:** Match the nouns to the official names in the "Visible Object Names" and "Visible NPC Names" lists. Be flexible with synonyms.
+3.  **Construct Command:** Build the command string using the 'Available Game Commands' as a guide. Use the full, exact names of the objects/NPCs in quotes.
+4.  **Formulate Response:** Write a brief, in-character \`agentResponse\` that fits the rules above.
+5.  **Reasoning:** Briefly explain your thought process. Why did you choose this command? How did you interpret the player's input?
+6.  **Return JSON:** Output the complete, valid JSON object.
 `,
   objectInteractionPromptContext: `You are Agent Sharma, observing your partner Burt as he inspects the {{objectName}}. Your job is to map his input to one of the available actions, while maintaining your persona as a supportive and curious colleague. Ask questions to guide him. Example: "What do you make of that, Burt?"`,
   storyStyleGuide: `You are a master storyteller and a brilliant editor. Your task is to transform a raw log of a text-based RPG into a captivating, well-written narrative chapter for a crime noir book.
@@ -881,5 +917,3 @@ export const game: Game = {
   chapters: chapters,
   startChapterId: 'ch1-the-cafe' as ChapterId,
 };
-
-    

@@ -608,7 +608,7 @@ export type Game = {
   locations: Record<LocationId, Location>;
   portals: Record<PortalId, Portal>;
   gameObjects: Record<GameObjectId, GameObject>;
-  items: Record<ItemId, Item>;
+items: Record<ItemId, Item>;
   npcs: Record<NpcId, NPC>;
 
   // Legacy Chapter model (for gradual migration)

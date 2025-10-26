@@ -57,12 +57,19 @@ export function getLiveNpc(id: NpcId, state: PlayerState, baseNpc: NPC): NpcStat
 export function findItemInContext(state: PlayerState, game: Game, targetName: string): { item: Item, source: { type: 'inventory' } | { type: 'object', id: GameObjectId } | { type: 'location', id: LocationId } } | null {
     const normalizedTargetName = normalizeName(targetName);
 
+    const checkItem = (item: Item) => {
+        if (!item) return false;
+        const itemName = normalizeName(item.name);
+        const itemTags = item.design?.tags?.map(normalizeName) || [];
+        return itemName.includes(normalizedTargetName) || itemTags.includes(normalizedTargetName) || normalizedTargetName.includes(itemName);
+    };
+
     // 1. Check inventory
-    const itemInInventory = state.inventory
-        .map(id => game.items[id])
-        .find(item => item && normalizeName(item.name).includes(normalizedTargetName));
-    if (itemInInventory) {
-        return { item: itemInInventory, source: { type: 'inventory' } };
+    for (const itemId of state.inventory) {
+        const item = game.items[itemId];
+        if (checkItem(item)) {
+            return { item, source: { type: 'inventory' } };
+        }
     }
 
     // 2. Check items inside all open objects in the current location
@@ -73,7 +80,7 @@ export function findItemInContext(state: PlayerState, game: Game, targetName: st
             const itemsInContainer = liveObject.state.items || [];
             for (const itemId of itemsInContainer) {
                 const item = game.items[itemId];
-                if (item && normalizeName(item.name).includes(normalizedTargetName)) {
+                if (checkItem(item)) {
                     return { item, source: { type: 'object', id: objId } };
                 }
             }
