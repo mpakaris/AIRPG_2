@@ -73,17 +73,19 @@ export function findItemInContext(state: PlayerState, game: Game, targetName: st
     }
 
     // 2. Check items inside all visible objects in the current location
-    const locationState = state.locationStates[state.currentLocationId];
-    if (locationState) {
-        for (const objId of locationState.objects) {
-            const liveObject = getLiveGameObject(objId, state, game);
-            if (liveObject && liveObject.state.isOpen) {
-                const itemsInContainer = liveObject.state.items || [];
-                for (const itemId of itemsInContainer) {
-                    const item = game.items[itemId];
-                    if (checkItem(item)) {
-                        return { item, source: { type: 'object', id: objId } };
-                    }
+    const location = game.locations[state.currentLocationId];
+    if (!location) return null;
+
+    const visibleObjectIds = state.locationStates[state.currentLocationId]?.objects || location.objects;
+
+    for (const objId of visibleObjectIds) {
+        const liveObject = getLiveGameObject(objId, state, game);
+        if (liveObject && liveObject.state.isOpen) {
+            const itemsInContainer = liveObject.state.items || [];
+            for (const itemId of itemsInContainer) {
+                const item = game.items[itemId];
+                if (checkItem(item)) {
+                    return { item, source: { type: 'object', id: objId } };
                 }
             }
         }
@@ -91,3 +93,5 @@ export function findItemInContext(state: PlayerState, game: Game, targetName: st
 
     return null;
 }
+
+    
