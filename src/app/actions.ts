@@ -186,283 +186,204 @@ export async function processCommand(
   playerInput: string
 ): Promise<CommandResult> {
     const safePlayerInput = playerInput || '';
+    const lowerInput = safePlayerInput.toLowerCase().trim();
 
     const game = await getGameData(GAME_ID);
   
-  if (!game) {
-      throw new Error("Critical: Game data could not be loaded. Cannot process command.");
-  }
-
-  const gameId = game.id;
-  let allMessagesForSession: Message[] = [];
-  let currentState: PlayerState;
-
-  if (!userId) {
-    return {
-        newState: getInitialState(game),
-        messages: [createMessage('system', 'System', 'Error: User ID is missing. Cannot process command.')]
-    };
-  }
-
-  const { firestore } = initializeFirebase();
-  const stateRef = doc(firestore, 'player_states', `${userId}_${gameId}`);
-  const logRef = doc(firestore, 'logs', `${userId}_${gameId}`);
-
-  try {
-    const [stateSnap, logSnap] = await Promise.all([getDoc(stateRef), getDoc(logRef)]);
-    
-    if (stateSnap.exists()) {
-        currentState = stateSnap.data() as PlayerState;
-    } else {
-        currentState = getInitialState(game);
-    }
-  
-    if (!game.locations[currentState.currentLocationId]) {
-        console.warn(`Invalid location ID '${currentState.currentLocationId}' found in processCommand. Resetting to initial state.`);
-        currentState = getInitialState(game);
-    }
-    
-    if (logSnap.exists() && logSnap.data()?.messages?.length > 0) {
-        allMessagesForSession = logSnap.data()?.messages || [];
-    } else {
-        allMessagesForSession = await createInitialMessages(currentState, game);
+    if (!game) {
+        throw new Error("Critical: Game data could not be loaded. Cannot process command.");
     }
 
-    const agentName = game.narratorName || "Agent Sharma";
-    const lowerInput = safePlayerInput.toLowerCase().trim();
+    const gameId = game.id;
+    let allMessagesForSession: Message[] = [];
+    let currentState: PlayerState;
 
-    let playerMessage: Message | null = null;
-    if (safePlayerInput) {
-        playerMessage = createMessage('player', 'You', safePlayerInput);
-        allMessagesForSession.push(playerMessage);
-    }
-    
-    let commandHandlerResult: CommandResult | null = null;
-
-    // --- Simple Command Parser ---
-    if (currentState.activeConversationWith) {
-        commandHandlerResult = await handleConversation(currentState, safePlayerInput, game);
-    } else {
-        const verbMatch = lowerInput.match(/^(\w+)\s*/);
-        const verb = verbMatch ? verbMatch[1] : lowerInput;
-        const restOfCommand = lowerInput.substring((verbMatch ? verbMatch[0].length : verb.length)).trim();
-
-        switch (verb) {
-            case 'examine':
-            case 'look':
-                if (restOfCommand === 'around') {
-                    commandHandlerResult = await handleLook(currentState, game);
-                } else if (restOfCommand.startsWith('at ')) {
-                     commandHandlerResult = await handleExamine(currentState, restOfCommand.replace('at ', ''), game);
-                } else {
-                     commandHandlerResult = await handleExamine(currentState, restOfCommand, game);
-                }
-                break;
-            case 'move':
-                commandHandlerResult = await handleMove(currentState, restOfCommand, game);
-                break;
-            case 'take':
-            case 'pick': 
-                const target = restOfCommand.startsWith('up ') ? restOfCommand.substring(3) : restOfCommand;
-                commandHandlerResult = await handleTake(currentState, target, game);
-                break;
-            case 'inventory':
-                 commandHandlerResult = await handleInventory(currentState, game);
-                 break;
-            case 'help':
-            case 'hint':
-                commandHandlerResult = await handleHelp(currentState, game);
-                break;
-             case 'talk':
-                 commandHandlerResult = await handleTalk(currentState, restOfCommand.replace('to ', ''), game);
-                 break;
-             case 'use':
-                const useOnMatch = restOfCommand.match(/^(.*?)\s+on\s+(.*)$/);
-                if (useOnMatch) {
-                    commandHandlerResult = await handleUse(currentState, useOnMatch[1].trim(), useOnMatch[2].trim(), game);
-                } else {
-                    commandHandlerResult = await handleUse(currentState, restOfCommand, '', game);
-                }
-                break;
-            case 'open':
-                commandHandlerResult = await handleOpen(currentState, restOfCommand, game);
-                break;
-            case 'read':
-                commandHandlerResult = await handleRead(currentState, restOfCommand.replace(/"/g, ''), game);
-                break;
-            case 'password':
-            case 'say':
-            case 'enter':
-                commandHandlerResult = await processPassword(currentState, commandToExecute, game);
-                break;
-            case 'close':
-            case 'exit':
-                if (currentState.interactingWithObject) {
-                    commandHandlerResult = await processEffects(currentState, [{type: 'END_INTERACTION'}], game);
-                } else if (currentState.activeConversationWith) {
-                    commandHandlerResult = await processEffects(currentState, [{type: 'END_CONVERSATION'}], game);
-                } else {
-                    commandHandlerResult = { newState: currentState, messages: [] };
-                }
-                break;
-        }
+    if (!userId) {
+        return {
+            newState: getInitialState(game),
+            messages: [createMessage('system', 'System', 'Error: User ID is missing. Cannot process command.')]
+        };
     }
 
+    const { firestore } = initializeFirebase();
+    const stateRef = doc(firestore, 'player_states', `${userId}_${gameId}`);
+    const logRef = doc(firestore, 'logs', `${userId}_${gameId}`);
 
-    // --- AI Command Parser (Fallback) ---
-    if (!commandHandlerResult) {
-        const location = game.locations[currentState.currentLocationId];
-        const examinedObjectFlag = (id: string) => `examined_${id}`;
+    try {
+        const [stateSnap, logSnap] = await Promise.all([getDoc(stateRef), getDoc(logRef)]);
         
-        const locationState: LocationState = currentState.locationStates[currentState.currentLocationId] || { objects: location.objects };
-        const visibleObjects = locationState.objects.map(id => getLiveGameObject(id, currentState, game)).filter(Boolean) as {gameLogic: GameObject, state: GameObjectState}[];
-        const visibleObjectNames = visibleObjects.map(obj => obj.gameLogic.name);
+        if (stateSnap.exists()) {
+            currentState = stateSnap.data() as PlayerState;
+        } else {
+            currentState = getInitialState(game);
+        }
+    
+        if (!game.locations[currentState.currentLocationId]) {
+            console.warn(`Invalid location ID '${currentState.currentLocationId}' found in processCommand. Resetting to initial state.`);
+            currentState = getInitialState(game);
+        }
+        
+        if (logSnap.exists() && logSnap.data()?.messages?.length > 0) {
+            allMessagesForSession = logSnap.data()?.messages || [];
+        } else {
+            allMessagesForSession = await createInitialMessages(currentState, game);
+        }
 
-        for (const obj of visibleObjects) {
-            const hasBeenExamined = currentState.flags.includes(examinedObjectFlag(obj.gameLogic.id));
-            if (obj.state.isOpen && hasBeenExamined && obj.state.items) {
-                for (const itemId of obj.state.items) {
-                    const item = game.items[itemId];
-                    if (item) {
-                        visibleObjectNames.push(item.name);
+        const agentName = game.narratorName || "Agent Sharma";
+
+        let playerMessage: Message | null = null;
+        if (safePlayerInput) {
+            playerMessage = createMessage('player', 'You', safePlayerInput);
+            allMessagesForSession.push(playerMessage);
+        }
+        
+        let commandHandlerResult: CommandResult | null = null;
+
+        // --- Core Command Logic ---
+        if (currentState.activeConversationWith) {
+            commandHandlerResult = await handleConversation(currentState, safePlayerInput, game);
+        } else if (lowerInput === 'restart') {
+            return await resetGame(userId);
+        } else {
+            // Let the AI interpret the command
+            const location = game.locations[currentState.currentLocationId];
+            const examinedObjectFlag = (id: string) => `examined_${id}`;
+            
+            const locationState: LocationState = currentState.locationStates[currentState.currentLocationId] || { objects: location.objects };
+            const visibleObjects = locationState.objects.map(id => getLiveGameObject(id, currentState, game)).filter(Boolean) as {gameLogic: GameObject, state: GameObjectState}[];
+            
+            let visibleEntityNames = visibleObjects.map(obj => obj.gameLogic.name);
+            visibleEntityNames.push(...currentState.inventory.map(id => game.items[id]?.name).filter(Boolean));
+
+            for (const obj of visibleObjects) {
+                const hasBeenExamined = currentState.flags.includes(examinedObjectFlag(obj.gameLogic.id));
+                if (obj.state.isOpen && hasBeenExamined && obj.state.items) {
+                    for (const itemId of obj.state.items) {
+                        const item = game.items[itemId];
+                        if (item) {
+                            visibleEntityNames.push(item.name);
+                        }
                     }
                 }
             }
-        }
-        
-        const visibleNpcNames = location.npcs.map(id => game.npcs[id]?.name).filter(Boolean) as string[];
+            
+            const visibleNpcNames = location.npcs.map(id => game.npcs[id]?.name).filter(Boolean) as string[];
+            visibleEntityNames.push(...visibleNpcNames);
 
-        const { output: aiResponse, usage } = await guidePlayerWithNarrator({
-            promptContext: game.promptContext || '',
-            gameState: JSON.stringify({
-                ...currentState,
-                objectStates: undefined,
-                locationStates: undefined,
-                portalStates: undefined,
-                npcStates: undefined,
-                stories: undefined
-            }, null, 2),
-            playerCommand: safePlayerInput,
-            availableCommands: AVAILABLE_COMMANDS.join(', '),
-            visibleObjectNames: visibleObjectNames,
-            visibleNpcNames: visibleNpcNames,
-        });
+            const { output: aiResponse, usage } = await guidePlayerWithNarrator({
+                promptContext: game.promptContext || '',
+                gameState: JSON.stringify({
+                    ...currentState,
+                    objectStates: undefined, locationStates: undefined, portalStates: undefined, npcStates: undefined, stories: undefined
+                }, null, 2),
+                playerCommand: safePlayerInput,
+                availableCommands: AVAILABLE_COMMANDS.join(', '),
+                visibleObjectNames: visibleEntityNames,
+                visibleNpcNames: visibleNpcNames,
+            });
 
-        let agentMessage = createMessage('agent', agentName, `${aiResponse.agentResponse}`, 'text', undefined, usage);
-        allMessagesForSession.push(agentMessage);
+            if (aiResponse.agentResponse) {
+                let agentMessage = createMessage('agent', agentName, `${aiResponse.agentResponse}`, 'text', undefined, usage);
+                allMessagesForSession.push(agentMessage);
+            }
 
-        const commandToExecute = aiResponse.commandToExecute.toLowerCase();
-        
-        // We re-route the AI's chosen command back through the simple parser logic.
-        const verbMatch = commandToExecute.match(/^(\w+)\s*/);
-        const verb = verbMatch ? verbMatch[1] : commandToExecute;
-        const restOfCommand = commandToExecute.substring((verbMatch ? verbMatch[0].length : verb.length)).trim();
-        
-        switch (verb) {
-            case 'examine':
-            case 'look':
-                if (restOfCommand === 'around') {
-                    commandHandlerResult = await handleLook(currentState, game);
-                } else {
-                     commandHandlerResult = await handleExamine(currentState, restOfCommand.replace(/^at\s+/, ''), game);
-                }
-                break;
-            case 'move':
-                commandHandlerResult = await handleMove(currentState, restOfCommand, game);
-                break;
-            case 'open':
-                commandHandlerResult = await handleOpen(currentState, restOfCommand, game);
-                break;
-            case 'take':
-            case 'pick': 
-                const target = restOfCommand.startsWith('up ') ? restOfCommand.substring(3) : restOfCommand;
-                commandHandlerResult = await handleTake(currentState, target, game);
-                break;
-            case 'go':
-                commandHandlerResult = await handleGo(currentState, restOfCommand.replace('to ', ''), game);
-                break;
-            case 'use':
-                const useOnMatch = restOfCommand.match(/^(.*?)\s+on\s+(.*)$/);
-                if (useOnMatch) {
-                    commandHandlerResult = await handleUse(currentState, useOnMatch[1].trim(), useOnMatch[2].trim(), game);
-                } else {
-                    commandHandlerResult = await handleUse(currentState, restOfCommand, '', game);
-                }
-                break;
-            case 'read':
-                commandHandlerResult = await handleRead(currentState, restOfCommand.replace(/"/g, ''), game);
-                break;
-            case 'talk':
-                 commandHandlerResult = await handleTalk(currentState, restOfCommand.replace('to ', ''), game);
-                 break;
-            case 'inventory':
-                commandHandlerResult = await handleInventory(currentState, game);
-                break;
-            case 'password':
-            case 'say':
-            case 'enter':
-                commandHandlerResult = await processPassword(currentState, commandToExecute, game);
-                break;
-            case 'close':
-            case 'exit':
-                if (currentState.interactingWithObject) {
-                    commandHandlerResult = await processEffects(currentState, [{type: 'END_INTERACTION'}], game);
-                } else {
-                    commandHandlerResult = { newState: currentState, messages: [] };
-                }
-                break;
-            case 'invalid':
-                 commandHandlerResult = { newState: currentState, messages: [] };
-                 break;
-            case 'help':
-                commandHandlerResult = await handleHelp(currentState, game);
-                break;
-            default:
-                const targetObject = visibleObjects.find(obj => restOfCommand.includes(obj.gameLogic.name.toLowerCase()));
-                if (targetObject && targetObject.gameLogic.fallbackMessages) {
-                    const fallbackMessages = targetObject.gameLogic.fallbackMessages;
-                    const failureMessage = fallbackMessages?.[verb as keyof typeof fallbackMessages] || fallbackMessages?.default;
-                    if (failureMessage) {
-                        commandHandlerResult = { newState: currentState, messages: [createMessage('narrator', "Narrator", failureMessage)] };
+            const commandToExecute = aiResponse.commandToExecute.toLowerCase();
+            
+            const verbMatch = commandToExecute.match(/^(\w+)\s*/);
+            const verb = verbMatch ? verbMatch[1] : commandToExecute;
+            const restOfCommand = commandToExecute.substring((verbMatch ? verbMatch[0].length : verb.length)).trim();
+            
+            switch (verb) {
+                case 'examine':
+                case 'look':
+                    if (restOfCommand === 'around') {
+                        commandHandlerResult = await handleLook(currentState, game);
+                    } else {
+                         commandHandlerResult = await handleExamine(currentState, restOfCommand.replace(/^at\s+/, ''), game);
+                    }
+                    break;
+                case 'move':
+                    commandHandlerResult = await handleMove(currentState, restOfCommand, game);
+                    break;
+                case 'take':
+                case 'pick': 
+                    const target = restOfCommand.startsWith('up ') ? restOfCommand.substring(3) : restOfCommand;
+                    commandHandlerResult = await handleTake(currentState, target, game);
+                    break;
+                case 'inventory':
+                     commandHandlerResult = await handleInventory(currentState, game);
+                     break;
+                case 'help':
+                case 'hint':
+                    commandHandlerResult = await handleHelp(currentState, game);
+                    break;
+                 case 'talk':
+                     commandHandlerResult = await handleTalk(currentState, restOfCommand.replace('to ', ''), game);
+                     break;
+                 case 'use':
+                    const useOnMatch = restOfCommand.match(/^(.*?)\s+on\s+(.*)$/);
+                    if (useOnMatch) {
+                        commandHandlerResult = await handleUse(currentState, useOnMatch[1].trim(), useOnMatch[2].trim(), game);
+                    } else {
+                        commandHandlerResult = await handleUse(currentState, restOfCommand, '', game);
+                    }
+                    break;
+                case 'open':
+                    commandHandlerResult = await handleOpen(currentState, restOfCommand, game);
+                    break;
+                case 'read':
+                    commandHandlerResult = await handleRead(currentState, restOfCommand.replace(/"/g, ''), game);
+                    break;
+                case 'password':
+                case 'say':
+                case 'enter':
+                    commandHandlerResult = await processPassword(currentState, commandToExecute, game);
+                    break;
+                case 'close':
+                case 'exit':
+                    if (currentState.interactingWithObject) {
+                        commandHandlerResult = await processEffects(currentState, [{type: 'END_INTERACTION'}], game);
+                    } else if (currentState.activeConversationWith) {
+                        commandHandlerResult = await processEffects(currentState, [{type: 'END_CONVERSATION'}], game);
                     } else {
                         commandHandlerResult = { newState: currentState, messages: [] };
                     }
-                } else {
+                    break;
+                case 'invalid':
+                     commandHandlerResult = { newState: currentState, messages: [] };
+                     break;
+                default:
                     commandHandlerResult = { newState: currentState, messages: [] }; 
-                }
-                break;
-        }
-    }
-    
-    if (commandHandlerResult && commandHandlerResult.messages) {
-        allMessagesForSession.push(...commandHandlerResult.messages);
-    }
-
-
-    let finalState = commandHandlerResult?.newState;
-
-    if (finalState) {
-        const completion = checkChapterCompletion(finalState, game);
-        if (completion.isComplete) {
-            const chapterCompletionFlagValue = `chapter_${game.startChapterId}_complete` as Flag;
-            const isNewlyComplete = !currentState.flags.includes(chapterCompletionFlagValue);
-            if (isNewlyComplete) {
-                finalState.flags = [...finalState.flags, chapterCompletionFlagValue];
-                allMessagesForSession.push(...completion.messages);
+                    break;
             }
         }
-    }
-    
-    const finalResult: CommandResult = {
-        newState: finalState || currentState,
-        messages: allMessagesForSession,
-    };
-    
-    await logAndSave(userId, gameId, finalResult.newState, finalResult.messages);
-    
-    if (process.env.NEXT_PUBLIC_NODE_ENV === 'development' && playerMessage) {
-        const isRestart = lowerInput === 'restart' || lowerInput === 'start over';
-        if (!isRestart) {
+        
+        if (commandHandlerResult && commandHandlerResult.messages) {
+            allMessagesForSession.push(...commandHandlerResult.messages);
+        }
+
+        let finalState = commandHandlerResult?.newState;
+
+        if (finalState) {
+            const completion = checkChapterCompletion(finalState, game);
+            if (completion.isComplete) {
+                const chapterCompletionFlagValue = `chapter_${game.startChapterId}_complete` as Flag;
+                const isNewlyComplete = !currentState.flags.includes(chapterCompletionFlagValue);
+                if (isNewlyComplete) {
+                    finalState.flags = [...finalState.flags, chapterCompletionFlagValue];
+                    allMessagesForSession.push(...completion.messages);
+                }
+            }
+        }
+        
+        const finalResult: CommandResult = {
+            newState: finalState || currentState,
+            messages: allMessagesForSession,
+        };
+        
+        await logAndSave(userId, gameId, finalResult.newState, finalResult.messages);
+        
+        if (process.env.NEXT_PUBLIC_NODE_ENV === 'development' && playerMessage) {
             const newMessagesFromServer = finalResult.messages.filter(
                 m => m.timestamp >= playerMessage!.timestamp && m.sender !== 'player'
             );
@@ -470,37 +391,36 @@ export async function processCommand(
                 await dispatchMessage(userId, message);
             }
         }
-    }
-    
-    return finalResult;
+        
+        return finalResult;
 
-  } catch (error) {
-    console.error('Error processing command:', error);
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    const errorResponseMessage = createMessage('system', 'System', `Sorry, an error occurred: ${errorMessage}`);
-    
-    const messagesWithError = [...allMessagesForSession, errorResponseMessage];
-    
-    const stateRef = doc(firestore, 'player_states', `${userId}_${gameId}`);
-    const stateSnap = await getDoc(stateRef);
-    
-    let stateToSave: PlayerState;
-    if (stateSnap.exists()) {
-        stateToSave = stateSnap.data() as PlayerState;
-    } else {
-        const game = await getGameData(GAME_ID);
-        if (!game) throw new Error("Could not load game data to create initial state.");
-        stateToSave = getInitialState(game);
-    }
+    } catch (error) {
+        console.error('Error processing command:', error);
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+        const errorResponseMessage = createMessage('system', 'System', `Sorry, an error occurred: ${errorMessage}`);
+        
+        const messagesWithError = [...allMessagesForSession, errorResponseMessage];
+        
+        const stateRef = doc(firestore, 'player_states', `${userId}_${gameId}`);
+        const stateSnap = await getDoc(stateRef);
+        
+        let stateToSave: PlayerState;
+        if (stateSnap.exists()) {
+            stateToSave = stateSnap.data() as PlayerState;
+        } else {
+            const game = await getGameData(GAME_ID);
+            if (!game) throw new Error("Could not load game data to create initial state.");
+            stateToSave = getInitialState(game);
+        }
 
-    await logAndSave(userId, gameId, stateToSave, messagesWithError);
-    
-    if (process.env.NEXT_PUBLIC_NODE_ENV === 'development') {
-        await dispatchMessage(userId, errorResponseMessage);
+        await logAndSave(userId, gameId, stateToSave, messagesWithError);
+        
+        if (process.env.NEXT_PUBLIC_NODE_ENV === 'development') {
+            await dispatchMessage(userId, errorResponseMessage);
+        }
+        
+        return { newState: stateToSave, messages: messagesWithError };
     }
-    
-    return { newState: stateToSave, messages: messagesWithError };
-  }
 }
 
 export async function resetGame(userId: string): Promise<CommandResult> {
