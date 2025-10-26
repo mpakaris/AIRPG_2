@@ -617,7 +617,7 @@ const items: Record<ItemId, Item> = {
                 fail: { message: "" }
             }
         },
-        design: { tags: ['clue', 'document', 'file', 'confidential file'] },
+        design: { tags: ['file', 'document'] },
         version: { schema: "1.0", content: "1.0" }
     }
 };
@@ -877,6 +877,7 @@ export const game: Game = {
 5.  **Understand Intent:** The player might use different sentence structures for the same action. Your job is to parse their *intent*.
     *   "open the safe with the key" should become \`use "Deposit Box Key" on "Wall Safe"\`
     *   "use my key to open the safe" should also become \`use "Deposit Box Key" on "Wall Safe"\`
+    *   If the player says "move the painting" or "look behind the painting", the command MUST be \`move "Painting on the wall"\`.
 6.  **Interaction Trap:** If Burt is currently interacting with an object and tries to interact with a *different* one, you MUST use this specific response: \`{"agentResponse": "Whoa there, Burt. We're zeroed in on the {{objectName}} right now. If you want to check something else, we need to 'exit' this first.", "commandToExecute": "invalid"}\`
 7.  **Invalid/Conversational Input:** If Burt's input is illogical ("eat the SD card") or conversational ("what now?"), gently guide him back to the case.
     *   **Illogical:** \`{"agentResponse": "I don't think that's a good idea, Burt. We might need that as evidence. Let's rethink.", "commandToExecute": "invalid"}\`
@@ -917,3 +918,5 @@ export const game: Game = {
   chapters: chapters,
   startChapterId: 'ch1-the-cafe' as ChapterId,
 };
+
+    
