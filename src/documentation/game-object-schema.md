@@ -1,4 +1,3 @@
-
 # Standardized GameObject Schema Documentation
 
 This document outlines the standard structure for all `GameObject` definitions within the game cartridge. Adhering to this schema ensures predictability, simplifies engine logic, and accelerates content creation.
@@ -84,17 +83,33 @@ Defines a direct input puzzle. Requires `capabilities.inputtable` to be `true`.
 This is the core of the object's interactivity. Each handler defines what happens when a player performs a verb on the object.
 
 **Handler Structure:**
-Most handlers follow this shape:
+This is the standard, robust shape for a handler. **CRITICAL:** Any handler that changes an object's state (e.g., unlocking a door, moving a painting) **MUST** use the `conditions` block to prevent the action from being repeated.
+
 ```json
 {
-  "conditions": [ { "type": "HAS_FLAG", "targetId": "some_flag" } ],
-  "success": { "message": "It works!", "actions": [ { "type": "SET_FLAG", "flag": "success_flag" } ] },
-  "fail": { "message": "It fails." }
+  "conditions": [ 
+      { "type": "NO_FLAG", "targetId": "painting_has_been_moved" },
+      { "type": "HAS_ITEM", "targetId": "item_crowbar" }
+  ],
+  "success": { 
+      "message": "You pry the painting off the wall, revealing a safe!", 
+      "effects": [ 
+          { "type": "SET_FLAG", "flag": "painting_has_been_moved" },
+          { "type": "REVEAL_OBJECT", "objectId": "obj_wall_safe" }
+      ] 
+  },
+  "fail": { 
+      "message": "You've already moved the painting. There's nothing else behind it." 
+  }
 }
 ```
-*   `conditions`: (Optional) An array of requirements that must be met for the `success` block to run.
-*   `success`: The result if conditions are met (or if there are no conditions).
-*   `fail`: The result if conditions are not met.
+*   `conditions`: (Optional) An array of requirements that must be met for the `success` block to run. **This is the key to robust objects.**
+    *   `{ "type": "HAS_FLAG", "targetId": "some_flag" }`: Player must have this flag.
+    *   `{ "type": "NO_FLAG", "targetId": "some_flag" }`: Player must NOT have this flag.
+    *   `{ "type": "HAS_ITEM", "targetId": "item_id" }`: Player must have this item in inventory.
+    *   `{ "type": "STATE_MATCH", "targetId": "object_id", "expectedValue": { "isLocked": false } }`: An object must be in a certain state.
+*   `success`: The result if all conditions are met.
+*   `fail`: The result if any condition is not met. This message should tell the player *why* the action failed (e.g., "It's already open," or "It won't budge.").
 
 **Available Handlers:**
 *   `onExamine`: Player looks at the object.
@@ -119,3 +134,4 @@ Provides default messages for common verbs if a specific handler is not defined 
 | `locked` | `string` | Message for trying to `open` a `lockable` object that is locked. |
 | `notMovable` | `string` | Message for trying to `move` an object where `movable: false`. |
 | `noEffect` | `string` | Message for `use` when the item has no special interaction. |
+| `alreadyOpen` | `string` | Message for trying to `open` or `unlock` an object that is already open/unlocked. |
