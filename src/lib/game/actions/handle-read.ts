@@ -1,6 +1,7 @@
+
 'use server';
 
-import type { Game, PlayerState, CommandResult } from "@/lib/game/types";
+import type { Game, PlayerState, CommandResult, Item } from "@/lib/game/types";
 import { findItemInContext } from "@/lib/game/utils/helpers";
 import { createMessage } from "@/lib/utils";
 import { processEffects } from "@/lib/game/actions/process-effects";
@@ -12,11 +13,13 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
     const agentName = game.narratorName || "Agent Sharma";
     const normalizedItemName = normalizeName(itemName);
     
-    const itemToRead = findItemInContext(state, game, normalizedItemName);
+    const itemInContext = findItemInContext(state, game, normalizedItemName);
 
-    if (!itemToRead) {
+    if (!itemInContext) {
         return { newState: state, messages: [createMessage('system', 'System', `You don't have an item called "${itemName}" to read.`)] };
     }
+    
+    const itemToRead = itemInContext.item;
 
     if (!itemToRead.capabilities.isReadable) {
         return { newState: state, messages: [createMessage('narrator', narratorName, `There's nothing to read on the ${itemToRead.name}.`)] };
