@@ -72,7 +72,7 @@ export function findItemInContext(state: PlayerState, game: Game, targetName: st
         }
     }
 
-    // 2. Check items inside all open objects in the current location
+    // 2. Check items inside all visible objects in the current location
     const locationState = state.locationStates[state.currentLocationId];
     if (locationState) {
         for (const objId of locationState.objects) {
