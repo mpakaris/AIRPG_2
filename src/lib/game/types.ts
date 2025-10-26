@@ -63,10 +63,12 @@ export type Effect =
   | { type: 'ADD_ITEM'; itemId: ItemId }
   | { type: 'SPAWN_ITEM'; itemId: ItemId; containerId: GameObjectId }
   | { type: 'REMOVE_ITEM'; itemId: ItemId } // From inventory
+  | { type: 'REMOVE_ITEM_FROM_CONTAINER', itemId: ItemId, containerId: GameObjectId }
   | { type: 'DESTROY_ITEM'; itemId: ItemId } // From world
   | { type: 'SET_FLAG'; flag: Flag }
   | { type: 'REVEAL_OBJECT'; objectId: GameObjectId }
   | { type: 'SHOW_MESSAGE'; sender: Message['sender']; senderName?: string; content: string; messageType?: Message['type']; imageId?: ItemId | NpcId | GameObjectId }
+  | { type: 'START_CONVERSATION'; npcId: NpcId }
   | { type: 'END_CONVERSATION' }
   | { type: 'START_INTERACTION'; objectId: GameObjectId, interactionStateId?: string }
   | { type: 'END_INTERACTION' }
@@ -75,7 +77,11 @@ export type Effect =
   | { type: 'MOVE_TO_CELL', toCellId: CellId }
   | { type: 'ENTER_PORTAL', portalId: PortalId }
   | { type: 'TELEPORT_PLAYER', toLocationId: LocationId }
-  | { type: 'DEMOTE_NPC', npcId: NpcId };
+  | { type: 'DEMOTE_NPC', npcId: NpcId }
+  | { type: 'INCREMENT_ITEM_READ_COUNT', itemId: ItemId }
+  | { type: 'INCREMENT_NPC_INTERACTION', npcId: NpcId }
+  | { type: 'COMPLETE_NPC_TOPIC', npcId: NpcId, topicId: string }
+  | { type: 'SET_STORY', story: Story };
 
 
 export type Story = {
@@ -96,7 +102,7 @@ export type GameObjectState = {
 
 export type ItemState = {
     readCount: number;
-    currentStateId: string;
+    currentStateId?: string;
 }
 
 export type PortalState = {

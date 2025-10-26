@@ -1,3 +1,4 @@
+
 'use server';
 
 import type { Game, PlayerState, CommandResult } from "@/lib/game/types";
@@ -56,17 +57,20 @@ export async function handleOpen(state: PlayerState, targetName: string, game: G
             return result;
         }
 
+        // Generic fallback if no specific handler
+        const effects = [{ type: 'SET_OBJECT_STATE' as const, objectId: liveObject.gameLogic.id, state: { isOpen: true } }];
+        const result = await processEffects(state, effects, game);
         const genericOpenMessage = `You open the ${liveObject.gameLogic.name}.`;
-        const newState = { ...state, objectStates: { ...state.objectStates, [liveObject.gameLogic.id]: { ...liveObject.state, isOpen: true } } };
-        return { newState, messages: [createMessage('narrator', narratorName, genericOpenMessage)] };
+        result.messages.unshift(createMessage('narrator', narratorName, genericOpenMessage));
+        return result;
     }
 
     const itemToOpen = findItemInContext(state, game, normalizedTargetName);
     if (itemToOpen) {
-        if (itemToOpen.capabilities && itemToOpen.capabilities.isReadable) {
+        if (itemToOpen.item.capabilities && itemToOpen.item.capabilities.isReadable) {
             return handleRead(state, targetName, game);
         } else {
-            return { newState: state, messages: [createMessage('narrator', narratorName, `You can't "open" the ${itemToOpen.name} in that way.`)] };
+            return { newState: state, messages: [createMessage('narrator', narratorName, `You can't "open" the ${itemToOpen.item.name} in that way.`)] };
         }
     }
 

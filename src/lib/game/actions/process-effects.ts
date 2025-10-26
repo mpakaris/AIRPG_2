@@ -19,6 +19,11 @@ export async function processEffects(initialState: PlayerState, effects: Effect[
                     newState.inventory.push(effect.itemId);
                 }
                 break;
+            case 'REMOVE_ITEM_FROM_CONTAINER':
+                 if (effect.containerId && newState.objectStates[effect.containerId]?.items) {
+                    newState.objectStates[effect.containerId].items = newState.objectStates[effect.containerId].items!.filter((id: ItemId) => id !== effect.itemId);
+                }
+                break;
             case 'SPAWN_ITEM':
                 const containerId = effect.containerId;
                 if (containerId) {
@@ -73,6 +78,10 @@ export async function processEffects(initialState: PlayerState, effects: Effect[
                  if (messageImageId && !newState.flags.includes(examinedObjectFlag(messageImageId as string))) {
                      newState.flags.push(examinedObjectFlag(messageImageId as string));
                  }
+                break;
+            case 'START_CONVERSATION':
+                newState.activeConversationWith = effect.npcId;
+                newState.interactingWithObject = null;
                 break;
             case 'END_CONVERSATION':
                  if (newState.activeConversationWith) {
@@ -130,6 +139,37 @@ export async function processEffects(initialState: PlayerState, effects: Effect[
                     };
                  }
                  break;
+            case 'INCREMENT_ITEM_READ_COUNT':
+                if (!newState.itemStates[effect.itemId]) {
+                    newState.itemStates[effect.itemId] = { readCount: 0 };
+                }
+                newState.itemStates[effect.itemId].readCount = (newState.itemStates[effect.itemId].readCount || 0) + 1;
+                break;
+            case 'INCREMENT_NPC_INTERACTION':
+                 if (!newState.npcStates[effect.npcId]) {
+                    // This should not happen if state is initialized correctly
+                    const baseNpc = game.npcs[effect.npcId];
+                    newState.npcStates[effect.npcId] = { 
+                        stage: baseNpc.initialState.stage,
+                        importance: baseNpc.importance,
+                        trust: baseNpc.initialState.trust,
+                        attitude: baseNpc.initialState.attitude,
+                        completedTopics: [],
+                        interactionCount: 0
+                    };
+                 }
+                 newState.npcStates[effect.npcId].interactionCount = (newState.npcStates[effect.npcId].interactionCount || 0) + 1;
+                 break;
+            case 'COMPLETE_NPC_TOPIC':
+                if (newState.npcStates[effect.npcId] && !newState.npcStates[effect.npcId].completedTopics.includes(effect.topicId)) {
+                    newState.npcStates[effect.npcId].completedTopics.push(effect.topicId);
+                }
+                break;
+            case 'SET_STORY':
+                if (effect.story) {
+                    newState.stories[effect.story.chapterId] = effect.story;
+                }
+                break;
         }
     }
 

@@ -1,3 +1,4 @@
+
 'use server';
 
 import type { Game, GameObject, GameObjectState, PlayerState, CommandResult } from "@/lib/game/types";
@@ -57,13 +58,13 @@ export async function processPassword(state: PlayerState, command: string, game:
     const handler = targetObject.gameLogic.handlers.onUnlock;
 
     if (normalizeName(phrase) === normalizeName(expectedPhrase)) {
-        let newState = { ...state, objectStates: { ...state.objectStates }};
-        if (!newState.objectStates[targetObject.gameLogic.id]) newState.objectStates[targetObject.gameLogic.id] = {} as any;
-        newState.objectStates[targetObject.gameLogic.id].isLocked = false;
-        newState.objectStates[targetObject.gameLogic.id].isOpen = true; 
-        
-        const effects = handler?.success?.effects || [];
-        const result = await processEffects(newState, effects, game);
+        const effects = [
+            ...(handler?.success?.effects || []),
+            { type: 'SET_OBJECT_STATE' as const, objectId: targetObject.gameLogic.id, state: { isLocked: false, isOpen: true } },
+            { type: 'SET_FLAG' as const, flag: examinedObjectFlag(targetObject.gameLogic.id) as any }
+        ];
+
+        const result = await processEffects(state, effects, game);
         
         const unlockMessage = createMessage(
             'narrator', 
@@ -73,11 +74,6 @@ export async function processPassword(state: PlayerState, command: string, game:
             { id: targetObject.gameLogic.id, game, state: result.newState!, showEvenIfExamined: true }
         );
         result.messages.unshift(unlockMessage);
-
-        const flag = examinedObjectFlag(targetObject.gameLogic.id);
-        if (result.newState! && !result.newState!.flags.includes(flag as any)) {
-            result.newState!.flags.push(flag as any);
-        }
         
         return result;
     } else {
