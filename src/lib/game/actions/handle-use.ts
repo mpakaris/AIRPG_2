@@ -28,9 +28,13 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
     const locationState = state.locationStates[state.currentLocationId] || { objects: game.locations[state.currentLocationId].objects };
     const visibleObjectIds = locationState.objects;
     
-    const targetObjectId = visibleObjectIds.find(id =>
-        normalizeName(game.gameObjects[id]?.name).includes(normalizedTargetName)
-    );
+    const targetObjectId = visibleObjectIds.find(id => {
+        const obj = game.gameObjects[id];
+        if (!obj) return false;
+        const objName = normalizeName(obj.name);
+        const objTags = obj.design?.tags?.map(normalizeName) || [];
+        return objName.includes(normalizedTargetName) || objTags.includes(normalizedTargetName);
+    });
 
     if (targetObjectId) {
         const targetObject = getLiveGameObject(targetObjectId as GameObjectId, state, game);
@@ -62,8 +66,7 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
     // Check if the object exists at all, even if not visible, to give a better message.
     const objectExistsInGame = Object.values(game.gameObjects).some(obj => normalizeName(obj.name).includes(normalizedTargetName));
     if (objectExistsInGame) {
-        // The object exists, but isn't visible. Give a more narrative hint.
-        return { newState: state, messages: [createMessage('narrator', narratorName, `That's a good idea, but you'll need to reveal the ${targetName} first.`)] };
+        return { newState: state, messages: [createMessage('narrator', narratorName, `There's no "${targetName}" visible here. Maybe it's hidden?`)] };
     }
 
     const targetItemResult = findItemInContext(state, game, normalizedTargetName);
