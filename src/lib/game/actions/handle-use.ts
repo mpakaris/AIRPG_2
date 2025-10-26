@@ -66,7 +66,7 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
     // Check if the object exists at all, even if not visible, to give a better message.
     const objectExistsInGame = Object.values(game.gameObjects).some(obj => normalizeName(obj.name).includes(normalizedTargetName));
     if (objectExistsInGame) {
-        return { newState: state, messages: [createMessage('narrator', narratorName, `There's no "${targetName}" visible here. Maybe it's hidden?`)] };
+        return { newState: state, messages: [createMessage('narrator', narratorName, `There's no ${normalizedTargetName} visible here. Maybe it's hidden?`)] };
     }
 
     const targetItemResult = findItemInContext(state, game, normalizedTargetName);
