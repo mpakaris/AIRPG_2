@@ -215,6 +215,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         effects: [
                             { type: 'SET_FLAG', flag: 'safe_is_unlocked' as Flag },
                             { type: 'SET_OBJECT_STATE', objectId: 'obj_wall_safe', state: { isLocked: false, isOpen: true, currentStateId: 'unlocked' } },
+                            { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'The safe is open, revealing a confidential file.', imageId: 'obj_wall_safe' }
                         ]
                     },
                     fail: { message: "You've already unlocked the safe." }
