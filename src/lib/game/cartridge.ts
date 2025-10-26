@@ -74,10 +74,10 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             onExamine: {
                 success: { message: "A chalkboard menu stands near the counter. It reads: Today's special is three scones for the price of two. A deal almost as sweet as justice. Something seems to be propped up behind it." },
                 fail: { message: "" },
-                alternateMessage: "You've already moved the chalkboard. The dusty floor behind it is empty now."
+                alternateMessage: "The menu hasn't changed. The special is still about 'justice'."
             },
             onMove: {
-                 conditions: [{ type: 'NO_FLAG', targetId: 'has_moved_chalkboard' as Flag }],
+                conditions: [{ type: 'NO_FLAG', targetId: 'has_moved_chalkboard' as Flag }],
                 success: {
                     message: "You move the chalkboard aside and find a heavy iron pipe leaning against the wall behind it.",
                     effects: [
@@ -210,6 +210,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             onUse: [
                 {
                     itemId: 'item_deposit_key' as ItemId,
+                    conditions: [{ type: 'NO_FLAG', targetId: 'safe_is_unlocked' as Flag }],
                     success: {
                         message: "The key from the coffee machine fits perfectly. You turn it, and the safe door swings open with a satisfying clunk. Inside, there's a single, thick file marked 'CONFIDENTIAL'.",
                         effects: [
@@ -218,7 +219,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                             { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'The safe is open, revealing a confidential file.', imageId: 'obj_wall_safe' }
                         ]
                     },
-                    fail: { message: "You've already unlocked the safe." }
+                    fail: { message: "The safe is already unlocked. No need to use the key again." }
                 }
             ]
         },
@@ -288,7 +289,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                             { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'The side of the coffee machine is now smashed.', imageId: 'obj_coffee_machine' }
                         ]
                     },
-                    fail: { message: "The side panel is already broken." }
+                    fail: { message: "You've already smashed the coffee machine. Doing it again would just be overkill." }
                 }
             ]
         },

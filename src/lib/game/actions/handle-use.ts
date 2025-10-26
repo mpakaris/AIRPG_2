@@ -19,7 +19,6 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
 
   const { item: itemToUse, source } = itemInContext;
 
-  // Issue 1 Fix: Check if the item is actually in the inventory before allowing use.
   if (source.type !== 'inventory') {
       return { newState: state, messages: [createMessage('system', 'System', `You can only use items that are in your inventory. Use "take ${itemToUse.name}" to pick it up first.`)] };
   }
