@@ -56,20 +56,20 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
                 }
             }
         }
-        return { newState: state, messages: [createMessage('narrator', narratorName, `You can't use the "${itemName}" on the "${targetName}".`)] };
+        return { newState: state, messages: [createMessage('narrator', narratorName, `You can't use the ${itemToUse.name} on the ${targetObject?.gameLogic.name || targetName}.`)] };
     }
     
-    // Check if the object exists at all, even if not visible.
+    // Check if the object exists at all, even if not visible, to give a better message.
     const objectExistsInGame = Object.values(game.gameObjects).some(obj => normalizeName(obj.name).includes(normalizedTargetName));
     if (objectExistsInGame) {
-        return { newState: state, messages: [createMessage('narrator', narratorName, `You can't see a "${targetName}" here.`)] };
+        // The object exists, but isn't visible. Give a more narrative hint.
+        return { newState: state, messages: [createMessage('narrator', narratorName, `That's a good idea, but you'll need to reveal the ${targetName} first.`)] };
     }
-
 
     const targetItemResult = findItemInContext(state, game, normalizedTargetName);
     if(targetItemResult) {
         // Logic for combining items would go here if implemented
-        return { newState: state, messages: [createMessage('narrator', narratorName, `You can't use the "${itemName}" on the "${targetName}".`)] };
+        return { newState: state, messages: [createMessage('narrator', narratorName, `You can't use the ${itemName} on the ${targetName}.`)] };
     }
 
     return { newState: state, messages: [createMessage('narrator', narratorName, `You don't see a "${targetName}" to use the item on.`)] };
