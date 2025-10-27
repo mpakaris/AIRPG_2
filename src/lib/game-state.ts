@@ -46,8 +46,20 @@ export function getInitialState(game: Game): PlayerState {
   // Initialize items
   for (const itemId in game.items) {
     const item = game.items[itemId as ItemId];
+
+    // Check if item is a child of a container - if so, start hidden
+    let isHiddenChild = false;
+    for (const objId in game.gameObjects) {
+      const obj = game.gameObjects[objId as GameObjectId];
+      if (obj.children?.items?.includes(item.id as any)) {
+        // Item is a child - start hidden if parent is closed/unmoved
+        isHiddenChild = true;
+        break;
+      }
+    }
+
     world[item.id] = {
-      isVisible: true, // Will be controlled by parent container/location
+      isVisible: !isHiddenChild, // Hidden if child of container, visible otherwise
       discovered: false,
       taken: false,
       readCount: item.state?.readCount || 0,
