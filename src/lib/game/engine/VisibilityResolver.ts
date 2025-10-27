@@ -44,8 +44,17 @@ export class VisibilityResolver {
     }
 
     // 1. Get objects in current location
-    for (const objectId of currentLocation.objects || []) {
-      if (VisibilityResolver.isEntityVisibleInContext(objectId, state, game)) {
+    // IMPORTANT: Check ALL game objects, not just location.objects
+    // This allows dynamically revealed objects (like wall safe) to be visible
+    for (const objectId in game.gameObjects) {
+      const obj = game.gameObjects[objectId as any];
+
+      // Only include objects that are in this location OR have been revealed
+      const isInLocation = currentLocation.objects?.includes(objectId as any);
+      const entityState = GameStateManager.getEntityState(state, objectId);
+      const hasBeenRevealed = entityState.isVisible === true;
+
+      if ((isInLocation || hasBeenRevealed) && VisibilityResolver.isEntityVisibleInContext(objectId, state, game)) {
         visibleObjects.push(objectId);
 
         // Check for child objects/items
@@ -71,13 +80,21 @@ export class VisibilityResolver {
       }
     }
 
-    // 4. Items are visible if in inventory OR in accessible containers
+    // 4. Items are visible if in inventory OR revealed in world state
     for (const itemId in game.items) {
       const item = game.items[itemId as any];
 
       // In inventory - always visible
       if (state.inventory.includes(itemId as any)) {
         if (!visibleItems.includes(itemId)) {
+          visibleItems.push(itemId);
+        }
+      }
+      // OR has been revealed and not taken yet
+      else if (!visibleItems.includes(itemId)) {
+        const itemState = GameStateManager.getEntityState(state, itemId);
+        if (itemState.isVisible === true && !itemState.taken) {
+          // Item is visible and accessible
           visibleItems.push(itemId);
         }
       }
