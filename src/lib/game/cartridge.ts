@@ -35,8 +35,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         { type: 'SET_ENTITY_STATE', entityId: 'obj_brown_notebook', patch: { isOpen: true } },
                         { type: 'REVEAL_ENTITY', entityId: 'item_sd_card' },
                         { type: 'REVEAL_ENTITY', entityId: 'item_newspaper_article' }
-                    ],
-                    media: { imageKey: 'unlocked' }
+                    ]
                 },
                 fail: { message: "The lock prevents it from being opened without the right password. Stuck? Maybe this will help: https://airpg-minigames.vercel.app/games/the-notebook" }
             },
@@ -96,8 +95,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         { type: 'SET_FLAG', flag: 'has_moved_chalkboard', value: true },
                         { type: 'REVEAL_ENTITY', entityId: 'item_iron_pipe' },
                         { type: 'SET_ENTITY_STATE', entityId: 'obj_chalkboard_menu', patch: { currentStateId: 'moved', isOpen: true, isMoved: true } }
-                    ],
-                    media: { imageKey: 'moved' }
+                    ]
                 },
                 fail: { message: "You shift the chalkboard stand, but there's nothing else behind it." }
             }
@@ -202,8 +200,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         { type: 'SET_FLAG', flag: 'has_moved_painting', value: true },
                         { type: 'REVEAL_ENTITY', entityId: 'obj_wall_safe' },
                         { type: 'SET_ENTITY_STATE', entityId: 'obj_painting', patch: { isMoved: true, currentStateId: 'moved' } }
-                    ],
-                    media: { imageKey: 'moved' }
+                    ]
                 },
                 fail: { message: "You lift the painting again, but there's nothing else behind it. Just the safe." }
             }
@@ -249,8 +246,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                             { type: 'SET_FLAG', flag: 'safe_is_unlocked', value: true },
                             { type: 'SET_ENTITY_STATE', entityId: 'obj_wall_safe', patch: { isLocked: false, isOpen: true, currentStateId: 'unlocked' } },
                             { type: 'REVEAL_ENTITY', entityId: 'item_secret_document' }
-                        ],
-                        media: { imageKey: 'unlocked' }
+                        ]
                     },
                     fail: { message: "The safe is already unlocked. No need to use the key again." }
                 }
@@ -324,8 +320,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                             { type: 'SET_FLAG', flag: 'machine_is_broken', value: true },
                             { type: 'SET_ENTITY_STATE', entityId: 'obj_coffee_machine', patch: { isBroken: true, isOpen: true, currentStateId: 'broken' } },
                             { type: 'REVEAL_ENTITY', entityId: 'item_deposit_key' }
-                        ],
-                        media: { imageKey: 'broken' }
+                        ]
                     },
                     fail: { message: "You've already smashed the coffee machine. Doing it again would just be overkill." }
                 }
