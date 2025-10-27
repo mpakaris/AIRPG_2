@@ -91,7 +91,7 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
             });
           }
 
-          if (outcome.effects) {
+          if (outcome.effects && Array.isArray(outcome.effects)) {
             effects.push(...outcome.effects);
           }
 

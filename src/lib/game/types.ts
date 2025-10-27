@@ -311,7 +311,7 @@ export type ItemHandler = {
   itemId: ItemId;
   conditions?: Condition[];
   success: InteractionResult;
-  fail: { message: string };
+  fail?: InteractionResult; // Changed to InteractionResult for consistency
 };
 
 type HandlerOverrides = Partial<{
@@ -491,6 +491,11 @@ export type GameObject = {
     notContainer?: string;
     noEffect?: string;
     [key: string]: string | undefined;
+  };
+
+  children?: {
+    objects?: string[];
+    items?: string[];
   };
 
   design: {

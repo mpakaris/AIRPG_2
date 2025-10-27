@@ -1,36 +1,44 @@
+/**
+ * handle-look - NEW ARCHITECTURE
+ *
+ * Handles looking around the current location.
+ * Returns Effect[] instead of mutating state directly.
+ */
 
 'use server';
 
-import type { Game, PlayerState, CommandResult } from "@/lib/game/types";
-import { createMessage } from "@/lib/utils";
-import { getLiveGameObject } from "@/lib/game/utils/helpers";
+import type { Game, PlayerState, Effect } from "@/lib/game/types";
+import { VisibilityResolver } from "@/lib/game/engine";
 
-export async function handleLook(state: PlayerState, game: Game): Promise<CommandResult> {
-  const narratorName = "Narrator";
+export async function handleLook(state: PlayerState, game: Game): Promise<Effect[]> {
   const location = game.locations[state.currentLocationId];
   let fullDescription = location.sceneDescription.trim();
 
-  const locationState = state.locationStates[state.currentLocationId] || { objects: location.objects };
-  const visibleObjectIds = locationState.objects;
-  
-  if (visibleObjectIds.length > 0) {
+  // Use VisibilityResolver to get visible entities
+  const visibleEntities = VisibilityResolver.getVisibleEntities(state, game);
+
+  if (visibleEntities.objects.length > 0) {
       fullDescription += '\n\nYou see the following objects:';
-      const objectNames = visibleObjectIds
-        .map(id => getLiveGameObject(id, state, game))
+      const objectNames = visibleEntities.objects
+        .map(id => game.gameObjects[id as any])
         .filter(Boolean)
-        .map(obj => `\n- ${obj!.gameLogic.name}`);
+        .map(obj => `\n- ${obj!.name}`);
       fullDescription += objectNames.join('');
   }
 
-  if (location.npcs && location.npcs.length > 0) {
+  if (visibleEntities.npcs.length > 0) {
     fullDescription += '\n\nYou can also see the following people:';
-    location.npcs.forEach(npcId => {
-      const npc = game.npcs[npcId];
+    visibleEntities.npcs.forEach(npcId => {
+      const npc = game.npcs[npcId as any];
       if (npc) {
         fullDescription += `\n- ${npc.name}`;
       }
     });
   }
 
-  return { newState: state, messages: [createMessage('narrator', narratorName, fullDescription.trim(), 'text')] };
+  return [{
+    type: 'SHOW_MESSAGE',
+    speaker: 'narrator',
+    content: fullDescription.trim()
+  }];
 }
