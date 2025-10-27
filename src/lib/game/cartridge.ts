@@ -38,7 +38,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                     ],
                     media: { imageKey: 'unlocked' }
                 },
-                fail: { message: "The lock prevents it from being opened without the right password." }
+                fail: { message: "The lock prevents it from being opened without the right password. Stuck? Maybe this will help: https://airpg-minigames.vercel.app/games/the-notebook" }
             },
             onUnlock: {
                 success: {
