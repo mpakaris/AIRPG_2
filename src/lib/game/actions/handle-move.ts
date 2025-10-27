@@ -90,6 +90,7 @@ export async function handleMove(state: PlayerState, targetName: string, game: G
             type: 'SHOW_MESSAGE',
             speaker: outcome.speaker || 'narrator',
             content: outcome.message,
+            imageId: targetObjectId,  // Pass entityId so image can be resolved
             imageKey: outcome.media?.imageKey,
             soundKey: outcome.media?.soundKey,
             videoUrl: outcome.media?.videoUrl

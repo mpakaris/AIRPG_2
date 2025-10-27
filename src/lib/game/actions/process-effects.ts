@@ -61,6 +61,16 @@ export async function processEffects(initialState: PlayerState, effects: Effect[
                 break;
             case 'SHOW_MESSAGE':
                 const messageImageId = effect.imageId;
+
+                // If imageKey is provided, resolve it to the actual image directly
+                let imageOverride: any = undefined;
+                if (effect.imageKey && messageImageId) {
+                    const entity = game.gameObjects[messageImageId as any] || game.items[messageImageId as any];
+                    if (entity?.media?.images?.[effect.imageKey]) {
+                        imageOverride = entity.media.images[effect.imageKey];
+                    }
+                }
+
                 const message = createMessage(
                     'narrator',
                     narratorName,
@@ -68,6 +78,12 @@ export async function processEffects(initialState: PlayerState, effects: Effect[
                     effect.messageType,
                     messageImageId ? { id: messageImageId, game, state: newState, showEvenIfExamined: true } : undefined
                 );
+
+                // Override image if imageKey was specified
+                if (imageOverride) {
+                    message.image = imageOverride;
+                }
+
                 messages.push(message);
 
                  if (messageImageId && !newState.flags.includes(examinedObjectFlag(messageImageId as string))) {

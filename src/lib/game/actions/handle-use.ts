@@ -87,7 +87,11 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
             effects.push({
               type: 'SHOW_MESSAGE',
               speaker: 'narrator',
-              content: outcome.message
+              content: outcome.message,
+              imageId: targetObjectId,  // Pass entityId so image can be resolved
+              imageKey: outcome.media?.imageKey,
+              soundKey: outcome.media?.soundKey,
+              videoUrl: outcome.media?.videoUrl
             });
           }
 
@@ -163,7 +167,11 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
       effects.push({
         type: 'SHOW_MESSAGE',
         speaker: 'narrator',
-        content: outcome.message
+        content: outcome.message,
+        imageId: itemId,  // Pass entityId so image can be resolved
+        imageKey: outcome.media?.imageKey,
+        soundKey: outcome.media?.soundKey,
+        videoUrl: outcome.media?.videoUrl
       });
     }
 
