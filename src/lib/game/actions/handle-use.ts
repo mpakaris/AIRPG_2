@@ -80,23 +80,23 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
             }];
           }
 
-          // Build effects
+          // Build effects - IMPORTANT: State updates BEFORE messages
           const effects: Effect[] = [];
 
+          // Add outcome effects FIRST
+          if (outcome.effects && Array.isArray(outcome.effects)) {
+            effects.push(...outcome.effects);
+          }
+
+          // Add message AFTER state updates
           if (outcome.message) {
             effects.push({
               type: 'SHOW_MESSAGE',
               speaker: 'narrator',
               content: outcome.message,
-              imageId: targetObjectId,  // Pass entityId so image can be resolved
-              imageKey: outcome.media?.imageKey,
-              soundKey: outcome.media?.soundKey,
-              videoUrl: outcome.media?.videoUrl
+              imageId: targetObjectId,  // Will resolve based on updated state
+              messageType: 'image'
             });
-          }
-
-          if (outcome.effects && Array.isArray(outcome.effects)) {
-            effects.push(...outcome.effects);
           }
 
           return effects;
@@ -160,23 +160,23 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
       }];
     }
 
-    // Build effects
+    // Build effects - IMPORTANT: State updates BEFORE messages
     const effects: Effect[] = [];
 
+    // Add outcome effects FIRST
+    if (outcome.effects) {
+      effects.push(...outcome.effects);
+    }
+
+    // Add message AFTER state updates
     if (outcome.message) {
       effects.push({
         type: 'SHOW_MESSAGE',
         speaker: 'narrator',
         content: outcome.message,
-        imageId: itemId,  // Pass entityId so image can be resolved
-        imageKey: outcome.media?.imageKey,
-        soundKey: outcome.media?.soundKey,
-        videoUrl: outcome.media?.videoUrl
+        imageId: itemId,  // Will resolve based on updated state
+        messageType: 'image'
       });
-    }
-
-    if (outcome.effects) {
-      effects.push(...outcome.effects);
     }
 
     return effects;

@@ -62,43 +62,13 @@ export async function processEffects(initialState: PlayerState, effects: Effect[
             case 'SHOW_MESSAGE':
                 const messageImageId = effect.imageId;
 
-                // If imageKey is provided, resolve it to the actual image directly
-                let resolvedImage: any = undefined;
-                if (effect.imageKey && messageImageId) {
-                    const entity = game.gameObjects[messageImageId as any] || game.items[messageImageId as any];
-                    const imageFromKey = entity?.media?.images?.[effect.imageKey];
-                    // Make sure we got a valid image object with a url property
-                    if (imageFromKey && typeof imageFromKey === 'object' && 'url' in imageFromKey) {
-                        resolvedImage = imageFromKey;
-                    }
-                }
-
-                // If imageKey was specified and resolved, don't pass imageId to createMessage
-                // (to avoid conflicting image resolution logic)
-                const shouldUseImageId = messageImageId && !effect.imageKey;
-
                 const message = createMessage(
-                    'narrator',
+                    effect.speaker || 'narrator',
                     narratorName,
                     effect.content,
                     effect.messageType,
-                    shouldUseImageId ? { id: messageImageId, game, state: newState, showEvenIfExamined: true } : undefined
+                    messageImageId ? { id: messageImageId, game, state: newState, showEvenIfExamined: true } : undefined
                 );
-
-                // Override image if imageKey was resolved
-                if (resolvedImage) {
-                    message.image = resolvedImage;
-                }
-
-                // DEFENSIVE: Ensure message.image is either undefined or a valid ImageDetails object
-                if (message.image && typeof message.image === 'string') {
-                    console.error('Invalid image detected - string instead of ImageDetails:', message.image);
-                    message.image = undefined;
-                }
-                if (message.image && (!message.image.url || typeof message.image.url !== 'string')) {
-                    console.error('Invalid image detected - missing or invalid url:', message.image);
-                    message.image = undefined;
-                }
 
                 messages.push(message);
 

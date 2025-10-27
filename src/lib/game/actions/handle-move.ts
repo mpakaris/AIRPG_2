@@ -81,25 +81,23 @@ export async function handleMove(state: PlayerState, targetName: string, game: G
         }];
     }
 
-    // 5. Build effects
+    // 5. Build effects - IMPORTANT: State updates BEFORE messages
     const effects: Effect[] = [];
 
-    // Add message if present
+    // Add outcome effects FIRST so state is updated before message shows
+    if (outcome.effects) {
+        effects.push(...outcome.effects);
+    }
+
+    // Add message AFTER state updates (so createMessage sees updated state)
     if (outcome.message) {
         effects.push({
             type: 'SHOW_MESSAGE',
             speaker: outcome.speaker || 'narrator',
             content: outcome.message,
-            imageId: targetObjectId,  // Pass entityId so image can be resolved
-            imageKey: outcome.media?.imageKey,
-            soundKey: outcome.media?.soundKey,
-            videoUrl: outcome.media?.videoUrl
+            imageId: targetObjectId,  // Will resolve image based on updated currentStateId
+            messageType: 'image'
         });
-    }
-
-    // Add outcome effects
-    if (outcome.effects) {
-        effects.push(...outcome.effects);
     }
 
     return effects;

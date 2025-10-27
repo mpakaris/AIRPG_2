@@ -87,7 +87,7 @@ export type Effect =
   | { type: 'ENTER_PORTAL'; portalId: string }
 
   // UI/Media
-  | { type: 'SHOW_MESSAGE'; speaker?: 'narrator' | 'agent' | 'system' | string; content: string; imageId?: string; imageKey?: string; soundKey?: string; videoUrl?: string; messageType?: Message['type'] }
+  | { type: 'SHOW_MESSAGE'; speaker?: 'narrator' | 'agent' | 'system' | string; content: string; imageId?: string; messageType?: Message['type'] }
 
   // Timers (optional)
   | { type: 'START_TIMER'; timerId: string; ms: number; effect: Effect }
