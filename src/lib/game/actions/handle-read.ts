@@ -1,78 +1,127 @@
 
+/**
+ * handle-read - NEW ARCHITECTURE
+ *
+ * Handles reading items (documents, books, etc.).
+ * Supports stateMap for progressive content.
+ * Returns Effect[] instead of mutating state directly.
+ */
+
 'use server';
 
-import type { Game, PlayerState, CommandResult, Item } from "@/lib/game/types";
-import { findItemInContext } from "@/lib/game/utils/helpers";
-import { createMessage } from "@/lib/utils";
-import { processEffects } from "@/lib/game/actions/process-effects";
+import type { Game, PlayerState, Effect } from "@/lib/game/types";
+import { HandlerResolver, GameStateManager } from "@/lib/game/engine";
 import { normalizeName } from "@/lib/utils";
 
-
-export async function handleRead(state: PlayerState, itemName: string, game: Game): Promise<CommandResult> {
-    const narratorName = "Narrator";
+export async function handleRead(state: PlayerState, itemName: string, game: Game): Promise<Effect[]> {
     const agentName = game.narratorName || "Agent Sharma";
     const normalizedItemName = normalizeName(itemName);
-    
+
     if (!normalizedItemName) {
-        return { newState: state, messages: [createMessage('system', 'System', `You need to specify what to read.`)] };
+        return [{
+            type: 'SHOW_MESSAGE',
+            speaker: 'system',
+            content: 'You need to specify what to read.'
+        }];
     }
 
-    const itemInContext = findItemInContext(state, game, normalizedItemName);
+    // 1. Find item in inventory
+    const itemId = state.inventory.find(id =>
+        normalizeName(game.items[id]?.name).includes(normalizedItemName)
+    );
 
-    if (!itemInContext) {
-        return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${itemName}" to read here.`)] };
+    if (!itemId) {
+        return [{
+            type: 'SHOW_MESSAGE',
+            speaker: 'system',
+            content: `You don't see a "${itemName}" to read here.`
+        }];
     }
-    
-    const itemToRead = itemInContext.item;
 
-    if (!itemToRead.capabilities.isReadable) {
-        return { newState: state, messages: [createMessage('narrator', narratorName, `There's nothing to read on the ${itemToRead.name}.`)] };
+    const itemToRead = game.items[itemId];
+    if (!itemToRead) {
+        return [{
+            type: 'SHOW_MESSAGE',
+            speaker: 'system',
+            content: `You don't see a "${itemName}" to read here.`
+        }];
     }
-    
-    let newState = JSON.parse(JSON.stringify(state)); // Deep copy for safety
 
+    // 2. Check if readable
+    if (!itemToRead.capabilities?.isReadable) {
+        return [{
+            type: 'SHOW_MESSAGE',
+            speaker: 'narrator',
+            content: `There's nothing to read on the ${itemToRead.name}.`
+        }];
+    }
+
+    // 3. Check for stateMap (progressive content)
     if (itemToRead.stateMap && Object.keys(itemToRead.stateMap).length > 0) {
-        
-        if (!newState.itemStates[itemToRead.id]) {
-            newState.itemStates[itemToRead.id] = { readCount: 0 };
-        }
-
-        const liveItemState = newState.itemStates[itemToRead.id];
-        const currentReadCount = liveItemState.readCount || 0;
-        
+        const entityState = GameStateManager.getEntityState(state, itemId);
+        const currentReadCount = entityState.readCount || 0;
         const stateMapKeys = Object.keys(itemToRead.stateMap);
 
+        // Check if all content has been read
         if (currentReadCount >= stateMapKeys.length) {
-            const deflectionMessage = `Come on Burt, let's continue. You can spend hours reading this book and not come up with anything useful.`;
-            return { newState, messages: [createMessage('agent', agentName, deflectionMessage)] };
+            return [{
+                type: 'SHOW_MESSAGE',
+                speaker: 'agent',
+                content: `Come on Burt, let's continue. You can spend hours reading this book and not come up with anything useful.`
+            }];
         }
-        
+
+        // Get current state entry
         const currentStateKey = stateMapKeys[currentReadCount];
         const stateMapEntry = itemToRead.stateMap[currentStateKey];
 
-        if (!stateMapEntry || typeof stateMapEntry.description !== 'string') {
-            return { newState, messages: [createMessage('narrator', narratorName, "You try to read it, but the text is illegible.")] };
+        if (!stateMapEntry || !stateMapEntry.description) {
+            return [{
+                type: 'SHOW_MESSAGE',
+                speaker: 'narrator',
+                content: "You try to read it, but the text is illegible."
+            }];
         }
-        
-        const description = stateMapEntry.description;
-        newState.itemStates[itemToRead.id].readCount = currentReadCount + 1;
-        
-        const message = createMessage('narrator', narratorName, description);
-        return { newState, messages: [message] };
+
+        // Build effects: show message + increment read count
+        return [
+            {
+                type: 'SHOW_MESSAGE',
+                speaker: 'narrator',
+                content: stateMapEntry.description
+            },
+            {
+                type: 'SET_ENTITY_STATE',
+                entityId: itemId,
+                patch: { readCount: currentReadCount + 1 }
+            }
+        ];
     }
 
-    const handler = itemToRead.handlers?.onRead;
-    if (handler && handler.success) {
-        const effectsToProcess = Array.isArray(handler.success.effects) ? handler.success.effects : [];
-        let result = await processEffects(newState, effectsToProcess, game);
-        
+    // 4. Check for onRead handler
+    const handler = HandlerResolver.getEffectiveHandler(itemToRead, 'read', state);
+    if (handler?.success) {
+        const effects: Effect[] = [];
+
         if (handler.success.message) {
-            const message = createMessage('narrator', narratorName, handler.success.message, 'text');
-            result.messages.unshift(message);
+            effects.push({
+                type: 'SHOW_MESSAGE',
+                speaker: 'narrator',
+                content: handler.success.message
+            });
         }
-        
-        return result;
+
+        if (handler.success.effects) {
+            effects.push(...handler.success.effects);
+        }
+
+        return effects;
     }
 
-    return { newState: state, messages: [createMessage('narrator', narratorName, itemToRead.description)] };
+    // 5. Fallback: just show description
+    return [{
+        type: 'SHOW_MESSAGE',
+        speaker: 'narrator',
+        content: itemToRead.description
+    }];
 }

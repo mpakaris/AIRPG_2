@@ -1,102 +1,186 @@
 
+/**
+ * handle-use - NEW ARCHITECTURE
+ *
+ * Handles "use item on object" and "use item" actions.
+ * Returns Effect[] instead of mutating state directly.
+ */
+
 'use server';
 
-import type { GameObjectId, Game, PlayerState, CommandResult, Item } from "@/lib/game/types";
-import { findItemInContext, getLiveGameObject } from "@/lib/game/utils/helpers";
-import { createMessage } from "@/lib/utils";
-import { processEffects } from "@/lib/game/actions/process-effects";
+import type { Game, PlayerState, Effect } from "@/lib/game/types";
+import { Validator, VisibilityResolver } from "@/lib/game/engine";
 import { normalizeName } from "@/lib/utils";
 
-export async function handleUse(state: PlayerState, itemName: string, targetName: string, game: Game): Promise<CommandResult> {
-  const narratorName = "Narrator";
+export async function handleUse(state: PlayerState, itemName: string, targetName: string, game: Game): Promise<Effect[]> {
   const normalizedItemName = normalizeName(itemName);
 
-  const itemInContext = findItemInContext(state, game, normalizedItemName);
-  
-  if (!itemInContext) {
-    return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${itemName}" to use.`)] };
+  // 1. Find item in inventory
+  const itemId = state.inventory.find(id =>
+    normalizeName(game.items[id]?.name).includes(normalizedItemName)
+  );
+
+  if (!itemId) {
+    return [{
+      type: 'SHOW_MESSAGE',
+      speaker: 'system',
+      content: `You don't see a "${itemName}" to use.`
+    }];
   }
 
-  const { item: itemToUse, source } = itemInContext;
-
-  if (source.type !== 'inventory') {
-      return { newState: state, messages: [createMessage('system', 'System', `You can only use items that are in your inventory. Use "take ${itemToUse.name}" to pick it up first.`)] };
+  const itemToUse = game.items[itemId];
+  if (!itemToUse) {
+    return [{
+      type: 'SHOW_MESSAGE',
+      speaker: 'system',
+      content: `You don't have a "${itemName}".`
+    }];
   }
-  
+
+  // 2. If using item on a target
   if (targetName) {
     const normalizedTargetName = normalizeName(targetName);
-    const locationState = state.locationStates[state.currentLocationId] || { objects: game.locations[state.currentLocationId].objects };
-    const visibleObjectIds = locationState.objects;
-    
-    const targetObjectId = visibleObjectIds.find(id => {
-        const obj = game.gameObjects[id];
-        if (!obj) return false;
-        const objName = normalizeName(obj.name);
-        const objTags = obj.design?.tags?.map(normalizeName) || [];
-        return objName.includes(normalizedTargetName) || objTags.includes(normalizedTargetName);
+    const visibleEntities = VisibilityResolver.getVisibleEntities(state, game);
+
+    // Find target object
+    const targetObjectId = visibleEntities.objects.find(id => {
+      const obj = game.gameObjects[id as any];
+      if (!obj) return false;
+      const objName = normalizeName(obj.name);
+      const objTags = obj.design?.tags?.map(normalizeName) || [];
+      return objName.includes(normalizedTargetName) || objTags.includes(normalizedTargetName);
     });
 
     if (targetObjectId) {
-        const targetObject = getLiveGameObject(targetObjectId as GameObjectId, state, game);
-        if (targetObject) {
-            const useHandlers = targetObject.gameLogic.handlers.onUse;
-            if (Array.isArray(useHandlers)) {
-                const specificHandler = useHandlers.find(h => h.itemId === itemToUse.id);
-                if (specificHandler) {
-                    const { success, fail, conditions } = specificHandler;
-                    const conditionsMet = (conditions || []).every(cond => {
-                        if (cond.type === 'HAS_FLAG') return state.flags.includes(cond.targetId as any);
-                        if (cond.type === 'NO_FLAG') return !state.flags.includes(cond.targetId as any);
-                        return true;
-                    });
-                    
-                    if (conditionsMet) {
-                        const result = await processEffects(state, success.effects || [], game);
-                        result.messages.unshift(createMessage('narrator', narratorName, success.message));
-                        return result;
-                    } else {
-                         return { newState: state, messages: [createMessage('narrator', narratorName, fail.message || `That doesn't seem to work.`)] };
-                    }
-                }
-            }
+      const targetObject = game.gameObjects[targetObjectId as any];
+      if (!targetObject) {
+        return [{
+          type: 'SHOW_MESSAGE',
+          speaker: 'narrator',
+          content: `You can't use the ${itemToUse.name} on that.`
+        }];
+      }
+
+      // Check if object has onUse handlers
+      const useHandlers = targetObject.handlers?.onUse;
+      if (Array.isArray(useHandlers)) {
+        // Find handler for this specific item
+        const specificHandler = useHandlers.find(h => h.itemId === itemId);
+
+        if (specificHandler) {
+          // Evaluate conditions
+          const conditionsMet = Validator.evaluateConditions(specificHandler.conditions, state, game);
+          const outcome = conditionsMet ? specificHandler.success : specificHandler.fail;
+
+          if (!outcome) {
+            return [{
+              type: 'SHOW_MESSAGE',
+              speaker: 'narrator',
+              content: `That doesn't seem to work.`
+            }];
+          }
+
+          // Build effects
+          const effects: Effect[] = [];
+
+          if (outcome.message) {
+            effects.push({
+              type: 'SHOW_MESSAGE',
+              speaker: 'narrator',
+              content: outcome.message
+            });
+          }
+
+          if (outcome.effects) {
+            effects.push(...outcome.effects);
+          }
+
+          return effects;
         }
-        return { newState: state, messages: [createMessage('narrator', narratorName, `You can't use the ${itemToUse.name} on the ${targetObject?.gameLogic.name || targetName}.`)] };
+      }
+
+      // No matching handler
+      return [{
+        type: 'SHOW_MESSAGE',
+        speaker: 'narrator',
+        content: `You can't use the ${itemToUse.name} on the ${targetObject.name}.`
+      }];
     }
-    
-    // Check if the object exists at all, even if not visible, to give a better message.
-    const objectExistsInGame = Object.values(game.gameObjects).some(obj => normalizeName(obj.name).includes(normalizedTargetName));
+
+    // Check if target exists but not visible
+    const objectExistsInGame = Object.values(game.gameObjects).some(obj =>
+      normalizeName(obj.name).includes(normalizedTargetName)
+    );
+
     if (objectExistsInGame) {
-        return { newState: state, messages: [createMessage('narrator', narratorName, `There's no ${normalizedTargetName} visible here. Maybe it's hidden?`)] };
+      return [{
+        type: 'SHOW_MESSAGE',
+        speaker: 'narrator',
+        content: `There's no ${normalizedTargetName} visible here. Maybe it's hidden?`
+      }];
     }
 
-    const targetItemResult = findItemInContext(state, game, normalizedTargetName);
-    if(targetItemResult) {
-        // Logic for combining items would go here if implemented
-        return { newState: state, messages: [createMessage('narrator', narratorName, `You can't use the ${itemName} on the ${targetName}.`)] };
+    // Check if target is an item
+    const targetItemId = state.inventory.find(id =>
+      normalizeName(game.items[id]?.name).includes(normalizedTargetName)
+    );
+
+    if (targetItemId) {
+      // Item-on-item combination (not implemented yet)
+      return [{
+        type: 'SHOW_MESSAGE',
+        speaker: 'narrator',
+        content: `You can't use the ${itemName} on the ${targetName}.`
+      }];
     }
 
-    return { newState: state, messages: [createMessage('narrator', narratorName, `You don't see a "${targetName}" to use the item on.`)] };
+    return [{
+      type: 'SHOW_MESSAGE',
+      speaker: 'narrator',
+      content: `You don't see a "${targetName}" to use the item on.`
+    }];
   }
-  
-  // This handles using an item on its own (e.g., "use phone")
-  const onUseHandler = itemToUse.handlers.onUse;
+
+  // 3. Using item on its own (e.g., "use phone")
+  const onUseHandler = itemToUse.handlers?.onUse;
   if (onUseHandler && !Array.isArray(onUseHandler)) {
-    const { conditions, success, fail } = onUseHandler;
-    const conditionsMet = (conditions || []).every(cond => {
-        if (cond.type === 'HAS_FLAG') return state.flags.includes(cond.targetId as any);
-        if (cond.type === 'NO_FLAG') return !state.flags.includes(cond.targetId as any);
-        return true;
-    });
+    // Evaluate conditions
+    const conditionsMet = Validator.evaluateConditions(onUseHandler.conditions, state, game);
+    const outcome = conditionsMet ? onUseHandler.success : onUseHandler.fail;
 
-    if (conditionsMet) {
-        let result = await processEffects(state, success.effects || [], game);
-        result.messages.unshift(createMessage('narrator', narratorName, success.message));
-        return result;
-    } else {
-        return { newState: state, messages: [createMessage('narrator', narratorName, fail.message || `You can't use the ${itemToUse.name} right now.`)]};
+    if (!outcome) {
+      return [{
+        type: 'SHOW_MESSAGE',
+        speaker: 'narrator',
+        content: `You can't use the ${itemToUse.name} right now.`
+      }];
     }
+
+    // Build effects
+    const effects: Effect[] = [];
+
+    if (outcome.message) {
+      effects.push({
+        type: 'SHOW_MESSAGE',
+        speaker: 'narrator',
+        content: outcome.message
+      });
+    }
+
+    if (outcome.effects) {
+      effects.push(...outcome.effects);
+    }
+
+    return effects;
   }
 
-  const defaultFail = itemToUse.handlers?.defaultFailMessage || 'You need to specify what to use that on, or it can\'t be used by itself.';
-  return { newState: state, messages: [createMessage('narrator', narratorName, defaultFail)] };
+  // No handler for using this item
+  const defaultFail = itemToUse.handlers?.defaultFailMessage ||
+    'You need to specify what to use that on, or it can\'t be used by itself.';
+
+  return [{
+    type: 'SHOW_MESSAGE',
+    speaker: 'narrator',
+    content: defaultFail
+  }];
 }

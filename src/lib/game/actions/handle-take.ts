@@ -1,65 +1,92 @@
 
+/**
+ * handle-take - NEW ARCHITECTURE
+ *
+ * Handles taking (picking up) items.
+ * Returns Effect[] instead of mutating state directly.
+ */
+
 'use server';
 
-import type { GameObjectId, Game, PlayerState, CommandResult, ItemId } from "@/lib/game/types";
-import { findItemInContext, getLiveGameObject } from "@/lib/game/utils/helpers";
-import { createMessage } from "@/lib/utils";
-import { processEffects } from "./process-effects";
+import type { Game, PlayerState, Effect } from "@/lib/game/types";
+import { Validator, HandlerResolver, VisibilityResolver } from "@/lib/game/engine";
 import { normalizeName } from "@/lib/utils";
 
-export async function handleTake(state: PlayerState, targetName: string, game: Game): Promise<CommandResult> {
-  const narratorName = "Narrator";
+export async function handleTake(state: PlayerState, targetName: string, game: Game): Promise<Effect[]> {
   const normalizedTargetName = normalizeName(targetName);
-  
+
   if (!normalizedTargetName) {
-      return { newState: state, messages: [createMessage('system', 'System', 'You need to specify what to take.')] };
-  }
-  
-  let newState = JSON.parse(JSON.stringify(state));
-
-  const itemInContext = findItemInContext(newState, game, normalizedTargetName);
-
-  if (!itemInContext) {
-    return { newState: state, messages: [createMessage('narrator', narratorName, `You don't see a "${targetName}" here to take.`)] };
+    return [{
+      type: 'SHOW_MESSAGE',
+      speaker: 'system',
+      content: 'You need to specify what to take.'
+    }];
   }
 
-  const { item, source } = itemInContext;
-  
-  if (newState.inventory.includes(item.id)) {
-    return { newState: state, messages: [createMessage('system', 'System', `You already have the ${item.name}.`)] };
+  // 1. Find item in visible entities
+  const visibleEntities = VisibilityResolver.getVisibleEntities(state, game);
+  const itemId = visibleEntities.items.find(id =>
+    normalizeName(game.items[id as any]?.name).includes(normalizedTargetName)
+  );
+
+  if (!itemId) {
+    return [{
+      type: 'SHOW_MESSAGE',
+      speaker: 'narrator',
+      content: `You don't see a "${targetName}" here to take.`
+    }];
   }
 
-  if (!item.capabilities.isTakable) {
-    const failMessage = item.handlers?.onTake?.fail?.message || `You can't take the ${item.name}.`;
-    return { newState: state, messages: [createMessage('narrator', narratorName, failMessage)] };
+  const item = game.items[itemId as any];
+  if (!item) {
+    return [{
+      type: 'SHOW_MESSAGE',
+      speaker: 'narrator',
+      content: `You don't see a "${targetName}" here to take.`
+    }];
   }
 
-  // If item was found in a container, remove it from there
-  if (source && source.type === 'object') {
-    const containerId = source.id;
-    const containerState = newState.objectStates[containerId];
-    if (containerState && containerState.items) {
-      containerState.items = containerState.items.filter((id: ItemId) => id !== item.id);
+  // 2. Check if already in inventory
+  if (state.inventory.includes(itemId as any)) {
+    return [{
+      type: 'SHOW_MESSAGE',
+      speaker: 'system',
+      content: `You already have the ${item.name}.`
+    }];
+  }
+
+  // 3. Check if item is takable
+  if (!item.capabilities?.isTakable) {
+    const handler = HandlerResolver.getEffectiveHandler(item, 'take', state);
+    const failMessage = handler?.fail?.message || `You can't take the ${item.name}.`;
+    return [{
+      type: 'SHOW_MESSAGE',
+      speaker: 'narrator',
+      content: failMessage
+    }];
+  }
+
+  // 4. Get onTake handler if exists
+  const handler = HandlerResolver.getEffectiveHandler(item, 'take', state);
+  const successMessage = handler?.success?.message || `You take the ${item.name}.`;
+
+  // 5. Build effects
+  const effects: Effect[] = [
+    {
+      type: 'SHOW_MESSAGE',
+      speaker: 'narrator',
+      content: successMessage
+    },
+    {
+      type: 'ADD_ITEM',
+      itemId: itemId
     }
-  } else if (source && source.type === 'location') {
-    // If we support items being directly in locations, logic to remove it would go here.
-    // For now, our model has items inside objects.
-  } else {
-    // This case handles items that are 'spawned' but not yet in a container.
-    // The findItemInContext function logic needs to support this.
-    // For now, we assume all takeable items are in containers.
-    // If the source is null but the item was found, it means it was in the world but not in a container.
-    // This shouldn't happen with our current logic, but we handle it gracefully.
+  ];
+
+  // Add handler effects if present
+  if (handler?.success?.effects) {
+    effects.push(...handler.success.effects);
   }
 
-  // Add item to player inventory
-  newState.inventory.push(item.id);
-
-  const successHandler = item.handlers?.onTake?.success;
-  const effects = successHandler?.effects || [];
-  const successMessage = successHandler?.message || `You take the ${item.name}.`;
-  
-  const result = await processEffects(newState, effects, game);
-  result.messages.unshift(createMessage('narrator', narratorName, successMessage));
-  return result;
+  return effects;
 }
