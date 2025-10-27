@@ -147,32 +147,44 @@ const MessageLog: FC<Pick<GameScreenProps, 'messages'>> = ({ messages }) => {
                   </div>
                 )}
                 <MessageContent message={message} />
-                 {message.image && (
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <button className="mt-2 block w-full cursor-pointer">
+                 {message.image && typeof message.image.url === 'string' && (() => {
+                    const src = message.image.url.trim();
+                    const valid = src.startsWith('http://') || src.startsWith('https://') || src.startsWith('/');
+
+                    if (!valid) {
+                      if (process.env.NODE_ENV === 'development') {
+                        console.warn('Invalid image URL in message:', message.image);
+                      }
+                      return null;
+                    }
+
+                    return (
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <button className="mt-2 block w-full cursor-pointer">
+                            <Image
+                              src={src}
+                              alt={message.image.description || 'image'}
+                              width={200}
+                              height={200}
+                              className="rounded-lg border-2 border-border"
+                              data-ai-hint={message.image.hint}
+                            />
+                          </button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-3xl">
+                          <DialogTitle className="sr-only">{message.image.description || 'image'}</DialogTitle>
                           <Image
-                            src={message.image.url}
-                            alt={message.image.description}
-                            width={200}
-                            height={200}
-                            className="rounded-lg border-2 border-border"
-                            data-ai-hint={message.image.hint}
+                            src={src}
+                            alt={message.image.description || 'image'}
+                            width={800}
+                            height={600}
+                            className="mx-auto rounded-lg"
                           />
-                        </button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-3xl">
-                        <DialogTitle className="sr-only">{message.image.description}</DialogTitle>
-                        <Image
-                          src={message.image.url}
-                          alt={message.image.description}
-                          width={800}
-                          height={600}
-                          className="mx-auto rounded-lg"
-                        />
-                      </DialogContent>
-                    </Dialog>
-                )}
+                        </DialogContent>
+                      </Dialog>
+                    );
+                  })()}
               </div>
             </div>
           );
