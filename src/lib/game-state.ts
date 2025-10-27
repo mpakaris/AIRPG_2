@@ -21,9 +21,14 @@ export function getInitialState(game: Game): PlayerState {
   // Initialize game objects
   for (const gameObjectId in game.gameObjects) {
     const gameObject = game.gameObjects[gameObjectId as GameObjectId];
+
+    // Objects that start hidden (revealed by other actions)
+    const hiddenObjects = ['obj_wall_safe'];
+    const startsHidden = hiddenObjects.includes(gameObject.id);
+
     world[gameObject.id] = {
       // Universal properties
-      isVisible: true, // Default to visible unless explicitly hidden
+      isVisible: !startsHidden, // Hidden objects start invisible
       discovered: false,
       currentStateId: gameObject.state?.currentStateId || 'default',
 
@@ -47,19 +52,22 @@ export function getInitialState(game: Game): PlayerState {
   for (const itemId in game.items) {
     const item = game.items[itemId as ItemId];
 
-    // Check if item is a child of a container - if so, start hidden
+    // Check if item is a child of a container - if so, check parent state
     let isHiddenChild = false;
     for (const objId in game.gameObjects) {
       const obj = game.gameObjects[objId as GameObjectId];
       if (obj.children?.items?.includes(item.id as any)) {
-        // Item is a child - start hidden if parent is closed/unmoved
-        isHiddenChild = true;
+        // Item is a child - start hidden ONLY if parent is closed/locked/not moved
+        const parentState = obj.state || { isOpen: false, isLocked: false };
+        if (!parentState.isOpen || parentState.isLocked) {
+          isHiddenChild = true;
+        }
         break;
       }
     }
 
     world[item.id] = {
-      isVisible: !isHiddenChild, // Hidden if child of container, visible otherwise
+      isVisible: !isHiddenChild, // Hidden if child of closed container, visible otherwise
       discovered: false,
       taken: false,
       readCount: item.state?.readCount || 0,

@@ -12,6 +12,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         capabilities: { openable: true, lockable: true, breakable: false, movable: true, powerable: false, container: true, readable: false, inputtable: true },
         state: { isOpen: false, isLocked: true, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
         inventory: { items: ['item_sd_card', 'item_newspaper_article'] as ItemId[], capacity: 2, allowTags: [], denyTags: [] },
+        children: { items: ['item_sd_card', 'item_newspaper_article'] as ItemId[] },
         media: {
             images: {
                 default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759242347/Notebook_locked_ngfes0.png', description: 'A locked notebook.', hint: 'locked notebook' },
@@ -27,12 +28,13 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                 alternateMessage: "The notebook is open. Inside, you see a small SD card next to a folded newspaper article."
             },
             onOpen: {
-                conditions: [{ type: 'STATE_MATCH', targetId: 'obj_brown_notebook', expectedValue: { isLocked: false } }],
+                conditions: [{ type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: false }],
                 success: {
                     message: "The notebook is open. Inside, you see a small SD card next to a folded newspaper article.",
                     effects: [
-                        { type: 'SET_OBJECT_STATE', objectId: 'obj_brown_notebook', state: { isOpen: true } },
-                        { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'The notebook is open. Inside, you see a small SD card next to a folded newspaper article.', imageId: 'obj_brown_notebook' }
+                        { type: 'SET_ENTITY_STATE', entityId: 'obj_brown_notebook', patch: { isOpen: true } },
+                        { type: 'REVEAL_ENTITY', entityId: 'item_sd_card' },
+                        { type: 'REVEAL_ENTITY', entityId: 'item_newspaper_article' }
                     ]
                 },
                 fail: { message: "The lock prevents it from being opened without the right password." }
@@ -41,8 +43,8 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                 success: {
                     message: "The notebook unlocks with a soft click. The cover creaks open.",
                     effects: [
-                        { type: 'SET_FLAG', flag: 'has_unlocked_notebook' as Flag },
-                        { type: 'SET_OBJECT_STATE', objectId: 'obj_brown_notebook', state: { isLocked: false } }
+                        { type: 'SET_FLAG', flag: 'has_unlocked_notebook', value: true },
+                        { type: 'SET_ENTITY_STATE', entityId: 'obj_brown_notebook', patch: { isLocked: false } }
                     ]
                 },
                 fail: { message: "That password doesn't work. The lock remains stubbornly shut." }
@@ -140,6 +142,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         capabilities: { openable: false, lockable: false, breakable: false, movable: true, powerable: false, container: true, readable: false, inputtable: false },
         state: { isOpen: true, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
         inventory: { items: ['item_book_deal', 'item_book_time', 'item_book_justice'] as ItemId[], capacity: null },
+        children: { items: ['item_book_deal', 'item_book_time', 'item_book_justice'] as ItemId[] },
         media: { images: { default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759604596/Bookshelf_Cafe_kn4poz.png', description: 'A bookshelf in a cafe.', hint: 'bookshelf reading corner' } } },
         handlers: {
             onExamine: {
@@ -180,13 +183,13 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                 alternateMessage: "It's the same abstract painting signed 'S.B.'. It definitely seems like it could be moved."
             },
             onMove: {
-                conditions: [{ type: 'NO_FLAG', targetId: 'has_moved_painting' as Flag }],
+                conditions: [{ type: 'NO_FLAG', flag: 'has_moved_painting' }],
                 success: {
                     message: "You lift the painting off its hook. Just as you suspected, a small wall safe is set into the wall behind it.",
                     effects: [
-                        { type: 'SET_FLAG', flag: 'has_moved_painting' as Flag },
-                        { type: 'REVEAL_OBJECT', objectId: 'obj_wall_safe' as GameObjectId },
-                        { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'You see a small wall safe, previously hidden by the painting.', imageId: 'obj_wall_safe' }
+                        { type: 'SET_FLAG', flag: 'has_moved_painting', value: true },
+                        { type: 'REVEAL_ENTITY', entityId: 'obj_wall_safe' },
+                        { type: 'SET_ENTITY_STATE', entityId: 'obj_painting', patch: { isMoved: true } }
                     ]
                 },
                 fail: { message: "You lift the painting again, but there's nothing else behind it. Just the safe." }
@@ -210,6 +213,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         capabilities: { openable: true, lockable: true, breakable: false, movable: false, powerable: false, container: true, readable: false, inputtable: false },
         state: { isOpen: false, isLocked: true, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
         inventory: { items: ['item_secret_document'] as ItemId[], capacity: 1 },
+        children: { items: ['item_secret_document'] as ItemId[] },
         media: {
             images: {
                 default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761263220/safe_behind_Painting_dbo6qc.png', description: 'A closed wall safe.', hint: 'wall safe' },
@@ -225,13 +229,13 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             onUse: [
                 {
                     itemId: 'item_deposit_key' as ItemId,
-                    conditions: [{ type: 'NO_FLAG', targetId: 'safe_is_unlocked' as Flag }],
+                    conditions: [{ type: 'NO_FLAG', flag: 'safe_is_unlocked' }],
                     success: {
                         message: "The key from the coffee machine fits perfectly. You turn it, and the safe door swings open with a satisfying clunk. Inside, there's a single, thick file marked 'CONFIDENTIAL'.",
                         effects: [
-                            { type: 'SET_FLAG', flag: 'safe_is_unlocked' as Flag },
-                            { type: 'SET_OBJECT_STATE', objectId: 'obj_wall_safe', state: { isLocked: false, isOpen: true, currentStateId: 'unlocked' } },
-                            { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'The safe is open, revealing a confidential file.', imageId: 'obj_wall_safe' }
+                            { type: 'SET_FLAG', flag: 'safe_is_unlocked', value: true },
+                            { type: 'SET_ENTITY_STATE', entityId: 'obj_wall_safe', patch: { isLocked: false, isOpen: true, currentStateId: 'unlocked' } },
+                            { type: 'REVEAL_ENTITY', entityId: 'item_secret_document' }
                         ]
                     },
                     fail: { message: "The safe is already unlocked. No need to use the key again." }
