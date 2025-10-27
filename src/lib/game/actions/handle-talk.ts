@@ -38,9 +38,10 @@ export async function handleTalk(state: PlayerState, npcName: string, game: Game
         );
         messages.push(npcMessage);
 
-
-        if (!newState.flags.includes(flag as any)) {
-            newState.flags.push(flag as any);
+        // NEW: flags is now Record<string, boolean> instead of array
+        if (!newState.flags?.[flag]) {
+            if (!newState.flags) newState.flags = {};
+            newState.flags[flag] = true;
         }
 
         return { newState, messages };

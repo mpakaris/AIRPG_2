@@ -30,8 +30,9 @@ export function createMessage(
     
     if (imageDetails) {
         const { id, game, state, showEvenIfExamined } = imageDetails;
-        const isAlreadyExamined = state.flags.includes(examinedObjectFlag(id as string));
-        
+        // NEW: flags is now Record<string, boolean> instead of array
+        const isAlreadyExamined = !!state.flags?.[examinedObjectFlag(id as string)];
+
         let shouldShowImage = true;
         
         if (showEvenIfExamined !== true) {

@@ -75,8 +75,10 @@ export async function processPassword(state: PlayerState, command: string, game:
         result.messages.unshift(unlockMessage);
 
         const flag = examinedObjectFlag(targetObject.gameLogic.id);
-        if (result.newState! && !result.newState!.flags.includes(flag as any)) {
-            result.newState!.flags.push(flag as any);
+        // NEW: flags is now Record<string, boolean> instead of array
+        if (result.newState! && !result.newState!.flags?.[flag]) {
+            if (!result.newState!.flags) result.newState!.flags = {};
+            result.newState!.flags[flag] = true;
         }
         
         return result;
