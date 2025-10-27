@@ -55,7 +55,14 @@ export function createMessage(
                     if (liveObject.state.isBroken && gameObject.media.images.broken) {
                         image = gameObject.media.images.broken;
                     } else if (stateImageKey && gameObject.media.images[stateImageKey]) {
-                        image = gameObject.media.images[stateImageKey];
+                        const resolvedImage = gameObject.media.images[stateImageKey];
+                        // DEFENSIVE: Only use if it's a valid ImageDetails object with url
+                        if (resolvedImage && typeof resolvedImage === 'object' && resolvedImage.url) {
+                            image = resolvedImage;
+                        } else {
+                            console.error('Invalid image for stateKey:', stateImageKey, 'Got:', resolvedImage);
+                            image = gameObject.media.images.default;
+                        }
                     }
                     else if (liveObject.state.isLocked === false && gameObject.media.images.unlocked) {
                         image = gameObject.media.images.unlocked;
