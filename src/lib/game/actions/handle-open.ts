@@ -1,74 +1,130 @@
+/**
+ * handle-open - NEW ARCHITECTURE
+ *
+ * Handles the "open" action using the new effect-based system.
+ * Returns Effect[] instead of mutating state directly.
+ */
+
 'use server';
 
-import type { Game, PlayerState, CommandResult } from "@/lib/game/types";
-import { findItemInContext, getLiveGameObject } from "@/lib/game/utils/helpers";
-import { createMessage } from "@/lib/utils";
-import { processEffects } from "@/lib/game/actions/process-effects";
+import type { Game, PlayerState, Effect } from "@/lib/game/types";
+import { Validator, HandlerResolver, VisibilityResolver } from "@/lib/game/engine";
 import { normalizeName } from "@/lib/utils";
 import { handleRead } from "@/lib/game/actions/handle-read";
 
-export async function handleOpen(state: PlayerState, targetName: string, game: Game): Promise<CommandResult> {
-    const narratorName = "Narrator";
+export async function handleOpen(state: PlayerState, targetName: string, game: Game): Promise<Effect[]> {
     const normalizedTargetName = normalizeName(targetName);
+    const visibleEntities = VisibilityResolver.getVisibleEntities(state, game);
 
-    const visibleObjectIds = state.locationStates[state.currentLocationId]?.objects || [];
-
-    const targetObjectId = visibleObjectIds.find(id =>
-        normalizeName(game.gameObjects[id]?.name).includes(normalizedTargetName)
+    // 1. Find target object in visible objects
+    const targetObjectId = visibleEntities.objects.find(id =>
+        normalizeName(game.gameObjects[id as any]?.name).includes(normalizedTargetName)
     );
 
     if (targetObjectId) {
-        const liveObject = getLiveGameObject(targetObjectId, state, game);
-        if (!liveObject) {
-            return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${normalizedTargetName}" to open.`)] };
+        const targetObject = game.gameObjects[targetObjectId as any];
+        if (!targetObject) {
+            return [{
+                type: 'SHOW_MESSAGE',
+                speaker: 'system',
+                content: `You don't see a "${targetName}" to open.`
+            }];
         }
-        
-        if (liveObject.state.isLocked) {
-            let lockMessage = liveObject.gameLogic.fallbackMessages?.locked || "It's locked.";
-            if (liveObject.gameLogic.input?.hint) {
-                lockMessage += `\n\n${liveObject.gameLogic.input.hint}`;
+
+        // 2. Validate action
+        const validation = Validator.validate('open', targetObjectId, state, game);
+        if (!validation.valid) {
+            // Return validation reason or fallback message
+            const message = validation.reason || HandlerResolver.getFallbackMessage(targetObject, 'notOpenable');
+            return [{
+                type: 'SHOW_MESSAGE',
+                speaker: 'narrator',
+                content: message
+            }];
+        }
+
+        // 3. Get effective handler (with stateMap composition)
+        const handler = HandlerResolver.getEffectiveHandler(targetObject, 'open', state);
+
+        if (!handler) {
+            // Generic open behavior - just set isOpen to true
+            return [
+                {
+                    type: 'SHOW_MESSAGE',
+                    speaker: 'narrator',
+                    content: `You open the ${targetObject.name}.`
+                },
+                {
+                    type: 'SET_ENTITY_STATE',
+                    entityId: targetObjectId,
+                    patch: { isOpen: true }
+                }
+            ];
+        }
+
+        // 4. Evaluate conditions
+        const conditionsMet = Validator.evaluateConditions(handler.conditions, state, game);
+        const outcome = conditionsMet ? handler.success : handler.fail;
+
+        if (!outcome) {
+            if (handler.fallback) {
+                return [{
+                    type: 'SHOW_MESSAGE',
+                    speaker: 'narrator',
+                    content: handler.fallback
+                }];
             }
-            return { newState: state, messages: [createMessage('narrator', narratorName, lockMessage)] };
+            return [{
+                type: 'SHOW_MESSAGE',
+                speaker: 'narrator',
+                content: `You open the ${targetObject.name}.`
+            }];
         }
 
-        if (liveObject.state.isOpen) {
-            const alreadyOpenMessage = liveObject.gameLogic.handlers.onExamine?.alternateMessage || "It's already open.";
-            return { newState: state, messages: [createMessage('narrator', narratorName, alreadyOpenMessage)] };
-        }
-        
-        if (!liveObject.gameLogic.capabilities.openable) {
-            const notOpenableMessage = liveObject.gameLogic.fallbackMessages?.notOpenable || `You can't open the ${liveObject.gameLogic.name}.`;
-            return { newState: state, messages: [createMessage('narrator', narratorName, notOpenableMessage)] };
-        }
+        // 5. Build effects
+        const effects: Effect[] = [];
 
-        const onOpen = liveObject.gameLogic.handlers.onOpen;
-
-        if (onOpen && onOpen.success) {
-            const successBlock = onOpen.success;
-            const effectsToProcess = Array.isArray(successBlock.effects) ? successBlock.effects : [];
-            
-            let result = await processEffects(state, effectsToProcess, game);
-            
-            if (successBlock.message) {
-                result.messages.unshift(createMessage('narrator', narratorName, successBlock.message));
-            }
-            
-            return result;
+        // Add message if present
+        if (outcome.message) {
+            effects.push({
+                type: 'SHOW_MESSAGE',
+                speaker: outcome.speaker || 'narrator',
+                content: outcome.message,
+                imageKey: outcome.media?.imageKey,
+                soundKey: outcome.media?.soundKey,
+                videoUrl: outcome.media?.videoUrl
+            });
         }
 
-        const genericOpenMessage = `You open the ${liveObject.gameLogic.name}.`;
-        const newState = { ...state, objectStates: { ...state.objectStates, [liveObject.gameLogic.id]: { ...liveObject.state, isOpen: true } } };
-        return { newState, messages: [createMessage('narrator', narratorName, genericOpenMessage)] };
+        // Add outcome effects
+        if (outcome.effects) {
+            effects.push(...outcome.effects);
+        }
+
+        return effects;
     }
 
-    const itemToOpen = findItemInContext(state, game, normalizedTargetName);
-    if (itemToOpen) {
-        if (itemToOpen.capabilities && itemToOpen.capabilities.isReadable) {
-            return handleRead(state, targetName, game);
+    // 2. Check if it's an item (redirect to read if readable)
+    const itemId = state.inventory.find(id =>
+        normalizeName(game.items[id]?.name).includes(normalizedTargetName)
+    );
+
+    if (itemId) {
+        const item = game.items[itemId];
+        if (item?.capabilities?.isReadable) {
+            return await handleRead(state, targetName, game);
         } else {
-            return { newState: state, messages: [createMessage('narrator', narratorName, `You can't "open" the ${itemToOpen.name} in that way.`)] };
+            return [{
+                type: 'SHOW_MESSAGE',
+                speaker: 'narrator',
+                content: `You can't "open" the ${item.name} in that way.`
+            }];
         }
     }
 
-    return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${normalizedTargetName}" to open.`)] };
+    return [{
+        type: 'SHOW_MESSAGE',
+        speaker: 'system',
+        content: `You don't see a "${targetName}" to open.`
+    }];
 }

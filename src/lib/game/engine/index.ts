@@ -6,6 +6,7 @@
  * 2. Validator - Capability and condition checking
  * 3. VisibilityResolver - Parent-child and visibility logic
  * 4. AIContextBuilder - Filtered state for LLM
+ * 5. HandlerResolver - StateMap composition and handler resolution
  */
 
 export { GameStateManager } from './GameStateManager';
@@ -15,3 +16,5 @@ export { VisibilityResolver } from './VisibilityResolver';
 export type { VisibilityContext } from './VisibilityResolver';
 export { AIContextBuilder } from './AIContextBuilder';
 export type { AIContext, AIEntity } from './AIContextBuilder';
+export { HandlerResolver } from './HandlerResolver';
+export type { EntityWithHandlers } from './HandlerResolver';
