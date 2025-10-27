@@ -63,31 +63,42 @@ export async function processEffects(initialState: PlayerState, effects: Effect[
                 const messageImageId = effect.imageId;
 
                 // If imageKey is provided, resolve it to the actual image directly
-                let imageOverride: any = undefined;
+                let resolvedImage: any = undefined;
                 if (effect.imageKey && messageImageId) {
                     const entity = game.gameObjects[messageImageId as any] || game.items[messageImageId as any];
-                    if (entity?.media?.images?.[effect.imageKey]) {
-                        imageOverride = entity.media.images[effect.imageKey];
+                    const imageFromKey = entity?.media?.images?.[effect.imageKey];
+                    // Make sure we got a valid image object with a url property
+                    if (imageFromKey && typeof imageFromKey === 'object' && 'url' in imageFromKey) {
+                        resolvedImage = imageFromKey;
                     }
                 }
+
+                // If imageKey was specified and resolved, don't pass imageId to createMessage
+                // (to avoid conflicting image resolution logic)
+                const shouldUseImageId = messageImageId && !effect.imageKey;
 
                 const message = createMessage(
                     'narrator',
                     narratorName,
                     effect.content,
                     effect.messageType,
-                    messageImageId ? { id: messageImageId, game, state: newState, showEvenIfExamined: true } : undefined
+                    shouldUseImageId ? { id: messageImageId, game, state: newState, showEvenIfExamined: true } : undefined
                 );
 
-                // Override image if imageKey was specified
-                if (imageOverride) {
-                    message.image = imageOverride;
+                // Override image if imageKey was resolved
+                if (resolvedImage) {
+                    message.image = resolvedImage;
                 }
 
                 messages.push(message);
 
-                 if (messageImageId && !newState.flags.includes(examinedObjectFlag(messageImageId as string))) {
-                     newState.flags.push(examinedObjectFlag(messageImageId as string));
+                 if (messageImageId) {
+                     const flag = examinedObjectFlag(messageImageId as string);
+                     // NEW: flags is now Record<string, boolean> instead of array
+                     if (!newState.flags) newState.flags = {};
+                     if (!newState.flags[flag]) {
+                         newState.flags[flag] = true;
+                     }
                  }
                 break;
             case 'END_CONVERSATION':
