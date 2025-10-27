@@ -76,7 +76,12 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
         inventory: { items: [], capacity: 1 },
         children: { items: ['item_iron_pipe' as ItemId] },
-        media: { images: { default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759603706/Chalkboard_h61haz.png', description: 'A chalkboard menu in a cafe.', hint: 'chalkboard menu' } } },
+        media: {
+            images: {
+                default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759603706/Chalkboard_h61haz.png', description: 'A chalkboard menu in a cafe.', hint: 'chalkboard menu' },
+                moved: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759603706/Chalkboard_h61haz.png', description: 'The chalkboard has been moved aside, revealing a heavy iron pipe leaning against the wall.', hint: 'moved chalkboard with pipe' }
+            }
+        },
         handlers: {
             onExamine: {
                 success: { message: "A chalkboard menu stands near the counter. It reads: Today's special is three scones for the price of two. A deal almost as sweet as justice. Something seems to be propped up behind it." },
@@ -91,7 +96,8 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         { type: 'SET_FLAG', flag: 'has_moved_chalkboard', value: true },
                         { type: 'REVEAL_ENTITY', entityId: 'item_iron_pipe' },
                         { type: 'SET_ENTITY_STATE', entityId: 'obj_chalkboard_menu', patch: { currentStateId: 'moved', isOpen: true, isMoved: true } }
-                    ]
+                    ],
+                    media: { imageKey: 'moved' }
                 },
                 fail: { message: "You shift the chalkboard stand, but there's nothing else behind it." }
             }
@@ -176,7 +182,12 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         description: 'An abstract painting hangs on the wall.',
         capabilities: { openable: false, lockable: false, breakable: false, movable: true, powerable: false, container: false, readable: false, inputtable: false },
         state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        media: { images: { default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759604943/picture_on_wall_fcx10j.png', description: 'A painting on the wall of the cafe.', hint: 'abstract painting' } } },
+        media: {
+            images: {
+                default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759604943/picture_on_wall_fcx10j.png', description: 'A painting on the wall of the cafe.', hint: 'abstract painting' },
+                moved: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761263220/safe_behind_Painting_dbo6qc.png', description: 'The painting has been moved, revealing a wall safe behind it.', hint: 'revealed wall safe' }
+            }
+        },
         handlers: {
             onExamine: {
                 success: { message: "An abstract painting hangs on the wall. Its swirls of color add a touch of modern art to the cafe's cozy atmosphere, but it feels... off. Like it's a bit crooked, or was placed there in a rush. It's signed 'S.B.'" },
@@ -190,8 +201,9 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                     effects: [
                         { type: 'SET_FLAG', flag: 'has_moved_painting', value: true },
                         { type: 'REVEAL_ENTITY', entityId: 'obj_wall_safe' },
-                        { type: 'SET_ENTITY_STATE', entityId: 'obj_painting', patch: { isMoved: true } }
-                    ]
+                        { type: 'SET_ENTITY_STATE', entityId: 'obj_painting', patch: { isMoved: true, currentStateId: 'moved' } }
+                    ],
+                    media: { imageKey: 'moved' }
                 },
                 fail: { message: "You lift the painting again, but there's nothing else behind it. Just the safe." }
             }
@@ -880,6 +892,19 @@ Your single most important task is to translate Burt's natural language input in
   - "look at the book" and "examine notebook" both become \`examine "Brown Notebook"\`.
   - "open the safe with the key" and "use my key to open the safe" both become \`use "Deposit Box Key" on "Wall Safe"\`.
   - "move the painting" or "look behind the art" both become \`move "Painting on the wall"\`.
+
+**// 1a. Natural Language Variations (CRITICAL)**
+Many actions can be expressed in different ways. Map these variations to the correct command:
+  - **Destructive Actions:** "hit", "smash", "whack", "bash", "break", "strike", "slam" → map to \`use <item> on <object>\`
+    - "hit the coffee machine with the pipe" → \`use "Iron Pipe" on "Coffee Machine"\`
+    - "smash the machine with pipe" → \`use "Iron Pipe" on "Coffee Machine"\`
+    - "break coffee machine using pipe" → \`use "Iron Pipe" on "Coffee Machine"\`
+  - **Opening Actions:** "unlock", "open", "access", "get into" → map to \`open <object>\` or \`use <key> on <object>\`
+    - "unlock the safe with the key" → \`use "Deposit Box Key" on "Wall Safe"\`
+    - "open the safe with key" → \`use "Deposit Box Key" on "Wall Safe"\`
+  - **Movement Actions:** "move", "push", "shift", "look behind", "check behind" → map to \`move <object>\`
+    - "push the chalkboard aside" → \`move "Chalkboard Menu"\`
+    - "look behind the painting" → \`move "Painting on the wall"\`
 
 **// 2. Your Response Protocol**
 - **If the command is valid and actionable (take, use, examine, etc.):** Your \`agentResponse\` MUST be one of the following, and nothing else: "Copy that, Burt.", "On it.", "Got it.", "Alright, Burt."
