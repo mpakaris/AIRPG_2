@@ -1,10 +1,89 @@
 
 
-import type { Game, PlayerState, Chapter, ChapterId, GameObjectId, GameObjectState, PortalState, PortalId, NpcId, NpcState, LocationId, ItemId, ItemState, LocationState } from './game/types';
+import type { Game, PlayerState, Chapter, ChapterId, GameObjectId, GameObjectState, PortalState, PortalId, NpcId, NpcState, LocationId, ItemId, ItemState, LocationState, EntityRuntimeState } from './game/types';
 
+/**
+ * NEW ARCHITECTURE: Initialize PlayerState with unified world state
+ *
+ * This function creates the initial game state by:
+ * 1. Building a unified world state from all entities
+ * 2. Copying stateDefaults from cartridge entities
+ * 3. Maintaining backward compatibility with legacy state structures
+ */
 export function getInitialState(game: Game): PlayerState {
-  
-  // Create a clean state for all game objects
+
+  // ============================================================================
+  // NEW: Unified World State
+  // ============================================================================
+  // Initialize world with default state from all entities
+  const world: Record<string, EntityRuntimeState> = {};
+
+  // Initialize game objects
+  for (const gameObjectId in game.gameObjects) {
+    const gameObject = game.gameObjects[gameObjectId as GameObjectId];
+    world[gameObject.id] = {
+      // Universal properties
+      isVisible: true, // Default to visible unless explicitly hidden
+      discovered: false,
+      currentStateId: gameObject.state?.currentStateId || 'default',
+
+      // Object-specific properties
+      isOpen: gameObject.state?.isOpen || false,
+      isLocked: gameObject.state?.isLocked || false,
+      isBroken: gameObject.state?.isBroken || false,
+      isMoved: false,
+      isPoweredOn: gameObject.state?.isPoweredOn || false,
+
+      // Container
+      items: gameObject.inventory?.items ? [...gameObject.inventory.items] : [],
+
+      // Analytics
+      usedCount: 0,
+      examinedCount: 0,
+    };
+  }
+
+  // Initialize items
+  for (const itemId in game.items) {
+    const item = game.items[itemId as ItemId];
+    world[item.id] = {
+      isVisible: true, // Will be controlled by parent container/location
+      discovered: false,
+      taken: false,
+      readCount: item.state?.readCount || 0,
+      currentStateId: item.state?.currentStateId || 'default',
+    };
+  }
+
+  // Initialize NPCs
+  for (const npcId in game.npcs) {
+    const npc = game.npcs[npcId as NpcId];
+    world[npc.id] = {
+      isVisible: true,
+      discovered: false,
+      stage: npc.initialState?.stage || 'active',
+      importance: npc.importance,
+      trust: npc.initialState?.trust || 0,
+      attitude: npc.initialState?.attitude || 'neutral',
+      completedTopics: [],
+      interactionCount: 0,
+    };
+  }
+
+  // Initialize portals
+  for (const portalId in game.portals) {
+    const portal = game.portals[portalId as PortalId];
+    world[portal.portalId] = {
+      isVisible: true,
+      discovered: false,
+      isOpen: portal.state?.isOpen || false,
+      isLocked: portal.state?.isLocked || false,
+    };
+  }
+
+  // ============================================================================
+  // Legacy State Structures (for backward compatibility)
+  // ============================================================================
   const initialObjectStates: Record<GameObjectId, GameObjectState> = {};
   for (const gameObjectId in game.gameObjects) {
     const gameObject = game.gameObjects[gameObjectId as GameObjectId];
@@ -17,7 +96,7 @@ export function getInitialState(game: Game): PlayerState {
       currentStateId: gameObject.state.currentStateId,
     };
   }
-  
+
   const initialItemStates: Record<ItemId, Partial<ItemState>> = {};
   for (const itemId in game.items) {
       const item = game.items[itemId as ItemId];
@@ -29,7 +108,6 @@ export function getInitialState(game: Game): PlayerState {
       }
   }
 
-  // Create a clean state for all portals
   const initialPortalStates: Record<PortalId, PortalState> = {};
   for (const portalId in game.portals) {
       const portal = game.portals[portalId as PortalId];
@@ -39,7 +117,6 @@ export function getInitialState(game: Game): PlayerState {
       };
   }
 
-  // Create a clean state for all NPCs
   const initialNpcStates: Record<NpcId, NpcState> = {};
   for (const npcId in game.npcs) {
     const npc = game.npcs[npcId as NpcId];
@@ -61,7 +138,9 @@ export function getInitialState(game: Game): PlayerState {
         };
     }
 
-  // Find the starting location, which could be a cell or a location
+  // ============================================================================
+  // Find Starting Location
+  // ============================================================================
   const startChapter = game.chapters[game.startChapterId];
   if (!startChapter) {
       throw new Error(`Start chapter "${game.startChapterId}" not found in game data.`);
@@ -69,17 +148,31 @@ export function getInitialState(game: Game): PlayerState {
 
   const startingInventory: ItemId[] = ['item_player_phone' as ItemId];
 
+  // ============================================================================
+  // Return Complete PlayerState
+  // ============================================================================
   return {
     currentGameId: game.id,
     currentChapterId: game.startChapterId,
     currentLocationId: startChapter.startLocationId,
     inventory: startingInventory,
-    flags: [],
+
+    // NEW: Flags as Record<string, boolean>
+    flags: {},
+
+    // NEW: Unified world state
+    world,
+
+    // NEW: Counters for analytics
+    counters: {},
+
+    // Legacy state structures (preserved for backward compatibility)
     objectStates: initialObjectStates,
     locationStates: initialLocationStates,
     itemStates: initialItemStates,
     portalStates: initialPortalStates,
     npcStates: initialNpcStates,
+
     stories: {},
     activeConversationWith: null,
     interactingWithObject: null,

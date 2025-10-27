@@ -58,24 +58,47 @@ export type CommandResult = {
   messages: Message[];
 };
 
-// --- Effect System ---
+// ============================================================================
+// NEW ARCHITECTURE: Effect System (Atomic Operations)
+// ============================================================================
+// All state changes must go through these atomic effects processed by a single reducer
+
 export type Effect =
-  | { type: 'ADD_ITEM'; itemId: ItemId }
-  | { type: 'SPAWN_ITEM'; itemId: ItemId; containerId: GameObjectId }
-  | { type: 'REMOVE_ITEM'; itemId: ItemId } // From inventory
-  | { type: 'DESTROY_ITEM'; itemId: ItemId } // From world
-  | { type: 'SET_FLAG'; flag: Flag }
-  | { type: 'REVEAL_OBJECT'; objectId: GameObjectId }
-  | { type: 'SHOW_MESSAGE'; sender: Message['sender']; senderName?: string; content: string; messageType?: Message['type']; imageId?: ItemId | NpcId | GameObjectId }
+  // State and flags
+  | { type: 'SET_FLAG'; flag: string; value: boolean }
+  | { type: 'SET_ENTITY_STATE'; entityId: string; patch: Partial<EntityRuntimeState> }
+  | { type: 'SET_STATE_ID'; entityId: string; to: string }
+  | { type: 'INC_COUNTER'; key: string; by?: number }
+
+  // Inventory
+  | { type: 'ADD_ITEM'; itemId: string }
+  | { type: 'REMOVE_ITEM'; itemId: string }
+
+  // World graph
+  | { type: 'REVEAL_ENTITY'; entityId: string }     // shorthand for isVisible:true
+  | { type: 'HIDE_ENTITY'; entityId: string }
+  | { type: 'LINK_ENABLE'; linkId: string }         // optional for switch/door graphs
+  | { type: 'LINK_DISABLE'; linkId: string }
+
+  // Movement
+  | { type: 'MOVE_TO_LOCATION'; locationId: string }
+  | { type: 'TELEPORT'; locationId: string }        // bypass checks
+  | { type: 'MOVE_TO_CELL'; cellId: string }
+  | { type: 'ENTER_PORTAL'; portalId: string }
+
+  // UI/Media
+  | { type: 'SHOW_MESSAGE'; speaker?: 'narrator' | 'agent' | 'system' | string; content: string; imageKey?: string; soundKey?: string; videoUrl?: string; messageType?: Message['type'] }
+
+  // Timers (optional)
+  | { type: 'START_TIMER'; timerId: string; ms: number; effect: Effect }
+  | { type: 'CANCEL_TIMER'; timerId: string }
+
+  // Conversation/Interaction
+  | { type: 'START_CONVERSATION'; npcId: string }
   | { type: 'END_CONVERSATION' }
-  | { type: 'START_INTERACTION'; objectId: GameObjectId, interactionStateId?: string }
+  | { type: 'START_INTERACTION'; objectId: string }
   | { type: 'END_INTERACTION' }
-  | { type: 'SET_STATE'; targetId: GameObjectId | ItemId, to: string }
-  | { type: 'SET_OBJECT_STATE', objectId: GameObjectId, state: Partial<GameObjectState> }
-  | { type: 'MOVE_TO_CELL', toCellId: CellId }
-  | { type: 'ENTER_PORTAL', portalId: PortalId }
-  | { type: 'TELEPORT_PLAYER', toLocationId: LocationId }
-  | { type: 'DEMOTE_NPC', npcId: NpcId };
+  | { type: 'DEMOTE_NPC'; npcId: string };
 
 
 export type Story = {
@@ -124,29 +147,153 @@ export type User = {
     createdAt?: number;
 };
 
+// ============================================================================
+// NEW ARCHITECTURE: EntityRuntimeState
+// ============================================================================
+// Unified runtime state for all entities (objects, items, NPCs, portals)
+
+export type EntityRuntimeState = {
+  // Universal properties
+  isVisible?: boolean;
+  discovered?: boolean;
+  currentStateId?: string;
+  stateTags?: string[];
+
+  // Object-specific
+  isOpen?: boolean;
+  isLocked?: boolean;
+  isBroken?: boolean;
+  isMoved?: boolean;
+  isPoweredOn?: boolean;
+
+  // Item-specific
+  taken?: boolean;
+  readCount?: number;
+
+  // NPC-specific
+  stage?: 'active' | 'completed' | 'demoted';
+  importance?: 'primary' | 'supporting' | 'ambient';
+  trust?: number;
+  attitude?: 'friendly' | 'neutral' | 'hostile' | 'suspicious';
+  completedTopics?: string[];
+  interactionCount?: number;
+
+  // Container/inventory
+  items?: string[];
+
+  // Analytics/counters
+  usedCount?: number;
+  examinedCount?: number;
+};
+
+// ============================================================================
+// NEW ARCHITECTURE: PlayerState with unified world state
+// ============================================================================
+
 export type PlayerState = {
   currentGameId: GameId;
   currentChapterId: ChapterId;
   currentLocationId: LocationId; // Can be a cell or a location
   inventory: ItemId[];
-  flags: Flag[];
-  objectStates: Record<GameObjectId, GameObjectState>;
-  locationStates: Record<LocationId, LocationState>;
-  itemStates: Record<ItemId, Partial<ItemState>>;
-  portalStates: Record<PortalId, PortalState>;
-  npcStates: Record<NpcId, NpcState>;
+
+  // NEW: Flags as Record<string, boolean> for better performance
+  flags: Record<string, boolean>;
+
+  // NEW: Unified world state - authoritative runtime state for every entity
+  world: Record<string, EntityRuntimeState>;
+
+  // Optional analytics
+  counters?: Record<string, number>;
+
+  // Legacy state structures (for backward compatibility during migration)
+  objectStates?: Record<GameObjectId, GameObjectState>;
+  locationStates?: Record<LocationId, LocationState>;
+  itemStates?: Record<ItemId, Partial<ItemState>>;
+  portalStates?: Record<PortalId, PortalState>;
+  npcStates?: Record<NpcId, NpcState>;
+
   stories: Record<ChapterId, Story>;
   activeConversationWith: NpcId | null;
   interactingWithObject: GameObjectId | null;
 };
 
-// --- Standardized Schemas ---
+// ============================================================================
+// NEW ARCHITECTURE: Condition System
+// ============================================================================
 
-export type Condition = {
-  type: 'HAS_ITEM' | 'HAS_FLAG' | 'STATE_MATCH' | 'NO_FLAG';
-  targetId: ItemId | Flag | GameObjectId;
-  expectedValue?: any; // For state matching
+export type Condition =
+  | { type: 'FLAG'; flag: string; value: boolean }
+  | { type: 'STATE'; entityId: string; key: string; equals: any }
+  | { type: 'HAS_ITEM'; itemId?: string; tag?: string }
+  | { type: 'LOCATION_IS'; locationId: string }
+  | { type: 'CHAPTER_IS'; chapterId: string }
+  | { type: 'RANDOM_CHANCE'; p: number }
+  // Legacy support
+  | { type: 'HAS_FLAG'; flag: string }
+  | { type: 'NO_FLAG'; flag: string }
+  | { type: 'STATE_MATCH'; entityId: string; key: string; expectedValue: any };
+
+// ============================================================================
+// NEW ARCHITECTURE: DSL Handler System
+// ============================================================================
+
+export type MediaSet = {
+  imageKey?: string;
+  soundKey?: string;
+  videoUrl?: string;
 };
+
+export type Outcome = {
+  message?: string;
+  speaker?: 'narrator' | 'agent' | 'system';
+  media?: MediaSet;
+  effects?: Effect[];
+};
+
+export type Rule = {
+  conditions?: Condition[];
+  success?: Outcome;
+  fail?: Outcome;
+  fallback?: string; // optional short message if neither applies
+};
+
+export type OnUseWith = {
+  itemId?: string;
+  itemTag?: string;
+  conditions?: Condition[];
+  success?: Outcome;
+  fail?: Outcome;
+};
+
+export type Handlers = {
+  onExamine?: Rule;
+  onMove?: Rule;
+  onOpen?: Rule;
+  onClose?: Rule;
+  onUnlock?: Rule & { unlocksWith?: { itemId?: string; code?: string; phrase?: string; tag?: string } };
+  onBreak?: Rule & { requiredItemTag?: string; requiredItemId?: string };
+  onSearch?: Rule;
+  onUse?: Rule | OnUseWith[];
+  onRead?: Rule;
+  onInput?: Rule;
+  onEnter?: Rule;
+  onExit?: Rule;
+  onTake?: Rule;
+  onTalk?: Rule;
+};
+
+export type StateOverrides = {
+  description?: string;
+  media?: {
+    images?: Record<string, ImageDetails>;
+    sounds?: Record<string, string>;
+  };
+  overrides?: Partial<Handlers>;
+};
+
+// ============================================================================
+// Legacy Handler Types (for backward compatibility)
+// ============================================================================
 
 export type InteractionResult = {
   message: string;
@@ -174,6 +321,79 @@ type HandlerOverrides = Partial<{
     onOpen: Handler;
     onUnlock: Handler;
 }>
+
+// ============================================================================
+// NEW ARCHITECTURE: Capabilities
+// ============================================================================
+
+export type Capabilities = {
+  // Containers/portals/devices/readables
+  openable?: boolean;
+  lockable?: boolean;
+  breakable?: boolean;
+  container?: boolean;
+  movable?: boolean;
+  searchable?: boolean;
+  inputtable?: boolean;
+  powerable?: boolean;
+  readable?: boolean;
+  usable?: boolean;
+  combinable?: boolean;
+  passage?: boolean;
+  takable?: boolean;
+};
+
+// ============================================================================
+// NEW ARCHITECTURE: Archetype System
+// ============================================================================
+
+export type Archetype = {
+  id: string;
+  name: string;
+  capabilities: Capabilities;
+  stateDefaults: EntityRuntimeState;
+  handlers?: Handlers;
+  media?: {
+    images?: Record<string, ImageDetails>;
+    sounds?: Record<string, string>;
+  };
+};
+
+// ============================================================================
+// NEW ARCHITECTURE: Entity Base (for Cartridge)
+// ============================================================================
+
+export type EntityBase = {
+  id: string;
+  name: string;
+  description?: string;
+  tags?: string[];
+  capabilities?: Capabilities;
+  stateDefaults?: EntityRuntimeState;
+  handlers?: Handlers;
+  stateMap?: Record<string, StateOverrides>;
+  media?: {
+    images?: Record<string, ImageDetails>;
+    sounds?: Record<string, string>;
+  };
+  children?: {
+    objects?: string[];
+    items?: string[];
+  };
+  links?: {
+    type: 'controls' | 'reveals' | 'blocks';
+    targetId: string;
+    params?: any;
+  }[];
+  version?: {
+    schema: string;
+    content: string;
+  };
+};
+
+// ============================================================================
+// Legacy GameObject Type (preserved for backward compatibility)
+// ============================================================================
 
 export type GameObject = {
   id: GameObjectId;
