@@ -303,15 +303,16 @@ export type InteractionResult = {
 
 export type Handler = {
   conditions?: Condition[];
-  success: InteractionResult;
-  fail: { message: string, effects?: Effect[] };
+  success: Outcome;  // NEW: Use Outcome to support media property
+  fail?: Outcome;     // NEW: Use Outcome to support media property
+  fallback?: string;  // Fallback message if no success/fail matched
 };
 
 export type ItemHandler = {
   itemId: ItemId;
   conditions?: Condition[];
-  success: InteractionResult;
-  fail?: InteractionResult; // Changed to InteractionResult for consistency
+  success: Outcome;  // NEW: Use Outcome to support media property
+  fail?: Outcome;    // NEW: Use Outcome to support media property
 };
 
 type HandlerOverrides = Partial<{

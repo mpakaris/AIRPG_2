@@ -90,6 +90,16 @@ export async function processEffects(initialState: PlayerState, effects: Effect[
                     message.image = resolvedImage;
                 }
 
+                // DEFENSIVE: Ensure message.image is either undefined or a valid ImageDetails object
+                if (message.image && typeof message.image === 'string') {
+                    console.error('Invalid image detected - string instead of ImageDetails:', message.image);
+                    message.image = undefined;
+                }
+                if (message.image && (!message.image.url || typeof message.image.url !== 'string')) {
+                    console.error('Invalid image detected - missing or invalid url:', message.image);
+                    message.image = undefined;
+                }
+
                 messages.push(message);
 
                  if (messageImageId) {
