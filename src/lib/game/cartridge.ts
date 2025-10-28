@@ -324,7 +324,8 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         effects: [
                             { type: 'SET_FLAG', flag: 'machine_is_broken', value: true },
                             { type: 'SET_ENTITY_STATE', entityId: 'obj_coffee_machine', patch: { isBroken: true, isOpen: true, currentStateId: 'broken' } },
-                            { type: 'SET_ENTITY_STATE', entityId: 'item_deposit_key', patch: { isVisible: true, discovered: true } }
+                            { type: 'REMOVE_FROM_CONTAINER', entityId: 'item_deposit_key', containerId: 'obj_coffee_machine' },
+                            { type: 'REVEAL_ENTITY', entityId: 'item_deposit_key' }
                         ]
                     },
                     fail: { message: "You've already smashed the coffee machine. Doing it again would just be overkill." }
