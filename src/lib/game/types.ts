@@ -80,6 +80,12 @@ export type Effect =
   | { type: 'LINK_ENABLE'; linkId: string }         // optional for switch/door graphs
   | { type: 'LINK_DISABLE'; linkId: string }
 
+  // Container relationships (NEW)
+  | { type: 'SET_PARENT'; entityId: string; parentId: string }
+  | { type: 'ADD_TO_CONTAINER'; entityId: string; containerId: string }
+  | { type: 'REMOVE_FROM_CONTAINER'; entityId: string; containerId: string }
+  | { type: 'REVEAL_FROM_PARENT'; entityId: string; parentId: string }  // Marks revealedBy and parent
+
   // Movement
   | { type: 'MOVE_TO_LOCATION'; locationId: string }
   | { type: 'TELEPORT'; locationId: string }        // bypass checks
@@ -159,6 +165,13 @@ export type EntityRuntimeState = {
   currentStateId?: string;
   stateTags?: string[];
 
+  // Parent-child relationship tracking (NEW)
+  parentId?: string;  // Entity that contains this entity
+  revealedBy?: string;  // Entity whose action revealed this entity
+  containedEntities?: string[];  // Direct children (items or objects inside)
+  isAccessible?: boolean;  // Can player interact with this entity and its children?
+  accessibilityReason?: 'parent_closed' | 'parent_locked' | 'parent_not_moved' | 'parent_not_broken' | 'not_visible';
+
   // Object-specific
   isOpen?: boolean;
   isLocked?: boolean;
@@ -178,7 +191,7 @@ export type EntityRuntimeState = {
   completedTopics?: string[];
   interactionCount?: number;
 
-  // Container/inventory
+  // Container/inventory (LEGACY - use containedEntities instead)
   items?: string[];
 
   // Analytics/counters

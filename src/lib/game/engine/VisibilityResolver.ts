@@ -1,19 +1,17 @@
 /**
- * VisibilityResolver - Parent-Child and Rule-Based Visibility
+ * VisibilityResolver - Parent-Child and Rule-Based Visibility (REWRITTEN)
  *
- * This service handles:
- * 1. Parent-child visibility relationships
- * 2. Container gating (children hidden until parent opened)
- * 3. Spatial visibility (objects in location)
- * 4. Computed visibility based on game rules
+ * This service handles visibility and accessibility with robust container support.
+ * Supports up to 10+ levels of nested containers.
  *
  * Design principles:
- * 1. Central visibility logic - no scattered toggles
+ * 1. Use runtime parent-child relationships from GameStateManager
  * 2. Hierarchical enforcement - parent state controls children
- * 3. Efficient computation - only recalculate when needed
+ * 3. Efficient recursive computation
+ * 4. No scattered visibility toggles
  */
 
-import type { Game, PlayerState, EntityBase, GameObject, Item } from '../types';
+import type { Game, PlayerState, GameObject } from '../types';
 import { GameStateManager } from './GameStateManager';
 
 export type VisibilityContext = {
@@ -24,7 +22,8 @@ export type VisibilityContext = {
 
 export class VisibilityResolver {
   /**
-   * Get all entities that should be visible in current context
+   * Get all entities that should be visible AND accessible in current context
+   * This is the main entry point for getting what the player can see/interact with
    */
   static getVisibleEntities(state: PlayerState, game: Game): {
     objects: string[];
@@ -43,58 +42,75 @@ export class VisibilityResolver {
       return { objects: [], items: [], npcs: [], portals: [] };
     }
 
-    // 1. Get objects in current location
-    // IMPORTANT: Check ALL game objects, not just location.objects
-    // This allows dynamically revealed objects (like wall safe) to be visible
+    // =========================================================================
+    // 1. Get ALL objects and check visibility/accessibility
+    // =========================================================================
     for (const objectId in game.gameObjects) {
       const obj = game.gameObjects[objectId as any];
 
-      // Only include objects that are in this location OR have been revealed
+      // Check if object is in current location (initial placement)
       const isInLocation = currentLocation.objects?.includes(objectId as any);
+
+      // Check if object has been revealed (via REVEAL_ENTITY or REVEAL_FROM_PARENT)
       const entityState = GameStateManager.getEntityState(state, objectId);
       const hasBeenRevealed = entityState.isVisible === true;
 
-      if ((isInLocation || hasBeenRevealed) && VisibilityResolver.isEntityVisibleInContext(objectId, state, game)) {
-        visibleObjects.push(objectId);
+      // Object is potentially visible if in location OR revealed
+      if (isInLocation || hasBeenRevealed) {
+        // Check if accessible (parent chain grants access)
+        const isAccessible = GameStateManager.isAccessible(state, game, objectId);
 
-        // Check for child objects/items
-        const children = VisibilityResolver.getVisibleChildren(objectId, state, game);
-        visibleObjects.push(...children.objects);
-        visibleItems.push(...children.items);
+        if (isAccessible) {
+          visibleObjects.push(objectId);
+
+          // Recursively get accessible children
+          const children = VisibilityResolver.getAccessibleChildren(objectId, state, game);
+          visibleObjects.push(...children.objects);
+          visibleItems.push(...children.items);
+        }
       }
     }
 
+    // =========================================================================
     // 2. Get NPCs in current location
+    // =========================================================================
     for (const npcId of currentLocation.npcs || []) {
-      if (VisibilityResolver.isEntityVisibleInContext(npcId, state, game)) {
+      const isAccessible = GameStateManager.isAccessible(state, game, npcId);
+      if (isAccessible) {
         visibleNpcs.push(npcId);
       }
     }
 
+    // =========================================================================
     // 3. Get portals in current location
+    // =========================================================================
     if (currentLocation.exitPortals) {
       for (const portalId of currentLocation.exitPortals) {
-        if (VisibilityResolver.isEntityVisibleInContext(portalId, state, game)) {
+        const isAccessible = GameStateManager.isAccessible(state, game, portalId);
+        if (isAccessible) {
           visiblePortals.push(portalId);
         }
       }
     }
 
-    // 4. Items are visible if in inventory OR revealed in world state
+    // =========================================================================
+    // 4. Get items (in inventory OR revealed and accessible in world)
+    // =========================================================================
     for (const itemId in game.items) {
-      const item = game.items[itemId as any];
-
       // In inventory - always visible
       if (state.inventory.includes(itemId as any)) {
         if (!visibleItems.includes(itemId)) {
           visibleItems.push(itemId);
         }
       }
-      // OR has been revealed and not taken yet
+      // OR revealed and accessible in world
       else if (!visibleItems.includes(itemId)) {
         const itemState = GameStateManager.getEntityState(state, itemId);
-        if (itemState.isVisible === true && !itemState.taken) {
-          // Item is visible and accessible
+        const isRevealed = itemState.isVisible === true;
+        const notTaken = !itemState.taken;
+        const isAccessible = GameStateManager.isAccessible(state, game, itemId);
+
+        if (isRevealed && notTaken && isAccessible) {
           visibleItems.push(itemId);
         }
       }
@@ -109,134 +125,137 @@ export class VisibilityResolver {
   }
 
   /**
-   * Check if a specific entity should be visible
+   * Check if a specific entity should be visible AND accessible
+   * Uses GameStateManager's robust accessibility checking
    */
-  static isEntityVisibleInContext(entityId: string, state: PlayerState, game: Game): boolean {
-    const entityState = GameStateManager.getEntityState(state, entityId);
+  static isEntityVisibleAndAccessible(
+    state: PlayerState,
+    game: Game,
+    entityId: string
+  ): boolean {
+    // Check if in inventory - always accessible
+    if (GameStateManager.isInInventory(state, entityId)) {
+      return true;
+    }
 
-    // If explicitly hidden, always invisible
+    // Check if visible
+    const entityState = GameStateManager.getEntityState(state, entityId);
     if (entityState.isVisible === false) {
       return false;
     }
 
-    // Check parent gating
-    const parent = VisibilityResolver.findParent(entityId, game);
-    if (parent) {
-      const isParentAccessible = VisibilityResolver.isParentAccessible(parent, state, game);
-      if (!isParentAccessible) {
-        return false;
-      }
-    }
-
-    // Default to visible if no explicit hide
-    return true;
+    // Check if accessible (parent chain grants access)
+    return GameStateManager.isAccessible(state, game, entityId);
   }
 
   /**
-   * Find parent entity (if entity is a child)
+   * Get accessible children of an entity (recursively)
+   * Only returns children that are:
+   * 1. Visible
+   * 2. Parent grants access
+   * 3. All ancestors in chain grant access
    */
-  static findParent(entityId: string, game: Game): string | null {
-    // Check all objects for children
-    for (const objectId in game.gameObjects) {
-      const obj = game.gameObjects[objectId as any];
+  static getAccessibleChildren(
+    parentId: string,
+    state: PlayerState,
+    game: Game
+  ): {
+    objects: string[];
+    items: string[];
+  } {
+    const accessibleObjects: string[] = [];
+    const accessibleItems: string[] = [];
 
-      if (obj.children?.objects?.includes(entityId)) {
-        return objectId;
+    // Check if parent grants access
+    if (!GameStateManager.parentGrantsAccess(state, game, parentId)) {
+      return { objects: [], items: [] };
+    }
+
+    // Get direct children from runtime state
+    const children = GameStateManager.getChildren(state, parentId);
+
+    for (const childId of children) {
+      // Check if child is accessible
+      if (!GameStateManager.isAccessible(state, game, childId)) {
+        continue;
       }
 
-      if (obj.children?.items?.includes(entityId)) {
-        return objectId;
+      // Check if child is visible
+      const childState = GameStateManager.getEntityState(state, childId);
+      if (childState.isVisible === false) {
+        continue;
+      }
+
+      // Determine if child is object or item
+      if (game.gameObjects[childId as any]) {
+        accessibleObjects.push(childId);
+
+        // Recursively get children of this object
+        const grandchildren = VisibilityResolver.getAccessibleChildren(childId, state, game);
+        accessibleObjects.push(...grandchildren.objects);
+        accessibleItems.push(...grandchildren.items);
+      } else if (game.items[childId as any]) {
+        accessibleItems.push(childId);
       }
     }
 
-    return null;
+    return { objects: accessibleObjects, items: accessibleItems };
   }
 
   /**
-   * Check if parent is accessible (visible and open if container)
+   * Get the full containment chain for an entity
+   * Example: ["loc_cafe_interior", "obj_wall_safe", "item_lockbox", "item_envelope"]
+   * Delegates to GameStateManager
+   */
+  static getContainmentChain(state: PlayerState, game: Game, entityId: string): string[] {
+    return GameStateManager.getContainmentChain(state, entityId);
+  }
+
+  /**
+   * Find parent entity using runtime state
+   * Delegates to GameStateManager
+   */
+  static findParent(entityId: string, state: PlayerState): string | null {
+    return GameStateManager.getParent(state, entityId);
+  }
+
+  /**
+   * Check if parent is accessible (visible and grants access)
+   * Delegates to GameStateManager
    */
   static isParentAccessible(parentId: string, state: PlayerState, game: Game): boolean {
-    const parentState = GameStateManager.getEntityState(state, parentId);
-
     // Parent must be visible
+    const parentState = GameStateManager.getEntityState(state, parentId);
     if (parentState.isVisible === false) {
       return false;
     }
 
-    const parent = game.gameObjects[parentId as any];
-
-    // If parent is a container, it must be open
-    if (parent?.capabilities?.container) {
-      if (parentState.isOpen !== true) {
-        return false;
-      }
-    }
-
-    // If parent is movable, check if it's been moved (reveals children)
-    if (parent?.capabilities?.movable) {
-      // Some movable objects reveal children only after being moved
-      // This is optional - can be configured per object
-      return true;
-    }
-
-    return true;
+    // Parent must grant access
+    return GameStateManager.parentGrantsAccess(state, game, parentId);
   }
 
   /**
-   * Get visible children of an entity
+   * Get visible children of an entity (legacy method - use getAccessibleChildren instead)
    */
-  static getVisibleChildren(parentId: string, state: PlayerState, game: Game): {
+  static getVisibleChildren(
+    parentId: string,
+    state: PlayerState,
+    game: Game
+  ): {
     objects: string[];
     items: string[];
   } {
-    const visibleObjects: string[] = [];
-    const visibleItems: string[] = [];
-
-    const parent = game.gameObjects[parentId as any];
-    if (!parent) {
-      return { objects: visibleObjects, items: visibleItems };
-    }
-
-    // Check if parent is accessible
-    if (!VisibilityResolver.isParentAccessible(parentId, state, game)) {
-      return { objects: visibleObjects, items: visibleItems };
-    }
-
-    // Get child objects
-    if (parent.children?.objects) {
-      for (const childId of parent.children.objects) {
-        if (VisibilityResolver.isEntityVisibleInContext(childId, state, game)) {
-          visibleObjects.push(childId);
-        }
-      }
-    }
-
-    // Get child items
-    if (parent.children?.items) {
-      for (const childId of parent.children.items) {
-        if (VisibilityResolver.isEntityVisibleInContext(childId, state, game)) {
-          visibleItems.push(childId);
-        }
-      }
-    }
-
-    return { objects: visibleObjects, items: visibleItems };
+    return VisibilityResolver.getAccessibleChildren(parentId, state, game);
   }
 
   /**
-   * Recompute visibility after state changes
-   * Call this after applying effects that might change visibility
+   * Get container contents if accessible
    */
-  static recomputeVisibility(state: PlayerState, game: Game): PlayerState {
-    // This is an optimization - only recalculate if needed
-    // For now, we compute visibility on-demand rather than storing it
-    return state;
-  }
-
-  /**
-   * Get all entities accessible from a specific container
-   */
-  static getContainerContents(containerId: string, state: PlayerState, game: Game): {
+  static getContainerContents(
+    containerId: string,
+    state: PlayerState,
+    game: Game
+  ): {
     objects: string[];
     items: string[];
   } {
@@ -245,21 +264,19 @@ export class VisibilityResolver {
       return { objects: [], items: [] };
     }
 
-    const containerState = GameStateManager.getEntityState(state, containerId);
-
-    // Container must be open to see contents
-    if (container.capabilities?.container && containerState.isOpen !== true) {
+    // Container must grant access
+    if (!GameStateManager.parentGrantsAccess(state, game, containerId)) {
       return { objects: [], items: [] };
     }
 
-    return VisibilityResolver.getVisibleChildren(containerId, state, game);
+    return VisibilityResolver.getAccessibleChildren(containerId, state, game);
   }
 
   /**
    * Check if an entity is in player's inventory
    */
   static isInInventory(entityId: string, state: PlayerState): boolean {
-    return state.inventory.includes(entityId as any);
+    return GameStateManager.isInInventory(state, entityId);
   }
 
   /**
@@ -275,8 +292,8 @@ export class VisibilityResolver {
       return { type: 'inventory' };
     }
 
-    // Check if in a container
-    const parent = VisibilityResolver.findParent(entityId, game);
+    // Check if in a container (has parent)
+    const parent = GameStateManager.getParent(state, entityId);
     if (parent) {
       return { type: 'container', containerId: parent };
     }
@@ -288,5 +305,28 @@ export class VisibilityResolver {
     }
 
     return { type: 'hidden' };
+  }
+
+  /**
+   * Get blocking parent (if entity is inaccessible)
+   * Returns the first parent that blocks access, or null if accessible
+   */
+  static getBlockingParent(entityId: string, state: PlayerState, game: Game): string | null {
+    return GameStateManager.getBlockingParent(state, game, entityId);
+  }
+
+  /**
+   * Get full accessibility report for debugging
+   */
+  static getAccessibilityReport(entityId: string, state: PlayerState, game: Game): {
+    isAccessible: boolean;
+    blockingParent: string | null;
+    chain: Array<{ entityId: string; accessible: boolean; reason?: string }>;
+  } {
+    return {
+      isAccessible: GameStateManager.isAccessible(state, game, entityId),
+      blockingParent: GameStateManager.getBlockingParent(state, game, entityId),
+      chain: GameStateManager.getAccessibilityChain(state, game, entityId),
+    };
   }
 }

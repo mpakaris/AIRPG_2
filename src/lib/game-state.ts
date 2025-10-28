@@ -102,6 +102,44 @@ export function getInitialState(game: Game): PlayerState {
   }
 
   // ============================================================================
+  // NEW: Initialize Parent-Child Relationships from Cartridge
+  // ============================================================================
+  // Set up parent-child relationships based on children property in cartridge
+  for (const gameObjectId in game.gameObjects) {
+    const gameObject = game.gameObjects[gameObjectId as GameObjectId];
+
+    if (gameObject.children) {
+      // Initialize containedEntities array for parent
+      if (!world[gameObject.id]) world[gameObject.id] = {};
+      world[gameObject.id].containedEntities = [];
+
+      // Add child objects
+      if (gameObject.children.objects) {
+        for (const childId of gameObject.children.objects) {
+          // Add child to parent's containedEntities
+          world[gameObject.id].containedEntities!.push(childId);
+
+          // Set parent on child
+          if (!world[childId]) world[childId] = {};
+          world[childId].parentId = gameObject.id;
+        }
+      }
+
+      // Add child items
+      if (gameObject.children.items) {
+        for (const childId of gameObject.children.items) {
+          // Add child to parent's containedEntities
+          world[gameObject.id].containedEntities!.push(childId);
+
+          // Set parent on child
+          if (!world[childId]) world[childId] = {};
+          world[childId].parentId = gameObject.id;
+        }
+      }
+    }
+  }
+
+  // ============================================================================
   // Legacy State Structures (for backward compatibility)
   // ============================================================================
   const initialObjectStates: Record<GameObjectId, GameObjectState> = {};
