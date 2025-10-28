@@ -71,17 +71,28 @@ export async function handleTake(state: PlayerState, targetName: string, game: G
   const successMessage = handler?.success?.message || `You take the ${item.name}.`;
 
   // 5. Build effects
-  const effects: Effect[] = [
-    {
-      type: 'SHOW_MESSAGE',
-      speaker: 'narrator',
-      content: successMessage
-    },
-    {
-      type: 'ADD_ITEM',
-      itemId: itemId
-    }
-  ];
+  const effects: Effect[] = [];
+
+  // If item has a parent container, remove it from that container first
+  const itemState = state.world?.[itemId];
+  if (itemState?.parentId) {
+    effects.push({
+      type: 'REMOVE_FROM_CONTAINER',
+      entityId: itemId,
+      containerId: itemState.parentId
+    });
+  }
+
+  effects.push({
+    type: 'SHOW_MESSAGE',
+    speaker: 'narrator',
+    content: successMessage
+  });
+
+  effects.push({
+    type: 'ADD_ITEM',
+    itemId: itemId
+  });
 
   // Add handler effects if present
   if (handler?.success?.effects) {

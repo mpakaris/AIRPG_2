@@ -64,8 +64,7 @@ export async function handleExamine(state: PlayerState, targetName: string, game
             speaker: 'narrator',
             content: messageText,
             messageType: 'image',
-            // Note: Image metadata would be handled by SHOW_MESSAGE processor
-            imageKey: item.media?.image?.url
+            imageId: itemId  // Image will be resolved by process-effects.ts via createMessage
         }];
 
         if (!isAlreadyExamined) {
@@ -123,8 +122,7 @@ export async function handleExamine(state: PlayerState, targetName: string, game
             speaker: 'narrator',
             content: messageContent,
             messageType: 'image',
-            // Note: Image metadata would be handled by SHOW_MESSAGE processor
-            imageKey: targetObject.media?.images?.default?.url
+            imageId: targetObjectId  // Image will be resolved by process-effects.ts via createMessage
         }];
 
         if (!hasBeenExamined) {

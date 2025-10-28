@@ -144,20 +144,17 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         name: 'Bookshelf',
         archetype: 'Furniture',
         description: "A small bookshelf filled with used paperbacks is tucked into a corner.",
-        capabilities: { openable: false, lockable: false, breakable: false, movable: true, powerable: false, container: true, readable: false, inputtable: false },
+        capabilities: { openable: false, lockable: false, breakable: false, movable: true, powerable: false, container: false, readable: false, inputtable: false },
         state: { isOpen: true, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        inventory: { items: ['item_book_deal', 'item_book_time', 'item_book_justice'] as ItemId[], capacity: null },
-        children: { items: ['item_book_deal', 'item_book_time', 'item_book_justice'] as ItemId[] },
+        inventory: { items: [], capacity: null },
+        children: { items: [] },
         media: { images: { default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759604596/Bookshelf_Cafe_kn4poz.png', description: 'A bookshelf in a cafe.', hint: 'bookshelf reading corner' } } },
         handlers: {
             onExamine: {
                 success: {
                     message: "You turn to a small bookshelf filled with used paperbacks. The titles include: 'The Art of the Deal', 'A Brief History of Time', and a romance novel called 'Justice for My Love'.",
                     effects: [
-                        { type: 'SET_FLAG', flag: 'has_seen_justice_book' as Flag, value: true },
-                        { type: 'REVEAL_FROM_PARENT', entityId: 'item_book_deal', parentId: 'obj_bookshelf' },
-                        { type: 'REVEAL_FROM_PARENT', entityId: 'item_book_time', parentId: 'obj_bookshelf' },
-                        { type: 'REVEAL_FROM_PARENT', entityId: 'item_book_justice', parentId: 'obj_bookshelf' }
+                        { type: 'SET_FLAG', flag: 'has_seen_justice_book', value: true }
                     ]
                 },
                 fail: { message: "" },

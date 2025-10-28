@@ -52,22 +52,28 @@ export function getInitialState(game: Game): PlayerState {
   for (const itemId in game.items) {
     const item = game.items[itemId as ItemId];
 
+    // Books on bookshelf are always visible
+    const alwaysVisibleItems = ['item_book_deal', 'item_book_time', 'item_book_justice'];
+    const isAlwaysVisible = alwaysVisibleItems.includes(item.id);
+
     // Check if item is a child of a container - if so, check parent state
     let isHiddenChild = false;
-    for (const objId in game.gameObjects) {
-      const obj = game.gameObjects[objId as GameObjectId];
-      if (obj.children?.items?.includes(item.id as any)) {
-        // Item is a child - start hidden ONLY if parent is closed/locked/not moved
-        const parentState = obj.state || { isOpen: false, isLocked: false };
-        if (!parentState.isOpen || parentState.isLocked) {
-          isHiddenChild = true;
+    if (!isAlwaysVisible) {
+      for (const objId in game.gameObjects) {
+        const obj = game.gameObjects[objId as GameObjectId];
+        if (obj.children?.items?.includes(item.id as any)) {
+          // Item is a child - start hidden ONLY if parent is closed/locked/not moved
+          const parentState = obj.state || { isOpen: false, isLocked: false };
+          if (!parentState.isOpen || parentState.isLocked) {
+            isHiddenChild = true;
+          }
+          break;
         }
-        break;
       }
     }
 
     world[item.id] = {
-      isVisible: !isHiddenChild, // Hidden if child of closed container, visible otherwise
+      isVisible: isAlwaysVisible || !isHiddenChild, // Always visible items or not hidden children
       discovered: false,
       taken: false,
       readCount: item.state?.readCount || 0,
