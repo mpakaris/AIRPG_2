@@ -540,6 +540,7 @@ const items: Record<ItemId, Item> = {
     'item_book_deal': {
         id: 'item_book_deal' as ItemId,
         name: 'The Art of the Deal',
+        alternateNames: ['art of the deal', 'deal book', 'business book', 'art of deal'],
         archetype: 'Book',
         description: 'A book about business with a gaudy cover.',
         capabilities: { isTakable: false, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
@@ -573,6 +574,7 @@ const items: Record<ItemId, Item> = {
     'item_book_time': {
         id: 'item_book_time' as ItemId,
         name: 'A Brief History of Time',
+        alternateNames: ['brief history of time', 'history of time', 'time book', 'physics book', 'brief history'],
         archetype: 'Book',
         description: 'A book about physics by a famous scientist.',
         capabilities: { isTakable: false, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
@@ -606,6 +608,7 @@ const items: Record<ItemId, Item> = {
     'item_book_justice': {
         id: 'item_book_justice' as ItemId,
         name: 'Justice for My Love',
+        alternateNames: ['justice for my love', 'justice book', 'romance novel', 'justice for love', 'love book'],
         archetype: 'Book',
         description: 'A romance novel with a cheesy cover. The title, "Justice for My Love", catches your eye.',
         capabilities: { isTakable: false, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },

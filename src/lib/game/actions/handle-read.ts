@@ -10,7 +10,7 @@
 'use server';
 
 import type { Game, PlayerState, Effect } from "@/lib/game/types";
-import { HandlerResolver, GameStateManager } from "@/lib/game/engine";
+import { HandlerResolver, GameStateManager, VisibilityResolver } from "@/lib/game/engine";
 import { normalizeName } from "@/lib/utils";
 
 export async function handleRead(state: PlayerState, itemName: string, game: Game): Promise<Effect[]> {
@@ -25,10 +25,29 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
         }];
     }
 
-    // 1. Find item in inventory
-    const itemId = state.inventory.find(id =>
-        normalizeName(game.items[id]?.name).includes(normalizedItemName)
+    // Helper function to check if name matches (including alternateNames)
+    const matchesName = (item: any, searchName: string): boolean => {
+        if (normalizeName(item.name).includes(searchName)) return true;
+        if (item.alternateNames) {
+            return item.alternateNames.some((altName: string) =>
+                normalizeName(altName).includes(searchName)
+            );
+        }
+        return false;
+    };
+
+    // 1. Find item in inventory OR visible entities
+    let itemId = state.inventory.find(id =>
+        matchesName(game.items[id], normalizedItemName)
     );
+
+    // If not in inventory, check visible entities
+    if (!itemId) {
+        const visibleEntities = VisibilityResolver.getVisibleEntities(state, game);
+        itemId = visibleEntities.items.find(id =>
+            matchesName(game.items[id as any], normalizedItemName)
+        );
+    }
 
     if (!itemId) {
         return [{
