@@ -153,7 +153,12 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             onExamine: {
                 success: {
                     message: "You turn to a small bookshelf filled with used paperbacks. The titles include: 'The Art of the Deal', 'A Brief History of Time', and a romance novel called 'Justice for My Love'.",
-                    effects: [{ type: 'SET_FLAG', flag: 'has_seen_justice_book' as Flag }]
+                    effects: [
+                        { type: 'SET_FLAG', flag: 'has_seen_justice_book' as Flag, value: true },
+                        { type: 'REVEAL_FROM_PARENT', entityId: 'item_book_deal', parentId: 'obj_bookshelf' },
+                        { type: 'REVEAL_FROM_PARENT', entityId: 'item_book_time', parentId: 'obj_bookshelf' },
+                        { type: 'REVEAL_FROM_PARENT', entityId: 'item_book_justice', parentId: 'obj_bookshelf' }
+                    ]
                 },
                 fail: { message: "" },
                 alternateMessage: "The bookshelf still has that romance novel, 'Justice for My Love'."
@@ -319,7 +324,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         effects: [
                             { type: 'SET_FLAG', flag: 'machine_is_broken', value: true },
                             { type: 'SET_ENTITY_STATE', entityId: 'obj_coffee_machine', patch: { isBroken: true, isOpen: true, currentStateId: 'broken' } },
-                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_deposit_key', parentId: 'obj_coffee_machine' }
+                            { type: 'SET_ENTITY_STATE', entityId: 'item_deposit_key', patch: { isVisible: true, discovered: true } }
                         ]
                     },
                     fail: { message: "You've already smashed the coffee machine. Doing it again would just be overkill." }
@@ -546,9 +551,18 @@ const items: Record<ItemId, Item> = {
                 success: { message: 'A book about business with a gaudy cover.' },
                 fail: { message: "" }
             },
-            onTake: { 
-                fail: { message: "You can't take that book." } 
+            onTake: {
+                fail: { message: "You can't take that book." }
             },
+            onRead: {
+                success: {
+                    message: "It seems to be a ghost-written book about a real estate magnate. Not relevant to the case.",
+                    effects: [
+                        { type: 'SET_ENTITY_STATE', entityId: 'item_book_deal', patch: { readCount: 1 } }
+                    ]
+                },
+                fail: { message: "" }
+            }
         },
         stateMap: {
             'read0': { description: "It seems to be a ghost-written book about a real estate magnate. Not relevant to the case." },
@@ -570,9 +584,18 @@ const items: Record<ItemId, Item> = {
                 success: { message: 'A book about physics by a famous scientist.' },
                 fail: { message: "" }
             },
-            onTake: { 
-                fail: { message: "You can't take that book." } 
+            onTake: {
+                fail: { message: "You can't take that book." }
             },
+            onRead: {
+                success: {
+                    message: "Complex theories about spacetime. Unlikely to help you solve a murder.",
+                    effects: [
+                        { type: 'SET_ENTITY_STATE', entityId: 'item_book_time', patch: { readCount: 1 } }
+                    ]
+                },
+                fail: { message: "" }
+            }
         },
         stateMap: {
             'read0': { description: "Complex theories about spacetime. Unlikely to help you solve a murder." },
@@ -594,9 +617,18 @@ const items: Record<ItemId, Item> = {
                 success: { message: 'A romance novel with a cheesy cover. The title, "Justice for My Love", catches your eye.' },
                 fail: { message: "" }
             },
-             onTake: { 
-                fail: { message: "You can't take that book." } 
+            onTake: {
+                fail: { message: "You can't take that book." }
             },
+            onRead: {
+                success: {
+                    message: "Against your better judgment, you read a page. 'His voice was like smooth jazz on a rainy night, but his eyes held a storm. She knew then that he would get justice for her, or die trying.'",
+                    effects: [
+                        { type: 'SET_ENTITY_STATE', entityId: 'item_book_justice', patch: { readCount: 1 } }
+                    ]
+                },
+                fail: { message: "" }
+            }
         },
         stateMap: {
             'read0': { description: "Against your better judgment, you read a page. 'His voice was like smooth jazz on a rainy night, but his eyes held a storm. She knew then that he would get justice for her, or die trying.'" },
