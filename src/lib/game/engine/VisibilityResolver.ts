@@ -110,6 +110,14 @@ export class VisibilityResolver {
         const notTaken = !itemState.taken;
         const isAccessible = GameStateManager.isAccessible(state, game, itemId);
 
+        if (itemId === 'item_iron_pipe') {
+          console.log('[VisibilityResolver] Iron Pipe check:');
+          console.log('  - isRevealed:', isRevealed);
+          console.log('  - notTaken:', notTaken);
+          console.log('  - isAccessible:', isAccessible);
+          console.log('  - itemState:', itemState);
+        }
+
         if (isRevealed && notTaken && isAccessible) {
           visibleItems.push(itemId);
         }

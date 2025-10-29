@@ -1,5 +1,5 @@
 
-import type { Game, GameId, ChapterId, LocationId, GameObjectId, ItemId, NpcId, Flag, WorldId, StructureId, CellId, PortalId, GameObject, Item, NPC, Location, Portal, Structure, World, Chapter } from './types';
+import type { CellId, Chapter, ChapterId, Flag, Game, GameId, GameObject, GameObjectId, Item, ItemId, Location, LocationId, NPC, NpcId, Portal, PortalId, Structure, StructureId, WorldId } from './types';
 
 // --- Static Game Data ---
 
@@ -71,14 +71,14 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         name: 'Chalkboard Menu',
         archetype: 'Signage',
         description: "There's a chalkboard menu near the counter with today's specials.",
-        capabilities: { openable: true, lockable: false, breakable: true, movable: true, powerable: false, container: true, readable: true, inputtable: false },
+        capabilities: { openable: false, lockable: false, breakable: true, movable: true, powerable: false, container: false, readable: true, inputtable: false },
         state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        inventory: { items: [], capacity: 1 },
+        inventory: { items: [], capacity: 0 },
         children: { items: ['item_iron_pipe' as ItemId] },
         media: {
             images: {
                 default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759603706/Chalkboard_h61haz.png', description: 'A chalkboard menu in a cafe.', hint: 'chalkboard menu' },
-                moved: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759603706/Chalkboard_h61haz.png', description: 'The chalkboard has been moved aside, revealing a heavy iron pipe leaning against the wall.', hint: 'moved chalkboard with pipe' }
+                moved: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761261134/iron_pipe_bpcofa.png', description: 'The chalkboard has been moved aside, revealing a heavy iron pipe leaning against the wall.', hint: 'moved chalkboard with pipe' }
             }
         },
         handlers: {
@@ -94,7 +94,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                     effects: [
                         { type: 'SET_FLAG', flag: 'has_moved_chalkboard', value: true },
                         { type: 'REVEAL_FROM_PARENT', entityId: 'item_iron_pipe', parentId: 'obj_chalkboard_menu' },
-                        { type: 'SET_ENTITY_STATE', entityId: 'obj_chalkboard_menu', patch: { currentStateId: 'moved', isOpen: true, isMoved: true } }
+                        { type: 'SET_ENTITY_STATE', entityId: 'obj_chalkboard_menu', patch: { currentStateId: 'moved', isMoved: true } }
                     ]
                 },
                 fail: { message: "You shift the chalkboard stand, but there's nothing else behind it." }
@@ -240,10 +240,10 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             },
             onUse: [
                 {
-                    itemId: 'item_deposit_key' as ItemId,
+                    itemId: 'item_safe_key' as ItemId,
                     conditions: [{ type: 'NO_FLAG', flag: 'safe_is_unlocked' }],
                     success: {
-                        message: "The key from the coffee machine fits perfectly. You turn it, and the safe door swings open with a satisfying clunk. Inside, there's a single, thick file marked 'CONFIDENTIAL'.",
+                        message: "The brass key from the coffee machine fits perfectly into the safe's lock. You turn it, and the safe door swings open with a satisfying clunk. Inside, there's a single, thick file marked 'CONFIDENTIAL'.",
                         effects: [
                             { type: 'SET_FLAG', flag: 'safe_is_unlocked', value: true },
                             { type: 'SET_ENTITY_STATE', entityId: 'obj_wall_safe', patch: { isLocked: false, isOpen: true, currentStateId: 'unlocked' } },
@@ -277,13 +277,13 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                 }
             }
         },
-        fallbackMessages: { 
+        fallbackMessages: {
             default: "That doesn't work on the safe.",
-            locked: "It's locked tight. We need the right key.",
+            locked: "It's locked tight. We need the wall safe key.",
             notMovable: "It's built into the wall. It's not going anywhere."
         },
-        design: { 
-            authorNotes: "Final puzzle for chapter 1. Opened by the key from the coffee machine.",
+        design: {
+            authorNotes: "Final puzzle for chapter 1. Opened by the wall safe key from the coffee machine.",
             tags: ['safe']
         },
         version: { schema: "1.0", content: "1.1" }
@@ -295,8 +295,8 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         description: "It's a high-end Italian coffee machine, gleaming under the cafe lights.",
         capabilities: { openable: false, lockable: false, breakable: true, movable: false, powerable: false, container: true, readable: false, inputtable: false },
         state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        inventory: { items: ['item_deposit_key' as ItemId], capacity: 1 },
-        children: { items: ['item_deposit_key' as ItemId] },
+        inventory: { items: ['item_safe_key' as ItemId], capacity: 1 },
+        children: { items: ['item_safe_key' as ItemId] },
         media: {
             images: {
                 default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761211151/coffee_machine_detail_frexuu.png', description: 'A high-end Italian coffee machine.', hint: 'coffee machine' },
@@ -317,12 +317,12 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                     itemId: 'item_iron_pipe' as ItemId,
                     conditions: [{ type: 'NO_FLAG', flag: 'machine_is_broken' }],
                     success: {
-                        message: "With a sharp crack, the iron pipe shatters the side panel of the coffee machine. A small, ornate key falls out from the broken compartment.",
+                        message: "With a sharp crack, the iron pipe shatters the side panel of the coffee machine. A small, brass key falls out from the broken compartment and clatters to the floor.",
                         effects: [
                             { type: 'SET_FLAG', flag: 'machine_is_broken', value: true },
                             { type: 'SET_ENTITY_STATE', entityId: 'obj_coffee_machine', patch: { isBroken: true, isOpen: true, currentStateId: 'broken' } },
-                            { type: 'REMOVE_FROM_CONTAINER', entityId: 'item_deposit_key', containerId: 'obj_coffee_machine' },
-                            { type: 'REVEAL_ENTITY', entityId: 'item_deposit_key' }
+                            { type: 'REMOVE_FROM_CONTAINER', entityId: 'item_safe_key', containerId: 'obj_coffee_machine' },
+                            { type: 'REVEAL_ENTITY', entityId: 'item_safe_key' }
                         ]
                     },
                     fail: { message: "You've already smashed the coffee machine. Doing it again would just be overkill." }
@@ -342,8 +342,8 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             notOpenable: "You can't open it. The compartment is jammed shut.",
             noEffect: "Using that on the coffee machine has no effect."
         },
-        design: { 
-            authorNotes: "Breakable object containing the deposit key.",
+        design: {
+            authorNotes: "Breakable object containing the wall safe key. Requires the iron pipe to break.",
             tags: ['machine', 'coffee']
         },
         version: { schema: "1.0", content: "1.1" }
@@ -354,6 +354,7 @@ const items: Record<ItemId, Item> = {
     'item_player_phone': {
         id: 'item_player_phone' as ItemId,
         name: 'Phone',
+        alternateNames: ['phone', 'smartphone', 'cell phone', 'mobile', 'fbi phone', 'my phone'],
         archetype: 'Gadget',
         description: "Your standard-issue FBI smartphone. It has a camera, secure messaging, and a slot for external media.",
         capabilities: { isTakable: false, isReadable: true, isUsable: true, isCombinable: true, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: true },
@@ -377,6 +378,7 @@ const items: Record<ItemId, Item> = {
     'item_iron_pipe': {
         id: 'item_iron_pipe' as ItemId,
         name: 'Iron Pipe',
+        alternateNames: ['iron pipe', 'pipe', 'heavy pipe', 'metal pipe'],
         archetype: 'Tool',
         description: 'A heavy iron pipe. Iron pipes come in handy to open or break things.',
         capabilities: { isTakable: true, isReadable: false, isUsable: true, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
@@ -404,39 +406,45 @@ const items: Record<ItemId, Item> = {
         },
         version: { schema: "1.0", content: "1.0" }
     },
-    'item_deposit_key': {
-        id: 'item_deposit_key' as ItemId,
-        name: 'Deposit Box Key',
+    'item_safe_key': {
+        id: 'item_safe_key' as ItemId,
+        name: 'Wall Safe Key',
+        alternateNames: ['safe key', 'key', 'small key', 'ornate key'],
         archetype: 'Key',
-        description: 'A small, ornate key with a number tag. It looks like it belongs to a bank deposit box.',
+        description: 'A small, ornate brass key. It looks like it might fit the wall safe behind the painting.',
         capabilities: { isTakable: true, isReadable: true, isUsable: true, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         media: {
             image: {
                 url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761211151/deposit_box_key_f5g2k2.png',
-                description: 'A small key for a deposit box.',
-                hint: 'ornate key'
+                description: 'A small brass key for the wall safe.',
+                hint: 'wall safe key'
             }
         },
         handlers: {
             onTake: {
-                success: { message: "You pick up the small key and put it in your pocket." },
+                success: { message: "You pick up the small brass key and put it in your pocket." },
                 fail: { message: "You can't take that right now." }
             },
             onRead: {
-                success: { message: "The tag on the key reads 'Metropolis Bank - Box 713'."},
+                success: { message: "It's a small, ornate brass key. No markings or labels, but it looks like it would fit a safe."},
                 fail: { message: "" }
             },
-            defaultFailMessage: "You need to use this key on a lock."
+            onExamine: {
+                success: { message: "It's a small, ornate brass key. No markings or labels, but it looks like it would fit a safe."},
+                fail: { message: "" }
+            },
+            defaultFailMessage: "You need to use this key on the wall safe."
         },
-        design: { 
-            authorNotes: "Clue item found inside the broken coffee machine.",
+        design: {
+            authorNotes: "Key found inside the broken coffee machine. Opens the wall safe behind the painting.",
             tags: ['key']
         },
-        version: { schema: "1.0", content: "1.0" }
+        version: { schema: "1.0", content: "1.1" }
     },
     'item_business_card': {
         id: 'item_business_card' as ItemId,
         name: 'Business Card',
+        alternateNames: ['business card', 'card', 'musicians card', 'saxo card', 'sax card'],
         archetype: "Personal",
         description: 'A simple business card for a musician. It reads: "S A X O - The World\'s Best Sax Player". A phone number is listed, along with a handwritten number "1943" and the name "ROSE".',
         alternateDescription: "The musician's business card. That name, 'ROSE', and the number '1943' seem significant.",
@@ -467,6 +475,7 @@ const items: Record<ItemId, Item> = {
     'item_newspaper_article': {
         id: 'item_newspaper_article' as ItemId,
         name: 'Newspaper Article',
+        alternateNames: ['newspaper article', 'article', 'newspaper', 'clipping', 'news article', 'old article'],
         archetype: "Document",
         description: 'A folded newspaper article from the 1940s. The headline is about a local musician, Silas Bloom.',
         alternateDescription: 'The old article about Silas Bloom. The mention of your family name, Macklin, still feels strange.',
@@ -490,10 +499,9 @@ const items: Record<ItemId, Item> = {
             }
         },
         media: {
-            image: {
-                url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759241463/Screenshot_2025-09-30_at_15.51.35_gyj3d5.png',
-                description: 'A newspaper article about Silas Bloom.',
-                hint: 'newspaper article'
+            images: {
+                default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759241463/Screenshot_2025-09-30_at_15.51.35_gyj3d5.png', description: 'A folded newspaper article.', hint: 'folded article' },
+                opened: { url: 'https://the-openbook.com/wp-content/uploads/2023/02/cropped-the-open-book-nieuw.jpg?w=780&h=684', description: 'An unfolded newspaper article with text visible.', hint: 'open article' }
             }
         },
         design: { 
@@ -505,6 +513,7 @@ const items: Record<ItemId, Item> = {
     'item_sd_card': {
         id: 'item_sd_card' as ItemId,
         name: 'SD Card',
+        alternateNames: ['sd card', 'card', 'memory card', 'sd', 'media card'],
         archetype: "Media",
         description: 'A small, modern SD card, looking strangely out of place in the old notebook. It probably fits in your phone.',
         alternateDescription: 'You can "use SD Card" to see what\'s on it.',
@@ -545,6 +554,12 @@ const items: Record<ItemId, Item> = {
         description: 'A book about business with a gaudy cover.',
         capabilities: { isTakable: false, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         state: { readCount: 0, currentStateId: 'default' },
+        media: {
+            images: {
+                default: { url: 'https://images.stockcake.com/public/8/2/1/821cc306-132c-48ca-91e9-5d2bb356fc1e_large/ancient-closed-book-stockcake.jpg', description: 'A closed book.', hint: 'closed book' },
+                opened: { url: 'https://the-openbook.com/wp-content/uploads/2023/02/cropped-the-open-book-nieuw.jpg?w=780&h=684', description: 'An open book.', hint: 'open book' }
+            }
+        },
         handlers: {
             onExamine: {
                 success: { message: 'A book about business with a gaudy cover.' },
@@ -579,6 +594,12 @@ const items: Record<ItemId, Item> = {
         description: 'A book about physics by a famous scientist.',
         capabilities: { isTakable: false, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         state: { readCount: 0, currentStateId: 'default' },
+        media: {
+            images: {
+                default: { url: 'https://images.stockcake.com/public/8/2/1/821cc306-132c-48ca-91e9-5d2bb356fc1e_large/ancient-closed-book-stockcake.jpg', description: 'A closed book.', hint: 'closed book' },
+                opened: { url: 'https://the-openbook.com/wp-content/uploads/2023/02/cropped-the-open-book-nieuw.jpg?w=780&h=684', description: 'An open book.', hint: 'open book' }
+            }
+        },
         handlers: {
             onExamine: {
                 success: { message: 'A book about physics by a famous scientist.' },
@@ -613,6 +634,12 @@ const items: Record<ItemId, Item> = {
         description: 'A romance novel with a cheesy cover. The title, "Justice for My Love", catches your eye.',
         capabilities: { isTakable: false, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         state: { readCount: 0, currentStateId: 'default' },
+        media: {
+            images: {
+                default: { url: 'https://images.stockcake.com/public/8/2/1/821cc306-132c-48ca-91e9-5d2bb356fc1e_large/ancient-closed-book-stockcake.jpg', description: 'A closed book.', hint: 'closed book' },
+                opened: { url: 'https://the-openbook.com/wp-content/uploads/2023/02/cropped-the-open-book-nieuw.jpg?w=780&h=684', description: 'An open book.', hint: 'open book' }
+            }
+        },
         handlers: {
             onExamine: {
                 success: { message: 'A romance novel with a cheesy cover. The title, "Justice for My Love", catches your eye.' },
@@ -642,12 +669,16 @@ const items: Record<ItemId, Item> = {
     'item_secret_document': {
         id: 'item_secret_document' as ItemId,
         name: 'Secret Document',
+        alternateNames: ['secret document', 'confidential file', 'file', 'document', 'confidential document', 'manila folder'],
         archetype: 'Document',
         description: "A thick manila folder simply marked 'CONFIDENTIAL' in red ink. It feels heavy.",
         alternateDescription: "The confidential file from the safe. It's filled with complex legal and financial jargon.",
         capabilities: { isTakable: true, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         media: {
-            image: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761263220/Confidential_File_qegnr4.png', description: 'A confidential document folder.', hint: 'secret document' }
+            images: {
+                default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761263220/Confidential_File_qegnr4.png', description: 'A confidential document folder.', hint: 'closed document' },
+                opened: { url: 'https://the-openbook.com/wp-content/uploads/2023/02/cropped-the-open-book-nieuw.jpg?w=780&h=684', description: 'An open document with text visible.', hint: 'open document' }
+            }
         },
         handlers: {
             onTake: {
@@ -655,11 +686,10 @@ const items: Record<ItemId, Item> = {
                 fail: { message: "" }
             },
             onRead: {
-                success: { 
+                success: {
                     message: "You open the file. It's dense with financial reports, shell corporations, and offshore accounts, all linked to a powerful holding company. It's going to take hours to untangle this web, but one name keeps reappearing in the margins: a company called 'Veridian Dynamics'. This feels big... bigger than a simple murder.",
                     effects: [
-                        { type: 'SET_FLAG', flag: 'has_read_secret_document' as Flag },
-                        { type: 'SHOW_MESSAGE', sender: 'narrator', content: "You are looking at a confidential file.", messageType: 'image', imageId: 'item_secret_document' },
+                        { type: 'SET_FLAG', flag: 'has_read_secret_document' as Flag }
                     ]
                 },
                 fail: { message: "" }

@@ -24,6 +24,12 @@ export class GameStateManager {
     const newState = JSON.parse(JSON.stringify(state)) as PlayerState;
     const newMessages = [...messages];
 
+    // Ensure world object exists
+    if (!newState.world) {
+      console.error('[GameStateManager.apply] WARNING: state.world is undefined! Initializing empty object.');
+      newState.world = {};
+    }
+
     try {
       switch (effect.type) {
         // ============================================================================
@@ -295,6 +301,11 @@ export class GameStateManager {
    * This is the main entry point for command processing
    */
   static applyAll(effects: Effect[], state: PlayerState, messages: Message[] = []): { state: PlayerState, messages: Message[] } {
+    console.log('[GameStateManager.applyAll] ========================================');
+    console.log('[GameStateManager.applyAll] Applying', effects.length, 'effects:', effects.map(e => e.type));
+    console.log('[GameStateManager.applyAll] INPUT STATE - Chalkboard isMoved:', state.world?.['obj_chalkboard_menu']?.isMoved);
+    console.log('[GameStateManager.applyAll] INPUT STATE - Iron pipe isVisible:', state.world?.['item_iron_pipe']?.isVisible);
+
     let currentState = state;
     let currentMessages = messages;
 
@@ -302,10 +313,21 @@ export class GameStateManager {
     const effectsArray = Array.isArray(effects) ? effects : [];
 
     for (const effect of effectsArray) {
+      console.log('[GameStateManager.applyAll] Processing effect:', effect.type);
       const result = GameStateManager.apply(effect, currentState, currentMessages);
       currentState = result.state;
       currentMessages = result.messages;
+
+      // Log state after each effect
+      if (effect.type === 'SET_ENTITY_STATE' || effect.type === 'REVEAL_FROM_PARENT' || effect.type === 'REVEAL_ENTITY') {
+        console.log('[GameStateManager.applyAll] After', effect.type, '- Chalkboard isMoved:', currentState.world?.['obj_chalkboard_menu']?.isMoved);
+        console.log('[GameStateManager.applyAll] After', effect.type, '- Iron pipe isVisible:', currentState.world?.['item_iron_pipe']?.isVisible);
+      }
     }
+
+    console.log('[GameStateManager.applyAll] OUTPUT STATE - Chalkboard isMoved:', currentState.world?.['obj_chalkboard_menu']?.isMoved);
+    console.log('[GameStateManager.applyAll] OUTPUT STATE - Iron pipe isVisible:', currentState.world?.['item_iron_pipe']?.isVisible);
+    console.log('[GameStateManager.applyAll] ========================================');
 
     return { state: currentState, messages: currentMessages };
   }
@@ -431,25 +453,39 @@ export class GameStateManager {
    * 2. ALL parents in the chain grant access
    */
   static isAccessible(state: PlayerState, game: Game, entityId: string): boolean {
+    if (entityId === 'item_iron_pipe') {
+      console.log('[isAccessible] Checking item_iron_pipe');
+    }
+
     // Check if entity is in inventory - always accessible
     if (GameStateManager.isInInventory(state, entityId)) {
+      if (entityId === 'item_iron_pipe') console.log('[isAccessible] ✅ In inventory');
       return true;
     }
 
     // Entity must be visible
     const entityState = GameStateManager.getEntityState(state, entityId);
+    if (entityId === 'item_iron_pipe') {
+      console.log('[isAccessible] entityState:', entityState);
+    }
     if (entityState.isVisible === false) {
+      if (entityId === 'item_iron_pipe') console.log('[isAccessible] ❌ Not visible');
       return false;
     }
 
     // Check all parents in chain
     const ancestors = GameStateManager.getAncestors(state, entityId);
+    if (entityId === 'item_iron_pipe') {
+      console.log('[isAccessible] ancestors:', ancestors);
+    }
     for (const ancestorId of ancestors) {
       if (!GameStateManager.parentGrantsAccess(state, game, ancestorId)) {
+        if (entityId === 'item_iron_pipe') console.log('[isAccessible] ❌ Parent', ancestorId, 'does not grant access');
         return false;
       }
     }
 
+    if (entityId === 'item_iron_pipe') console.log('[isAccessible] ✅ Accessible');
     return true;
   }
 
@@ -464,8 +500,12 @@ export class GameStateManager {
   static parentGrantsAccess(state: PlayerState, game: Game, parentId: string): boolean {
     const parentState = GameStateManager.getEntityState(state, parentId);
 
+    console.log('[parentGrantsAccess] Checking parentId:', parentId);
+    console.log('[parentGrantsAccess] parentState:', parentState);
+
     // Parent must be visible
     if (parentState.isVisible === false) {
+      console.log('[parentGrantsAccess] ❌ Parent not visible');
       return false;
     }
 
@@ -476,39 +516,50 @@ export class GameStateManager {
 
     if (!parentEntity) {
       // If parent not found in game data, assume access granted (might be location)
+      console.log('[parentGrantsAccess] ✅ Parent not found in game data, granting access');
       return true;
     }
 
     const caps = parentEntity.capabilities;
+    console.log('[parentGrantsAccess] caps:', caps);
+    console.log('[parentGrantsAccess] has children:', !!parentEntity.children);
 
     // Check accessibility based on capabilities
     if (caps) {
       // Containers must be open
       if (caps.container && parentState.isOpen !== true) {
+        console.log('[parentGrantsAccess] ❌ Container not open');
         return false;
       }
 
       // Lockable entities must be unlocked
       if (caps.lockable && parentState.isLocked === true) {
+        console.log('[parentGrantsAccess] ❌ Entity locked');
         return false;
       }
 
       // Movable entities must be moved (to reveal children)
       if (caps.movable && parentEntity.children && parentState.isMoved !== true) {
         // Only block if entity has children (reveals things)
+        console.log('[parentGrantsAccess] ❌ Movable entity not moved (has children, isMoved:', parentState.isMoved, ')');
         return false;
       }
 
       // Breakable entities: children accessible if broken OR if other access granted
       // (e.g., coffee machine must be broken to reveal key inside)
       if (caps.breakable && parentEntity.children?.items) {
-        // If it's a breakable container with hidden items, must be broken
-        if (parentState.isBroken !== true && !caps.openable) {
+        // Exception: movable entities grant access when moved (chalkboard reveals pipe when moved)
+        const isMovedAndGrantsAccess = caps.movable && parentState.isMoved === true;
+
+        // If it's a breakable container with hidden items, must be broken (unless moved)
+        if (parentState.isBroken !== true && !caps.openable && !isMovedAndGrantsAccess) {
+          console.log('[parentGrantsAccess] ❌ Breakable entity not broken (and not moved)');
           return false;
         }
       }
     }
 
+    console.log('[parentGrantsAccess] ✅ Access granted');
     return true;
   }
 

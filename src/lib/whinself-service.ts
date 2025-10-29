@@ -52,7 +52,7 @@ async function sendMessage(payload: object) {
     }
     
     const endpoint = `${WHINSELF_API_URL}/wspout`;
-    console.log('Sending payload to Whinself:', JSON.stringify(payload, null, 2));
+    // console.log('Sending payload to Whinself:', JSON.stringify(payload, null, 2));
 
     try {
         const response = await fetch(endpoint, {
@@ -73,7 +73,7 @@ async function sendMessage(payload: object) {
         return responseBody;
 
     } catch (error) {
-        console.error("Failed to send message via Whinself:", error);
+        // console.error("Failed to send message via Whinself:", error);
         if (error instanceof Error) {
             throw error;
         }
@@ -173,9 +173,9 @@ export async function dispatchMessage(toUserId: string, message: Message) {
         }
 
         await sendWhatsApp(opts);
-        
+
     } catch (error) {
-        console.error(`Failed to dispatch message ID ${message.id} to ${toUserId}:`, error);
+        // console.error(`Failed to dispatch message ID ${message.id} to ${toUserId}:`, error);
         // Do not re-throw here to avoid crashing the main game loop
     }
 }

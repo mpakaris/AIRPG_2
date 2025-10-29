@@ -11,10 +11,18 @@ import { GameStateManager } from '../engine/GameStateManager';
  * with backward compatibility for legacy effect types
  */
 export async function processEffects(initialState: PlayerState, effects: Effect[], game: Game): Promise<CommandResult> {
+    console.log('[processEffects] ========================================');
+    console.log('[processEffects] Received effects:', effects.map(e => e.type));
+    console.log('[processEffects] INITIAL STATE - Chalkboard isMoved:', initialState.world?.['obj_chalkboard_menu']?.isMoved);
+    console.log('[processEffects] INITIAL STATE - Iron pipe isVisible:', initialState.world?.['item_iron_pipe']?.isVisible);
+
     // Use GameStateManager for all standard effects
     const result = GameStateManager.applyAll(effects, initialState, []);
     let newState = result.state;
     let messages = result.messages;
+
+    console.log('[processEffects] AFTER applyAll - Chalkboard isMoved:', newState.world?.['obj_chalkboard_menu']?.isMoved);
+    console.log('[processEffects] AFTER applyAll - Iron pipe isVisible:', newState.world?.['item_iron_pipe']?.isVisible);
 
     // Handle legacy/special effects that need custom processing
     const examinedObjectFlag = (id: string) => `examined_${id}`;
@@ -127,6 +135,10 @@ export async function processEffects(initialState: PlayerState, effects: Effect[
                 break;
         }
     }
+
+    console.log('[processEffects] FINAL STATE (returning) - Chalkboard isMoved:', newState.world?.['obj_chalkboard_menu']?.isMoved);
+    console.log('[processEffects] FINAL STATE (returning) - Iron pipe isVisible:', newState.world?.['item_iron_pipe']?.isVisible);
+    console.log('[processEffects] ========================================');
 
     return { newState, messages };
 }

@@ -25,14 +25,33 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
         }];
     }
 
-    // Helper function to check if name matches (including alternateNames)
+    // Helper function to check if name matches (including alternateNames and ID)
     const matchesName = (item: any, searchName: string): boolean => {
+        // Try matching against the item name
         if (normalizeName(item.name).includes(searchName)) return true;
+
+        // Try matching against alternate names
         if (item.alternateNames) {
-            return item.alternateNames.some((altName: string) =>
+            const matchesAlt = item.alternateNames.some((altName: string) =>
                 normalizeName(altName).includes(searchName)
             );
+            if (matchesAlt) return true;
         }
+
+        // FALLBACK: Try matching against the item ID (for AI mistakes)
+        // Check if searchName matches the item ID exactly or partially
+        const itemIdNormalized = normalizeName(item.id);
+        if (itemIdNormalized === searchName || itemIdNormalized.includes(searchName) || searchName.includes(itemIdNormalized)) {
+            return true;
+        }
+
+        // Also try without the prefix and underscores
+        const idWithoutPrefix = item.id.replace(/^item_/, '').replace(/_/g, '').toLowerCase();
+        const searchWithoutPrefix = searchName.replace(/^item_/, '').replace(/_/g, '');
+        if (idWithoutPrefix === searchWithoutPrefix || idWithoutPrefix.includes(searchWithoutPrefix) || searchWithoutPrefix.includes(idWithoutPrefix)) {
+            return true;
+        }
+
         return false;
     };
 
@@ -102,17 +121,19 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
             }];
         }
 
-        // Build effects: show message + increment read count
+        // Build effects: UPDATE STATE FIRST, then show message (so image shows "opened" state)
         return [
-            {
-                type: 'SHOW_MESSAGE',
-                speaker: 'narrator',
-                content: stateMapEntry.description
-            },
             {
                 type: 'SET_ENTITY_STATE',
                 entityId: itemId,
-                patch: { readCount: currentReadCount + 1 }
+                patch: { readCount: currentReadCount + 1, currentStateId: 'opened' }
+            },
+            {
+                type: 'SHOW_MESSAGE',
+                speaker: 'narrator',
+                content: stateMapEntry.description,
+                messageType: 'image',
+                imageId: itemId  // Will show "opened" image after state update
             }
         ];
     }
@@ -122,11 +143,22 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
     if (handler?.success) {
         const effects: Effect[] = [];
 
+        // Set state to 'opened' BEFORE showing message (for book/document images)
+        if (itemToRead.archetype === 'Book' || itemToRead.archetype === 'Document') {
+            effects.push({
+                type: 'SET_ENTITY_STATE',
+                entityId: itemId,
+                patch: { currentStateId: 'opened' }
+            });
+        }
+
         if (handler.success.message) {
             effects.push({
                 type: 'SHOW_MESSAGE',
                 speaker: 'narrator',
-                content: handler.success.message
+                content: handler.success.message,
+                messageType: 'image',
+                imageId: itemId  // Will show "opened" image for books/documents
             });
         }
 
@@ -141,6 +173,8 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
     return [{
         type: 'SHOW_MESSAGE',
         speaker: 'narrator',
-        content: itemToRead.description
+        content: itemToRead.description,
+        messageType: 'image',
+        imageId: itemId
     }];
 }

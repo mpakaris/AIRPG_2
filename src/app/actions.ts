@@ -212,11 +212,15 @@ export async function processCommand(
 
     try {
         const [stateSnap, logSnap] = await Promise.all([getDoc(stateRef), getDoc(logRef)]);
-        
+
         if (stateSnap.exists()) {
             currentState = stateSnap.data() as PlayerState;
+            console.log('[processCommand] ✅ Loaded state from Firestore');
+            console.log('[processCommand] Chalkboard isMoved:', currentState.world?.['obj_chalkboard_menu']?.isMoved);
+            console.log('[processCommand] Iron pipe isVisible:', currentState.world?.['item_iron_pipe']?.isVisible);
         } else {
             currentState = getInitialState(game);
+            console.log('[processCommand] ⚠️ No saved state found, using initial state');
         }
     
         if (!game.locations[currentState.currentLocationId]) {
@@ -307,16 +311,18 @@ export async function processCommand(
                         effects = await handleLook(currentState, game);
                     } else {
                         // NEW: handleExamine returns Effect[]
-                        effects = await handleExamine(currentState, restOfCommand.replace(/^at\s+/, ''), game);
+                        const examineTarget = restOfCommand.replace(/^at\s+/, '').replace(/"/g, '');
+                        effects = await handleExamine(currentState, examineTarget, game);
                     }
                     break;
                 case 'move':
                     // NEW: handleMove returns Effect[]
-                    effects = await handleMove(currentState, restOfCommand, game);
+                    effects = await handleMove(currentState, restOfCommand.replace(/"/g, ''), game);
                     break;
                 case 'take':
                 case 'pick':
-                    const target = restOfCommand.startsWith('up ') ? restOfCommand.substring(3) : restOfCommand;
+                    const targetRaw = restOfCommand.startsWith('up ') ? restOfCommand.substring(3) : restOfCommand;
+                    const target = targetRaw.replace(/"/g, ''); // Strip quotes like we do for read
                     // NEW: handleTake returns Effect[]
                     effects = await handleTake(currentState, target, game);
                     break;
@@ -343,14 +349,16 @@ export async function processCommand(
                     const useOnMatch = restOfCommand.match(/^(.*?)\s+on\s+(.*)$/);
                     if (useOnMatch) {
                         // NEW: handleUse returns Effect[]
-                        effects = await handleUse(currentState, useOnMatch[1].trim(), useOnMatch[2].trim(), game);
+                        const useItem = useOnMatch[1].trim().replace(/"/g, '');
+                        const useTarget = useOnMatch[2].trim().replace(/"/g, '');
+                        effects = await handleUse(currentState, useItem, useTarget, game);
                     } else {
-                        effects = await handleUse(currentState, restOfCommand, '', game);
+                        effects = await handleUse(currentState, restOfCommand.replace(/"/g, ''), '', game);
                     }
                     break;
                 case 'open':
                     // NEW: handleOpen returns Effect[]
-                    effects = await handleOpen(currentState, restOfCommand, game);
+                    effects = await handleOpen(currentState, restOfCommand.replace(/"/g, ''), game);
                     break;
                 case 'read':
                     // NEW: handleRead returns Effect[]
@@ -380,11 +388,13 @@ export async function processCommand(
                     break;
             }
 
-            // NEW: Apply effects through GameStateManager
+            // NEW: Apply effects through processEffects (which includes image resolution)
             if (effects.length > 0) {
-                const result = GameStateManager.applyAll(effects, currentState, allMessagesForSession);
-                currentState = result.state;
-                allMessagesForSession = result.messages;
+                const result = await processEffects(currentState, effects, game);
+                currentState = result.newState;  // FIX: Use newState, not state!
+                console.log('[processCommand] After processEffects - currentState Chalkboard isMoved:', currentState.world?.['obj_chalkboard_menu']?.isMoved);
+                console.log('[processCommand] After processEffects - currentState Iron pipe isVisible:', currentState.world?.['item_iron_pipe']?.isVisible);
+                allMessagesForSession.push(...result.messages);
             }
         }
 
@@ -411,7 +421,10 @@ export async function processCommand(
             newState: finalState || currentState,
             messages: allMessagesForSession,
         };
-        
+
+        console.log('[processCommand] Before logAndSave - finalResult.newState Chalkboard isMoved:', finalResult.newState.world?.['obj_chalkboard_menu']?.isMoved);
+        console.log('[processCommand] Before logAndSave - finalResult.newState Iron pipe isVisible:', finalResult.newState.world?.['item_iron_pipe']?.isVisible);
+
         await logAndSave(userId, gameId, finalResult.newState, finalResult.messages);
         
         if (process.env.NEXT_PUBLIC_NODE_ENV === 'development' && playerMessage) {
@@ -494,9 +507,13 @@ export async function logAndSave(
 
   try {
     if (state) {
+        console.log('[logAndSave] Saving state to Firestore');
+        console.log('[logAndSave] Chalkboard isMoved:', state.world?.['obj_chalkboard_menu']?.isMoved);
+        console.log('[logAndSave] Iron pipe isVisible:', state.world?.['item_iron_pipe']?.isVisible);
         await setDoc(stateRef, state, { merge: false });
+        console.log('[logAndSave] ✅ State saved successfully');
     }
-    
+
     await setDoc(logRef, { messages: messages }, { merge: false });
 
   } catch (error) {

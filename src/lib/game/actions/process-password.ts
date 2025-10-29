@@ -1,10 +1,9 @@
 'use server';
 
-import type { Game, GameObject, GameObjectState, PlayerState, CommandResult } from "@/lib/game/types";
-import { getLiveGameObject } from "@/lib/game/utils/helpers";
-import { createMessage } from "@/lib/utils";
 import { processEffects } from "@/lib/game/actions/process-effects";
-import { normalizeName } from "@/lib/utils";
+import type { CommandResult, Game, GameObject, GameObjectState, PlayerState } from "@/lib/game/types";
+import { getLiveGameObject } from "@/lib/game/utils/helpers";
+import { createMessage, normalizeName } from "@/lib/utils";
 
 const examinedObjectFlag = (id: string) => `examined_${id}`;
 
@@ -50,7 +49,7 @@ export async function processPassword(state: PlayerState, command: string, game:
     phrase = normalizeName(phrase);
 
     if (!phrase) {
-        return { newState: state, messages: [createMessage('narrator', narratorName, 'You need to specify a password phrase.')] };
+        return { newState: state, messages: [createMessage('narrator', narratorName, 'It seems you tried a passphrase. Unfortunately, this is not it.')] };
     }
     
     const expectedPhrase = targetObject.gameLogic.input?.validation;

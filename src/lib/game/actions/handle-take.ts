@@ -23,10 +23,41 @@ export async function handleTake(state: PlayerState, targetName: string, game: G
     }];
   }
 
+  // Helper function for robust name matching
+  const matchesName = (item: any, searchName: string): boolean => {
+    if (!item) return false;
+
+    // Try matching against the item name
+    if (normalizeName(item.name).includes(searchName)) return true;
+
+    // Try matching against alternate names
+    if (item.alternateNames) {
+      const matchesAlt = item.alternateNames.some((altName: string) =>
+        normalizeName(altName).includes(searchName)
+      );
+      if (matchesAlt) return true;
+    }
+
+    // FALLBACK: Try matching against the item ID (for AI mistakes)
+    const itemIdNormalized = normalizeName(item.id);
+    if (itemIdNormalized === searchName || itemIdNormalized.includes(searchName) || searchName.includes(itemIdNormalized)) {
+      return true;
+    }
+
+    // Also try without the prefix and underscores
+    const idWithoutPrefix = item.id.replace(/^item_/, '').replace(/_/g, '').toLowerCase();
+    const searchWithoutPrefix = searchName.replace(/^item_/, '').replace(/_/g, '');
+    if (idWithoutPrefix === searchWithoutPrefix || idWithoutPrefix.includes(searchWithoutPrefix) || searchWithoutPrefix.includes(idWithoutPrefix)) {
+      return true;
+    }
+
+    return false;
+  };
+
   // 1. Find item in visible entities
   const visibleEntities = VisibilityResolver.getVisibleEntities(state, game);
   const itemId = visibleEntities.items.find(id =>
-    normalizeName(game.items[id as any]?.name).includes(normalizedTargetName)
+    matchesName(game.items[id as any], normalizedTargetName)
   );
 
   if (!itemId) {
