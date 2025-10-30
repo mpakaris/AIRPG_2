@@ -25,7 +25,7 @@ export async function handlePassword(
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'system',
-            content: 'You need to focus on something first. Try examining or opening the object you want to interact with.'
+            content: game.systemMessages.needsFocus
         }];
     }
 
@@ -37,7 +37,7 @@ export async function handlePassword(
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'system',
-            content: 'Something went wrong with the focus system.'
+            content: game.systemMessages.focusSystemError
         }];
     }
 
@@ -46,7 +46,7 @@ export async function handlePassword(
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'narrator',
-            content: `The ${focusedObject.name} doesn't accept password input.`
+            content: game.systemMessages.noPasswordInput(focusedObject.name)
         }];
     }
 
@@ -57,7 +57,7 @@ export async function handlePassword(
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'narrator',
-            content: `No need, Burt. We already unlocked the ${focusedObject.name}.`
+            content: game.systemMessages.alreadyUnlocked(focusedObject.name)
         }];
     }
 
@@ -77,7 +77,7 @@ export async function handlePassword(
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'narrator',
-            content: 'It seems you tried a passphrase. Unfortunately, this is not it.'
+            content: game.systemMessages.wrongPassword
         }];
     }
 

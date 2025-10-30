@@ -37,7 +37,7 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
     return [{
       type: 'SHOW_MESSAGE',
       speaker: 'system',
-      content: `You don't see a "${itemName}" to use.`
+      content: game.systemMessages.notVisible(itemName)
     }];
   }
 
@@ -46,7 +46,7 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
     return [{
       type: 'SHOW_MESSAGE',
       speaker: 'system',
-      content: `You don't have a "${itemName}".`
+      content: game.systemMessages.dontHaveItem(itemName)
     }];
   }
 
@@ -70,7 +70,7 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
         return [{
           type: 'SHOW_MESSAGE',
           speaker: 'narrator',
-          content: `You can't use the ${itemToUse.name} on that.`
+          content: game.systemMessages.cantUseItem(itemToUse.name)
         }];
       }
 
@@ -107,7 +107,7 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
             return [{
               type: 'SHOW_MESSAGE',
               speaker: 'narrator',
-              content: `That doesn't seem to work.`
+              content: game.systemMessages.useDidntWork
             }];
           }
 
@@ -146,7 +146,7 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
       return [{
         type: 'SHOW_MESSAGE',
         speaker: 'narrator',
-        content: `You can't use the ${itemToUse.name} on the ${targetObject.name}.`
+        content: game.systemMessages.cantUseOnTarget(itemToUse.name, targetObject.name)
       }];
     }
 
@@ -159,7 +159,7 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
       return [{
         type: 'SHOW_MESSAGE',
         speaker: 'narrator',
-        content: `There's no ${normalizedTargetName} visible here. Maybe it's hidden?`
+        content: game.systemMessages.noVisibleTarget(normalizedTargetName)
       }];
     }
 
@@ -173,14 +173,14 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
       return [{
         type: 'SHOW_MESSAGE',
         speaker: 'narrator',
-        content: `You can't use the ${itemName} on the ${targetName}.`
+        content: game.systemMessages.cantUseOnTarget(itemName, targetName)
       }];
     }
 
     return [{
       type: 'SHOW_MESSAGE',
       speaker: 'narrator',
-      content: `You don't see a "${targetName}" to use the item on.`
+      content: game.systemMessages.notVisible(targetName)
     }];
   }
 
@@ -195,7 +195,7 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
       return [{
         type: 'SHOW_MESSAGE',
         speaker: 'narrator',
-        content: `You can't use the ${itemToUse.name} right now.`
+        content: game.systemMessages.cantUseItem(itemToUse.name)
       }];
     }
 

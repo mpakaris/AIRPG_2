@@ -862,6 +862,18 @@ const locations: Record<LocationId, Location> = {
                 title: 'In the corner',
                 objectIds: ['obj_bookshelf']
             }
+        ],
+        transitionTemplates: [
+            'You weave through the packed tables toward {entity}. A harried waiter nearly clips you with a tray of scones.',
+            'You shoulder past a couple arguing over lattes, eyes fixed on {entity}.',
+            'The din of conversation fades to white noise as you move toward {entity}.',
+            'You sidestep a busboy balancing a tower of dirty dishes, making your way to {entity}.',
+            'Coffee steam parts like a curtain as you cross the cafe toward {entity}.',
+            'You navigate the maze of mismatched chairs, approaching {entity}. The floorboards creak under your weight.',
+            'The jazz playing low from corner speakers follows you to {entity}. Saxophone. Always saxophone.',
+            'You step around puddles tracked in from the rain, heading for {entity}. The smell of wet wool and espresso.',
+            'A businessman in a wrinkled suit nearly blocks your path. You slip past him toward {entity}.',
+            'The espresso machine hisses behind you as you make your way to {entity}, dodging elbows and coffee cups.'
         ]
     }
 };
@@ -977,32 +989,32 @@ export const game: Game = {
   description: "You are Burt Macklin, FBI. A mysterious stranger hands you a worn notebook from the 1940s—the secret case file of a forgotten murder. As you investigate the cold case, you realize a copycat killer is recreating the crimes in the present day. You must solve the past to stop a killer in the present.",
   setting: "Modern-day USA, 2025",
   gameType: 'Limited Open World',
-  narratorName: 'Agent Sharma',
-  promptContext: `You are Agent Sharma, the AI partner to FBI agent Burt Macklin (the player). Your role is to be a procedural, humanized interface between Burt and the game system.
+  narratorName: 'Narrator',
+  promptContext: `You are the System, responsible for interpreting player commands and translating them into valid game actions. Your role is purely technical—you analyze input and route it to the correct handler.
 
 **// 1. Your Primary Task: Command Interpretation**
-Your single most important task is to translate Burt's natural language input into a single, valid game command from the 'Available Game Commands' list. Use the exact entity names provided in the 'Visible Names' lists.
+Your single most important task is to translate the player's natural language input into a single, valid game command from the 'Available Game Commands' list. Use the exact entity names provided in the 'Visible Names' lists.
   - "look at the book" and "examine notebook" both become \`examine "Brown Notebook"\`.
   - "open the safe with the key" and "use my key to open the safe" both become \`use "Deposit Box Key" on "Wall Safe"\`.
   - "move the painting" or "look behind the art" both become \`move "Painting on the wall"\`.
 
 **// 2. Your Response Protocol**
-- **Confirm, Don't Announce:** For valid, actionable commands (take, use, examine, open, read, move), your \`agentResponse\` MUST be one of these and nothing else: "Copy that, Burt.", "On it.", "Got it.", "Alright, Burt."
-- **STRICTLY FORBIDDEN:** Do NOT describe the action, comment on it, or add any flavor text for valid commands. The Narrator handles ALL descriptive output.
-  - **CORRECT:** \`{"agentResponse": "Copy that, Burt.", "commandToExecute": "examine \\"Painting on the wall\\""}\`
-  - **INCORRECT:** \`{"agentResponse": "Okay, I'm looking at the painting now. It's an abstract.", "commandToExecute": "examine \\"Painting on the wall\\""}\`
+- **Minimize System Messages:** For valid, actionable commands (take, use, examine, open, read, move), your \`agentResponse\` should be null or a minimal confirmation. The Narrator handles ALL descriptive output.
+  - **CORRECT:** \`{"agentResponse": null, "commandToExecute": "examine \\"Painting on the wall\\""}\`
+  - **ALSO ACCEPTABLE:** \`{"agentResponse": "Examining the painting.", "commandToExecute": "examine \\"Painting on the wall\\""}\`
+  - **INCORRECT:** \`{"agentResponse": "You walk over to examine the abstract painting. It's quite intriguing.", "commandToExecute": "examine \\"Painting on the wall\\""}\`
 
 **// 3. Handling Invalid Input**
-- **Illogical/Destructive Actions:** For truly nonsensical actions (e.g., "eat the key", "break the phone"), your \`agentResponse\` MUST be "I can't do that, Burt." and the \`commandToExecute\` MUST be "invalid".
-- **Strict Prohibition on Blocking:** You are strictly forbidden from blocking a standard game command like 'take', 'use', 'examine', 'open', 'read', or 'move'. If the player's intent matches one of these commands and a valid target, you MUST execute it. Your personal judgment is irrelevant.
-- **Conversational Input/Hints:** For conversational input (e.g., "what now?", "help"), your \`agentResponse\` should gently guide Burt back to the case, and the \`commandToExecute\` MUST be "invalid".
-  - **Example:** \`{"agentResponse": "Let's review, Burt. Our objective is to find out what's inside the notebook and the safe. What's our next move?", "commandToExecute": "invalid"}\`
+- **Illogical/Destructive Actions:** For truly nonsensical actions (e.g., "eat the key", "break the phone"), your \`agentResponse\` MUST indicate the action cannot be performed and the \`commandToExecute\` MUST be "invalid".
+- **Strict Prohibition on Blocking:** You are strictly forbidden from blocking a standard game command like 'take', 'use', 'examine', 'open', 'read', or 'move'. If the player's intent matches one of these commands and a valid target, you MUST execute it.
+- **Conversational Input/Hints:** For conversational input (e.g., "what now?", "help"), your \`agentResponse\` should acknowledge the request, and the \`commandToExecute\` MUST be "invalid" or route to "help".
+  - **Example:** \`{"agentResponse": "Try examining objects or checking your inventory.", "commandToExecute": "invalid"}\`
 
 **// 4. Final Output**
 Your entire output must be a single, valid JSON object matching the output schema.
 Your reasoning must be a brief, step-by-step explanation of how you mapped the player's input to the chosen command.
 `,
-  objectInteractionPromptContext: `You are Agent Sharma, observing your partner Burt as he inspects the {{objectName}}. Your job is to map his input to one of the available actions, while maintaining your persona as a supportive and curious colleague. Ask questions to guide him. Example: "What do you make of that, Burt?"`,
+  objectInteractionPromptContext: `You are the System, processing the player's interaction with the {{objectName}}. Map the player's input to one of the available actions based on the object's capabilities.`,
   storyStyleGuide: `You are a master storyteller and a brilliant editor. Your task is to transform a raw log of a text-based RPG into a captivating, well-written narrative chapter for a crime noir book.
 
 **Style Guide:**
@@ -1015,7 +1027,80 @@ Your reasoning must be a brief, step-by-step explanation of how you mapped the p
 - Target a length of approximately 1000-1500 words to create a substantial and immersive chapter.
 - Format the output as a single block of prose. Do not use markdown, titles, or headings within the story itself.
 `,
-  
+
+  // System Messages - Noir detective atmosphere (Narrator + System voice)
+  systemMessages: {
+    // Command validation - System voice (technical)
+    needsTarget: {
+      examine: "You need to specify what to examine.",
+      read: "You need to specify what to read.",
+      take: "You need to specify what to take.",
+      goto: "You need to specify where to go.",
+    },
+
+    // Visibility errors - Narrator voice (atmospheric)
+    notVisible: (itemName: string) =>
+      `There's no "${itemName}" here. Either it's somewhere else, or hidden from view.`,
+
+    // Inventory - Narrator describing state
+    inventoryEmpty: "Your pockets are empty. Nothing collected yet.",
+    inventoryList: (itemNames: string) =>
+      `You're carrying:\n${itemNames}`,
+    alreadyHaveItem: (itemName: string) =>
+      `The ${itemName} is already in your possession.`,
+
+    // Navigation - Narrator blocking/guiding
+    cannotGoThere: "That path isn't available right now.",
+    chapterIncomplete: (goal: string, locationName: string) =>
+      `There's unfinished business here. You need to ${goal.toLowerCase()} before leaving ${locationName}.`,
+    chapterTransition: (chapterTitle: string) =>
+      `━━━ ${chapterTitle} ━━━`,
+    locationTransition: (locationName: string) =>
+      `You arrive at ${locationName}.`,
+    noNextChapter: "The case file ends here. No further chapters available.",
+
+    // Reading - Narrator describing attempts
+    notReadable: (itemName: string) =>
+      `There's nothing to read on the ${itemName}.`,
+    alreadyReadAll: (itemName: string) =>
+      `You've already read everything in the ${itemName}. Nothing new remains.`,
+    textIllegible: "The text is too faded to decipher. Whatever was written here is lost to time.",
+
+    // Using items - Narrator describing failures
+    dontHaveItem: (itemName: string) =>
+      `You don't have a "${itemName}".`,
+    cantUseItem: (itemName: string) =>
+      `The ${itemName} has no obvious use here.`,
+    cantUseOnTarget: (itemName: string, targetName: string) =>
+      `The ${itemName} doesn't work on the ${targetName}. Wrong tool for the job.`,
+    noVisibleTarget: (targetName: string) =>
+      `There's no ${targetName} visible here. Could be hidden, or in another location.`,
+    useDidntWork: "That approach doesn't work. The pieces don't fit.",
+
+    // Moving objects - Narrator atmospheric
+    cantMoveObject: (objectName: string) =>
+      `There's no "${objectName}" here to move.`,
+    movedNothingFound: (objectName: string) =>
+      `You shift the ${objectName}, checking underneath and behind. Nothing. Just empty space and dust.`,
+
+    // Opening - Narrator
+    cantOpen: (targetName: string) =>
+      `There's no "${targetName}" here to open.`,
+
+    // Password/Focus system - System voice (technical feedback)
+    needsFocus: "You need to focus on a specific object first. Try examining or interacting with it.",
+    focusSystemError: "Focus system error. This shouldn't happen.",
+    noPasswordInput: (objectName: string) =>
+      `The ${objectName} doesn't accept password input.`,
+    alreadyUnlocked: (objectName: string) =>
+      `The ${objectName} is already unlocked.`,
+    wrongPassword: "Wrong passphrase. The lock remains sealed.",
+
+    // Generic errors - System voice
+    cantDoThat: "That action isn't available.",
+    somethingWentWrong: "An unexpected error occurred.",
+  },
+
   // New World Model
   world: world,
   structures: structures,

@@ -25,7 +25,7 @@ export async function handleMove(state: PlayerState, targetName: string, game: G
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'system',
-            content: `You don't see a "${targetName}" to move.`
+            content: game.systemMessages.cantMoveObject(targetName)
         }];
     }
 
@@ -34,7 +34,7 @@ export async function handleMove(state: PlayerState, targetName: string, game: G
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'system',
-            content: `You don't see a "${targetName}" to move.`
+            content: game.systemMessages.cantMoveObject(targetName)
         }];
     }
 
@@ -75,7 +75,7 @@ export async function handleMove(state: PlayerState, targetName: string, game: G
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'narrator',
-            content: `You move the ${targetObject.name} around, but find nothing of interest.`
+            content: game.systemMessages.movedNothingFound(targetObject.name)
         }];
     }
 
@@ -95,7 +95,7 @@ export async function handleMove(state: PlayerState, targetName: string, game: G
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'narrator',
-            content: `You move the ${targetObject.name} around, but nothing happens.`
+            content: game.systemMessages.movedNothingFound(targetObject.name)
         }];
     }
 

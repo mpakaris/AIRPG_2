@@ -223,7 +223,7 @@ export class FocusResolver {
 
     /**
      * Get a transition message when focus changes
-     * Uses variety (10-20 canned messages) to avoid repetition
+     * First checks for location-specific atmospheric templates, then falls back to generic ones
      */
     static getTransitionNarration(
         newFocusId: string,
@@ -250,7 +250,14 @@ export class FocusResolver {
                 break;
         }
 
-        // Different transition templates based on entity type
+        // Try location-specific templates first
+        const location = game.locations[state.currentLocationId];
+        if (location?.transitionTemplates && location.transitionTemplates.length > 0) {
+            const template = location.transitionTemplates[Math.floor(Math.random() * location.transitionTemplates.length)];
+            return template.replace('{entity}', entityName);
+        }
+
+        // Fall back to generic templates based on entity type
         if (newFocusType === 'npc') {
             const npcTemplates = [
                 `You approach ${entityName}.`,

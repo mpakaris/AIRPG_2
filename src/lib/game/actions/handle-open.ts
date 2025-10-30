@@ -52,7 +52,7 @@ export async function handleOpen(state: PlayerState, targetName: string, game: G
             return [{
                 type: 'SHOW_MESSAGE',
                 speaker: 'system',
-                content: `You don't see a "${targetName}" to open.`
+                content: game.systemMessages.cantOpen(targetName)
             }];
         }
 

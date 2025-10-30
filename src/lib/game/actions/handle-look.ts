@@ -44,10 +44,12 @@ export async function handleLook(state: PlayerState, game: Game): Promise<Effect
     content: fullDescription.trim()
   };
 
-  // Add location image for wide shot view
+  // Add location image for wide shot view (cartridge-driven)
   if (location.sceneImage) {
     messageEffect.messageType = 'image';
     messageEffect.imageUrl = location.sceneImage.url;
+    messageEffect.imageDescription = location.sceneImage.description;
+    messageEffect.imageHint = location.sceneImage.hint;
   }
 
   return [

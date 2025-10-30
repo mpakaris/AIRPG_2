@@ -10,11 +10,12 @@
 import type { Game, PlayerState, Effect } from "@/lib/game/types";
 
 export async function handleInventory(state: PlayerState, game: Game): Promise<Effect[]> {
+    // CARTRIDGE-DRIVEN: All content comes from game.systemMessages
     if (state.inventory.length === 0) {
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'system',
-            content: 'Your inventory is empty.'
+            content: game.systemMessages.inventoryEmpty
         }];
     }
 
@@ -27,6 +28,6 @@ export async function handleInventory(state: PlayerState, game: Game): Promise<E
     return [{
         type: 'SHOW_MESSAGE',
         speaker: 'system',
-        content: `You are carrying:\n${itemNames}`
+        content: game.systemMessages.inventoryList(itemNames)
     }];
 }

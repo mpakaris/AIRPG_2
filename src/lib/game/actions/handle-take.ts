@@ -19,7 +19,7 @@ export async function handleTake(state: PlayerState, targetName: string, game: G
     return [{
       type: 'SHOW_MESSAGE',
       speaker: 'system',
-      content: 'You need to specify what to take.'
+      content: game.systemMessages.needsTarget.take
     }];
   }
   
@@ -35,22 +35,18 @@ export async function handleTake(state: PlayerState, targetName: string, game: G
     return [{
       type: 'SHOW_MESSAGE',
       speaker: 'narrator',
-      content: `You don't see a "${targetName}" here to take.`
+      content: game.systemMessages.notVisible(targetName)
     }];
   }
 
   const { item, source } = itemInContext;
-  
-  if (state.inventory.includes(item.id)) {
-    return { newState: state, messages: [createMessage('system', 'System', `You already have the ${item.name}.`)] };
-  }
 
   // 2. Check if already in inventory
   if (state.inventory.includes(itemId as any)) {
     return [{
       type: 'SHOW_MESSAGE',
       speaker: 'system',
-      content: `You already have the ${item.name}.`
+      content: game.systemMessages.alreadyHaveItem(item.name)
     }];
   }
 

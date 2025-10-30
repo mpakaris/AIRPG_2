@@ -71,7 +71,7 @@ export type Effect =
   | { type: 'DESTROY_ITEM'; itemId: ItemId } // From world
   | { type: 'SET_FLAG'; flag: Flag }
   | { type: 'REVEAL_OBJECT'; objectId: GameObjectId }
-  | { type: 'SHOW_MESSAGE'; sender: Message['sender']; senderName?: string; content: string; messageType?: Message['type']; imageId?: ItemId | NpcId | GameObjectId }
+  | { type: 'SHOW_MESSAGE'; speaker: Message['sender']; senderName?: string; content: string; messageType?: Message['type']; imageId?: ItemId | NpcId | GameObjectId; imageUrl?: string; imageDescription?: string; imageHint?: string }
   | { type: 'START_CONVERSATION'; npcId: NpcId }
   | { type: 'END_CONVERSATION' }
   | { type: 'START_INTERACTION'; objectId: string }
@@ -793,6 +793,7 @@ export type Location = {
   onEnterLocation?: Handler;
   onExitLocation?: Handler;
   zones?: { title: string, objectIds: GameObjectId[] }[];
+  transitionTemplates?: string[]; // Location-specific atmospheric transitions. Use {entity} placeholder for object/NPC name.
 };
 
 export type Portal = {
@@ -845,6 +846,65 @@ export type Chapter = {
 };
 
 
+// ============================================================================
+// System Messages (Content from Cartridge)
+// ============================================================================
+
+export type SystemMessages = {
+  // Command validation
+  needsTarget: {
+    examine: string;
+    read: string;
+    take: string;
+    goto: string;
+  };
+
+  // Visibility errors
+  notVisible: (itemName: string) => string;
+
+  // Inventory
+  inventoryEmpty: string;
+  inventoryList: (itemNames: string) => string;
+  alreadyHaveItem: (itemName: string) => string;
+
+  // Navigation
+  cannotGoThere: string;
+  chapterIncomplete: (goal: string, locationName: string) => string;
+  chapterTransition: (chapterTitle: string) => string;
+  locationTransition: (locationName: string) => string;
+  noNextChapter: string;
+
+  // Reading
+  notReadable: (itemName: string) => string;
+  alreadyReadAll: (itemName: string) => string;
+  textIllegible: string;
+
+  // Using items
+  dontHaveItem: (itemName: string) => string;
+  cantUseItem: (itemName: string) => string;
+  cantUseOnTarget: (itemName: string, targetName: string) => string;
+  noVisibleTarget: (targetName: string) => string;
+  useDidntWork: string;
+
+  // Moving objects
+  cantMoveObject: (objectName: string) => string;
+  movedNothingFound: (objectName: string) => string;
+
+  // Opening
+  cantOpen: (targetName: string) => string;
+
+  // Password/Focus system
+  needsFocus: string;
+  focusSystemError: string;
+  noPasswordInput: (objectName: string) => string;
+  alreadyUnlocked: (objectName: string) => string;
+  wrongPassword: string;
+
+  // Generic errors
+  cantDoThat: string;
+  somethingWentWrong: string;
+};
+
 export type Game = {
   id: GameId;
   title: string;
@@ -855,7 +915,10 @@ export type Game = {
   promptContext?: string;
   objectInteractionPromptContext?: string;
   storyStyleGuide?: string;
-  
+
+  // System messages (all fallback/error text)
+  systemMessages: SystemMessages;
+
   // New World Model
   world: World;
   structures: Record<StructureId, Structure>;

@@ -16,7 +16,7 @@ export async function handleGoto(state: PlayerState, targetName: string, game: G
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'system',
-            content: 'You need to specify what to go to.'
+            content: game.systemMessages.needsTarget.goto
         }];
     }
 
@@ -31,7 +31,7 @@ export async function handleGoto(state: PlayerState, targetName: string, game: G
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'system',
-            content: `You don't see "${targetName}" here.`
+            content: game.systemMessages.notVisible(targetName)
         }];
     }
 
@@ -46,7 +46,7 @@ export async function handleGoto(state: PlayerState, targetName: string, game: G
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'system',
-            content: `You can't go to ${targetName} - it's an item, not a location.`
+            content: game.systemMessages.cantDoThat
         }];
     }
 

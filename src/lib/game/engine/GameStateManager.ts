@@ -268,14 +268,31 @@ export class GameStateManager {
 
           const message = createMessage(
             speaker as any,
-            speaker === 'narrator' ? 'Narrator' :
-            speaker === 'agent' ? 'Agent' :
-            speaker === 'system' ? 'System' : speaker,
+            effect.senderName || (
+              speaker === 'narrator' ? 'Narrator' :
+              speaker === 'agent' ? 'Agent' :
+              speaker === 'system' ? 'System' : speaker
+            ),
             content,
-            messageType
+            messageType,
+            // If imageId is provided, resolve it (for entity images)
+            effect.imageId && game ? {
+              id: effect.imageId,
+              game,
+              state,
+              showEvenIfExamined: true
+            } : undefined
           );
 
-          // Note: Image resolution is handled by process-effects.ts via imageId
+          // CARTRIDGE-DRIVEN: If imageUrl is provided directly (e.g., location scene images),
+          // use it as-is without any engine interpretation
+          if (effect.imageUrl) {
+            message.image = {
+              url: effect.imageUrl,
+              description: effect.imageDescription || 'Scene view',
+              hint: effect.imageHint || 'wide shot'
+            };
+          }
 
           newMessages.push(message);
           break;

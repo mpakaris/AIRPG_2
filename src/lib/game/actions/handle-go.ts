@@ -24,6 +24,27 @@ function checkChapterCompletion(state: PlayerState, game: Game): boolean {
     return allObjectivesMet;
 }
 
+/**
+ * Helper to create a location message effect with optional scene image (cartridge-driven)
+ */
+function createLocationMessage(location: Location): Effect {
+  const effect: Effect = {
+    type: 'SHOW_MESSAGE',
+    speaker: 'narrator',
+    content: location.sceneDescription
+  };
+
+  // Add location image if defined in cartridge
+  if (location.sceneImage) {
+    effect.messageType = 'image';
+    effect.imageUrl = location.sceneImage.url;
+    effect.imageDescription = location.sceneImage.description;
+    effect.imageHint = location.sceneImage.hint;
+  }
+
+  return effect;
+}
+
 export async function handleGo(state: PlayerState, targetName: string, game: Game): Promise<Effect[]> {
     const chapter = game.chapters[game.startChapterId];
     const currentLocation = game.locations[state.currentLocationId];
@@ -44,17 +65,17 @@ export async function handleGo(state: PlayerState, targetName: string, game: Gam
                     { type: 'MOVE_TO_LOCATION', locationId: nextChapter.startLocationId },
                     { type: 'END_CONVERSATION' },
                     { type: 'END_INTERACTION' },
-                    { type: 'SHOW_MESSAGE', speaker: 'system', content: `You are now in Chapter: ${nextChapter.title}.` },
-                    { type: 'SHOW_MESSAGE', speaker: 'narrator', content: newLocation.sceneDescription }
+                    { type: 'SHOW_MESSAGE', speaker: 'system', content: game.systemMessages.chapterTransition(nextChapter.title) },
+                    createLocationMessage(newLocation)
                 ];
             } else {
-                return [{ type: 'SHOW_MESSAGE', speaker: 'system', content: 'There is no next chapter defined.' }];
+                return [{ type: 'SHOW_MESSAGE', speaker: 'system', content: game.systemMessages.noNextChapter }];
             }
         } else {
             return [{
                 type: 'SHOW_MESSAGE',
                 speaker: 'narrator',
-                content: `Wait a second. We still need to ${chapter.goal.toLowerCase()} here in ${currentLocation.name}. We can't move on until we've figured that out.`
+                content: game.systemMessages.chapterIncomplete(chapter.goal, currentLocation.name)
             }];
         }
     }
@@ -68,10 +89,10 @@ export async function handleGo(state: PlayerState, targetName: string, game: Gam
             { type: 'MOVE_TO_LOCATION', locationId: targetLocation.locationId },
             { type: 'END_CONVERSATION' },
             { type: 'END_INTERACTION' },
-            { type: 'SHOW_MESSAGE', speaker: 'system', content: `You go to the ${targetLocation.name}.` },
-            { type: 'SHOW_MESSAGE', speaker: 'narrator', content: targetLocation.sceneDescription }
+            { type: 'SHOW_MESSAGE', speaker: 'system', content: game.systemMessages.locationTransition(targetLocation.name) },
+            createLocationMessage(targetLocation)
         ];
     }
 
-    return [{ type: 'SHOW_MESSAGE', speaker: 'system', content: "You can't go there." }];
+    return [{ type: 'SHOW_MESSAGE', speaker: 'system', content: game.systemMessages.cannotGoThere }];
 }

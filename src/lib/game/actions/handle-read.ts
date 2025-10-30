@@ -20,7 +20,7 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'system',
-            content: 'You need to specify what to read.'
+            content: game.systemMessages.needsTarget.read
         }];
     }
 
@@ -84,7 +84,7 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'system',
-            content: `You don't see any "${itemName}" to read.`
+            content: game.systemMessages.notVisible(itemName)
         }];
     }
 
@@ -93,7 +93,7 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'narrator',
-            content: `There's nothing to read on the ${entityToRead.name}.`
+            content: game.systemMessages.notReadable(entityToRead.name)
         }];
     }
 
@@ -108,7 +108,7 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
             return [{
                 type: 'SHOW_MESSAGE',
                 speaker: 'narrator',
-                content: `You've already read everything in the ${entityToRead.name}.`
+                content: game.systemMessages.alreadyReadAll(entityToRead.name)
             }];
         }
 
@@ -120,7 +120,7 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
             return [{
                 type: 'SHOW_MESSAGE',
                 speaker: 'narrator',
-                content: "You try to read it, but the text is illegible."
+                content: game.systemMessages.textIllegible
             }];
         }
 

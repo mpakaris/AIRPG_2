@@ -10,7 +10,7 @@ const examinedObjectFlag = (id: string) => `examined_${id}`;
 
 export async function processPassword(state: PlayerState, command: string, game: Game): Promise<CommandResult> {
     const narratorName = "Narrator";
-    const agentName = game.narratorName || 'Agent Sharma';
+    const systemName = "System";
     const location = game.locations[state.currentLocationId];
     const objectsInLocation = location.objects.map(id => getLiveGameObject(id, state, game)).filter(Boolean) as {gameLogic: GameObject, state: GameObjectState}[];
     
@@ -33,9 +33,9 @@ export async function processPassword(state: PlayerState, command: string, game:
     const targetObject = targetObjectResult;
 
     if (!targetObject.state.isLocked) {
-        return { 
-            newState: state, 
-            messages: [createMessage('agent', agentName, `No need, Burt. We already unlocked the ${targetObject.gameLogic.name}.`)]
+        return {
+            newState: state,
+            messages: [createMessage('system', systemName, `The ${targetObject.gameLogic.name} is already unlocked.`)]
         };
     }
     

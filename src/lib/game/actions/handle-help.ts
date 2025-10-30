@@ -14,13 +14,12 @@ import { GameStateManager, VisibilityResolver } from "@/lib/game/engine";
 import { AVAILABLE_COMMANDS } from "../commands";
 
 export async function handleHelp(state: PlayerState, game: Game): Promise<Effect[]> {
-    const agentName = game.narratorName || "Agent Sharma";
     const chapter = game.chapters[state.currentChapterId];
 
     // Fallback in case AI fails or for testing
     const nextObjective = chapter.objectives?.find(obj => !GameStateManager.hasFlag(state, obj.flag));
     const fallbackHint = chapter.hints?.find(h => h.flag === nextObjective?.flag);
-    const fallbackMessage = fallbackHint?.text || "Let's focus on the mission. What's our next move?";
+    const fallbackMessage = fallbackHint?.text || "Focus on the current objective. Examine your surroundings and inventory.";
 
     try {
         const location = game.locations[state.currentLocationId];
@@ -42,7 +41,7 @@ export async function handleHelp(state: PlayerState, game: Game): Promise<Effect
             .filter(Boolean) as string[];
 
         const { output: aiResponse, usage } = await guidePlayerWithNarrator({
-            promptContext: `You are Agent Sharma. The player, Burt, has asked for help. Your task is to provide a subtle, in-character hint based on the current Game State. Analyze the incomplete objectives and the visible items/NPCs. Guide Burt towards the next logical step without giving away the answer directly. Your response should be conversational and encouraging. Your commandToExecute MUST be "invalid".`,
+            promptContext: `The player has requested help. Analyze the current game state, incomplete objectives, and visible entities. Provide a subtle hint that guides the player toward the next logical step without revealing the solution. Keep the hint brief and focused on what they should examine or try next. Your commandToExecute MUST be "invalid".`,
             gameState: JSON.stringify({
                 chapterGoal: chapter.goal,
                 currentLocation: location.name,

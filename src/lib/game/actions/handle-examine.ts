@@ -21,7 +21,7 @@ export async function handleExamine(state: PlayerState, targetName: string, game
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'system',
-            content: 'You need to specify what to examine.'
+            content: game.systemMessages.needsTarget.examine
         }];
     }
 
@@ -67,7 +67,7 @@ export async function handleExamine(state: PlayerState, targetName: string, game
             return [{
                 type: 'SHOW_MESSAGE',
                 speaker: 'system',
-                content: `You don't see a "${targetName}" here.`
+                content: game.systemMessages.notVisible(targetName)
             }];
         }
 
@@ -195,7 +195,7 @@ export async function handleExamine(state: PlayerState, targetName: string, game
             return [{
                 type: 'SHOW_MESSAGE',
                 speaker: 'system',
-                content: `You don't see a "${targetName}" here.`
+                content: game.systemMessages.notVisible(targetName)
             }];
         }
 
@@ -253,6 +253,6 @@ export async function handleExamine(state: PlayerState, targetName: string, game
     return [{
         type: 'SHOW_MESSAGE',
         speaker: 'system',
-        content: `You don't see a "${targetName}" here.`
+        content: game.systemMessages.notVisible(targetName)
     }];
 }

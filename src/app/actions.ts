@@ -241,7 +241,7 @@ export async function processCommand(
             allMessagesForSession = await createInitialMessages(currentState, game);
         }
 
-        const agentName = game.narratorName || "Agent Sharma";
+        const systemName = "System";
 
         let playerMessage: Message | null = null;
         if (safePlayerInput) {
@@ -299,8 +299,8 @@ export async function processCommand(
             });
 
             if (aiResponse.agentResponse) {
-                let agentMessage = createMessage('agent', agentName, `${aiResponse.agentResponse}`, 'text', undefined, usage);
-                allMessagesForSession.push(agentMessage);
+                let systemMessage = createMessage('system', systemName, `${aiResponse.agentResponse}`, 'text', undefined, usage);
+                allMessagesForSession.push(systemMessage);
             }
 
             const commandToExecute = aiResponse.commandToExecute.toLowerCase();
