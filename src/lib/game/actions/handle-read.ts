@@ -78,11 +78,15 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
         entityToRead = game.items[itemId];
         entityType = 'item';
     }
-    
-    if (itemToRead.stateMap && Object.keys(itemToRead.stateMap).length > 0) {
-        const itemState = state.itemStates[itemToRead.id] || { readCount: 0 };
-        const currentReadCount = itemState.readCount || 0;
-        const stateMapKeys = Object.keys(itemToRead.stateMap);
+
+    // If still not found, return error
+    if (!entityToRead) {
+        return [{
+            type: 'SHOW_MESSAGE',
+            speaker: 'system',
+            content: `You don't see any "${itemName}" to read.`
+        }];
+    }
 
     // 2. Check if readable
     if (!entityToRead.capabilities?.readable && !entityToRead.capabilities?.isReadable) {
@@ -101,8 +105,11 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
 
         // Check if all content has been read
         if (currentReadCount >= stateMapKeys.length) {
-            const deflectionMessage = `Come on Burt, let's continue. You can spend hours reading this book and not come up with anything useful.`;
-            return { newState: state, messages: [createMessage('agent', agentName, deflectionMessage)] };
+            return [{
+                type: 'SHOW_MESSAGE',
+                speaker: 'narrator',
+                content: `You've already read everything in the ${entityToRead.name}.`
+            }];
         }
 
         // Get current state entry
@@ -110,26 +117,47 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
         const stateMapEntry = entityToRead.stateMap[currentStateKey];
 
         if (!stateMapEntry || typeof stateMapEntry.description !== 'string') {
-            return { newState: state, messages: [createMessage('narrator', narratorName, "You try to read it, but the text is illegible.")] };
+            return [{
+                type: 'SHOW_MESSAGE',
+                speaker: 'narrator',
+                content: "You try to read it, but the text is illegible."
+            }];
         }
-        
-        const description = stateMapEntry.description;
-        const message = createMessage('narrator', narratorName, description);
 
-        const { newState } = await processEffects(state, [{ type: 'INCREMENT_ITEM_READ_COUNT', itemId: itemToRead.id }], game);
-        
-        return { newState, messages: [message] };
+        // Return effects to show content and increment read count
+        return [
+            {
+                type: 'SHOW_MESSAGE',
+                speaker: 'narrator',
+                content: stateMapEntry.description,
+                messageType: 'text'
+            },
+            {
+                type: 'INCREMENT_ITEM_READ_COUNT',
+                itemId: entityId as any
+            }
+        ];
     }
 
-    const handler = itemToRead.handlers?.onRead;
+    // 4. Check for onRead handler
+    const handler = entityToRead.handlers?.onRead;
     if (handler && handler.success) {
-        const effectsToProcess = Array.isArray(handler.success.effects) ? handler.success.effects : [];
-        let result = await processEffects(state, effectsToProcess, game);
-        
+        const effects: Effect[] = [];
+
         if (handler.success.message) {
-            const message = createMessage('narrator', narratorName, handler.success.message, 'text');
-            result.messages.unshift(message);
+            effects.push({
+                type: 'SHOW_MESSAGE',
+                speaker: 'narrator',
+                content: handler.success.message,
+                messageType: 'text'
+            });
         }
+
+        if (handler.success.effects) {
+            effects.push(...handler.success.effects);
+        }
+
+        return effects;
     }
 
     // 5. Fallback: just show description

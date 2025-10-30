@@ -142,41 +142,6 @@ export async function processEffects(initialState: PlayerState, effects: Effect[
                 };
                 break;
 
-            // ================================================================
-            // ENHANCED MESSAGE HANDLING (with image resolution)
-            // ================================================================
-            case 'SHOW_MESSAGE': {
-                // Type narrow to SHOW_MESSAGE effect
-                if (effect.type !== 'SHOW_MESSAGE') break;
-
-                // Remove the message created by GameStateManager (it doesn't have image resolution)
-                // Keep only messages that DON'T have the same content as this effect
-                messages = messages.filter(m => m.content !== effect.content);
-
-                const messageImageId = effect.imageId;
-                const messageImageUrl = effect.imageUrl;
-                const speaker = effect.speaker || 'narrator';
-                const senderName = speaker === 'agent' ? game.narratorName || 'Narrator' : speaker === 'system' ? 'System' : narratorName;
-
-                let enhancedMessage: any;
-
-                // If direct imageUrl is provided (e.g., for location wide shots)
-                if (messageImageUrl) {
-                    enhancedMessage = createMessage(
-                        speaker as any,
-                        senderName,
-                        effect.content,
-                        effect.messageType || 'image',
-                        undefined  // No imageDetails needed
-                    );
-                    // Add image directly
-                    enhancedMessage.image = {
-                        url: messageImageUrl,
-                        description: 'Location view',
-                        hint: 'wide shot'
-                    };
-                 }
-                 break;
             case 'INCREMENT_ITEM_READ_COUNT':
                 if (!newState.itemStates[effect.itemId]) {
                     newState.itemStates[effect.itemId] = { readCount: 0 };
