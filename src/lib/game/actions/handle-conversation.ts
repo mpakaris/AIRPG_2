@@ -1,3 +1,4 @@
+
 'use server';
 
 import { generateNpcChatter, selectNpcResponse } from "@/ai";
@@ -31,27 +32,22 @@ async function checkDemotion(npc: NPC, state: PlayerState, game: Game): Promise<
     }
 
     if (shouldDemote) {
-        let newState = { ...state, npcStates: { ...state.npcStates } };
-        newState.npcStates[npc.id] = { ...liveNpcState, stage: then.setStage, importance: then.setImportance };
-        
-        const demotionResult = await processEffects(newState, [{ type: 'DEMOTE_NPC', npcId: npc.id }], game);
-        return demotionResult.newState;
+        const { newState } = await processEffects(state, [{ type: 'DEMOTE_NPC', npcId: npc.id }], game);
+        return newState;
     }
     
     return state;
 }
 
 async function handleFreeformChat(npc: NPC, state: PlayerState, playerInput: string, game: Game): Promise<CommandResult> {
-    let newState = { ...state };
-    let liveNpcState = getLiveNpc(npc.id, newState, npc);
-    const newInteractionCount = (liveNpcState.interactionCount || 0) + 1;
+    const { newState: stateAfterIncrement } = await processEffects(state, [{ type: 'INCREMENT_NPC_INTERACTION', npcId: npc.id }], game);
     
-    if (npc.limits?.maxInteractions && newInteractionCount > npc.limits.maxInteractions) {
+    const liveNpcState = getLiveNpc(npc.id, stateAfterIncrement, npc);
+    
+    if (npc.limits?.maxInteractions && liveNpcState.interactionCount > npc.limits.maxInteractions) {
         const limitMsg = npc.limits.interactionLimitResponse || "I really must be going now.";
-        return { newState, messages: [createMessage(npc.id, npc.name, `"${limitMsg}"`)] };
+        return { newState: stateAfterIncrement, messages: [createMessage(npc.id, npc.name, `"${limitMsg}"`)] };
     }
-    
-    newState.npcStates[npc.id] = { ...liveNpcState, interactionCount: newInteractionCount };
 
     const location = game.locations[state.currentLocationId];
     const { output: aiResponse, usage } = await generateNpcChatter({
@@ -63,7 +59,7 @@ async function handleFreeformChat(npc: NPC, state: PlayerState, playerInput: str
     });
     
     const message = createMessage(npc.id, npc.name, `"${aiResponse.npcResponse}"`, 'text', undefined, usage);
-    return { newState, messages: [message] };
+    return { newState: stateAfterIncrement, messages: [message] };
 }
 
 
@@ -101,7 +97,6 @@ async function handleScriptedChat(npc: NPC, state: PlayerState, playerInput: str
         cannedResponses: availableTopics
     });
     
-    let newState = { ...state };
     const selectedTopic = npc.topics?.find(t => t.topicId === aiResponse.topic);
 
     if (!selectedTopic) {
@@ -109,20 +104,21 @@ async function handleScriptedChat(npc: NPC, state: PlayerState, playerInput: str
         return { newState: state, messages: [createMessage(npc.id, npc.name, `"${fallback}"`)] };
     }
     
+    let effectsToProcess = [...(selectedTopic.response.effects || [])];
+    
     if (selectedTopic.once) {
-        const updatedNpcState = getLiveNpc(npc.id, newState, npc);
-        updatedNpcState.completedTopics = [...updatedNpcState.completedTopics, selectedTopic.topicId];
-        newState.npcStates[npc.id] = updatedNpcState;
+        effectsToProcess.push({ type: 'COMPLETE_NPC_TOPIC', npcId: npc.id, topicId: selectedTopic.topicId });
     }
     
     const initialMessage = createMessage(npc.id, npc.name, `"${selectedTopic.response.message}"`, 'text', undefined, usage);
-    const effectsToProcess = selectedTopic.response.effects || [];
-    let effectResult = await processEffects(newState, effectsToProcess, game);
     
-    effectResult.newState = await checkDemotion(npc, effectResult.newState, game);
+    let { newState, messages } = await processEffects(state, effectsToProcess, game);
+    
+    const stateAfterDemotionCheck = await checkDemotion(npc, newState, game);
+    newState = stateAfterDemotionCheck;
 
-    effectResult.messages.unshift(initialMessage);
-    return effectResult;
+    messages.unshift(initialMessage);
+    return { newState, messages };
 }
 
 
@@ -133,22 +129,22 @@ export async function handleConversation(state: PlayerState, playerInput: string
 
     const npcId = state.activeConversationWith;
     const npc = game.npcs[npcId];
-    let newState = await checkDemotion(npc, { ...state }, game);
+    let stateAfterDemotionCheck = await checkDemotion(npc, { ...state }, game);
 
     if (isEndingConversation(playerInput)) {
-        return await processEffects(newState, [{type: 'END_CONVERSATION'}], game);
+        return await processEffects(stateAfterDemotionCheck, [{type: 'END_CONVERSATION'}], game);
     }
     
     if (npc.dialogueType === 'scripted') {
-        return handleScriptedChat(npc, newState, playerInput, game);
+        return handleScriptedChat(npc, stateAfterDemotionCheck, playerInput, game);
     }
     
     if (npc.dialogueType === 'freeform') {
-        return handleFreeformChat(npc, newState, playerInput, game);
+        return handleFreeformChat(npc, stateAfterDemotionCheck, playerInput, game);
     }
 
     return {
-        newState: newState,
+        newState: stateAfterDemotionCheck,
         messages: [createMessage(npcId, npc.name, `"${npc.goodbyeMessage || 'I have nothing to say.'}"`)]
     };
 }

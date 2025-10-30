@@ -78,27 +78,11 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
         entityToRead = game.items[itemId];
         entityType = 'item';
     }
-
-    // If still not found, check visible objects (like notebook, signs, etc.)
-    if (!entityId) {
-        const visibleEntities = VisibilityResolver.getVisibleEntities(state, game);
-        const objectId = visibleEntities.objects.find(id =>
-            matchesName(game.gameObjects[id as any], normalizedItemName)
-        );
-        if (objectId) {
-            entityId = objectId;
-            entityToRead = game.gameObjects[objectId as any];
-            entityType = 'object';
-        }
-    }
-
-    if (!entityId || !entityToRead) {
-        return [{
-            type: 'SHOW_MESSAGE',
-            speaker: 'system',
-            content: `You don't see a "${itemName}" to read here.`
-        }];
-    }
+    
+    if (itemToRead.stateMap && Object.keys(itemToRead.stateMap).length > 0) {
+        const itemState = state.itemStates[itemToRead.id] || { readCount: 0 };
+        const currentReadCount = itemState.readCount || 0;
+        const stateMapKeys = Object.keys(itemToRead.stateMap);
 
     // 2. Check if readable
     if (!entityToRead.capabilities?.readable && !entityToRead.capabilities?.isReadable) {
@@ -117,109 +101,34 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
 
         // Check if all content has been read
         if (currentReadCount >= stateMapKeys.length) {
-            return [{
-                type: 'SHOW_MESSAGE',
-                speaker: 'narrator',
-                content: `Come on Burt, let's continue. You can spend hours reading this book and not come up with anything useful.`
-            }];
+            const deflectionMessage = `Come on Burt, let's continue. You can spend hours reading this book and not come up with anything useful.`;
+            return { newState: state, messages: [createMessage('agent', agentName, deflectionMessage)] };
         }
 
         // Get current state entry
         const currentStateKey = stateMapKeys[currentReadCount];
         const stateMapEntry = entityToRead.stateMap[currentStateKey];
 
-        if (!stateMapEntry || !stateMapEntry.description) {
-            return [{
-                type: 'SHOW_MESSAGE',
-                speaker: 'narrator',
-                content: "You try to read it, but the text is illegible."
-            }];
+        if (!stateMapEntry || typeof stateMapEntry.description !== 'string') {
+            return { newState: state, messages: [createMessage('narrator', narratorName, "You try to read it, but the text is illegible.")] };
         }
+        
+        const description = stateMapEntry.description;
+        const message = createMessage('narrator', narratorName, description);
 
-        // Build effects: UPDATE STATE FIRST, then show message (so image shows "opened" state)
-        return [
-            {
-                type: 'SET_ENTITY_STATE',
-                entityId: entityId,
-                patch: { readCount: currentReadCount + 1, currentStateId: 'opened' }
-            },
-            {
-                type: 'SHOW_MESSAGE',
-                speaker: 'narrator',
-                content: stateMapEntry.description,
-                messageType: 'image',
-                imageId: entityId  // Will show "opened" image after state update
-            }
-        ];
+        const { newState } = await processEffects(state, [{ type: 'INCREMENT_ITEM_READ_COUNT', itemId: itemToRead.id }], game);
+        
+        return { newState, messages: [message] };
     }
 
-    // 4. Check for onRead handler
-    const handler = HandlerResolver.getEffectiveHandler(entityToRead, 'read', state);
-    if (handler) {
-        // Evaluate conditions if they exist
-        const conditionsMet = handler.conditions
-            ? Validator.evaluateConditions(handler.conditions, state, game)
-            : true;
-
-        const outcome = conditionsMet ? handler.success : handler.fail;
-
-        if (!outcome) {
-            // No outcome defined, skip
-        } else {
-            const effects: Effect[] = [];
-
-            // Set focus on the entity
-            effects.push({
-                type: 'SET_FOCUS',
-                focusId: entityId,
-                focusType: entityType === 'object' ? 'object' : 'item',
-                transitionMessage: FocusResolver.getTransitionNarration(entityId, entityType === 'object' ? 'object' : 'item', state, game) || undefined
-            });
-
-            // Set state to 'opened' or 'unlocked' BEFORE showing message (for book/document/container images)
-            // Note: Don't override if outcome.effects already sets currentStateId
-            if (conditionsMet && (entityToRead.archetype === 'Book' || entityToRead.archetype === 'Document' || entityToRead.archetype === 'Container')) {
-                // Check if outcome.effects already sets currentStateId
-                const hasStateIdInEffects = outcome.effects?.some(
-                    (e: any) => e.type === 'SET_ENTITY_STATE' && e.entityId === entityId && e.patch?.currentStateId
-                );
-                if (!hasStateIdInEffects) {
-                    // Use 'unlocked' for containers, 'opened' for books/documents
-                    const stateId = entityToRead.archetype === 'Container' ? 'unlocked' : 'opened';
-                    const patch: any = { currentStateId: stateId };
-
-                    // For containers, ensure isOpen remains true
-                    if (entityToRead.archetype === 'Container') {
-                        patch.isOpen = true;
-                    }
-
-                    effects.push({
-                        type: 'SET_ENTITY_STATE',
-                        entityId: entityId,
-                        patch: patch
-                    });
-                }
-            }
-
-            // Add outcome effects first (if any)
-            if (outcome.effects) {
-                effects.push(...outcome.effects);
-            }
-
-            // Show message ONLY if there are no SHOW_MESSAGE effects already in outcome.effects
-            // (This prevents duplicate messages when the handler defines its own SHOW_MESSAGE effects)
-            const hasShowMessageInEffects = outcome.effects?.some((e: any) => e.type === 'SHOW_MESSAGE');
-            if (outcome.message && !hasShowMessageInEffects) {
-                effects.push({
-                    type: 'SHOW_MESSAGE',
-                    speaker: outcome.speaker || 'narrator',
-                    content: outcome.message,
-                    messageType: 'image',
-                    imageId: entityId  // Will show "opened" image for books/documents
-                });
-            }
-
-            return effects;
+    const handler = itemToRead.handlers?.onRead;
+    if (handler && handler.success) {
+        const effectsToProcess = Array.isArray(handler.success.effects) ? handler.success.effects : [];
+        let result = await processEffects(state, effectsToProcess, game);
+        
+        if (handler.success.message) {
+            const message = createMessage('narrator', narratorName, handler.success.message, 'text');
+            result.messages.unshift(message);
         }
     }
 

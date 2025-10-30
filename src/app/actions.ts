@@ -564,7 +564,7 @@ export async function generateStoryForChapter(userId: string, gameId: GameId, ch
         throw new Error("Game data could not be loaded. Cannot generate story.");
     }
 
-    const playerState = stateSnap.data() as PlayerState;
+    let playerState = stateSnap.data() as PlayerState;
     const allMessages = logSnap.data()?.messages as Message[];
     const chapter = game.chapters[chapterId];
 
@@ -589,13 +589,10 @@ export async function generateStoryForChapter(userId: string, gameId: GameId, ch
         usage: storyUsage,
     };
 
-    const newState: PlayerState = {
-        ...playerState,
-        stories: {
-            ...playerState.stories,
-            [chapterId]: newStory,
-        },
-    };
+    const { newState } = await processEffects(playerState, [{
+        type: 'SET_STORY',
+        story: newStory,
+    }], game);
 
     await setDoc(stateRef, newState);
 

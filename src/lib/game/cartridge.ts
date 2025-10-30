@@ -52,10 +52,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                 success: {
                     message: "The brass clasp gives with a soft click. The cover swings open, leather hinges creaking. Inside, pressed between aged pages, two objects reveal themselves: a black SD card—modern, digital, completely anachronistic—and beside it, a folded newspaper clipping, brown with decades. Someone preserved the past in two formats. Paper that survived seventy years. Data that will survive longer. Both hidden here, waiting.",
                     effects: [
-                        { type: 'SET_FLAG', flag: 'has_unlocked_notebook', value: true },
-                        { type: 'SET_ENTITY_STATE', entityId: 'obj_brown_notebook', patch: { isLocked: false, isOpen: true, currentStateId: 'unlocked' } },
-                        { type: 'REVEAL_FROM_PARENT', entityId: 'item_sd_card', parentId: 'obj_brown_notebook' },
-                        { type: 'REVEAL_FROM_PARENT', entityId: 'item_newspaper_article', parentId: 'obj_brown_notebook' }
+                        { type: 'SET_FLAG', flag: 'has_unlocked_notebook' as Flag }
                     ]
                 },
                 fail: { message: "That password doesn't work. The lock remains stubbornly shut." }
@@ -307,8 +304,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         description: "It's a high-end Italian coffee machine, gleaming under the cafe lights.",
         capabilities: { openable: false, lockable: false, breakable: true, movable: false, powerable: false, container: true, readable: false, inputtable: false },
         state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        inventory: { items: ['item_safe_key' as ItemId], capacity: 1 },
-        children: { items: ['item_safe_key' as ItemId] },
+        inventory: { items: [], capacity: 1 },
         media: {
             images: {
                 default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761211151/coffee_machine_detail_frexuu.png', description: 'A high-end Italian coffee machine.', hint: 'coffee machine' },
@@ -331,11 +327,10 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                     success: {
                         message: "You bring the iron pipe down on the warped service panel. Sharp crack—plastic and metal shatter under the impact. The panel splits open, revealing the internal cavity. Something small and brass tumbles out, bouncing once on the counter before settling. A key. Someone hid a key inside the coffee machine, and they didn't want it found the easy way.",
                         effects: [
-                            { type: 'SET_FLAG', flag: 'machine_is_broken', value: true },
-                            { type: 'SET_ENTITY_STATE', entityId: 'obj_coffee_machine', patch: { isBroken: true, isOpen: true, currentStateId: 'broken' } },
-                            { type: 'REMOVE_FROM_CONTAINER', entityId: 'item_safe_key', containerId: 'obj_coffee_machine' },
-                            { type: 'REVEAL_ENTITY', entityId: 'item_safe_key' },
-                            { type: 'REMOVE_ITEM', itemId: 'item_iron_pipe' }
+                            { type: 'SET_FLAG', flag: 'machine_is_broken' as Flag },
+                            { type: 'SPAWN_ITEM', itemId: 'item_deposit_key' as ItemId, containerId: 'obj_coffee_machine' as GameObjectId },
+                            { type: 'SET_OBJECT_STATE', objectId: 'obj_coffee_machine', state: { isBroken: true, isOpen: true, currentStateId: 'broken' } },
+                            { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'The side of the coffee machine is now smashed.', imageId: 'obj_coffee_machine' }
                         ]
                     },
                     fail: { message: "The coffee machine is already broken open. One hit was enough." }
@@ -476,17 +471,11 @@ const items: Record<ItemId, Item> = {
         capabilities: { isTakable: true, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         handlers: {
             onTake: {
-                success: {
-                    message: "You pick up the business card.",
-                    effects: [
-                        { type: 'ADD_ITEM', itemId: 'item_business_card' },
-                        { type: 'SET_ENTITY_STATE', entityId: 'item_business_card', patch: { taken: true } }
-                    ]
-                },
+                success: { message: "You pick up the business card." },
                 fail: { message: "You can't take that right now." }
             },
             onRead: {
-                success: { message: 'The card reads: "S A X O - The World\'s Best Sax Player". A phone number is listed, along with a handwritten number "1943" and the name "ROSE".', effects: [] },
+                success: { message: 'The card reads: "S A X O - The World\'s Best Sax Player". A phone number is listed, along with a handwritten number "1943" and the name "ROSE".'},
                 fail: { message: "You can't read that now."}
             }
         },
@@ -513,13 +502,7 @@ const items: Record<ItemId, Item> = {
         capabilities: { isTakable: true, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         handlers: {
             onTake: {
-                success: {
-                    message: 'You take the Newspaper Article. You can "read Article" to find out what it is about.',
-                    effects: [
-                        { type: 'ADD_ITEM', itemId: 'item_newspaper_article' },
-                        { type: 'SET_ENTITY_STATE', entityId: 'item_newspaper_article', patch: { taken: true } }
-                    ]
-                },
+                success: { message: 'You take the Newspaper Article. You can "read Article" to find out what it is about.' },
                 fail: { message: "You can't take that right now." }
             },
             onRead: {
@@ -564,21 +547,11 @@ const items: Record<ItemId, Item> = {
         },
         handlers: {
             onTake: {
-                success: {
-                    message: 'You take the SD Card.',
-                    effects: [
-                        { type: 'ADD_ITEM', itemId: 'item_sd_card' },
-                        { type: 'SET_ENTITY_STATE', entityId: 'item_sd_card', patch: { taken: true } }
-                    ]
-                },
+                success: { message: 'You take the SD Card.' },
                 fail: { message: "You can't take that right now." }
             },
             onRead: {
-                success: { message: "It's a standard SD card. Any standard smart device could handle it without issue. \n\nYou'll need to 'use' it to see what's on it.", effects: [] },
-                fail: { message: "" }
-            },
-            onExamine: {
-                success: { message: "A small black SD card, modern and sleek - Any modern digital device would recognize it instantly. Someone stored something important on this.", effects: [] },
+                success: { message: "It's a standard SD card. You'll need to 'use' it to see what's on it." },
                 fail: { message: "" }
             },
             onUse: {
@@ -1004,220 +977,30 @@ export const game: Game = {
   description: "You are Burt Macklin, FBI. A mysterious stranger hands you a worn notebook from the 1940s—the secret case file of a forgotten murder. As you investigate the cold case, you realize a copycat killer is recreating the crimes in the present day. You must solve the past to stop a killer in the present.",
   setting: "Modern-day USA, 2025",
   gameType: 'Limited Open World',
-  narratorName: 'Narrator',
-  promptContext: `You are the Narrator for FBI agent Burt Macklin (the player). Your role is to be a procedural, humanized interface between Burt and the game system.
-
-**// ============================================================================**
-**// 1. YOUR PRIMARY MISSION: INTERPRET PLAYER INTENT**
-**// ============================================================================**
-
-Your MOST IMPORTANT task is to understand what the player WANTS to do, not just what they literally said. Then translate that intent into the correct game command.
-
-**CRITICAL PRINCIPLE:**
-If the player's intent is clear, map it to the appropriate command even if the exact words differ. The player is investigating a crime scene - they will use natural, conversational language, not rigid commands.
-
-**// ============================================================================**
-**// 2. NATURAL LANGUAGE INTENT MAPPING (COMPREHENSIVE)**
-**// ============================================================================**
-
-### 2.1 DESTRUCTIVE ACTIONS → \`use <tool> on <target>\`
-
-The player wants to BREAK or DESTROY something. These phrases ALL mean the same thing:
-
-**Intent Keywords:** hit, smash, whack, bash, break, destroy, strike, slam, pound, crack, shatter, demolish, wreck, force, pry, hammer, beat
-
-**Examples - ALL map to the SAME command:**
-- "hit the coffee machine with the pipe" → \`use "Iron Pipe" on "Coffee Machine"\`
-- "smash the machine" → \`use "Iron Pipe" on "Coffee Machine"\` (if pipe in inventory)
-- "break coffee machine with pipe" → \`use "Iron Pipe" on "Coffee Machine"\`
-- "whack it with the pipe" → \`use "Iron Pipe" on "Coffee Machine"\`
-- "bash the machine" → \`use "Iron Pipe" on "Coffee Machine"\` (if pipe in inventory)
-- "destroy the machine using pipe" → \`use "Iron Pipe" on "Coffee Machine"\`
-- "crack open the machine with the pipe" → \`use "Iron Pipe" on "Coffee Machine"\`
-- "pound the coffee machine" → \`use "Iron Pipe" on "Coffee Machine"\` (if pipe in inventory)
-- "force the machine open" → \`use "Iron Pipe" on "Coffee Machine"\` (if pipe in inventory)
-- "break it" → \`use "Iron Pipe" on "Coffee Machine"\` (context: if examining coffee machine and have pipe)
-
-**Rule:** If the player mentions a destructive action + target, check inventory for appropriate tool (pipe, crowbar, hammer, etc.) and use it. If no tool specified but one is in inventory, infer it.
-
-### 2.2 OPENING/UNLOCKING ACTIONS → \`open <object>\` OR \`use <key/code> on <object>\`
-
-The player wants to OPEN or UNLOCK something. These phrases ALL mean the same thing:
-
-**Intent Keywords:** open, unlock, access, get into, pry open, crack open, unseal, unfasten
-
-**Examples - ALL achieve the same goal:**
-- "unlock the safe with the key" → \`use "Deposit Box Key" on "Wall Safe"\`
-- "open safe with key" → \`use "Deposit Box Key" on "Wall Safe"\`
-- "use key on safe" → \`use "Deposit Box Key" on "Wall Safe"\`
-- "put key in safe" → \`use "Deposit Box Key" on "Wall Safe"\`
-- "try the key on the safe" → \`use "Deposit Box Key" on "Wall Safe"\`
-- "unlock safe" → \`use "Deposit Box Key" on "Wall Safe"\` (if key in inventory)
-- "get into the safe" → \`use "Deposit Box Key" on "Wall Safe"\` (if key in inventory)
-- "access the safe" → \`use "Deposit Box Key" on "Wall Safe"\` (if key in inventory)
-- "open it" → \`open "Wall Safe"\` OR \`use "Deposit Box Key" on "Wall Safe"\` (context-dependent)
-
-**Rule:** If object requires a key/code and player has it, use \`use <key> on <object>\`. If object is just openable (no lock), use \`open <object>\`.
-
-### 2.3 STANDALONE USE ACTIONS → \`use <item>\`
-
-The player wants to USE an item by itself (not on a target). These items have their own functionality.
-
-**Intent Keywords:** use, activate, play, insert, check, try, put in
-
-**Examples - Standalone use:**
-- "use SD card" → \`use "SD Card"\` (the phone is implicit - narration will say "you insert it into your phone")
-- "use phone" → \`use "Phone"\`
-- "play SD card" → \`use "SD Card"\`
-- "check SD card" → \`use "SD Card"\` (if player means "see contents")
-- "activate phone" → \`use "Phone"\`
-
-**Rule:** If item has standalone functionality (SD cards, phones, consumables), map to \`use <item>\` without a target. Do NOT add the focused object as a target unless the player explicitly mentions it.
-
-**IMPORTANT:** When player says "use X", check if X is a usable item. If yes, use \`use "X"\` (no target). Do NOT automatically add the focused object as a target.
-
-### 2.4 MOVEMENT/INSPECTION ACTIONS → \`move <object>\` OR \`examine <object>\`
-
-The player wants to MOVE something or CHECK BEHIND it. These phrases ALL mean the same thing:
-
-**Intent Keywords (for MOVE):** move, push, shift, slide, pull, drag, lift, relocate, shove
-
-**Intent Keywords (for BEHIND):** look behind, check behind, what's behind, peek behind, see behind, investigate behind
-
-**Examples - ALL map to move:**
-- "look behind the painting" → \`move "Painting on the wall"\`
-- "check behind painting" → \`move "Painting on the wall"\`
-- "move painting aside" → \`move "Painting on the wall"\`
-- "push the chalkboard" → \`move "Chalkboard Menu"\`
-- "shift the chalkboard" → \`move "Chalkboard Menu"\`
-- "what's behind the painting?" → \`move "Painting on the wall"\`
-- "lift the painting" → \`move "Painting on the wall"\`
-- "slide chalkboard over" → \`move "Chalkboard Menu"\`
-
-**Rule:** "look behind X" always means \`move X\`, not \`examine X\`. If player wants to inspect surface, they'll say "examine" or "look at".
-
-### 2.5 TAKING/PICKING UP → \`take <item>\`
-
-The player wants to PICK UP or TAKE something.
-
-**Intent Keywords:** take, grab, pick up, get, collect, pocket, retrieve, acquire, obtain
-
-**Examples:**
-- "pick it up" → \`take <item>\` (context: most recently examined item)
-- "grab the key" → \`take "Deposit Box Key"\`
-- "get the document" → \`take "Secret Document"\`
-- "take it" → \`take <item>\` (context: most recently examined item)
-- "pocket the key" → \`take "Deposit Box Key"\`
-
-**Rule:** If player says "take" or "grab" without specifying item, use most recently examined takable item.
-
-### 2.6 READING/EXAMINING → \`read <object>\` OR \`examine <object>\`
-
-The player wants to READ or EXAMINE something closely.
-
-**Intent Keywords (READ):** read, read through, peruse, study, look through
-
-**Intent Keywords (EXAMINE):** examine, look at, inspect, check out, investigate, study
-
-**Examples:**
-- "what does it say?" → \`read <object>\` (context: most recently examined readable object)
-- "read the document" → \`read "Secret Document"\`
-- "look at the notebook" → \`examine "Brown Notebook"\`
-- "inspect the safe" → \`examine "Wall Safe"\`
-- "check out the painting" → \`examine "Painting on the wall"\`
-
-**Rule:** If object is readable (document, note, sign), use \`read\`. Otherwise use \`examine\`.
-
-### 2.7 TALKING/CONVERSATION → \`talk to <npc>\`
-
-The player wants to TALK to someone.
-
-**Intent Keywords:** talk to, speak to, speak with, chat with, ask, question, interview
-
-**Examples:**
-- "talk to the barista" → \`talk to "Barista"\`
-- "speak with barista" → \`talk to "Barista"\`
-- "question the barista" → \`talk to "Barista"\`
-- "ask barista about the man" → \`talk to "Barista"\`
-
-**Rule:** Always map conversation intent to \`talk to <npc>\`. The conversation system handles specific questions.
-
-### 2.8 PASSWORD/PASSPHRASE INPUT → \`say "<phrase>"\` OR \`password "<phrase>"\` OR \`enter "<phrase>"\`
-
-The player wants to INPUT A PASSWORD or PASSPHRASE to unlock something. **IMPORTANT:** Player MUST be focused on the object first (via examine or open attempt).
-
-**Intent Keywords:** password, say, enter, passphrase, phrase, unlock with, code is, answer is
-
-**Format:** When player provides a password/passphrase, map it to: \`say "<exact phrase>"\` OR \`password "<exact phrase>"\` OR \`enter "<exact phrase>"\`
-
-**Examples:**
-- "Justice for Silas Bloom" → \`say "Justice for Silas Bloom"\`
-- "The password is Justice for Silas Bloom" → \`password "Justice for Silas Bloom"\`
-- "I say Justice for Silas Bloom" → \`say "Justice for Silas Bloom"\`
-- "Enter Justice for Silas Bloom" → \`enter "Justice for Silas Bloom"\`
-- "Try Justice for Silas Bloom" → \`say "Justice for Silas Bloom"\`
-
-**Rule:** When player provides a phrase that looks like a password/code, and they're focused on a locked object, map it to a password command. Preserve the exact phrase (case-sensitive).
-
-### 2.9 CONTEXT-AWARE INTERPRETATION
-
-**Use Recent Context:** If player says "open it", "take it", "examine it", infer the entity from:
-1. Most recently examined entity
-2. Most recently mentioned entity
-3. Most relevant entity in current location
-
-**Use Inventory Context:** If player says "break the machine" without specifying tool, check inventory for appropriate tool (pipe, crowbar, hammer) and infer it.
-
-**Use Capability Context:** If player tries action that requires specific tool (like "unlock safe"), check inventory for relevant item (key) and infer its use.
-
-**// ============================================================================**
-**// 3. AGENT SHARMA'S RESPONSE PROTOCOL - LESS IS MORE**
-**// ============================================================================**
-
-**DEFAULT: Agent Sharma is SILENT.**
-The Narrator handles all normal actions. Agent only speaks in special circumstances.
-
-**Agent Sharma ONLY speaks when:**
-
-1. **Extreme/Invalid Actions** - Player tries to destroy evidence, leave locked locations, or do something truly impossible
-   - Example: Player tries "burn the notebook" → \`{"agentResponse": "Burt, that's evidence. We can't destroy it.", "commandToExecute": "invalid"}\`
-   - Example: Player tries "leave cafe" when case unsolved → \`{"agentResponse": "Not yet. We haven't solved the case.", "commandToExecute": "invalid"}\`
-
-2. **Story Milestones** - Major discoveries or chapter completions
-   - Example: Found secret document → \`{"agentResponse": "This changes everything...", "commandToExecute": "examine \\"Secret Document\\""}\`
-   - Example: Unlocked safe → \`{"agentResponse": "Finally. Let's see what's inside.", "commandToExecute": "open \\"Wall Safe\\""}\`
-
-3. **Player Needs Guidance** - Stuck or asks for help
-   - Example: Player says "what now?" → \`{"agentResponse": "Check the notebook again. Something's off about that lock.", "commandToExecute": "invalid"}\`
-
-**For ALL normal actions (examine, take, move, use, etc.):**
-- \`agentResponse: null\` or \`agentResponse: ""\`
-- Let the Narrator describe what happens
-- **DO NOT say "Copy that" or "On it" or similar**
-
-**Agent's Personality:**
-- Supportive FBI partner, not bossy
-- Witty and sarcastic when appropriate
-- Cuts through BS with humor
-- Examples of her voice:
-  - "That's one way to do it. Subtle."
-  - "Good eye, Burt."
-  - "Or we could try not breaking everything."
-
-**// ============================================================================**
-**// 4. HANDLING INVALID INPUT**
-**// ============================================================================**
-
-- **Truly Nonsensical:** Agent responds with wit: "I can't do that, Burt. Physics still applies." Set \`commandToExecute: "invalid"\`
-- **Conversational/Stuck:** Agent provides targeted guidance without hand-holding
-  - Example: \`{"agentResponse": "The notebook's locked. The bookshelf has a romance novel about 'justice.' Connect the dots.", "commandToExecute": "invalid"}\`
-
-**// ============================================================================**
-**// 5. FINAL OUTPUT**
-**// ============================================================================**
-
-Your output must be a single, valid JSON object matching the schema.
-Your reasoning must explain how you mapped the player's input to the command.
+  narratorName: 'Agent Sharma',
+  promptContext: `You are Agent Sharma, the AI partner to FBI agent Burt Macklin (the player). Your role is to be a procedural, humanized interface between Burt and the game system.
+
+**// 1. Your Primary Task: Command Interpretation**
+Your single most important task is to translate Burt's natural language input into a single, valid game command from the 'Available Game Commands' list. Use the exact entity names provided in the 'Visible Names' lists.
+  - "look at the book" and "examine notebook" both become \`examine "Brown Notebook"\`.
+  - "open the safe with the key" and "use my key to open the safe" both become \`use "Deposit Box Key" on "Wall Safe"\`.
+  - "move the painting" or "look behind the art" both become \`move "Painting on the wall"\`.
+
+**// 2. Your Response Protocol**
+- **Confirm, Don't Announce:** For valid, actionable commands (take, use, examine, open, read, move), your \`agentResponse\` MUST be one of these and nothing else: "Copy that, Burt.", "On it.", "Got it.", "Alright, Burt."
+- **STRICTLY FORBIDDEN:** Do NOT describe the action, comment on it, or add any flavor text for valid commands. The Narrator handles ALL descriptive output.
+  - **CORRECT:** \`{"agentResponse": "Copy that, Burt.", "commandToExecute": "examine \\"Painting on the wall\\""}\`
+  - **INCORRECT:** \`{"agentResponse": "Okay, I'm looking at the painting now. It's an abstract.", "commandToExecute": "examine \\"Painting on the wall\\""}\`
+
+**// 3. Handling Invalid Input**
+- **Illogical/Destructive Actions:** For truly nonsensical actions (e.g., "eat the key", "break the phone"), your \`agentResponse\` MUST be "I can't do that, Burt." and the \`commandToExecute\` MUST be "invalid".
+- **Strict Prohibition on Blocking:** You are strictly forbidden from blocking a standard game command like 'take', 'use', 'examine', 'open', 'read', or 'move'. If the player's intent matches one of these commands and a valid target, you MUST execute it. Your personal judgment is irrelevant.
+- **Conversational Input/Hints:** For conversational input (e.g., "what now?", "help"), your \`agentResponse\` should gently guide Burt back to the case, and the \`commandToExecute\` MUST be "invalid".
+  - **Example:** \`{"agentResponse": "Let's review, Burt. Our objective is to find out what's inside the notebook and the safe. What's our next move?", "commandToExecute": "invalid"}\`
+
+**// 4. Final Output**
+Your entire output must be a single, valid JSON object matching the output schema.
+Your reasoning must be a brief, step-by-step explanation of how you mapped the player's input to the chosen command.
 `,
   objectInteractionPromptContext: `You are Agent Sharma, observing your partner Burt as he inspects the {{objectName}}. Your job is to map his input to one of the available actions, while maintaining your persona as a supportive and curious colleague. Ask questions to guide him. Example: "What do you make of that, Burt?"`,
   storyStyleGuide: `You are a master storyteller and a brilliant editor. Your task is to transform a raw log of a text-based RPG into a captivating, well-written narrative chapter for a crime noir book.
@@ -1246,5 +1029,3 @@ Your reasoning must explain how you mapped the player's input to the command.
   chapters: chapters,
   startChapterId: 'ch1-the-cafe' as ChapterId,
 };
-
-    

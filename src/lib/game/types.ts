@@ -64,51 +64,28 @@ export type CommandResult = {
 // All state changes must go through these atomic effects processed by a single reducer
 
 export type Effect =
-  // State and flags
-  | { type: 'SET_FLAG'; flag: string; value: boolean }
-  | { type: 'SET_ENTITY_STATE'; entityId: string; patch: Partial<EntityRuntimeState> }
-  | { type: 'SET_STATE_ID'; entityId: string; to: string }
-  | { type: 'INC_COUNTER'; key: string; by?: number }
-
-  // Focus system
-  | { type: 'SET_FOCUS'; focusId: string; focusType: 'object' | 'item' | 'npc'; transitionMessage?: string }
-  | { type: 'CLEAR_FOCUS' }
-
-  // Inventory
-  | { type: 'ADD_ITEM'; itemId: string }
-  | { type: 'REMOVE_ITEM'; itemId: string }
-
-  // World graph
-  | { type: 'REVEAL_ENTITY'; entityId: string }     // shorthand for isVisible:true
-  | { type: 'HIDE_ENTITY'; entityId: string }
-  | { type: 'LINK_ENABLE'; linkId: string }         // optional for switch/door graphs
-  | { type: 'LINK_DISABLE'; linkId: string }
-
-  // Container relationships (NEW)
-  | { type: 'SET_PARENT'; entityId: string; parentId: string }
-  | { type: 'ADD_TO_CONTAINER'; entityId: string; containerId: string }
-  | { type: 'REMOVE_FROM_CONTAINER'; entityId: string; containerId: string }
-  | { type: 'REVEAL_FROM_PARENT'; entityId: string; parentId: string }  // Marks revealedBy and parent
-
-  // Movement
-  | { type: 'MOVE_TO_LOCATION'; locationId: string }
-  | { type: 'TELEPORT'; locationId: string }        // bypass checks
-  | { type: 'MOVE_TO_CELL'; cellId: string }
-  | { type: 'ENTER_PORTAL'; portalId: string }
-
-  // UI/Media
-  | { type: 'SHOW_MESSAGE'; speaker?: 'narrator' | 'agent' | 'system' | string; content: string; imageId?: string; imageUrl?: string; messageType?: Message['type'] }
-
-  // Timers (optional)
-  | { type: 'START_TIMER'; timerId: string; ms: number; effect: Effect }
-  | { type: 'CANCEL_TIMER'; timerId: string }
-
-  // Conversation/Interaction
-  | { type: 'START_CONVERSATION'; npcId: string }
+  | { type: 'ADD_ITEM'; itemId: ItemId }
+  | { type: 'SPAWN_ITEM'; itemId: ItemId; containerId: GameObjectId }
+  | { type: 'REMOVE_ITEM'; itemId: ItemId } // From inventory
+  | { type: 'REMOVE_ITEM_FROM_CONTAINER', itemId: ItemId, containerId: GameObjectId }
+  | { type: 'DESTROY_ITEM'; itemId: ItemId } // From world
+  | { type: 'SET_FLAG'; flag: Flag }
+  | { type: 'REVEAL_OBJECT'; objectId: GameObjectId }
+  | { type: 'SHOW_MESSAGE'; sender: Message['sender']; senderName?: string; content: string; messageType?: Message['type']; imageId?: ItemId | NpcId | GameObjectId }
+  | { type: 'START_CONVERSATION'; npcId: NpcId }
   | { type: 'END_CONVERSATION' }
   | { type: 'START_INTERACTION'; objectId: string }
   | { type: 'END_INTERACTION' }
-  | { type: 'DEMOTE_NPC'; npcId: string };
+  | { type: 'SET_STATE'; targetId: GameObjectId | ItemId, to: string }
+  | { type: 'SET_OBJECT_STATE', objectId: GameObjectId, state: Partial<GameObjectState> }
+  | { type: 'MOVE_TO_CELL', toCellId: CellId }
+  | { type: 'ENTER_PORTAL', portalId: PortalId }
+  | { type: 'TELEPORT_PLAYER', toLocationId: LocationId }
+  | { type: 'DEMOTE_NPC', npcId: NpcId }
+  | { type: 'INCREMENT_ITEM_READ_COUNT', itemId: ItemId }
+  | { type: 'INCREMENT_NPC_INTERACTION', npcId: NpcId }
+  | { type: 'COMPLETE_NPC_TOPIC', npcId: NpcId, topicId: string }
+  | { type: 'SET_STORY', story: Story };
 
 
 export type Story = {
@@ -129,7 +106,7 @@ export type GameObjectState = {
 
 export type ItemState = {
     readCount: number;
-    currentStateId: string;
+    currentStateId?: string;
 }
 
 export type PortalState = {

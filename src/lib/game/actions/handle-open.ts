@@ -1,9 +1,3 @@
-/**
- * handle-open - NEW ARCHITECTURE
- *
- * Handles the "open" action using the new effect-based system.
- * Returns Effect[] instead of mutating state directly.
- */
 
 'use server';
 
@@ -120,61 +114,22 @@ export async function handleOpen(state: PlayerState, targetName: string, game: G
             }
         }
 
-        // 4. Validate action (only if no specific handler fail message was used)
-        const validation = Validator.validate('open', targetObjectId, state, game);
-        if (!validation.valid) {
-            // Return validation reason or fallback message
-            const message = validation.reason || HandlerResolver.getFallbackMessage(targetObject, 'notOpenable');
-            return [{
-                type: 'SHOW_MESSAGE',
-                speaker: 'narrator',
-                content: message
-            }];
-        }
-
-        // 5. No handler or no specific outcome - generic open behavior
-        return [
-            // Set focus on this object
-            {
-                type: 'SET_FOCUS',
-                focusId: targetObjectId,
-                focusType: 'object',
-                transitionMessage: FocusResolver.getTransitionNarration(targetObjectId, 'object', state, game) || undefined
-            },
-            {
-                type: 'SET_ENTITY_STATE',
-                entityId: targetObjectId,
-                patch: { isOpen: true }
-            },
-            {
-                type: 'SHOW_MESSAGE',
-                speaker: 'narrator',
-                content: `You open the ${targetObject.name}.`
-            }
-        ];
+        // Generic fallback if no specific handler
+        const effects = [{ type: 'SET_OBJECT_STATE' as const, objectId: liveObject.gameLogic.id, state: { isOpen: true } }];
+        const result = await processEffects(state, effects, game);
+        const genericOpenMessage = `You open the ${liveObject.gameLogic.name}.`;
+        result.messages.unshift(createMessage('narrator', narratorName, genericOpenMessage));
+        return result;
     }
 
-    // 2. Check if it's a visible item (redirect to read if readable)
-    const visibleItemId = visibleEntities.items.find(id =>
-        matchesName(game.items[id as any], normalizedTargetName)
-    );
-
-    if (visibleItemId) {
-        const item = game.items[visibleItemId as any];
-        if (item?.capabilities?.isReadable) {
-            return await handleRead(state, targetName, game);
+    const itemToOpen = findItemInContext(state, game, normalizedTargetName);
+    if (itemToOpen) {
+        if (itemToOpen.item.capabilities && itemToOpen.item.capabilities.isReadable) {
+            return handleRead(state, targetName, game);
         } else {
-            return [{
-                type: 'SHOW_MESSAGE',
-                speaker: 'narrator',
-                content: `You can't "open" the ${item.name} in that way.`
-            }];
+            return { newState: state, messages: [createMessage('narrator', narratorName, `You can't "open" the ${itemToOpen.item.name} in that way.`)] };
         }
     }
 
-    return [{
-        type: 'SHOW_MESSAGE',
-        speaker: 'system',
-        content: `You don't see a "${targetName}" to open.`
-    }];
+    return { newState: state, messages: [createMessage('system', 'System', `You don't see a "${normalizedTargetName}" to open.`)] };
 }

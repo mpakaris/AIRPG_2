@@ -21,11 +21,17 @@ export async function processEffects(initialState: PlayerState, effects: Effect[
     const narratorName = "Narrator";
 
     for (const effect of effects) {
-        const effectType = (effect as any).type;
-        switch (effectType) {
-            // ================================================================
-            // LEGACY EFFECTS (for backward compatibility during migration)
-            // ================================================================
+        switch (effect.type) {
+            case 'ADD_ITEM':
+                if (!newState.inventory.includes(effect.itemId)) {
+                    newState.inventory.push(effect.itemId);
+                }
+                break;
+            case 'REMOVE_ITEM_FROM_CONTAINER':
+                 if (effect.containerId && newState.objectStates[effect.containerId]?.items) {
+                    newState.objectStates[effect.containerId].items = newState.objectStates[effect.containerId].items!.filter((id: ItemId) => id !== effect.itemId);
+                }
+                break;
             case 'SPAWN_ITEM':
                 // LEGACY: Use ADD_TO_CONTAINER instead
                 const containerId = (effect as any).containerId;
@@ -63,7 +69,52 @@ export async function processEffects(initialState: PlayerState, effects: Effect[
                     };
                 }
                 break;
+            case 'SHOW_MESSAGE':
+                const messageImageId = effect.imageId;
+                const message = createMessage(
+                    'narrator',
+                    narratorName,
+                    effect.content,
+                    effect.messageType,
+                    messageImageId ? { id: messageImageId, game, state: newState, showEvenIfExamined: true } : undefined
+                );
+                messages.push(message);
 
+                 if (messageImageId && !newState.flags.includes(examinedObjectFlag(messageImageId as string))) {
+                     newState.flags.push(examinedObjectFlag(messageImageId as string));
+                 }
+                break;
+            case 'START_CONVERSATION':
+                newState.activeConversationWith = effect.npcId;
+                newState.interactingWithObject = null;
+                break;
+            case 'END_CONVERSATION':
+                 if (newState.activeConversationWith) {
+                    const npc = game.npcs[newState.activeConversationWith];
+                    messages.push(createMessage('system', 'System', `You ended the conversation with ${npc.name}.`));
+                    if (npc.goodbyeMessage) {
+                        messages.push(createMessage(npc.id as any, npc.name, `"${npc.goodbyeMessage}"`));
+                    }
+                    newState.activeConversationWith = null;
+                }
+                break;
+            case 'START_INTERACTION':
+                newState.interactingWithObject = effect.objectId;
+                // Update state if provided
+                if (effect.interactionStateId && newState.interactingWithObject) {
+                    if (!newState.objectStates[newState.interactingWithObject]) {
+                        newState.objectStates[newState.interactingWithObject] = {};
+                    }
+                    newState.objectStates[newState.interactingWithObject].currentStateId = effect.interactionStateId;
+                }
+                break;
+            case 'END_INTERACTION':
+                if (newState.interactingWithObject) {
+                    const object = game.gameObjects[newState.interactingWithObject];
+                    messages.push(createMessage('narrator', narratorName, `You step back from the ${object.name}.`));
+                    newState.interactingWithObject = null;
+                }
+                break;
             case 'SET_STATE':
                 // LEGACY: Use SET_STATE_ID instead
                 const { targetId, to } = effect as any;
@@ -124,33 +175,38 @@ export async function processEffects(initialState: PlayerState, effects: Effect[
                         description: 'Location view',
                         hint: 'wide shot'
                     };
-                } else {
-                    // Use entity-based image resolution
-                    enhancedMessage = createMessage(
-                        speaker as any,
-                        senderName,
-                        effect.content,
-                        effect.messageType,
-                        messageImageId ? { id: messageImageId as any, game, state: newState, showEvenIfExamined: true } : undefined
-                    );
+                 }
+                 break;
+            case 'INCREMENT_ITEM_READ_COUNT':
+                if (!newState.itemStates[effect.itemId]) {
+                    newState.itemStates[effect.itemId] = { readCount: 0 };
                 }
-
-                messages.push(enhancedMessage);
-
-                // Mark entity as examined (for image display logic)
-                if (messageImageId) {
-                    const flag = examinedObjectFlag(messageImageId as string);
-                    if (!newState.flags) newState.flags = {};
-                    if (!newState.flags[flag]) {
-                        newState.flags[flag] = true;
-                    }
+                newState.itemStates[effect.itemId].readCount = (newState.itemStates[effect.itemId].readCount || 0) + 1;
+                break;
+            case 'INCREMENT_NPC_INTERACTION':
+                 if (!newState.npcStates[effect.npcId]) {
+                    // This should not happen if state is initialized correctly
+                    const baseNpc = game.npcs[effect.npcId];
+                    newState.npcStates[effect.npcId] = { 
+                        stage: baseNpc.initialState.stage,
+                        importance: baseNpc.importance,
+                        trust: baseNpc.initialState.trust,
+                        attitude: baseNpc.initialState.attitude,
+                        completedTopics: [],
+                        interactionCount: 0
+                    };
+                 }
+                 newState.npcStates[effect.npcId].interactionCount = (newState.npcStates[effect.npcId].interactionCount || 0) + 1;
+                 break;
+            case 'COMPLETE_NPC_TOPIC':
+                if (newState.npcStates[effect.npcId] && !newState.npcStates[effect.npcId].completedTopics.includes(effect.topicId)) {
+                    newState.npcStates[effect.npcId].completedTopics.push(effect.topicId);
                 }
                 break;
-            }
-
-            // All other effects are handled by GameStateManager
-            default:
-                // No additional processing needed
+            case 'SET_STORY':
+                if (effect.story) {
+                    newState.stories[effect.story.chapterId] = effect.story;
+                }
                 break;
         }
     }

@@ -22,37 +22,8 @@ export async function handleTake(state: PlayerState, targetName: string, game: G
       content: 'You need to specify what to take.'
     }];
   }
-
-  // Helper function for robust name matching
-  const matchesName = (item: any, searchName: string): boolean => {
-    if (!item) return false;
-
-    // Try matching against the item name
-    if (normalizeName(item.name).includes(searchName)) return true;
-
-    // Try matching against alternate names
-    if (item.alternateNames) {
-      const matchesAlt = item.alternateNames.some((altName: string) =>
-        normalizeName(altName).includes(searchName)
-      );
-      if (matchesAlt) return true;
-    }
-
-    // FALLBACK: Try matching against the item ID (for AI mistakes)
-    const itemIdNormalized = normalizeName(item.id);
-    if (itemIdNormalized === searchName || itemIdNormalized.includes(searchName) || searchName.includes(itemIdNormalized)) {
-      return true;
-    }
-
-    // Also try without the prefix and underscores
-    const idWithoutPrefix = item.id.replace(/^item_/, '').replace(/_/g, '').toLowerCase();
-    const searchWithoutPrefix = searchName.replace(/^item_/, '').replace(/_/g, '');
-    if (idWithoutPrefix === searchWithoutPrefix || idWithoutPrefix.includes(searchWithoutPrefix) || searchWithoutPrefix.includes(idWithoutPrefix)) {
-      return true;
-    }
-
-    return false;
-  };
+  
+  const itemInContext = findItemInContext(state, game, normalizedTargetName);
 
   // 1. Find item in visible entities
   const visibleEntities = VisibilityResolver.getVisibleEntities(state, game);
@@ -68,13 +39,10 @@ export async function handleTake(state: PlayerState, targetName: string, game: G
     }];
   }
 
-  const item = game.items[itemId as any];
-  if (!item) {
-    return [{
-      type: 'SHOW_MESSAGE',
-      speaker: 'narrator',
-      content: `You don't see a "${targetName}" here to take.`
-    }];
+  const { item, source } = itemInContext;
+  
+  if (state.inventory.includes(item.id)) {
+    return { newState: state, messages: [createMessage('system', 'System', `You already have the ${item.name}.`)] };
   }
 
   // 2. Check if already in inventory
@@ -86,51 +54,21 @@ export async function handleTake(state: PlayerState, targetName: string, game: G
     }];
   }
 
-  // 3. Check if item is takable
-  if (!item.capabilities?.isTakable) {
-    const handler = HandlerResolver.getEffectiveHandler(item, 'take', state);
-    const failMessage = handler?.fail?.message || `You can't take the ${item.name}.`;
-    return [{
-      type: 'SHOW_MESSAGE',
-      speaker: 'narrator',
-      content: failMessage
-    }];
+  // Define effects based on the take action
+  const takeEffects = [
+    { type: 'ADD_ITEM' as const, itemId: item.id },
+    ...(item.handlers?.onTake?.success?.effects || [])
+  ];
+
+  // If item was found in a container, add an effect to remove it from there
+  if (source && source.type === 'object') {
+    takeEffects.push({ type: 'REMOVE_ITEM_FROM_CONTAINER' as const, itemId: item.id, containerId: source.id });
   }
 
-  // 4. Get onTake handler if exists
-  const handler = HandlerResolver.getEffectiveHandler(item, 'take', state);
-  const successMessage = handler?.success?.message || `You take the ${item.name}.`;
+  const result = await processEffects(state, takeEffects, game);
 
-  // 5. Build effects
-  const effects: Effect[] = [];
-
-  // If item has a parent container, remove it from that container first
-  const itemState = state.world?.[itemId];
-  if (itemState?.parentId) {
-    effects.push({
-      type: 'REMOVE_FROM_CONTAINER',
-      entityId: itemId,
-      containerId: itemState.parentId
-    });
-  }
-
-  effects.push({
-    type: 'ADD_ITEM',
-    itemId: itemId
-  });
-
-  effects.push({
-    type: 'SHOW_MESSAGE',
-    speaker: 'narrator',
-    content: successMessage,
-    messageType: 'image',
-    imageUrl: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761771729/put_in_pocket_s19ume.png'
-  });
-
-  // Add handler effects if present
-  if (handler?.success?.effects) {
-    effects.push(...handler.success.effects);
-  }
-
-  return effects;
+  const successMessage = item.handlers?.onTake?.success?.message || `You take the ${item.name}.`;
+  result.messages.unshift(createMessage('narrator', narratorName, successMessage));
+  
+  return result;
 }

@@ -1,3 +1,4 @@
+
 'use server';
 
 import type { NpcId, Game, PlayerState, CommandResult } from "@/lib/game/types";
@@ -15,13 +16,12 @@ export async function handleTalk(state: PlayerState, npcName: string, game: Game
         .find(n => n?.name && normalizeName(n.name).includes(normalizedNpcName) && location.npcs.includes(n.id));
 
     if (npc) {
-        let newState = { ...state, activeConversationWith: npc.id, interactingWithObject: null };
-        let messages: any[] = [];
+        const effects = [
+            { type: 'START_CONVERSATION' as const, npcId: npc.id },
+            ...(npc.startConversationEffects || [])
+        ];
         
-        const startEffects = npc.startConversationEffects || [];
-        const effectResult = await processEffects(newState, startEffects, game);
-        newState = effectResult.newState!;
-        messages.push(...effectResult.messages);
+        let { newState, messages } = await processEffects(state, effects, game);
 
         messages.unshift(createMessage('system', 'System', `You are now talking to ${npc.name}. Type your message to continue the conversation. To end the conversation, type 'goodbye'.`));
         
@@ -38,10 +38,9 @@ export async function handleTalk(state: PlayerState, npcName: string, game: Game
         );
         messages.push(npcMessage);
 
-        // NEW: flags is now Record<string, boolean> instead of array
-        if (!newState.flags?.[flag]) {
-            if (!newState.flags) newState.flags = {};
-            newState.flags[flag] = true;
+        if (!newState.flags.includes(flag as any)) {
+            const flagEffectResult = await processEffects(newState, [{ type: 'SET_FLAG', flag: flag as any }], game);
+            newState = flagEffectResult.newState;
         }
 
         return { newState, messages };
