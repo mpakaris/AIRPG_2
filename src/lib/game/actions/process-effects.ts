@@ -11,18 +11,10 @@ import { GameStateManager } from '../engine/GameStateManager';
  * with backward compatibility for legacy effect types
  */
 export async function processEffects(initialState: PlayerState, effects: Effect[], game: Game): Promise<CommandResult> {
-    console.log('[processEffects] ========================================');
-    console.log('[processEffects] Received effects:', effects.map(e => e.type));
-    console.log('[processEffects] INITIAL STATE - SD Card isVisible:', initialState.world?.['item_sd_card']?.isVisible);
-    console.log('[processEffects] INITIAL STATE - SD Card taken:', initialState.world?.['item_sd_card']?.taken);
-
     // Use GameStateManager for all standard effects
     const result = GameStateManager.applyAll(effects, initialState, [], game);
     let newState = result.state;
     let messages = result.messages;
-
-    console.log('[processEffects] AFTER applyAll - SD Card isVisible:', newState.world?.['item_sd_card']?.isVisible);
-    console.log('[processEffects] AFTER applyAll - SD Card taken:', newState.world?.['item_sd_card']?.taken);
 
     // Handle legacy/special effects that need custom processing
     const examinedObjectFlag = (id: string) => `examined_${id}`;
@@ -107,17 +99,13 @@ export async function processEffects(initialState: PlayerState, effects: Effect[
                 if (effect.type !== 'SHOW_MESSAGE') break;
 
                 // Remove the message created by GameStateManager (it doesn't have image resolution)
-                messages = messages.filter(m => m.content !== effect.content || m.timestamp !== messages[messages.length - 1]?.timestamp);
+                // Keep only messages that DON'T have the same content as this effect
+                messages = messages.filter(m => m.content !== effect.content);
 
                 const messageImageId = effect.imageId;
                 const messageImageUrl = effect.imageUrl;
                 const speaker = effect.speaker || 'narrator';
-                const senderName = speaker === 'agent' ? 'Agent' : speaker === 'system' ? 'System' : narratorName;
-
-                console.log('[processEffects] SHOW_MESSAGE effect:');
-                console.log('  - messageType:', effect.messageType);
-                console.log('  - imageId:', messageImageId);
-                console.log('  - content length:', effect.content?.length);
+                const senderName = speaker === 'agent' ? game.narratorName || 'Narrator' : speaker === 'system' ? 'System' : narratorName;
 
                 let enhancedMessage: any;
 
@@ -147,9 +135,6 @@ export async function processEffects(initialState: PlayerState, effects: Effect[
                     );
                 }
 
-                console.log('[processEffects] Created message with type:', enhancedMessage.type);
-                console.log('[processEffects] Message has image/video?:', !!enhancedMessage.image || !!enhancedMessage.video);
-
                 messages.push(enhancedMessage);
 
                 // Mark entity as examined (for image display logic)
@@ -169,10 +154,6 @@ export async function processEffects(initialState: PlayerState, effects: Effect[
                 break;
         }
     }
-
-    console.log('[processEffects] FINAL STATE (returning) - SD Card isVisible:', newState.world?.['item_sd_card']?.isVisible);
-    console.log('[processEffects] FINAL STATE (returning) - SD Card taken:', newState.world?.['item_sd_card']?.taken);
-    console.log('[processEffects] ========================================');
 
     return { newState, messages };
 }

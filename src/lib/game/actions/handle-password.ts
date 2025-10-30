@@ -56,7 +56,7 @@ export async function handlePassword(
         // Already unlocked (validation.valid is false when object is not locked)
         return [{
             type: 'SHOW_MESSAGE',
-            speaker: 'agent',
+            speaker: 'narrator',
             content: `No need, Burt. We already unlocked the ${focusedObject.name}.`
         }];
     }

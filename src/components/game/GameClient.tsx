@@ -76,7 +76,7 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initia
     startCommandTransition(async () => {
       try {
         const result = await processCommand(userId, command);
-        
+
         if (result.newState) {
             setPlayerState(result.newState);
         }

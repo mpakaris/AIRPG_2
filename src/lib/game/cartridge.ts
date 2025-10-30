@@ -524,10 +524,10 @@ const items: Record<ItemId, Item> = {
             },
             onRead: {
                 success: {
-                    message: 'You unfold the old newspaper clipping.',
                     effects: [
-                        { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'A newspaper article about Silas Bloom.', messageType: 'article', imageId: 'item_newspaper_article' },
-                        { type: 'SHOW_MESSAGE', sender: 'agent', content: "Wait a second, Burt... the article mentions an Agent Macklin. That can't be a coincidence. Is he related to you? This could be about your own family." },
+                        { type: 'SHOW_MESSAGE', speaker: 'narrator', content: 'Carefully, you unfold the old newspaper clipping. The paper is brittle, yellowed with age, but still legible. The ink has faded to a sepia brown, and you can smell the decades in the fibers—dust, old wood, forgotten time.' },
+                        { type: 'SHOW_MESSAGE', speaker: 'narrator', content: 'A newspaper article about Silas Bloom.', messageType: 'article', imageId: 'item_newspaper_article' },
+                        { type: 'SHOW_MESSAGE', speaker: 'narrator', content: 'Your eyes catch on a name buried in the article: Agent Macklin. FBI. 1940s. A cold realization washes over you—this could be about your grandfather. The case that defined his career... or destroyed it. The notebook wasn\'t just evidence. It was family history.' },
                         { type: 'SET_FLAG', flag: 'notebook_article_read' as Flag },
                         { type: 'SET_FLAG', flag: 'notebook_interaction_complete' as Flag }
                     ]
@@ -538,7 +538,7 @@ const items: Record<ItemId, Item> = {
         media: {
             images: {
                 default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759241463/Screenshot_2025-09-30_at_15.51.35_gyj3d5.png', description: 'A folded newspaper article.', hint: 'folded article' },
-                opened: { url: 'https://the-openbook.com/wp-content/uploads/2023/02/cropped-the-open-book-nieuw.jpg?w=780&h=684', description: 'An unfolded newspaper article with text visible.', hint: 'open article' }
+                opened: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759241463/Screenshot_2025-09-30_at_15.51.35_gyj3d5.png', description: 'An unfolded newspaper article with text visible.', hint: 'open article' }
             }
         },
         design: { 
@@ -559,7 +559,7 @@ const items: Record<ItemId, Item> = {
         media: {
             images: {
                 closed: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761812524/SD_Card_rokilu.png', description: 'A black SD card.', hint: 'sd card' },
-                opened: { url: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759241547/0930_eit8he.mp4', description: 'Video playing from SD card.', hint: 'video' }
+                opened: { url: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759678377/CH_I_completion_jqtyme.mp4', description: 'Video playing from SD card.', hint: 'video' }
             }
         },
         handlers: {
@@ -807,7 +807,7 @@ const npcs: Record<NpcId, NPC> = {
                 effects: [
                     { type: 'ADD_ITEM', itemId: 'item_business_card' as ItemId },
                     { type: 'SET_FLAG', flag: 'has_received_business_card' as Flag },
-                    { type: 'SHOW_MESSAGE', sender: 'narrator', senderName: 'Narrator', content: "The barista slides a business card across the counter. It's been added to your inventory.", messageType: 'image', imageId: 'item_business_card' },
+                    { type: 'SHOW_MESSAGE', speaker: 'narrator', content: "The barista slides a business card across the counter. It's been added to your inventory.", messageType: 'image', imageId: 'item_business_card' },
                     { type: 'END_CONVERSATION' }
                 ]
               } 
@@ -1004,8 +1004,8 @@ export const game: Game = {
   description: "You are Burt Macklin, FBI. A mysterious stranger hands you a worn notebook from the 1940s—the secret case file of a forgotten murder. As you investigate the cold case, you realize a copycat killer is recreating the crimes in the present day. You must solve the past to stop a killer in the present.",
   setting: "Modern-day USA, 2025",
   gameType: 'Limited Open World',
-  narratorName: 'Agent Sharma',
-  promptContext: `You are Agent Sharma, an AI partner to FBI agent Burt Macklin (the player). Your role is to be a procedural, humanized interface between Burt and the game system.
+  narratorName: 'Narrator',
+  promptContext: `You are the Narrator for FBI agent Burt Macklin (the player). Your role is to be a procedural, humanized interface between Burt and the game system.
 
 **// ============================================================================**
 **// 1. YOUR PRIMARY MISSION: INTERPRET PLAYER INTENT**

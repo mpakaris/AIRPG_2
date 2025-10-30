@@ -58,7 +58,7 @@ export async function handleHelp(state: PlayerState, game: Game): Promise<Effect
 
         return [{
             type: 'SHOW_MESSAGE',
-            speaker: 'agent',
+            speaker: 'narrator',
             content: aiResponse.agentResponse
             // Note: Usage tracking would need to be handled separately
         }];
@@ -68,7 +68,7 @@ export async function handleHelp(state: PlayerState, game: Game): Promise<Effect
         // If AI fails, provide the deterministic, pre-written hint
         return [{
             type: 'SHOW_MESSAGE',
-            speaker: 'agent',
+            speaker: 'narrator',
             content: fallbackMessage
         }];
     }

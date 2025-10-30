@@ -147,11 +147,45 @@ const MessageLog: FC<Pick<GameScreenProps, 'messages'>> = ({ messages }) => {
 
                     if (!valid) {
                       if (process.env.NODE_ENV === 'development') {
-                        console.warn('Invalid image URL in message:', message.image);
+                        console.warn('[GameScreen] Invalid image URL:', message.image);
                       }
                       return null;
                     }
 
+                    // Check if this is a video URL (by file extension OR message type)
+                    const isVideoUrl = src.match(/\.(mp4|webm|ogg|mov)$/i) || message.type === 'video';
+
+                    if (isVideoUrl) {
+                      return (
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <button className="mt-2 block w-full cursor-pointer">
+                              <video
+                                src={src}
+                                controls
+                                className="rounded-lg border-2 border-border w-full max-w-md"
+                                preload="metadata"
+                              >
+                                Your browser does not support the video tag.
+                              </video>
+                            </button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-3xl">
+                            <DialogTitle className="sr-only">{message.image.description || 'video'}</DialogTitle>
+                            <video
+                              src={src}
+                              controls
+                              autoPlay
+                              className="mx-auto rounded-lg w-full"
+                            >
+                              Your browser does not support the video tag.
+                            </video>
+                          </DialogContent>
+                        </Dialog>
+                      );
+                    }
+
+                    // Default to image rendering
                     return (
                       <Dialog>
                         <DialogTrigger asChild>

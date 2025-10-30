@@ -97,9 +97,6 @@ export function createMessage(
                     // Try to get image for current state (e.g., 'opened')
                     if (currentStateId && item.media.images[currentStateId]) {
                         image = item.media.images[currentStateId];
-                        console.log('[createMessage] Resolved media for item', id, 'state:', currentStateId);
-                        console.log('[createMessage] Media URL:', image?.url);
-                        console.log('[createMessage] Is video URL?:', image?.url?.match(/\.(mp4|webm|ogg|mov)$/i) ? 'YES' : 'NO');
                     } else {
                         // Fallback to default image
                         image = item.media.images.default || item.media.images[Object.keys(item.media.images)[0]];
@@ -114,7 +111,6 @@ export function createMessage(
             }
         }
     }
-
 
   return {
     id: crypto.randomUUID(),

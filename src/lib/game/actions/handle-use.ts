@@ -86,7 +86,7 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
           // Target is out of focus - show helpful error
           return [{
             type: 'SHOW_MESSAGE',
-            speaker: 'agent',
+            speaker: 'narrator',
             content: FocusResolver.getOutOfFocusMessage('use ' + itemToUse.name + ' on', targetObject.name, state.currentFocusId, game)
           }];
         }
@@ -218,7 +218,8 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
       const item = game.items[itemId];
 
       // Check if there's a SET_ENTITY_STATE effect that changes currentStateId
-      let newStateId = state.world?.[itemId]?.currentStateId || 'default';
+      let newStateId = state.world?.[itemId]?.currentStateId || item?.state?.currentStateId || 'default';
+
       if (outcome.effects) {
         const stateChangeEffect = outcome.effects.find(
           (e: any) => e.type === 'SET_ENTITY_STATE' && e.entityId === itemId && e.patch?.currentStateId
@@ -230,12 +231,6 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
 
       const mediaUrl = item?.media?.images?.[newStateId]?.url;
       const isVideo = mediaUrl?.match(/\.(mp4|webm|ogg|mov)$/i);
-
-      console.log('[handle-use] Video detection for', itemId);
-      console.log('  - newStateId:', newStateId);
-      console.log('  - mediaUrl:', mediaUrl);
-      console.log('  - isVideo:', !!isVideo);
-      console.log('  - messageType will be:', isVideo ? 'video' : 'image');
 
       effects.push({
         type: 'SHOW_MESSAGE',

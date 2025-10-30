@@ -344,10 +344,6 @@ export class GameStateManager {
    * This is the main entry point for command processing
    */
   static applyAll(effects: Effect[], state: PlayerState, messages: Message[] = [], game?: Game): { state: PlayerState, messages: Message[] } {
-    console.log('[GameStateManager.applyAll] ========================================');
-    console.log('[GameStateManager.applyAll] Applying', effects.length, 'effects:', effects.map(e => e.type));
-    console.log('[GameStateManager.applyAll] INPUT STATE - SD Card isVisible:', state.world?.['item_sd_card']?.isVisible);
-    console.log('[GameStateManager.applyAll] INPUT STATE - SD Card taken:', state.world?.['item_sd_card']?.taken);
 
     let currentState = state;
     let currentMessages = messages;
@@ -356,21 +352,15 @@ export class GameStateManager {
     const effectsArray = Array.isArray(effects) ? effects : [];
 
     for (const effect of effectsArray) {
-      console.log('[GameStateManager.applyAll] Processing effect:', effect.type);
       const result = GameStateManager.apply(effect, currentState, currentMessages, game);
       currentState = result.state;
       currentMessages = result.messages;
 
       // Log state after each effect
       if (effect.type === 'SET_ENTITY_STATE' || effect.type === 'REVEAL_FROM_PARENT' || effect.type === 'REVEAL_ENTITY') {
-        console.log('[GameStateManager.applyAll] After', effect.type, '- SD Card isVisible:', currentState.world?.['item_sd_card']?.isVisible);
-        console.log('[GameStateManager.applyAll] After', effect.type, '- SD Card taken:', currentState.world?.['item_sd_card']?.taken);
       }
     }
 
-    console.log('[GameStateManager.applyAll] OUTPUT STATE - SD Card isVisible:', currentState.world?.['item_sd_card']?.isVisible);
-    console.log('[GameStateManager.applyAll] OUTPUT STATE - SD Card taken:', currentState.world?.['item_sd_card']?.taken);
-    console.log('[GameStateManager.applyAll] ========================================');
 
     return { state: currentState, messages: currentMessages };
   }
@@ -497,38 +487,31 @@ export class GameStateManager {
    */
   static isAccessible(state: PlayerState, game: Game, entityId: string): boolean {
     if (entityId === 'item_sd_card') {
-      console.log('[isAccessible] Checking item_sd_card');
     }
 
     // Check if entity is in inventory - always accessible
     if (GameStateManager.isInInventory(state, entityId)) {
-      if (entityId === 'item_sd_card') console.log('[isAccessible] ✅ In inventory');
       return true;
     }
 
     // Entity must be visible
     const entityState = GameStateManager.getEntityState(state, entityId);
     if (entityId === 'item_sd_card') {
-      console.log('[isAccessible] entityState:', entityState);
     }
     if (entityState.isVisible === false) {
-      if (entityId === 'item_sd_card') console.log('[isAccessible] ❌ Not visible');
       return false;
     }
 
     // Check all parents in chain
     const ancestors = GameStateManager.getAncestors(state, entityId);
     if (entityId === 'item_sd_card') {
-      console.log('[isAccessible] ancestors:', ancestors);
     }
     for (const ancestorId of ancestors) {
       if (!GameStateManager.parentGrantsAccess(state, game, ancestorId)) {
-        if (entityId === 'item_sd_card') console.log('[isAccessible] ❌ Parent', ancestorId, 'does not grant access');
         return false;
       }
     }
 
-    if (entityId === 'item_sd_card') console.log('[isAccessible] ✅ Accessible');
     return true;
   }
 
@@ -543,12 +526,9 @@ export class GameStateManager {
   static parentGrantsAccess(state: PlayerState, game: Game, parentId: string): boolean {
     const parentState = GameStateManager.getEntityState(state, parentId);
 
-    console.log('[parentGrantsAccess] Checking parentId:', parentId);
-    console.log('[parentGrantsAccess] parentState:', parentState);
 
     // Parent must be visible
     if (parentState.isVisible === false) {
-      console.log('[parentGrantsAccess] ❌ Parent not visible');
       return false;
     }
 
@@ -559,25 +539,20 @@ export class GameStateManager {
 
     if (!parentEntity) {
       // If parent not found in game data, assume access granted (might be location)
-      console.log('[parentGrantsAccess] ✅ Parent not found in game data, granting access');
       return true;
     }
 
     const caps = parentEntity.capabilities;
-    console.log('[parentGrantsAccess] caps:', caps);
-    console.log('[parentGrantsAccess] has children:', !!parentEntity.children);
 
     // Check accessibility based on capabilities
     if (caps) {
       // Containers must be open
       if (caps.container && parentState.isOpen !== true) {
-        console.log('[parentGrantsAccess] ❌ Container not open');
         return false;
       }
 
       // Lockable entities must be unlocked
       if (caps.lockable && parentState.isLocked === true) {
-        console.log('[parentGrantsAccess] ❌ Entity locked');
         return false;
       }
 
@@ -585,7 +560,6 @@ export class GameStateManager {
       // EXCEPTION: Containers use isOpen check, not isMoved (e.g., notebook is opened, not moved)
       if (caps.movable && !caps.container && parentEntity.children && parentState.isMoved !== true) {
         // Only block if entity has children (reveals things)
-        console.log('[parentGrantsAccess] ❌ Movable entity not moved (has children, isMoved:', parentState.isMoved, ')');
         return false;
       }
 
@@ -597,13 +571,11 @@ export class GameStateManager {
 
         // If it's a breakable container with hidden items, must be broken (unless moved)
         if (parentState.isBroken !== true && !caps.openable && !isMovedAndGrantsAccess) {
-          console.log('[parentGrantsAccess] ❌ Breakable entity not broken (and not moved)');
           return false;
         }
       }
     }
 
-    console.log('[parentGrantsAccess] ✅ Access granted');
     return true;
   }
 

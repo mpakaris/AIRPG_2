@@ -14,7 +14,6 @@ import { HandlerResolver, GameStateManager, VisibilityResolver, Validator, Focus
 import { normalizeName } from "@/lib/utils";
 
 export async function handleRead(state: PlayerState, itemName: string, game: Game): Promise<Effect[]> {
-    const agentName = game.narratorName || "Agent Sharma";
     const normalizedItemName = normalizeName(itemName);
 
     if (!normalizedItemName) {
@@ -120,7 +119,7 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
         if (currentReadCount >= stateMapKeys.length) {
             return [{
                 type: 'SHOW_MESSAGE',
-                speaker: 'agent',
+                speaker: 'narrator',
                 content: `Come on Burt, let's continue. You can spend hours reading this book and not come up with anything useful.`
             }];
         }
@@ -207,8 +206,10 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
                 effects.push(...outcome.effects);
             }
 
-            // Show message
-            if (outcome.message) {
+            // Show message ONLY if there are no SHOW_MESSAGE effects already in outcome.effects
+            // (This prevents duplicate messages when the handler defines its own SHOW_MESSAGE effects)
+            const hasShowMessageInEffects = outcome.effects?.some((e: any) => e.type === 'SHOW_MESSAGE');
+            if (outcome.message && !hasShowMessageInEffects) {
                 effects.push({
                     type: 'SHOW_MESSAGE',
                     speaker: outcome.speaker || 'narrator',

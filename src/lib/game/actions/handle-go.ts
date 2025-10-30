@@ -53,7 +53,7 @@ export async function handleGo(state: PlayerState, targetName: string, game: Gam
         } else {
             return [{
                 type: 'SHOW_MESSAGE',
-                speaker: 'agent',
+                speaker: 'narrator',
                 content: `Wait a second. We still need to ${chapter.goal.toLowerCase()} here in ${currentLocation.name}. We can't move on until we've figured that out.`
             }];
         }

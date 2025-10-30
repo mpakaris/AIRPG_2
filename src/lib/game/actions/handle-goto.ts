@@ -60,7 +60,7 @@ export async function handleGoto(state: PlayerState, targetName: string, game: G
         ];
         return [{
             type: 'SHOW_MESSAGE',
-            speaker: 'agent',
+            speaker: 'narrator',
             content: messages[Math.floor(Math.random() * messages.length)]
         }];
     }

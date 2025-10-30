@@ -50,7 +50,7 @@ export async function handleMove(state: PlayerState, targetName: string, game: G
             // Target is out of focus - show helpful error
             return [{
                 type: 'SHOW_MESSAGE',
-                speaker: 'agent',
+                speaker: 'narrator',
                 content: FocusResolver.getOutOfFocusMessage('move', targetObject.name, state.currentFocusId, game)
             }];
         }

@@ -117,7 +117,7 @@ function checkChapterCompletion(state: PlayerState, game: Game): { isComplete: b
             messages.push(createMessage('narrator', narratorName, chapter.completionVideo, 'video'))
         }
         if(chapter.postChapterMessage) {
-            messages.push(createMessage('agent', narratorName, chapter.postChapterMessage));
+            messages.push(createMessage('narrator', narratorName, chapter.postChapterMessage));
         }
         return { isComplete: true, messages };
     }
@@ -173,9 +173,19 @@ export async function createInitialMessages(state: PlayerState, game: Game): Pro
     const location = game.locations[state.currentLocationId];
     const narratorName = game.narratorName || "Narrator";
     const messages: Message[] = [];
+
     if (chapter.introductionVideo) {
-        messages.push(createMessage('narrator', narratorName, chapter.introductionVideo, 'video'));
+        // Create video message with proper image property
+        const videoMessage = createMessage('narrator', narratorName, chapter.introduction || 'Watch this video to begin your journey...', 'video');
+        // Manually set the image property since this isn't entity-based media
+        videoMessage.image = {
+            url: chapter.introductionVideo,
+            description: 'Introduction video',
+            hint: 'intro'
+        };
+        messages.push(videoMessage);
     }
+
     messages.push(createMessage('narrator', narratorName, location.sceneDescription));
     return messages;
 }
@@ -216,12 +226,8 @@ export async function processCommand(
 
         if (stateSnap.exists()) {
             currentState = stateSnap.data() as PlayerState;
-            console.log('[processCommand] ✅ Loaded state from Firestore');
-            console.log('[processCommand] SD Card isVisible:', currentState.world?.['item_sd_card']?.isVisible);
-            console.log('[processCommand] SD Card taken:', currentState.world?.['item_sd_card']?.taken);
         } else {
             currentState = getInitialState(game);
-            console.log('[processCommand] ⚠️ No saved state found, using initial state');
         }
     
         if (!game.locations[currentState.currentLocationId]) {
@@ -400,8 +406,6 @@ export async function processCommand(
             if (effects.length > 0) {
                 const result = await processEffects(currentState, effects, game);
                 currentState = result.newState;  // FIX: Use newState, not state!
-                console.log('[processCommand] After processEffects - currentState SD Card isVisible:', currentState.world?.['item_sd_card']?.isVisible);
-                console.log('[processCommand] After processEffects - currentState SD Card taken:', currentState.world?.['item_sd_card']?.taken);
                 allMessagesForSession.push(...result.messages);
             }
         }
@@ -429,9 +433,6 @@ export async function processCommand(
             newState: finalState || currentState,
             messages: allMessagesForSession,
         };
-
-        console.log('[processCommand] Before logAndSave - finalResult.newState SD Card isVisible:', finalResult.newState.world?.['item_sd_card']?.isVisible);
-        console.log('[processCommand] Before logAndSave - finalResult.newState SD Card taken:', finalResult.newState.world?.['item_sd_card']?.taken);
 
         await logAndSave(userId, gameId, finalResult.newState, finalResult.messages);
         
@@ -515,11 +516,7 @@ export async function logAndSave(
 
   try {
     if (state) {
-        console.log('[logAndSave] Saving state to Firestore');
-        console.log('[logAndSave] SD Card isVisible:', state.world?.['item_sd_card']?.isVisible);
-        console.log('[logAndSave] SD Card taken:', state.world?.['item_sd_card']?.taken);
         await setDoc(stateRef, state, { merge: false });
-        console.log('[logAndSave] ✅ State saved successfully');
     }
 
     await setDoc(logRef, { messages: messages }, { merge: false });

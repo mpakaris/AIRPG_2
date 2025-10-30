@@ -31,11 +31,6 @@ export class VisibilityResolver {
     npcs: string[];
     portals: string[];
   } {
-    console.log('');
-    console.log('========================================');
-    console.log('[getVisibleEntities] Starting visibility check');
-    console.log('[getVisibleEntities] Current location:', state.currentLocationId);
-    console.log('========================================');
 
     const visibleObjects: string[] = [];
     const visibleItems: string[] = [];
@@ -62,10 +57,6 @@ export class VisibilityResolver {
       const hasBeenRevealed = entityState.isVisible === true;
 
       if (objectId === 'obj_brown_notebook') {
-        console.log('[getVisibleEntities] Found notebook:');
-        console.log('  - isInLocation:', isInLocation);
-        console.log('  - hasBeenRevealed:', hasBeenRevealed);
-        console.log('  - entityState:', entityState);
       }
 
       // Object is potentially visible if in location OR revealed
@@ -74,7 +65,6 @@ export class VisibilityResolver {
         const isAccessible = GameStateManager.isAccessible(state, game, objectId);
 
         if (objectId === 'obj_brown_notebook') {
-          console.log('  - isAccessible:', isAccessible);
         }
 
         if (isAccessible) {
@@ -86,7 +76,6 @@ export class VisibilityResolver {
           visibleItems.push(...children.items);
 
           if (objectId === 'obj_brown_notebook') {
-            console.log('  - Children found:', children);
           }
         }
       }
@@ -132,11 +121,6 @@ export class VisibilityResolver {
         const isAccessible = GameStateManager.isAccessible(state, game, itemId);
 
         if (itemId === 'item_sd_card') {
-          console.log('[VisibilityResolver] SD Card check:');
-          console.log('  - isRevealed:', isRevealed);
-          console.log('  - notTaken:', notTaken);
-          console.log('  - isAccessible:', isAccessible);
-          console.log('  - itemState:', itemState);
         }
 
         if (isRevealed && notTaken && isAccessible) {
@@ -145,14 +129,6 @@ export class VisibilityResolver {
       }
     }
 
-    console.log('========================================');
-    console.log('[getVisibleEntities] FINAL RESULTS:');
-    console.log('  Objects:', visibleObjects);
-    console.log('  Items:', visibleItems);
-    console.log('  NPCs:', visibleNpcs);
-    console.log('  Portals:', visiblePortals);
-    console.log('========================================');
-    console.log('');
 
     return {
       objects: visibleObjects,
@@ -204,40 +180,32 @@ export class VisibilityResolver {
     const accessibleObjects: string[] = [];
     const accessibleItems: string[] = [];
 
-    console.log('[getAccessibleChildren] Checking parentId:', parentId);
 
     // Check if parent grants access
     const grantsAccess = GameStateManager.parentGrantsAccess(state, game, parentId);
-    console.log('[getAccessibleChildren] Parent grants access:', grantsAccess);
     if (!grantsAccess) {
       return { objects: [], items: [] };
     }
 
     // Get direct children from runtime state
     const children = GameStateManager.getChildren(state, parentId);
-    console.log('[getAccessibleChildren] Children found:', children);
 
     for (const childId of children) {
-      console.log('[getAccessibleChildren] Checking child:', childId);
 
       // Check if child is accessible
       const isAccessible = GameStateManager.isAccessible(state, game, childId);
-      console.log('[getAccessibleChildren] Child isAccessible:', isAccessible);
       if (!isAccessible) {
         continue;
       }
 
       // Check if child is visible
       const childState = GameStateManager.getEntityState(state, childId);
-      console.log('[getAccessibleChildren] Child state:', childState);
       if (childState.isVisible === false) {
-        console.log('[getAccessibleChildren] ❌ Child not visible');
         continue;
       }
 
       // Determine if child is object or item
       if (game.gameObjects[childId as any]) {
-        console.log('[getAccessibleChildren] ✅ Child is an object');
         accessibleObjects.push(childId);
 
         // Recursively get children of this object
@@ -245,10 +213,8 @@ export class VisibilityResolver {
         accessibleObjects.push(...grandchildren.objects);
         accessibleItems.push(...grandchildren.items);
       } else if (game.items[childId as any]) {
-        console.log('[getAccessibleChildren] ✅ Child is an item');
         accessibleItems.push(childId);
       } else {
-        console.log('[getAccessibleChildren] ❌ Child not found in game data');
       }
     }
 
