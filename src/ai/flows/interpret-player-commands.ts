@@ -60,7 +60,16 @@ const interpretPlayerCommandPrompt = ai.definePrompt({
   {{/each}}
 
   Based on the player's command, draft a response to the player and determine which command to execute.
-  Ensure the command is from the list of available commands (examine, take, go, use, talk, look, inventory, password).
+  Ensure the command is from the list of available commands (examine, take, go, goto, moveto, shift, use, talk, look, inventory, password).
+
+  **IMPORTANT FOCUS COMMANDS:**
+  - Use 'goto', 'moveto', or 'shift' when the player wants to position themselves at an object/NPC without performing an action (e.g., "go to the bookshelf", "move to the safe", "shift to the chalkboard")
+  - Use 'go' only for moving between locations/rooms
+
+  **IMPORTANT TAKE COMMAND VARIATIONS:**
+  - Use 'take' for any of these player intents: "take", "grab", "pick up", "put in pocket", "add to inventory", "take with me"
+  - Examples: "grab the key" → "take key", "put pipe in pocket" → "take pipe", "pick up the notebook" → "take notebook"
+
   Output should be formatted as valid JSON.
   `, safetySettings: [{
     category: 'HARM_CATEGORY_DANGEROUS_CONTENT',

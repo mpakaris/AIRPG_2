@@ -58,8 +58,9 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
   const isDevEnvironment = currentEnv === 'development';
 
   const [objectivesVisible, setObjectivesVisible] = useState(isDevEnvironment);
-  
-  const isChapterComplete = playerState.flags.includes(chapterCompletionFlag(game.startChapterId));
+
+  // NEW: flags is now Record<string, boolean> instead of array
+  const isChapterComplete = !!playerState.flags?.[chapterCompletionFlag(game.startChapterId)];
   const hasStory = !!playerState.stories?.[game.startChapterId];
 
 
@@ -74,7 +75,8 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
   }, [userId]);
 
   const isObjectiveComplete = (flag: Flag): boolean => {
-    return playerState.flags.includes(flag);
+    // NEW: flags is now Record<string, boolean> instead of array
+    return !!playerState.flags?.[flag];
   }
 
   const handleDevCommand = (chapterId: ChapterId) => {

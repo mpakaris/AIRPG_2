@@ -1,7 +1,7 @@
 
 'use server';
 
-import { 
+import {
   guidePlayerWithNarrator,
   generateStoryFromLogs
 } from '@/ai';
@@ -16,6 +16,7 @@ import { getLiveGameObject } from '@/lib/game/utils/helpers';
 import { handleConversation } from '@/lib/game/actions/handle-conversation';
 import { handleExamine } from '@/lib/game/actions/handle-examine';
 import { handleGo } from '@/lib/game/actions/handle-go';
+import { handleGoto } from '@/lib/game/actions/handle-goto';
 import { handleInventory } from '@/lib/game/actions/handle-inventory';
 import { handleLook } from '@/lib/game/actions/handle-look';
 import { handleMove } from '@/lib/game/actions/handle-move';
@@ -24,10 +25,11 @@ import { handleRead } from '@/lib/game/actions/handle-read';
 import { handleTake } from '@/lib/game/actions/handle-take';
 import { handleTalk } from '@/lib/game/actions/handle-talk';
 import { handleUse } from '@/lib/game/actions/handle-use';
-import { processPassword } from '@/lib/game/actions/process-password';
+import { handlePassword } from '@/lib/game/actions/handle-password';
 import { game as gameCartridge } from '@/lib/game/cartridge';
 import { handleHelp } from '@/lib/game/actions/handle-help';
 import { processEffects } from '@/lib/game/actions/process-effects';
+import { GameStateManager } from '@/lib/game/engine';
 
 
 const GAME_ID = 'blood-on-brass' as GameId;
@@ -100,13 +102,13 @@ export async function getGameData(gameId: GameId): Promise<Game | null> {
 function checkChapterCompletion(state: PlayerState, game: Game): { isComplete: boolean; messages: Message[] } {
     const chapter = game.chapters[game.startChapterId]; // Simplified for now
     const chapterCompletionFlagValue = `chapter_${game.startChapterId}_complete` as Flag;
-    const isAlreadyComplete = state.flags.includes(chapterCompletionFlagValue);
+    const isAlreadyComplete = GameStateManager.hasFlag(state, chapterCompletionFlagValue);
 
     if (isAlreadyComplete || !chapter.objectives || chapter.objectives.length === 0) {
-        return { isComplete: isAlreadyComplete, messages: [] }; 
+        return { isComplete: isAlreadyComplete, messages: [] };
     }
-    
-    const allObjectivesMet = chapter.objectives.every(obj => state.flags.includes(obj.flag));
+
+    const allObjectivesMet = chapter.objectives.every(obj => GameStateManager.hasFlag(state, obj.flag));
 
     if (allObjectivesMet) {
         const messages: Message[] = [];
@@ -115,11 +117,11 @@ function checkChapterCompletion(state: PlayerState, game: Game): { isComplete: b
             messages.push(createMessage('narrator', narratorName, chapter.completionVideo, 'video'))
         }
         if(chapter.postChapterMessage) {
-            messages.push(createMessage('agent', narratorName, chapter.postChapterMessage));
+            messages.push(createMessage('narrator', narratorName, chapter.postChapterMessage));
         }
         return { isComplete: true, messages };
     }
-    
+
     return { isComplete: false, messages: [] };
 }
 
@@ -171,9 +173,19 @@ export async function createInitialMessages(state: PlayerState, game: Game): Pro
     const location = game.locations[state.currentLocationId];
     const narratorName = game.narratorName || "Narrator";
     const messages: Message[] = [];
+
     if (chapter.introductionVideo) {
-        messages.push(createMessage('narrator', narratorName, chapter.introductionVideo, 'video'));
+        // Create video message with proper image property
+        const videoMessage = createMessage('narrator', narratorName, chapter.introduction || 'Watch this video to begin your journey...', 'video');
+        // Manually set the image property since this isn't entity-based media
+        videoMessage.image = {
+            url: chapter.introductionVideo,
+            description: 'Introduction video',
+            hint: 'intro'
+        };
+        messages.push(videoMessage);
     }
+
     messages.push(createMessage('narrator', narratorName, location.sceneDescription));
     return messages;
 }
@@ -211,7 +223,7 @@ export async function processCommand(
 
     try {
         const [stateSnap, logSnap] = await Promise.all([getDoc(stateRef), getDoc(logRef)]);
-        
+
         if (stateSnap.exists()) {
             currentState = stateSnap.data() as PlayerState;
         } else {
@@ -237,26 +249,30 @@ export async function processCommand(
             allMessagesForSession.push(playerMessage);
         }
         
-        let commandHandlerResult: CommandResult | null = null;
+        // NEW ARCHITECTURE: Handlers now return Effect[] instead of CommandResult
+        let effects: Effect[] = [];
 
         // --- Core Command Logic ---
         if (currentState.activeConversationWith) {
-            commandHandlerResult = await handleConversation(currentState, safePlayerInput, game);
+            // handleConversation still uses old architecture (legacy)
+            const legacyResult = await handleConversation(currentState, safePlayerInput, game);
+            allMessagesForSession.push(...legacyResult.messages);
+            currentState = legacyResult.newState;
         } else if (lowerInput === 'restart') {
             return await resetGame(userId);
         } else {
             // Let the AI interpret the command
             const location = game.locations[currentState.currentLocationId];
             const examinedObjectFlag = (id: string) => `examined_${id}`;
-            
-            const locationState: LocationState = currentState.locationStates[currentState.currentLocationId] || { objects: location.objects };
+
+            const locationState: LocationState = currentState.locationStates?.[currentState.currentLocationId] || { objects: location.objects };
             const visibleObjects = locationState.objects.map(id => getLiveGameObject(id, currentState, game)).filter(Boolean) as {gameLogic: GameObject, state: GameObjectState}[];
-            
+
             let visibleEntityNames = visibleObjects.map(obj => obj.gameLogic.name);
             visibleEntityNames.push(...currentState.inventory.map(id => game.items[id]?.name).filter(Boolean));
 
             for (const obj of visibleObjects) {
-                const hasBeenExamined = currentState.flags.includes(examinedObjectFlag(obj.gameLogic.id));
+                const hasBeenExamined = GameStateManager.hasFlag(currentState, examinedObjectFlag(obj.gameLogic.id));
                 if (obj.state.isOpen && hasBeenExamined && obj.state.items) {
                     for (const itemId of obj.state.items) {
                         const item = game.items[itemId];
@@ -266,7 +282,7 @@ export async function processCommand(
                     }
                 }
             }
-            
+
             const visibleNpcNames = location.npcs.map(id => game.npcs[id]?.name).filter(Boolean) as string[];
             visibleEntityNames.push(...visibleNpcNames);
 
@@ -288,90 +304,127 @@ export async function processCommand(
             }
 
             const commandToExecute = aiResponse.commandToExecute.toLowerCase();
-            
+
             const verbMatch = commandToExecute.match(/^(\w+)\s*/);
             const verb = verbMatch ? verbMatch[1] : commandToExecute;
             const restOfCommand = commandToExecute.substring((verbMatch ? verbMatch[0].length : verb.length)).trim();
-            
+
+            // NEW: Route to handlers that return Effect[]
             switch (verb) {
                 case 'examine':
                 case 'look':
                     if (restOfCommand === 'around') {
-                        commandHandlerResult = await handleLook(currentState, game);
+                        // NEW: handleLook returns Effect[]
+                        effects = await handleLook(currentState, game);
                     } else {
-                         commandHandlerResult = await handleExamine(currentState, restOfCommand.replace(/^at\s+/, ''), game);
+                        // NEW: handleExamine returns Effect[]
+                        const examineTarget = restOfCommand.replace(/^at\s+/, '').replace(/"/g, '');
+                        effects = await handleExamine(currentState, examineTarget, game);
                     }
                     break;
                 case 'move':
-                    commandHandlerResult = await handleMove(currentState, restOfCommand, game);
+                    // NEW: handleMove returns Effect[]
+                    effects = await handleMove(currentState, restOfCommand.replace(/"/g, ''), game);
                     break;
                 case 'take':
-                case 'pick': 
-                    const target = restOfCommand.startsWith('up ') ? restOfCommand.substring(3) : restOfCommand;
-                    commandHandlerResult = await handleTake(currentState, target, game);
+                case 'pick':
+                    const targetRaw = restOfCommand.startsWith('up ') ? restOfCommand.substring(3) : restOfCommand;
+                    const target = targetRaw.replace(/"/g, ''); // Strip quotes like we do for read
+                    // NEW: handleTake returns Effect[]
+                    effects = await handleTake(currentState, target, game);
                     break;
                 case 'inventory':
-                     commandHandlerResult = await handleInventory(currentState, game);
+                     // NEW: handleInventory returns Effect[]
+                     effects = await handleInventory(currentState, game);
                      break;
                 case 'help':
                 case 'hint':
-                    commandHandlerResult = await handleHelp(currentState, game);
+                    // NEW: handleHelp returns Effect[]
+                    effects = await handleHelp(currentState, game);
+                    break;
+                case 'go':
+                    // NEW: handleGo returns Effect[]
+                    effects = await handleGo(currentState, restOfCommand, game);
+                    break;
+                case 'goto':
+                case 'moveto':
+                case 'shift':
+                    // NEW: handleGoto changes focus without performing an action
+                    effects = await handleGoto(currentState, restOfCommand, game);
                     break;
                  case 'talk':
-                     commandHandlerResult = await handleTalk(currentState, restOfCommand.replace('to ', ''), game);
+                     // LEGACY: handleTalk uses old architecture (complex NPC state)
+                     const talkResult = await handleTalk(currentState, restOfCommand.replace('to ', ''), game);
+                     allMessagesForSession.push(...talkResult.messages);
+                     currentState = talkResult.newState;
                      break;
                  case 'use':
                     const useOnMatch = restOfCommand.match(/^(.*?)\s+on\s+(.*)$/);
                     if (useOnMatch) {
-                        commandHandlerResult = await handleUse(currentState, useOnMatch[1].trim(), useOnMatch[2].trim(), game);
+                        // NEW: handleUse returns Effect[]
+                        const useItem = useOnMatch[1].trim().replace(/"/g, '');
+                        const useTarget = useOnMatch[2].trim().replace(/"/g, '');
+                        effects = await handleUse(currentState, useItem, useTarget, game);
                     } else {
-                        commandHandlerResult = await handleUse(currentState, restOfCommand, '', game);
+                        effects = await handleUse(currentState, restOfCommand.replace(/"/g, ''), '', game);
                     }
                     break;
                 case 'open':
-                    commandHandlerResult = await handleOpen(currentState, restOfCommand, game);
+                    // NEW: handleOpen returns Effect[]
+                    effects = await handleOpen(currentState, restOfCommand.replace(/"/g, ''), game);
                     break;
                 case 'read':
-                    commandHandlerResult = await handleRead(currentState, restOfCommand.replace(/"/g, ''), game);
+                    // NEW: handleRead returns Effect[]
+                    effects = await handleRead(currentState, restOfCommand.replace(/"/g, ''), game);
                     break;
                 case 'password':
                 case 'say':
                 case 'enter':
-                    commandHandlerResult = await processPassword(currentState, commandToExecute, game);
+                    // NEW: handlePassword returns Effect[] and requires focus
+                    effects = await handlePassword(currentState, commandToExecute, game);
                     break;
                 case 'close':
                 case 'exit':
                     if (currentState.interactingWithObject) {
-                        commandHandlerResult = await processEffects(currentState, [{type: 'END_INTERACTION'}], game);
+                        effects = [{type: 'END_INTERACTION'}];
                     } else if (currentState.activeConversationWith) {
-                        commandHandlerResult = await processEffects(currentState, [{type: 'END_CONVERSATION'}], game);
-                    } else {
-                        commandHandlerResult = { newState: currentState, messages: [] };
+                        effects = [{type: 'END_CONVERSATION'}];
+                    } else if (currentState.currentFocusId) {
+                        // Clear focus - return to room-level view
+                        effects = [{type: 'CLEAR_FOCUS'}];
                     }
                     break;
                 case 'invalid':
-                     commandHandlerResult = { newState: currentState, messages: [] };
+                     // Do nothing
                      break;
                 default:
-                    commandHandlerResult = { newState: currentState, messages: [] }; 
+                    // Do nothing
                     break;
             }
-        }
-        
-        if (commandHandlerResult && commandHandlerResult.messages) {
-            allMessagesForSession.push(...commandHandlerResult.messages);
+
+            // NEW: Apply effects through processEffects (which includes image resolution)
+            if (effects.length > 0) {
+                const result = await processEffects(currentState, effects, game);
+                currentState = result.newState;  // FIX: Use newState, not state!
+                allMessagesForSession.push(...result.messages);
+            }
         }
 
-        let finalState = commandHandlerResult?.newState;
+        let finalState = currentState;
 
         if (finalState) {
             const completion = checkChapterCompletion(finalState, game);
             if (completion.isComplete) {
                 const chapterCompletionFlagValue = `chapter_${game.startChapterId}_complete` as Flag;
-                const isNewlyComplete = !currentState.flags.includes(chapterCompletionFlagValue);
+                const isNewlyComplete = !GameStateManager.hasFlag(currentState, chapterCompletionFlagValue);
                 if (isNewlyComplete) {
-                    finalState.flags = [...finalState.flags, chapterCompletionFlagValue];
-                    allMessagesForSession.push(...completion.messages);
+                    // Use SET_FLAG effect to set completion flag
+                    const completionEffects: Effect[] = [
+                        { type: 'SET_FLAG', flag: chapterCompletionFlagValue, value: true }
+                    ];
+                    const result = GameStateManager.applyAll(completionEffects, finalState, completion.messages);
+                    finalState = result.state;
+                    allMessagesForSession.push(...result.messages);
                 }
             }
         }
@@ -380,7 +433,7 @@ export async function processCommand(
             newState: finalState || currentState,
             messages: allMessagesForSession,
         };
-        
+
         await logAndSave(userId, gameId, finalResult.newState, finalResult.messages);
         
         if (process.env.NEXT_PUBLIC_NODE_ENV === 'development' && playerMessage) {
@@ -465,7 +518,7 @@ export async function logAndSave(
     if (state) {
         await setDoc(stateRef, state, { merge: false });
     }
-    
+
     await setDoc(logRef, { messages: messages }, { merge: false });
 
   } catch (error) {

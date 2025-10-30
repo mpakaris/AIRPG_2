@@ -26,7 +26,8 @@ async function checkDemotion(npc: NPC, state: PlayerState, game: Game): Promise<
     const { onFlagsAll, then } = npc.demoteRules;
     let shouldDemote = false;
 
-    if (onFlagsAll && onFlagsAll.every(flag => state.flags.includes(flag))) {
+    // NEW: flags is now Record<string, boolean> instead of array
+    if (onFlagsAll && onFlagsAll.every(flag => !!state.flags?.[flag])) {
         shouldDemote = true;
     }
 
@@ -75,10 +76,11 @@ async function handleScriptedChat(npc: NPC, state: PlayerState, playerInput: str
         if (once && liveNpcState.completedTopics.includes(topicId)) {
             return false;
         }
-        if (conditions?.requiredFlagsAll && !conditions.requiredFlagsAll.every(flag => state.flags.includes(flag))) {
+        // NEW: flags is now Record<string, boolean> instead of array
+        if (conditions?.requiredFlagsAll && !conditions.requiredFlagsAll.every(flag => !!state.flags?.[flag])) {
             return false;
         }
-        if (conditions?.forbiddenFlagsAny && conditions.forbiddenFlagsAny.some(flag => state.flags.includes(flag))) {
+        if (conditions?.forbiddenFlagsAny && conditions.forbiddenFlagsAny.some(flag => !!state.flags?.[flag])) {
             return false;
         }
         return true;

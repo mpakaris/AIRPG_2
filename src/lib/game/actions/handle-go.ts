@@ -1,80 +1,77 @@
+/**
+ * handle-go - NEW ARCHITECTURE
+ *
+ * Handles moving between locations.
+ * Returns Effect[] instead of mutating state directly.
+ */
+
 'use server';
 
-import type { CommandResult, Game, Location, PlayerState, ChapterId, Flag } from "@/lib/game/types";
-import { createMessage } from "@/lib/utils";
+import type { Game, Location, PlayerState, ChapterId, Flag, Effect } from "@/lib/game/types";
+import { GameStateManager } from "@/lib/game/engine";
 
 const chapterCompletionFlag = (chapterId: ChapterId) => `chapter_${chapterId}_complete` as Flag;
 
-function checkChapterCompletion(state: PlayerState, game: Game): { isComplete: boolean; messages: any[] } {
+function checkChapterCompletion(state: PlayerState, game: Game): boolean {
     const chapter = game.chapters[game.startChapterId];
-    const isAlreadyComplete = state.flags.includes(chapterCompletionFlag(game.startChapterId));
+    const isAlreadyComplete = GameStateManager.hasFlag(state, chapterCompletionFlag(game.startChapterId));
 
     if (isAlreadyComplete || !chapter.objectives || chapter.objectives.length === 0) {
-        return { isComplete: isAlreadyComplete, messages: [] };
+        return isAlreadyComplete;
     }
-    
-    const allObjectivesMet = chapter.objectives.every(obj => state.flags.includes(obj.flag));
 
-    if (allObjectivesMet) {
-        return { isComplete: true, messages: [] };
-    }
-    
-    return { isComplete: false, messages: [] };
+    const allObjectivesMet = chapter.objectives.every(obj => GameStateManager.hasFlag(state, obj.flag));
+    return allObjectivesMet;
 }
 
-
-export async function handleGo(state: PlayerState, targetName: string, game: Game): Promise<CommandResult> {
-    const chapter = game.chapters[game.startChapterId]; // simplified
+export async function handleGo(state: PlayerState, targetName: string, game: Game): Promise<Effect[]> {
+    const chapter = game.chapters[game.startChapterId];
     const currentLocation = game.locations[state.currentLocationId];
     targetName = targetName.toLowerCase();
     const narratorName = game.narratorName || "Narrator";
 
+    // Handle chapter progression
     if (targetName === 'next_chapter') {
-        const completion = checkChapterCompletion(state, game);
-        if (completion.isComplete) {
+        const isComplete = checkChapterCompletion(state, game);
+
+        if (isComplete) {
             const nextChapterId = chapter.nextChapter?.id;
             if (nextChapterId && game.chapters[nextChapterId]) {
                 const nextChapter = game.chapters[nextChapterId];
-                const newState: PlayerState = {
-                    ...state,
-                    // This logic will need to be updated to use the world model
-                    currentLocationId: nextChapter.startLocationId,
-                    activeConversationWith: null,
-                    interactingWithObject: null,
-                };
-                const newLocation = game.locations[newState.currentLocationId];
-                return {
-                    newState,
-                    messages: [
-                        createMessage('system', 'System', `You are now in Chapter: ${nextChapter.title}.`),
-                        createMessage('narrator', narratorName, newLocation.sceneDescription),
-                    ]
-                };
+                const newLocation = game.locations[nextChapter.startLocationId];
+
+                return [
+                    { type: 'MOVE_TO_LOCATION', locationId: nextChapter.startLocationId },
+                    { type: 'END_CONVERSATION' },
+                    { type: 'END_INTERACTION' },
+                    { type: 'SHOW_MESSAGE', speaker: 'system', content: `You are now in Chapter: ${nextChapter.title}.` },
+                    { type: 'SHOW_MESSAGE', speaker: 'narrator', content: newLocation.sceneDescription }
+                ];
             } else {
-                 return { newState: state, messages: [createMessage('system', 'System', `There is no next chapter defined.`)] };
+                return [{ type: 'SHOW_MESSAGE', speaker: 'system', content: 'There is no next chapter defined.' }];
             }
         } else {
-            return { newState: state, messages: [createMessage('agent', narratorName, `Wait a second. We still need to ${chapter.goal.toLowerCase()} here in ${currentLocation.name}. We can't move on until we've figured that out.`)] };
+            return [{
+                type: 'SHOW_MESSAGE',
+                speaker: 'narrator',
+                content: `Wait a second. We still need to ${chapter.goal.toLowerCase()} here in ${currentLocation.name}. We can't move on until we've figured that out.`
+            }];
         }
     }
 
+    // Find target location by name
     let targetLocation: Location | undefined;
     targetLocation = Object.values(game.locations).find(loc => loc.name.toLowerCase() === targetName);
 
-    if (!targetLocation) {
-        // This directional logic will need a major overhaul with the new world model
-    }
-    
     if (targetLocation) {
-        const newState: PlayerState = { ...state, currentLocationId: targetLocation.locationId, activeConversationWith: null, interactingWithObject: null };
-        return {
-            newState,
-            messages: [
-                createMessage('system', 'System', `You go to the ${targetLocation.name}.`),
-                createMessage('narrator', narratorName, targetLocation.sceneDescription)
-            ]
-        };
+        return [
+            { type: 'MOVE_TO_LOCATION', locationId: targetLocation.locationId },
+            { type: 'END_CONVERSATION' },
+            { type: 'END_INTERACTION' },
+            { type: 'SHOW_MESSAGE', speaker: 'system', content: `You go to the ${targetLocation.name}.` },
+            { type: 'SHOW_MESSAGE', speaker: 'narrator', content: targetLocation.sceneDescription }
+        ];
     }
 
-    return { newState: state, messages: [createMessage('system', 'System', `You can't go there.`)] };
+    return [{ type: 'SHOW_MESSAGE', speaker: 'system', content: "You can't go there." }];
 }

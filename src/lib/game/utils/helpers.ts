@@ -5,19 +5,25 @@ import { normalizeName } from '@/lib/utils';
 export function getLiveGameObject(id: GameObjectId, state: PlayerState, game: Game): {gameLogic: GameObject, state: GameObjectState} | null {
     const baseObject = game.gameObjects[id];
     if (!baseObject) return null;
-    
-    const liveState: GameObjectState | undefined = state.objectStates[id];
+
+    // NEW ARCHITECTURE: Read from state.world first, fallback to legacy objectStates
+    const worldState = state.world?.[id];
+    const legacyState: GameObjectState | undefined = state.objectStates?.[id];
+
+    // Prefer world state, fallback to legacy state
+    const liveState = worldState || legacyState;
 
     // Safely build the combined state with fallbacks for every property
     const combinedState: GameObjectState = {
         isLocked: typeof liveState?.isLocked === 'boolean' ? liveState.isLocked : (baseObject.state?.isLocked ?? false),
         isOpen: typeof liveState?.isOpen === 'boolean' ? liveState.isOpen : (baseObject.state?.isOpen ?? false),
         isBroken: typeof liveState?.isBroken === 'boolean' ? liveState.isBroken : (baseObject.state?.isBroken ?? false),
+        isMoved: typeof liveState?.isMoved === 'boolean' ? liveState.isMoved : (baseObject.state?.isMoved ?? false),
         isPoweredOn: typeof liveState?.isPoweredOn === 'boolean' ? liveState.isPoweredOn : (baseObject.state?.isPoweredOn ?? false),
         items: liveState?.items ? [...liveState.items] : (baseObject.inventory?.items ? [...baseObject.inventory.items] : []),
         currentStateId: liveState?.currentStateId || baseObject.state?.currentStateId,
     };
-    
+
     return { gameLogic: baseObject, state: combinedState };
 }
 
@@ -25,9 +31,14 @@ export function getLiveItem(id: ItemId, state: PlayerState, game: Game): { gameL
     const baseItem = game.items[id];
     if (!baseItem) return null;
 
-    const liveState = state.itemStates[id] || {};
+    // NEW ARCHITECTURE: Read from state.world first, fallback to legacy itemStates
+    const worldState = state.world?.[id];
+    const legacyState = state.itemStates?.[id];
     const baseState = baseItem.state || { readCount: 0, currentStateId: 'default' };
-    
+
+    // Prefer world state, fallback to legacy state, then base state
+    const liveState = worldState || legacyState || {};
+
     const combinedState: ItemState = {
         readCount: liveState.readCount ?? baseState.readCount,
         currentStateId: liveState.currentStateId ?? baseState.currentStateId

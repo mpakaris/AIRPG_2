@@ -1,24 +1,42 @@
 
+/**
+ * handle-take - NEW ARCHITECTURE
+ *
+ * Handles taking (picking up) items.
+ * Returns Effect[] instead of mutating state directly.
+ */
+
 'use server';
 
-import type { GameObjectId, Game, PlayerState, CommandResult, ItemId } from "@/lib/game/types";
-import { findItemInContext, getLiveGameObject } from "@/lib/game/utils/helpers";
-import { createMessage } from "@/lib/utils";
-import { processEffects } from "./process-effects";
+import type { Game, PlayerState, Effect } from "@/lib/game/types";
+import { Validator, HandlerResolver, VisibilityResolver } from "@/lib/game/engine";
 import { normalizeName } from "@/lib/utils";
 
-export async function handleTake(state: PlayerState, targetName: string, game: Game): Promise<CommandResult> {
-  const narratorName = "Narrator";
+export async function handleTake(state: PlayerState, targetName: string, game: Game): Promise<Effect[]> {
   const normalizedTargetName = normalizeName(targetName);
-  
+
   if (!normalizedTargetName) {
-      return { newState: state, messages: [createMessage('system', 'System', 'You need to specify what to take.')] };
+    return [{
+      type: 'SHOW_MESSAGE',
+      speaker: 'system',
+      content: 'You need to specify what to take.'
+    }];
   }
   
   const itemInContext = findItemInContext(state, game, normalizedTargetName);
 
-  if (!itemInContext) {
-    return { newState: state, messages: [createMessage('narrator', narratorName, `You don't see a "${targetName}" here to take.`)] };
+  // 1. Find item in visible entities
+  const visibleEntities = VisibilityResolver.getVisibleEntities(state, game);
+  const itemId = visibleEntities.items.find(id =>
+    matchesName(game.items[id as any], normalizedTargetName)
+  );
+
+  if (!itemId) {
+    return [{
+      type: 'SHOW_MESSAGE',
+      speaker: 'narrator',
+      content: `You don't see a "${targetName}" here to take.`
+    }];
   }
 
   const { item, source } = itemInContext;
@@ -27,9 +45,13 @@ export async function handleTake(state: PlayerState, targetName: string, game: G
     return { newState: state, messages: [createMessage('system', 'System', `You already have the ${item.name}.`)] };
   }
 
-  if (!item.capabilities.isTakable) {
-    const failMessage = item.handlers?.onTake?.fail?.message || `You can't take the ${item.name}.`;
-    return { newState: state, messages: [createMessage('narrator', narratorName, failMessage)] };
+  // 2. Check if already in inventory
+  if (state.inventory.includes(itemId as any)) {
+    return [{
+      type: 'SHOW_MESSAGE',
+      speaker: 'system',
+      content: `You already have the ${item.name}.`
+    }];
   }
 
   // Define effects based on the take action

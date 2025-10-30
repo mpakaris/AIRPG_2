@@ -58,7 +58,11 @@ export type CommandResult = {
   messages: Message[];
 };
 
-// --- Effect System ---
+// ============================================================================
+// NEW ARCHITECTURE: Effect System (Atomic Operations)
+// ============================================================================
+// All state changes must go through these atomic effects processed by a single reducer
+
 export type Effect =
   | { type: 'ADD_ITEM'; itemId: ItemId }
   | { type: 'SPAWN_ITEM'; itemId: ItemId; containerId: GameObjectId }
@@ -70,7 +74,7 @@ export type Effect =
   | { type: 'SHOW_MESSAGE'; sender: Message['sender']; senderName?: string; content: string; messageType?: Message['type']; imageId?: ItemId | NpcId | GameObjectId }
   | { type: 'START_CONVERSATION'; npcId: NpcId }
   | { type: 'END_CONVERSATION' }
-  | { type: 'START_INTERACTION'; objectId: GameObjectId, interactionStateId?: string }
+  | { type: 'START_INTERACTION'; objectId: string }
   | { type: 'END_INTERACTION' }
   | { type: 'SET_STATE'; targetId: GameObjectId | ItemId, to: string }
   | { type: 'SET_OBJECT_STATE', objectId: GameObjectId, state: Partial<GameObjectState> }
@@ -130,29 +134,186 @@ export type User = {
     createdAt?: number;
 };
 
+// ============================================================================
+// NEW ARCHITECTURE: EntityRuntimeState
+// ============================================================================
+// Unified runtime state for all entities (objects, items, NPCs, portals)
+
+export type EntityRuntimeState = {
+  // Universal properties
+  isVisible?: boolean;
+  discovered?: boolean;
+  currentStateId?: string;
+  stateTags?: string[];
+
+  // Parent-child relationship tracking (NEW)
+  parentId?: string;  // Entity that contains this entity
+  revealedBy?: string;  // Entity whose action revealed this entity
+  containedEntities?: string[];  // Direct children (items or objects inside)
+  isAccessible?: boolean;  // Can player interact with this entity and its children?
+  accessibilityReason?: 'parent_closed' | 'parent_locked' | 'parent_not_moved' | 'parent_not_broken' | 'not_visible';
+
+  // Object-specific
+  isOpen?: boolean;
+  isLocked?: boolean;
+  isBroken?: boolean;
+  isMoved?: boolean;
+  isPoweredOn?: boolean;
+
+  // Item-specific
+  taken?: boolean;
+  readCount?: number;
+
+  // NPC-specific
+  stage?: 'active' | 'completed' | 'demoted';
+  importance?: 'primary' | 'supporting' | 'ambient';
+  trust?: number;
+  attitude?: 'friendly' | 'neutral' | 'hostile' | 'suspicious';
+  completedTopics?: string[];
+  interactionCount?: number;
+
+  // Container/inventory (LEGACY - use containedEntities instead)
+  items?: string[];
+
+  // Analytics/counters
+  usedCount?: number;
+  examinedCount?: number;
+};
+
+// ============================================================================
+// NEW ARCHITECTURE: PlayerState with unified world state
+// ============================================================================
+
 export type PlayerState = {
   currentGameId: GameId;
   currentChapterId: ChapterId;
   currentLocationId: LocationId; // Can be a cell or a location
   inventory: ItemId[];
-  flags: Flag[];
-  objectStates: Record<GameObjectId, GameObjectState>;
-  locationStates: Record<LocationId, LocationState>;
-  itemStates: Record<ItemId, Partial<ItemState>>;
-  portalStates: Record<PortalId, PortalState>;
-  npcStates: Record<NpcId, NpcState>;
+
+  // Focus System: Track what the player is currently interacting with ("standing at")
+  currentFocusId?: string; // ID of the focused object/item/NPC
+  previousFocusId?: string; // Previous focus for transition messages
+  focusType?: 'object' | 'item' | 'npc'; // Type of focused entity
+
+  // NEW: Flags as Record<string, boolean> for better performance
+  flags: Record<string, boolean>;
+
+  // NEW: Unified world state - authoritative runtime state for every entity
+  world: Record<string, EntityRuntimeState>;
+
+  // Optional analytics
+  counters?: Record<string, number>;
+
+  // Legacy state structures (for backward compatibility during migration)
+  objectStates?: Record<GameObjectId, GameObjectState>;
+  locationStates?: Record<LocationId, LocationState>;
+  itemStates?: Record<ItemId, Partial<ItemState>>;
+  portalStates?: Record<PortalId, PortalState>;
+  npcStates?: Record<NpcId, NpcState>;
+
   stories: Record<ChapterId, Story>;
   activeConversationWith: NpcId | null;
   interactingWithObject: GameObjectId | null;
 };
 
-// --- Standardized Schemas ---
+// ============================================================================
+// NEW ARCHITECTURE: Condition System
+// ============================================================================
 
-export type Condition = {
-  type: 'HAS_ITEM' | 'HAS_FLAG' | 'STATE_MATCH' | 'NO_FLAG';
-  targetId: ItemId | Flag | GameObjectId;
-  expectedValue?: any; // For state matching
+export type Condition =
+  | { type: 'FLAG'; flag: string; value: boolean }
+  | { type: 'STATE'; entityId: string; key: string; equals: any }
+  | { type: 'HAS_ITEM'; itemId?: string; tag?: string }
+  | { type: 'LOCATION_IS'; locationId: string }
+  | { type: 'CHAPTER_IS'; chapterId: string }
+  | { type: 'RANDOM_CHANCE'; p: number }
+  // Legacy support
+  | { type: 'HAS_FLAG'; flag: string }
+  | { type: 'NO_FLAG'; flag: string }
+  | { type: 'STATE_MATCH'; entityId: string; key: string; expectedValue: any };
+
+// ============================================================================
+// NEW ARCHITECTURE: DSL Handler System
+// ============================================================================
+
+export type MediaSet = {
+  imageKey?: string;
+  soundKey?: string;
+  videoUrl?: string;
 };
+
+export type Outcome = {
+  message?: string;
+  speaker?: 'narrator' | 'agent' | 'system';
+  media?: MediaSet;
+  effects?: Effect[];
+};
+
+export type Rule = {
+  conditions?: Condition[];
+  success?: Outcome;
+  fail?: Outcome;
+  fallback?: string; // optional short message if neither applies
+};
+
+export type OnUseWith = {
+  itemId?: string;
+  itemTag?: string;
+  conditions?: Condition[];
+  success?: Outcome;
+  fail?: Outcome;
+};
+
+/**
+ * Handler Taxonomy - See HANDLER_TAXONOMY.md for full documentation
+ *
+ * CORE HANDLERS (Use these):
+ * - onExamine: Visual inspection (outer appearance)
+ * - onOpen: Open lids/drawers/covers
+ * - onMove: Push/slide aside (reveals what's behind)
+ * - onRead: Read text content
+ * - onUse: Use item on object (via OnUseWith array)
+ * - onTake: Pick up item
+ * - onTalk: Start conversation with NPC
+ * - onUnlock: Validate password/code
+ *
+ * DEPRECATED (Don't use):
+ * - onBreak → Use onUse instead
+ * - onRemove → Use onMove instead
+ * - onSearch → Use onExamine instead
+ */
+export type Handlers = {
+  // Core handlers
+  onExamine?: Rule;
+  onMove?: Rule;
+  onOpen?: Rule;
+  onClose?: Rule;
+  onUnlock?: Rule & { unlocksWith?: { itemId?: string; code?: string; phrase?: string; tag?: string } };
+  onUse?: Rule | OnUseWith[];
+  onRead?: Rule;
+  onTake?: Rule;
+  onTalk?: Rule;
+
+  // Legacy/specialized handlers (rarely used)
+  onBreak?: Rule & { requiredItemTag?: string; requiredItemId?: string }; // DEPRECATED: Use onUse instead
+  onSearch?: Rule; // DEPRECATED: Use onExamine instead
+  onInput?: Rule;
+  onEnter?: Rule;
+  onExit?: Rule;
+};
+
+export type StateOverrides = {
+  description?: string;
+  media?: {
+    images?: Record<string, ImageDetails>;
+    sounds?: Record<string, string>;
+  };
+  overrides?: Partial<Handlers>;
+};
+
+// ============================================================================
+// Legacy Handler Types (for backward compatibility)
+// ============================================================================
 
 export type InteractionResult = {
   message: string;
@@ -162,15 +323,16 @@ export type InteractionResult = {
 
 export type Handler = {
   conditions?: Condition[];
-  success: InteractionResult;
-  fail: { message: string, effects?: Effect[] };
+  success: Outcome;  // NEW: Use Outcome to support media property
+  fail?: Outcome;     // NEW: Use Outcome to support media property
+  fallback?: string;  // Fallback message if no success/fail matched
 };
 
 export type ItemHandler = {
   itemId: ItemId;
   conditions?: Condition[];
-  success: InteractionResult;
-  fail: { message: string };
+  success: Outcome;  // NEW: Use Outcome to support media property
+  fail?: Outcome;    // NEW: Use Outcome to support media property
 };
 
 type HandlerOverrides = Partial<{
@@ -180,6 +342,79 @@ type HandlerOverrides = Partial<{
     onOpen: Handler;
     onUnlock: Handler;
 }>
+
+// ============================================================================
+// NEW ARCHITECTURE: Capabilities
+// ============================================================================
+
+export type Capabilities = {
+  // Containers/portals/devices/readables
+  openable?: boolean;
+  lockable?: boolean;
+  breakable?: boolean;
+  container?: boolean;
+  movable?: boolean;
+  searchable?: boolean;
+  inputtable?: boolean;
+  powerable?: boolean;
+  readable?: boolean;
+  usable?: boolean;
+  combinable?: boolean;
+  passage?: boolean;
+  takable?: boolean;
+};
+
+// ============================================================================
+// NEW ARCHITECTURE: Archetype System
+// ============================================================================
+
+export type Archetype = {
+  id: string;
+  name: string;
+  capabilities: Capabilities;
+  stateDefaults: EntityRuntimeState;
+  handlers?: Handlers;
+  media?: {
+    images?: Record<string, ImageDetails>;
+    sounds?: Record<string, string>;
+  };
+};
+
+// ============================================================================
+// NEW ARCHITECTURE: Entity Base (for Cartridge)
+// ============================================================================
+
+export type EntityBase = {
+  id: string;
+  name: string;
+  description?: string;
+  tags?: string[];
+  capabilities?: Capabilities;
+  stateDefaults?: EntityRuntimeState;
+  handlers?: Handlers;
+  stateMap?: Record<string, StateOverrides>;
+  media?: {
+    images?: Record<string, ImageDetails>;
+    sounds?: Record<string, string>;
+  };
+  children?: {
+    objects?: string[];
+    items?: string[];
+  };
+  links?: {
+    type: 'controls' | 'reveals' | 'blocks';
+    targetId: string;
+    params?: any;
+  }[];
+  version?: {
+    schema: string;
+    content: string;
+  };
+};
+
+// ============================================================================
+// Legacy GameObject Type (preserved for backward compatibility)
+// ============================================================================
 
 export type GameObject = {
   id: GameObjectId;
@@ -244,17 +479,20 @@ export type GameObject = {
   };
 
   handlers: {
+    // Core handlers (see HANDLER_TAXONOMY.md)
     onExamine?: Handler & { alternateMessage?: string };
-    onSearch?: Handler;
     onOpen?: Handler;
     onClose?: Handler;
-    onUnlock?: Handler;
-    onInput?: Handler;
-    onUse?: ItemHandler[]; // Can react to multiple items
-    onInsert?: ItemHandler[];
-    onRemove?: ItemHandler[];
     onMove?: Handler;
-    onBreak?: Handler;
+    onUnlock?: Handler;
+    onUse?: ItemHandler[]; // Can react to multiple items
+
+    // Deprecated/specialized handlers
+    onSearch?: Handler; // DEPRECATED: Use onExamine instead
+    onRemove?: ItemHandler[]; // DEPRECATED: Use onMove instead
+    onBreak?: Handler; // DEPRECATED: Use onUse instead
+    onInput?: Handler;
+    onInsert?: ItemHandler[];
     onReset?: Handler;
     onActivate?: Handler;
     onDeactivate?: Handler;
@@ -277,6 +515,11 @@ export type GameObject = {
     notContainer?: string;
     noEffect?: string;
     [key: string]: string | undefined;
+  };
+
+  children?: {
+    objects?: string[];
+    items?: string[];
   };
 
   design: {
@@ -337,7 +580,8 @@ export type Item = {
   };
 
   media?: {
-    image?: ImageDetails;
+    image?: ImageDetails; // Legacy: single image
+    images?: Record<string, ImageDetails>; // NEW: state-based images (e.g., default, opened)
     sounds?: {
       onUse?: string;
       onCombine?: string;
@@ -583,6 +827,10 @@ export type Chapter = {
   objectives?: { flag: Flag, label: string }[];
   hints?: Hint[];
   startLocationId: LocationId; // Can be a cell or a location
+  startingFocus?: {
+    entityId: string;  // ID of the object/item/NPC to focus on initially
+    entityType: 'object' | 'item' | 'npc';
+  };
   introductionVideo?: string;
   completionVideo?: string;
   postChapterMessage?: string;
