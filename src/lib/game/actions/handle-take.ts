@@ -115,14 +115,16 @@ export async function handleTake(state: PlayerState, targetName: string, game: G
   }
 
   effects.push({
-    type: 'SHOW_MESSAGE',
-    speaker: 'narrator',
-    content: successMessage
+    type: 'ADD_ITEM',
+    itemId: itemId
   });
 
   effects.push({
-    type: 'ADD_ITEM',
-    itemId: itemId
+    type: 'SHOW_MESSAGE',
+    speaker: 'narrator',
+    content: successMessage,
+    messageType: 'image',
+    imageUrl: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761771729/put_in_pocket_s19ume.png'
   });
 
   // Add handler effects if present

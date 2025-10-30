@@ -7,6 +7,7 @@
  * 3. VisibilityResolver - Parent-child and visibility logic
  * 4. AIContextBuilder - Filtered state for LLM
  * 5. HandlerResolver - StateMap composition and handler resolution
+ * 6. FocusResolver - Focus-aware entity matching and scoping
  */
 
 export { GameStateManager } from './GameStateManager';
@@ -18,3 +19,5 @@ export { AIContextBuilder } from './AIContextBuilder';
 export type { AIContext, AIEntity } from './AIContextBuilder';
 export { HandlerResolver } from './HandlerResolver';
 export type { EntityWithHandlers } from './HandlerResolver';
+export { FocusResolver } from './FocusResolver';
+export type { EntityMatch } from './FocusResolver';

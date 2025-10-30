@@ -23,7 +23,7 @@ const GuidePlayerWithNarratorInputSchema = z.object({
 export type GuidePlayerWithNarratorInput = z.infer<typeof GuidePlayerWithNarratorInputSchema>;
 
 const GuidePlayerWithNarratorOutputSchema = z.object({
-  agentResponse: z.string().describe("The AI narrator's response to the player, guiding them and providing feedback."),
+  agentResponse: z.string().optional().nullable().describe("Agent Sharma's response. ONLY provide this when: (1) Player attempts extreme/invalid action, (2) Story milestone reached, (3) Player needs guidance. Otherwise: leave empty/null - the Narrator handles normal responses."),
   commandToExecute: z.string().describe('The command that engine should execute based on the player input and game state.'),
   reasoning: z.string().describe("A brief, step-by-step explanation of how you arrived at this command, starting from the player's input."),
 });

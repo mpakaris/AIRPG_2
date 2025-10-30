@@ -16,6 +16,7 @@ import { getLiveGameObject } from '@/lib/game/utils/helpers';
 import { handleConversation } from '@/lib/game/actions/handle-conversation';
 import { handleExamine } from '@/lib/game/actions/handle-examine';
 import { handleGo } from '@/lib/game/actions/handle-go';
+import { handleGoto } from '@/lib/game/actions/handle-goto';
 import { handleInventory } from '@/lib/game/actions/handle-inventory';
 import { handleLook } from '@/lib/game/actions/handle-look';
 import { handleMove } from '@/lib/game/actions/handle-move';
@@ -24,7 +25,7 @@ import { handleRead } from '@/lib/game/actions/handle-read';
 import { handleTake } from '@/lib/game/actions/handle-take';
 import { handleTalk } from '@/lib/game/actions/handle-talk';
 import { handleUse } from '@/lib/game/actions/handle-use';
-import { processPassword } from '@/lib/game/actions/process-password';
+import { handlePassword } from '@/lib/game/actions/handle-password';
 import { game as gameCartridge } from '@/lib/game/cartridge';
 import { handleHelp } from '@/lib/game/actions/handle-help';
 import { processEffects } from '@/lib/game/actions/process-effects';
@@ -216,8 +217,8 @@ export async function processCommand(
         if (stateSnap.exists()) {
             currentState = stateSnap.data() as PlayerState;
             console.log('[processCommand] ✅ Loaded state from Firestore');
-            console.log('[processCommand] Chalkboard isMoved:', currentState.world?.['obj_chalkboard_menu']?.isMoved);
-            console.log('[processCommand] Iron pipe isVisible:', currentState.world?.['item_iron_pipe']?.isVisible);
+            console.log('[processCommand] SD Card isVisible:', currentState.world?.['item_sd_card']?.isVisible);
+            console.log('[processCommand] SD Card taken:', currentState.world?.['item_sd_card']?.taken);
         } else {
             currentState = getInitialState(game);
             console.log('[processCommand] ⚠️ No saved state found, using initial state');
@@ -339,6 +340,12 @@ export async function processCommand(
                     // NEW: handleGo returns Effect[]
                     effects = await handleGo(currentState, restOfCommand, game);
                     break;
+                case 'goto':
+                case 'moveto':
+                case 'shift':
+                    // NEW: handleGoto changes focus without performing an action
+                    effects = await handleGoto(currentState, restOfCommand, game);
+                    break;
                  case 'talk':
                      // LEGACY: handleTalk uses old architecture (complex NPC state)
                      const talkResult = await handleTalk(currentState, restOfCommand.replace('to ', ''), game);
@@ -367,10 +374,8 @@ export async function processCommand(
                 case 'password':
                 case 'say':
                 case 'enter':
-                    // processPassword still uses old architecture (legacy)
-                    const pwResult = await processPassword(currentState, commandToExecute, game);
-                    allMessagesForSession.push(...pwResult.messages);
-                    currentState = pwResult.newState;
+                    // NEW: handlePassword returns Effect[] and requires focus
+                    effects = await handlePassword(currentState, commandToExecute, game);
                     break;
                 case 'close':
                 case 'exit':
@@ -378,6 +383,9 @@ export async function processCommand(
                         effects = [{type: 'END_INTERACTION'}];
                     } else if (currentState.activeConversationWith) {
                         effects = [{type: 'END_CONVERSATION'}];
+                    } else if (currentState.currentFocusId) {
+                        // Clear focus - return to room-level view
+                        effects = [{type: 'CLEAR_FOCUS'}];
                     }
                     break;
                 case 'invalid':
@@ -392,8 +400,8 @@ export async function processCommand(
             if (effects.length > 0) {
                 const result = await processEffects(currentState, effects, game);
                 currentState = result.newState;  // FIX: Use newState, not state!
-                console.log('[processCommand] After processEffects - currentState Chalkboard isMoved:', currentState.world?.['obj_chalkboard_menu']?.isMoved);
-                console.log('[processCommand] After processEffects - currentState Iron pipe isVisible:', currentState.world?.['item_iron_pipe']?.isVisible);
+                console.log('[processCommand] After processEffects - currentState SD Card isVisible:', currentState.world?.['item_sd_card']?.isVisible);
+                console.log('[processCommand] After processEffects - currentState SD Card taken:', currentState.world?.['item_sd_card']?.taken);
                 allMessagesForSession.push(...result.messages);
             }
         }
@@ -422,8 +430,8 @@ export async function processCommand(
             messages: allMessagesForSession,
         };
 
-        console.log('[processCommand] Before logAndSave - finalResult.newState Chalkboard isMoved:', finalResult.newState.world?.['obj_chalkboard_menu']?.isMoved);
-        console.log('[processCommand] Before logAndSave - finalResult.newState Iron pipe isVisible:', finalResult.newState.world?.['item_iron_pipe']?.isVisible);
+        console.log('[processCommand] Before logAndSave - finalResult.newState SD Card isVisible:', finalResult.newState.world?.['item_sd_card']?.isVisible);
+        console.log('[processCommand] Before logAndSave - finalResult.newState SD Card taken:', finalResult.newState.world?.['item_sd_card']?.taken);
 
         await logAndSave(userId, gameId, finalResult.newState, finalResult.messages);
         
@@ -508,8 +516,8 @@ export async function logAndSave(
   try {
     if (state) {
         console.log('[logAndSave] Saving state to Firestore');
-        console.log('[logAndSave] Chalkboard isMoved:', state.world?.['obj_chalkboard_menu']?.isMoved);
-        console.log('[logAndSave] Iron pipe isVisible:', state.world?.['item_iron_pipe']?.isVisible);
+        console.log('[logAndSave] SD Card isVisible:', state.world?.['item_sd_card']?.isVisible);
+        console.log('[logAndSave] SD Card taken:', state.world?.['item_sd_card']?.taken);
         await setDoc(stateRef, state, { merge: false });
         console.log('[logAndSave] ✅ State saved successfully');
     }

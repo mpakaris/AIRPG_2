@@ -230,6 +230,11 @@ export function getInitialState(game: Game): PlayerState {
     // NEW: Counters for analytics
     counters: {},
 
+    // NEW: Focus system - set starting focus from chapter
+    currentFocusId: startChapter.startingFocus?.entityId,
+    previousFocusId: undefined,
+    focusType: startChapter.startingFocus?.entityType,
+
     // Legacy state structures (preserved for backward compatibility)
     objectStates: initialObjectStates,
     locationStates: initialLocationStates,

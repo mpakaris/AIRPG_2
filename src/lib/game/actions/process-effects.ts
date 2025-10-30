@@ -13,16 +13,16 @@ import { GameStateManager } from '../engine/GameStateManager';
 export async function processEffects(initialState: PlayerState, effects: Effect[], game: Game): Promise<CommandResult> {
     console.log('[processEffects] ========================================');
     console.log('[processEffects] Received effects:', effects.map(e => e.type));
-    console.log('[processEffects] INITIAL STATE - Chalkboard isMoved:', initialState.world?.['obj_chalkboard_menu']?.isMoved);
-    console.log('[processEffects] INITIAL STATE - Iron pipe isVisible:', initialState.world?.['item_iron_pipe']?.isVisible);
+    console.log('[processEffects] INITIAL STATE - SD Card isVisible:', initialState.world?.['item_sd_card']?.isVisible);
+    console.log('[processEffects] INITIAL STATE - SD Card taken:', initialState.world?.['item_sd_card']?.taken);
 
     // Use GameStateManager for all standard effects
-    const result = GameStateManager.applyAll(effects, initialState, []);
+    const result = GameStateManager.applyAll(effects, initialState, [], game);
     let newState = result.state;
     let messages = result.messages;
 
-    console.log('[processEffects] AFTER applyAll - Chalkboard isMoved:', newState.world?.['obj_chalkboard_menu']?.isMoved);
-    console.log('[processEffects] AFTER applyAll - Iron pipe isVisible:', newState.world?.['item_iron_pipe']?.isVisible);
+    console.log('[processEffects] AFTER applyAll - SD Card isVisible:', newState.world?.['item_sd_card']?.isVisible);
+    console.log('[processEffects] AFTER applyAll - SD Card taken:', newState.world?.['item_sd_card']?.taken);
 
     // Handle legacy/special effects that need custom processing
     const examinedObjectFlag = (id: string) => `examined_${id}`;
@@ -102,20 +102,53 @@ export async function processEffects(initialState: PlayerState, effects: Effect[
             // ================================================================
             // ENHANCED MESSAGE HANDLING (with image resolution)
             // ================================================================
-            case 'SHOW_MESSAGE':
+            case 'SHOW_MESSAGE': {
+                // Type narrow to SHOW_MESSAGE effect
+                if (effect.type !== 'SHOW_MESSAGE') break;
+
                 // Remove the message created by GameStateManager (it doesn't have image resolution)
                 messages = messages.filter(m => m.content !== effect.content || m.timestamp !== messages[messages.length - 1]?.timestamp);
 
                 const messageImageId = effect.imageId;
+                const messageImageUrl = effect.imageUrl;
                 const speaker = effect.speaker || 'narrator';
                 const senderName = speaker === 'agent' ? 'Agent' : speaker === 'system' ? 'System' : narratorName;
-                const enhancedMessage = createMessage(
-                    speaker as any,
-                    senderName,
-                    effect.content,
-                    effect.messageType,
-                    messageImageId ? { id: messageImageId, game, state: newState, showEvenIfExamined: true } : undefined
-                );
+
+                console.log('[processEffects] SHOW_MESSAGE effect:');
+                console.log('  - messageType:', effect.messageType);
+                console.log('  - imageId:', messageImageId);
+                console.log('  - content length:', effect.content?.length);
+
+                let enhancedMessage: any;
+
+                // If direct imageUrl is provided (e.g., for location wide shots)
+                if (messageImageUrl) {
+                    enhancedMessage = createMessage(
+                        speaker as any,
+                        senderName,
+                        effect.content,
+                        effect.messageType || 'image',
+                        undefined  // No imageDetails needed
+                    );
+                    // Add image directly
+                    enhancedMessage.image = {
+                        url: messageImageUrl,
+                        description: 'Location view',
+                        hint: 'wide shot'
+                    };
+                } else {
+                    // Use entity-based image resolution
+                    enhancedMessage = createMessage(
+                        speaker as any,
+                        senderName,
+                        effect.content,
+                        effect.messageType,
+                        messageImageId ? { id: messageImageId as any, game, state: newState, showEvenIfExamined: true } : undefined
+                    );
+                }
+
+                console.log('[processEffects] Created message with type:', enhancedMessage.type);
+                console.log('[processEffects] Message has image/video?:', !!enhancedMessage.image || !!enhancedMessage.video);
 
                 messages.push(enhancedMessage);
 
@@ -128,6 +161,7 @@ export async function processEffects(initialState: PlayerState, effects: Effect[
                     }
                 }
                 break;
+            }
 
             // All other effects are handled by GameStateManager
             default:
@@ -136,8 +170,8 @@ export async function processEffects(initialState: PlayerState, effects: Effect[
         }
     }
 
-    console.log('[processEffects] FINAL STATE (returning) - Chalkboard isMoved:', newState.world?.['obj_chalkboard_menu']?.isMoved);
-    console.log('[processEffects] FINAL STATE (returning) - Iron pipe isVisible:', newState.world?.['item_iron_pipe']?.isVisible);
+    console.log('[processEffects] FINAL STATE (returning) - SD Card isVisible:', newState.world?.['item_sd_card']?.isVisible);
+    console.log('[processEffects] FINAL STATE (returning) - SD Card taken:', newState.world?.['item_sd_card']?.taken);
     console.log('[processEffects] ========================================');
 
     return { newState, messages };

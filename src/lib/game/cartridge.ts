@@ -9,7 +9,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         name: 'Brown Notebook',
         archetype: 'Container',
         description: 'A very worn, leather-bound notebook rests on a table.',
-        capabilities: { openable: true, lockable: true, breakable: false, movable: true, powerable: false, container: true, readable: false, inputtable: true },
+        capabilities: { openable: true, lockable: true, breakable: false, movable: false, powerable: false, container: true, readable: true, inputtable: true },
         state: { isOpen: false, isLocked: true, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
         inventory: { items: ['item_sd_card', 'item_newspaper_article'] as ItemId[], capacity: 2, allowTags: [], denyTags: [] },
         children: { items: ['item_sd_card', 'item_newspaper_article'] as ItemId[] },
@@ -23,26 +23,37 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         input: { type: 'phrase', validation: 'Justice for Silas Bloom', hint: 'Stuck? Maybe this will help: https://airpg-minigames.vercel.app/games/the-notebook', attempts: null, lockout: null },
         handlers: {
             onExamine: {
-                success: { message: "You examine the worn and old, leather-bound notebook. It seems to be locked tight. Nothing a password phrase wont solve." },
+                success: { message: "The leather notebook sits on the table, its cover soft and worn by decades of use. A brass clasp holds it shut—locked tight. Someone went to the trouble of protecting whatever's inside. You trace the lock with your thumb. Cold metal. No keyhole, just a mechanism waiting for the right phrase." },
                 fail: { message: "" },
-                alternateMessage: "The notebook is open. Inside, you see a small SD card next to a folded newspaper article."
+                alternateMessage: "The notebook lies open, its brass clasp now released. Inside, nestled in the center spread, you find a small SD card—black, modern, completely out of place against the yellowed pages. Next to it, a folded newspaper clipping, brown with age. Someone hid these here deliberately."
             },
             onOpen: {
                 conditions: [{ type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: false }],
                 success: {
-                    message: "The notebook is open. Inside, you see a small SD card next to a folded newspaper article.",
+                    message: "The notebook lies open, its brass clasp unfastened. In the crease between worn pages rests a single black SD card—modern, cold, impossibly out of place amid the faded ink and yellowed paper. Next to it, a folded newspaper clipping, brown with age. These objects don't belong to the same era, yet here they are, hidden together. The notebook's owner made a choice. Archive the past on modern media. Make sure it survived.",
                     effects: [
-                        { type: 'SET_ENTITY_STATE', entityId: 'obj_brown_notebook', patch: { isOpen: true } }
+                        { type: 'SET_ENTITY_STATE', entityId: 'obj_brown_notebook', patch: { isOpen: true, currentStateId: 'unlocked' } }
                     ]
                 },
-                fail: { message: "The lock prevents it from being opened without the right password. Stuck? Maybe this will help: https://airpg-minigames.vercel.app/games/the-notebook" }
+                fail: { message: "The brass clasp refuses to budge. This lock needs a password—a phrase, not a key. Whatever's inside, someone made sure it stayed hidden. Stuck? Maybe this will help: https://airpg-minigames.vercel.app/games/the-notebook" }
+            },
+            onRead: {
+                conditions: [
+                    { type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: false },
+                    { type: 'STATE', entityId: 'obj_brown_notebook', key: 'isOpen', equals: true }
+                ],
+                success: {
+                    message: "The notebook lies open, its brass clasp now released. Inside, nestled in the center spread, you find a small SD card—black, modern, completely out of place against the yellowed pages. Next to it, a folded newspaper clipping, brown with age. Someone hid these here deliberately.",
+                    effects: []
+                },
+                fail: { message: "The brass clasp refuses to budge. This lock needs a password—a phrase, not a key. Whatever's inside, someone made sure it stayed hidden. Stuck? Maybe this will help: https://airpg-minigames.vercel.app/games/the-notebook" }
             },
             onUnlock: {
                 success: {
-                    message: "The notebook unlocks with a soft click. The cover creaks open.",
+                    message: "The brass clasp gives with a soft click. The cover swings open, leather hinges creaking. Inside, pressed between aged pages, two objects reveal themselves: a black SD card—modern, digital, completely anachronistic—and beside it, a folded newspaper clipping, brown with decades. Someone preserved the past in two formats. Paper that survived seventy years. Data that will survive longer. Both hidden here, waiting.",
                     effects: [
                         { type: 'SET_FLAG', flag: 'has_unlocked_notebook', value: true },
-                        { type: 'SET_ENTITY_STATE', entityId: 'obj_brown_notebook', patch: { isLocked: false } },
+                        { type: 'SET_ENTITY_STATE', entityId: 'obj_brown_notebook', patch: { isLocked: false, isOpen: true, currentStateId: 'unlocked' } },
                         { type: 'REVEAL_FROM_PARENT', entityId: 'item_sd_card', parentId: 'obj_brown_notebook' },
                         { type: 'REVEAL_FROM_PARENT', entityId: 'item_newspaper_article', parentId: 'obj_brown_notebook' }
                     ]
@@ -83,21 +94,21 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         },
         handlers: {
             onExamine: {
-                success: { message: "A chalkboard menu stands near the counter. It reads: Today's special is three scones for the price of two. A deal almost as sweet as justice. Something seems to be propped up behind it." },
+                success: { message: "A wooden-framed chalkboard menu stands near the counter, angled against the wall. Today's handwritten special: 'Three scones for the price of two. A deal almost as sweet as justice.' That last word—justice—feels deliberate. Someone's leaving breadcrumbs. You notice the chalkboard isn't flush with the wall. Something's propped up behind it." },
                 fail: { message: "" },
-                alternateMessage: "The menu hasn't changed. The special is still about 'justice'."
+                alternateMessage: "The chalkboard menu sits pushed aside now, its daily special still promising justice. The pipe you found behind it is gone."
             },
             onMove: {
                 conditions: [{ type: 'NO_FLAG', flag: 'has_moved_chalkboard' }],
                 success: {
-                    message: "You move the chalkboard aside and find a heavy iron pipe leaning against the wall behind it.",
+                    message: "The chalkboard scrapes across tile as you shove it aside. Behind it, leaning against the exposed brick like it's been waiting for you, is a heavy iron pipe. Cold steel, solid weight, rust at the joints. The kind of tool that solves problems that don't have keys.",
                     effects: [
                         { type: 'SET_FLAG', flag: 'has_moved_chalkboard', value: true },
                         { type: 'REVEAL_FROM_PARENT', entityId: 'item_iron_pipe', parentId: 'obj_chalkboard_menu' },
                         { type: 'SET_ENTITY_STATE', entityId: 'obj_chalkboard_menu', patch: { currentStateId: 'moved', isMoved: true } }
                     ]
                 },
-                fail: { message: "You shift the chalkboard stand, but there's nothing else behind it." }
+                fail: { message: "You shift the chalkboard stand back and forth, but there's nothing left behind it. You already found what was hidden here." }
             }
         },
         fallbackMessages: { 
@@ -190,21 +201,21 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         },
         handlers: {
             onExamine: {
-                success: { message: "An abstract painting hangs on the wall. Its swirls of color add a touch of modern art to the cafe's cozy atmosphere, but it feels... off. Like it's a bit crooked, or was placed there in a rush. It's signed 'S.B.'" },
+                success: { message: "An abstract painting hangs on the exposed brick wall—swirls of deep blues and violent reds, chaotic but intentional. Modern art in a vintage cafe. The frame sits slightly crooked, like someone hung it in a hurry or moved it recently. Bottom corner: a signature in black paint. 'S.B.' Those initials again." },
                 fail: { message: "" },
-                alternateMessage: "It's the same abstract painting signed 'S.B.'. It definitely seems like it could be moved."
+                alternateMessage: "The abstract painting leans against the wall now, its frame revealing the mounting hook and the safe behind it. 'S.B.'—the signature feels more significant now."
             },
             onMove: {
                 conditions: [{ type: 'NO_FLAG', flag: 'has_moved_painting' }],
                 success: {
-                    message: "You lift the painting off its hook. Just as you suspected, a small wall safe is set into the wall behind it.",
+                    message: "You lift the painting off its hook. It's heavier than it looks—real canvas, solid frame. Behind it, set flush into the brick, is a small steel wall safe. Institutional gray, combination lock gleaming. Someone wanted to hide this. The question is why a cafe has a wall safe in the first place.",
                     effects: [
                         { type: 'SET_FLAG', flag: 'has_moved_painting', value: true },
                         { type: 'REVEAL_FROM_PARENT', entityId: 'obj_wall_safe', parentId: 'obj_painting' },
                         { type: 'SET_ENTITY_STATE', entityId: 'obj_painting', patch: { isMoved: true, currentStateId: 'moved' } }
                     ]
                 },
-                fail: { message: "You lift the painting again, but there's nothing else behind it. Just the safe." }
+                fail: { message: "You adjust the painting, but there's nothing new behind it. The safe is all you're going to find here." }
             }
         },
         fallbackMessages: { 
@@ -235,7 +246,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         },
         handlers: {
             onExamine: {
-                success: { message: "Up close, the safe looks old but very sturdy. It has a single, small keyhole." },
+                success: { message: "The wall safe is small but serious—steel construction, flush mount, professional installation. Cold to the touch. A single brass keyhole sits beneath a reinforced handle. This isn't the kind of safe you find in residential buildings. Someone needed secure storage, and they needed it hidden behind a painting. The lock is pristine, well-maintained." },
                 fail: { message: "" }
             },
             onUse: [
@@ -243,14 +254,15 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                     itemId: 'item_safe_key' as ItemId,
                     conditions: [{ type: 'NO_FLAG', flag: 'safe_is_unlocked' }],
                     success: {
-                        message: "The brass key from the coffee machine fits perfectly into the safe's lock. You turn it, and the safe door swings open with a satisfying clunk. Inside, there's a single, thick file marked 'CONFIDENTIAL'.",
+                        message: "The brass key slides into the lock like it was made for it—because it was. One smooth turn, and the internal mechanism gives with a heavy clunk. The door swings open on well-oiled hinges. Inside, mounted in a document sleeve, is a thick manila file folder. Red letters stamped across the cover: CONFIDENTIAL. This is what someone was hiding.",
                         effects: [
                             { type: 'SET_FLAG', flag: 'safe_is_unlocked', value: true },
                             { type: 'SET_ENTITY_STATE', entityId: 'obj_wall_safe', patch: { isLocked: false, isOpen: true, currentStateId: 'unlocked' } },
-                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_secret_document', parentId: 'obj_wall_safe' }
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_secret_document', parentId: 'obj_wall_safe' },
+                            { type: 'REMOVE_ITEM', itemId: 'item_safe_key' }
                         ]
                     },
-                    fail: { message: "The safe is already unlocked. No need to use the key again." }
+                    fail: { message: "The safe is already unlocked. The key served its purpose." }
                 }
             ]
         },
@@ -305,11 +317,11 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         },
         handlers: {
             onExamine: {
-                success: { message: "The barista polishes it lovingly. Up close, you notice a small service compartment on the side seems to be stuck or jammed shut. It looks fragile." },
+                success: { message: "It's a high-end Italian espresso machine—all chrome and polished steel, expensive enough to be someone's pride and joy. The barista treats it like a vintage car. But up close, you notice something off: a small service panel on the right side, slightly warped. The screws are stripped, like someone forced it closed in a hurry. The panel rattles when you touch it. It wouldn't take much to break it open." },
                 fail: { message: "" }
             },
             onMove: {
-                success: { message: "The machine is bolted to the counter and far too heavy to move." },
+                success: { message: "The machine is bolted directly to the counter—commercial installation, not going anywhere. Besides, it weighs more than you'd want to lift." },
                 fail: { message: "" }
             },
             onUse: [
@@ -317,15 +329,16 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                     itemId: 'item_iron_pipe' as ItemId,
                     conditions: [{ type: 'NO_FLAG', flag: 'machine_is_broken' }],
                     success: {
-                        message: "With a sharp crack, the iron pipe shatters the side panel of the coffee machine. A small, brass key falls out from the broken compartment and clatters to the floor.",
+                        message: "You bring the iron pipe down on the warped service panel. Sharp crack—plastic and metal shatter under the impact. The panel splits open, revealing the internal cavity. Something small and brass tumbles out, bouncing once on the counter before settling. A key. Someone hid a key inside the coffee machine, and they didn't want it found the easy way.",
                         effects: [
                             { type: 'SET_FLAG', flag: 'machine_is_broken', value: true },
                             { type: 'SET_ENTITY_STATE', entityId: 'obj_coffee_machine', patch: { isBroken: true, isOpen: true, currentStateId: 'broken' } },
                             { type: 'REMOVE_FROM_CONTAINER', entityId: 'item_safe_key', containerId: 'obj_coffee_machine' },
-                            { type: 'REVEAL_ENTITY', entityId: 'item_safe_key' }
+                            { type: 'REVEAL_ENTITY', entityId: 'item_safe_key' },
+                            { type: 'REMOVE_ITEM', itemId: 'item_iron_pipe' }
                         ]
                     },
-                    fail: { message: "You've already smashed the coffee machine. Doing it again would just be overkill." }
+                    fail: { message: "The coffee machine is already broken open. One hit was enough." }
                 }
             ]
         },
@@ -381,7 +394,7 @@ const items: Record<ItemId, Item> = {
         alternateNames: ['iron pipe', 'pipe', 'heavy pipe', 'metal pipe'],
         archetype: 'Tool',
         description: 'A heavy iron pipe. Iron pipes come in handy to open or break things.',
-        capabilities: { isTakable: true, isReadable: false, isUsable: true, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+        capabilities: { isTakable: true, isReadable: false, isUsable: true, isCombinable: false, isConsumable: true, isScannable: false, isAnalyzable: false, isPhotographable: false },
         media: {
             image: {
                 url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761261134/iron_pipe_bpcofa.png',
@@ -391,7 +404,13 @@ const items: Record<ItemId, Item> = {
         },
         handlers: {
             onTake: {
-                success: { message: "You take the Iron Pipe. It feels heavy and solid in your hand." },
+                success: {
+                    message: "You take the Iron Pipe. It feels heavy and solid in your hand.",
+                    effects: [
+                        { type: 'ADD_ITEM', itemId: 'item_iron_pipe' },
+                        { type: 'SET_ENTITY_STATE', entityId: 'item_iron_pipe', patch: { taken: true } }
+                    ]
+                },
                 fail: { message: "" }
             },
             onExamine: {
@@ -412,7 +431,7 @@ const items: Record<ItemId, Item> = {
         alternateNames: ['safe key', 'key', 'small key', 'ornate key'],
         archetype: 'Key',
         description: 'A small, ornate brass key. It looks like it might fit the wall safe behind the painting.',
-        capabilities: { isTakable: true, isReadable: true, isUsable: true, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+        capabilities: { isTakable: true, isReadable: true, isUsable: true, isCombinable: false, isConsumable: true, isScannable: false, isAnalyzable: false, isPhotographable: false },
         media: {
             image: {
                 url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761211151/deposit_box_key_f5g2k2.png',
@@ -422,7 +441,13 @@ const items: Record<ItemId, Item> = {
         },
         handlers: {
             onTake: {
-                success: { message: "You pick up the small brass key and put it in your pocket." },
+                success: {
+                    message: "You pick up the small brass key and put it in your pocket.",
+                    effects: [
+                        { type: 'ADD_ITEM', itemId: 'item_safe_key' },
+                        { type: 'SET_ENTITY_STATE', entityId: 'item_safe_key', patch: { taken: true } }
+                    ]
+                },
                 fail: { message: "You can't take that right now." }
             },
             onRead: {
@@ -451,7 +476,13 @@ const items: Record<ItemId, Item> = {
         capabilities: { isTakable: true, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         handlers: {
             onTake: {
-                success: { message: "You pick up the business card.", effects: [] },
+                success: {
+                    message: "You pick up the business card.",
+                    effects: [
+                        { type: 'ADD_ITEM', itemId: 'item_business_card' },
+                        { type: 'SET_ENTITY_STATE', entityId: 'item_business_card', patch: { taken: true } }
+                    ]
+                },
                 fail: { message: "You can't take that right now." }
             },
             onRead: {
@@ -482,7 +513,13 @@ const items: Record<ItemId, Item> = {
         capabilities: { isTakable: true, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         handlers: {
             onTake: {
-                success: { message: 'You take the Newspaper Article. You can "read Article" to find out what it is about.', effects: [] },
+                success: {
+                    message: 'You take the Newspaper Article. You can "read Article" to find out what it is about.',
+                    effects: [
+                        { type: 'ADD_ITEM', itemId: 'item_newspaper_article' },
+                        { type: 'SET_ENTITY_STATE', entityId: 'item_newspaper_article', patch: { taken: true } }
+                    ]
+                },
                 fail: { message: "You can't take that right now." }
             },
             onRead: {
@@ -518,29 +555,44 @@ const items: Record<ItemId, Item> = {
         description: 'A small, modern SD card, looking strangely out of place in the old notebook. It probably fits in your phone.',
         alternateDescription: 'You can "use SD Card" to see what\'s on it.',
         capabilities: { isTakable: true, isReadable: true, isUsable: true, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+        state: { currentStateId: 'closed' },
+        media: {
+            images: {
+                closed: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761812524/SD_Card_rokilu.png', description: 'A black SD card.', hint: 'sd card' },
+                opened: { url: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759241547/0930_eit8he.mp4', description: 'Video playing from SD card.', hint: 'video' }
+            }
+        },
         handlers: {
             onTake: {
-                success: { message: 'You take the SD Card.', effects: [] },
+                success: {
+                    message: 'You take the SD Card.',
+                    effects: [
+                        { type: 'ADD_ITEM', itemId: 'item_sd_card' },
+                        { type: 'SET_ENTITY_STATE', entityId: 'item_sd_card', patch: { taken: true } }
+                    ]
+                },
                 fail: { message: "You can't take that right now." }
             },
             onRead: {
-                success: { message: "It's a standard SD card. You'll need to 'use' it to see what's on it.", effects: [] },
+                success: { message: "It's a standard SD card. Any standard smart device could handle it without issue. \n\nYou'll need to 'use' it to see what's on it.", effects: [] },
+                fail: { message: "" }
+            },
+            onExamine: {
+                success: { message: "A small black SD card, modern and sleek - Any modern digital device would recognize it instantly. Someone stored something important on this.", effects: [] },
                 fail: { message: "" }
             },
             onUse: {
                  success: {
-                    message: "You insert the SD card into your phone and a video file opens.",
+                    message: "You slide the SD card into your phone. The screen flickers. A video file loads—grainy, decades old, but the audio is crystal clear. Music fills the cafe. A saxophone, smooth and melancholic, playing a tune that feels like it's been waiting seventy years to be heard again.\n\nSilas Bloom. Talented musician. And that song for Rose... they were in love. You can hear it in every note.\n\nThe video ends leaving you behind with more questions than answers. Your thoughts are a hyper-speed train running through the stations without stop. As you still try to grasp the meaning of all this, you notice the folded newspaper article still resting in the notebook, waiting to be examined.",
                     effects: [
-                        { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759241547/0930_eit8he.mov', messageType: 'video'},
-                        { type: 'SHOW_MESSAGE', sender: 'agent', content: "Silas Bloom... I've never heard that name before. Talented musician, if you ask me. And that song for Rose ... sounds like they were deeply in love." },
-                        { type: 'SHOW_MESSAGE', sender: 'narrator', content: 'Beside the SD card, you see a folded newspaper article.' },
+                        { type: 'SET_ENTITY_STATE', entityId: 'item_sd_card', patch: { currentStateId: 'opened' } },
                         { type: 'SET_FLAG', flag: 'notebook_video_watched' as Flag }
                     ]
                 },
                 fail: { message: "You can't use the SD card right now." }
             }
         },
-        design: { 
+        design: {
             authorNotes: "Contains the video clue about Silas Bloom.",
             tags: ['sd card', 'card']
         },
@@ -677,12 +729,18 @@ const items: Record<ItemId, Item> = {
         media: {
             images: {
                 default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761263220/Confidential_File_qegnr4.png', description: 'A confidential document folder.', hint: 'closed document' },
-                opened: { url: 'https://the-openbook.com/wp-content/uploads/2023/02/cropped-the-open-book-nieuw.jpg?w=780&h=684', description: 'An open document with text visible.', hint: 'open document' }
+                opened: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761773132/Screenshot_2025-10-29_at_22.24.23_w9e7vd.png', description: 'An open document with text visible.', hint: 'open document' }
             }
         },
         handlers: {
             onTake: {
-                success: { message: "You take the confidential file from the safe." },
+                success: {
+                    message: "You take the confidential file from the safe.",
+                    effects: [
+                        { type: 'ADD_ITEM', itemId: 'item_secret_document' },
+                        { type: 'SET_ENTITY_STATE', entityId: 'item_secret_document', patch: { taken: true } }
+                    ]
+                },
                 fail: { message: "" }
             },
             onRead: {
@@ -900,6 +958,10 @@ const chapters: Record<ChapterId, Chapter> = {
         id: 'ch1-the-cafe' as ChapterId,
         title: 'A Blast from the Past',
         goal: "Find out what's inside the notebook and the safe.",
+        startingFocus: {
+            entityId: 'obj_brown_notebook',
+            entityType: 'object'
+        },
         introductionVideo: 'https://res.cloudinary.com/dg912bwcc/video/upload/f_mp4/v1759670681/CH_I_Intro_ccy0og.mp4',
         completionVideo: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759678377/CH_I_completion_jqtyme.mp4',
         postChapterMessage: "Looks like we've got everything from this place. I'm thinking our next stop should be the jazz club mentioned in the article.",
@@ -997,7 +1059,24 @@ The player wants to OPEN or UNLOCK something. These phrases ALL mean the same th
 
 **Rule:** If object requires a key/code and player has it, use \`use <key> on <object>\`. If object is just openable (no lock), use \`open <object>\`.
 
-### 2.3 MOVEMENT/INSPECTION ACTIONS → \`move <object>\` OR \`examine <object>\`
+### 2.3 STANDALONE USE ACTIONS → \`use <item>\`
+
+The player wants to USE an item by itself (not on a target). These items have their own functionality.
+
+**Intent Keywords:** use, activate, play, insert, check, try, put in
+
+**Examples - Standalone use:**
+- "use SD card" → \`use "SD Card"\` (the phone is implicit - narration will say "you insert it into your phone")
+- "use phone" → \`use "Phone"\`
+- "play SD card" → \`use "SD Card"\`
+- "check SD card" → \`use "SD Card"\` (if player means "see contents")
+- "activate phone" → \`use "Phone"\`
+
+**Rule:** If item has standalone functionality (SD cards, phones, consumables), map to \`use <item>\` without a target. Do NOT add the focused object as a target unless the player explicitly mentions it.
+
+**IMPORTANT:** When player says "use X", check if X is a usable item. If yes, use \`use "X"\` (no target). Do NOT automatically add the focused object as a target.
+
+### 2.4 MOVEMENT/INSPECTION ACTIONS → \`move <object>\` OR \`examine <object>\`
 
 The player wants to MOVE something or CHECK BEHIND it. These phrases ALL mean the same thing:
 
@@ -1017,7 +1096,7 @@ The player wants to MOVE something or CHECK BEHIND it. These phrases ALL mean th
 
 **Rule:** "look behind X" always means \`move X\`, not \`examine X\`. If player wants to inspect surface, they'll say "examine" or "look at".
 
-### 2.4 TAKING/PICKING UP → \`take <item>\`
+### 2.5 TAKING/PICKING UP → \`take <item>\`
 
 The player wants to PICK UP or TAKE something.
 
@@ -1032,7 +1111,7 @@ The player wants to PICK UP or TAKE something.
 
 **Rule:** If player says "take" or "grab" without specifying item, use most recently examined takable item.
 
-### 2.5 READING/EXAMINING → \`read <object>\` OR \`examine <object>\`
+### 2.6 READING/EXAMINING → \`read <object>\` OR \`examine <object>\`
 
 The player wants to READ or EXAMINE something closely.
 
@@ -1049,7 +1128,7 @@ The player wants to READ or EXAMINE something closely.
 
 **Rule:** If object is readable (document, note, sign), use \`read\`. Otherwise use \`examine\`.
 
-### 2.6 TALKING/CONVERSATION → \`talk to <npc>\`
+### 2.7 TALKING/CONVERSATION → \`talk to <npc>\`
 
 The player wants to TALK to someone.
 
@@ -1063,7 +1142,24 @@ The player wants to TALK to someone.
 
 **Rule:** Always map conversation intent to \`talk to <npc>\`. The conversation system handles specific questions.
 
-### 2.7 CONTEXT-AWARE INTERPRETATION
+### 2.8 PASSWORD/PASSPHRASE INPUT → \`say "<phrase>"\` OR \`password "<phrase>"\` OR \`enter "<phrase>"\`
+
+The player wants to INPUT A PASSWORD or PASSPHRASE to unlock something. **IMPORTANT:** Player MUST be focused on the object first (via examine or open attempt).
+
+**Intent Keywords:** password, say, enter, passphrase, phrase, unlock with, code is, answer is
+
+**Format:** When player provides a password/passphrase, map it to: \`say "<exact phrase>"\` OR \`password "<exact phrase>"\` OR \`enter "<exact phrase>"\`
+
+**Examples:**
+- "Justice for Silas Bloom" → \`say "Justice for Silas Bloom"\`
+- "The password is Justice for Silas Bloom" → \`password "Justice for Silas Bloom"\`
+- "I say Justice for Silas Bloom" → \`say "Justice for Silas Bloom"\`
+- "Enter Justice for Silas Bloom" → \`enter "Justice for Silas Bloom"\`
+- "Try Justice for Silas Bloom" → \`say "Justice for Silas Bloom"\`
+
+**Rule:** When player provides a phrase that looks like a password/code, and they're focused on a locked object, map it to a password command. Preserve the exact phrase (case-sensitive).
+
+### 2.9 CONTEXT-AWARE INTERPRETATION
 
 **Use Recent Context:** If player says "open it", "take it", "examine it", infer the entity from:
 1. Most recently examined entity
@@ -1075,21 +1171,46 @@ The player wants to TALK to someone.
 **Use Capability Context:** If player tries action that requires specific tool (like "unlock safe"), check inventory for relevant item (key) and infer its use.
 
 **// ============================================================================**
-**// 3. YOUR RESPONSE PROTOCOL**
+**// 3. AGENT SHARMA'S RESPONSE PROTOCOL - LESS IS MORE**
 **// ============================================================================**
 
-- **If command is valid and actionable:** Your \`agentResponse\` MUST be one of these ONLY: "Copy that, Burt.", "On it.", "Got it.", "Alright, Burt."
-- **STRICTLY FORBIDDEN:** Do NOT describe the action or add flavor text. The Narrator handles that.
-  - **CORRECT:** \`{"agentResponse": "Copy that, Burt.", "commandToExecute": "use \\"Iron Pipe\\" on \\"Coffee Machine\\""}\`
-  - **WRONG:** \`{"agentResponse": "Okay, I'm hitting the coffee machine with the pipe now.", "commandToExecute": "use \\"Iron Pipe\\" on \\"Coffee Machine\\""}\`
+**DEFAULT: Agent Sharma is SILENT.**
+The Narrator handles all normal actions. Agent only speaks in special circumstances.
+
+**Agent Sharma ONLY speaks when:**
+
+1. **Extreme/Invalid Actions** - Player tries to destroy evidence, leave locked locations, or do something truly impossible
+   - Example: Player tries "burn the notebook" → \`{"agentResponse": "Burt, that's evidence. We can't destroy it.", "commandToExecute": "invalid"}\`
+   - Example: Player tries "leave cafe" when case unsolved → \`{"agentResponse": "Not yet. We haven't solved the case.", "commandToExecute": "invalid"}\`
+
+2. **Story Milestones** - Major discoveries or chapter completions
+   - Example: Found secret document → \`{"agentResponse": "This changes everything...", "commandToExecute": "examine \\"Secret Document\\""}\`
+   - Example: Unlocked safe → \`{"agentResponse": "Finally. Let's see what's inside.", "commandToExecute": "open \\"Wall Safe\\""}\`
+
+3. **Player Needs Guidance** - Stuck or asks for help
+   - Example: Player says "what now?" → \`{"agentResponse": "Check the notebook again. Something's off about that lock.", "commandToExecute": "invalid"}\`
+
+**For ALL normal actions (examine, take, move, use, etc.):**
+- \`agentResponse: null\` or \`agentResponse: ""\`
+- Let the Narrator describe what happens
+- **DO NOT say "Copy that" or "On it" or similar**
+
+**Agent's Personality:**
+- Supportive FBI partner, not bossy
+- Witty and sarcastic when appropriate
+- Cuts through BS with humor
+- Examples of her voice:
+  - "That's one way to do it. Subtle."
+  - "Good eye, Burt."
+  - "Or we could try not breaking everything."
 
 **// ============================================================================**
 **// 4. HANDLING INVALID INPUT**
 **// ============================================================================**
 
-- **Truly Nonsensical:** If player tries something impossible (e.g., "eat the key", "fly to the moon"), respond: "I can't do that, Burt." and \`commandToExecute: "invalid"\`
-- **Conversational/Stuck:** If player asks "what now?" or needs help, gently guide them back, and \`commandToExecute: "invalid"\`
-  - Example: \`{"agentResponse": "Let's review, Burt. We need to find out what's inside the notebook and safe. What's our next move?", "commandToExecute": "invalid"}\`
+- **Truly Nonsensical:** Agent responds with wit: "I can't do that, Burt. Physics still applies." Set \`commandToExecute: "invalid"\`
+- **Conversational/Stuck:** Agent provides targeted guidance without hand-holding
+  - Example: \`{"agentResponse": "The notebook's locked. The bookshelf has a romance novel about 'justice.' Connect the dots.", "commandToExecute": "invalid"}\`
 
 **// ============================================================================**
 **// 5. FINAL OUTPUT**

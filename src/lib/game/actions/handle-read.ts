@@ -10,7 +10,7 @@
 'use server';
 
 import type { Game, PlayerState, Effect } from "@/lib/game/types";
-import { HandlerResolver, GameStateManager, VisibilityResolver } from "@/lib/game/engine";
+import { HandlerResolver, GameStateManager, VisibilityResolver, Validator, FocusResolver } from "@/lib/game/engine";
 import { normalizeName } from "@/lib/utils";
 
 export async function handleRead(state: PlayerState, itemName: string, game: Game): Promise<Effect[]> {
@@ -55,29 +55,45 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
         return false;
     };
 
-    // 1. Find item in inventory OR visible entities
+    // 1. Find item in inventory OR visible entities (ITEMS first, then OBJECTS)
     let itemId = state.inventory.find(id =>
         matchesName(game.items[id], normalizedItemName)
     );
 
-    // If not in inventory, check visible entities
+    let entityToRead: any = null;
+    let entityId: string | undefined = itemId;
+    let entityType: 'item' | 'object' = 'item';
+
+    // If not in inventory, check visible entities (items)
     if (!itemId) {
         const visibleEntities = VisibilityResolver.getVisibleEntities(state, game);
         itemId = visibleEntities.items.find(id =>
             matchesName(game.items[id as any], normalizedItemName)
         );
+        if (itemId) {
+            entityId = itemId;
+            entityToRead = game.items[itemId];
+            entityType = 'item';
+        }
+    } else {
+        entityToRead = game.items[itemId];
+        entityType = 'item';
     }
 
-    if (!itemId) {
-        return [{
-            type: 'SHOW_MESSAGE',
-            speaker: 'system',
-            content: `You don't see a "${itemName}" to read here.`
-        }];
+    // If still not found, check visible objects (like notebook, signs, etc.)
+    if (!entityId) {
+        const visibleEntities = VisibilityResolver.getVisibleEntities(state, game);
+        const objectId = visibleEntities.objects.find(id =>
+            matchesName(game.gameObjects[id as any], normalizedItemName)
+        );
+        if (objectId) {
+            entityId = objectId;
+            entityToRead = game.gameObjects[objectId as any];
+            entityType = 'object';
+        }
     }
 
-    const itemToRead = game.items[itemId];
-    if (!itemToRead) {
+    if (!entityId || !entityToRead) {
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'system',
@@ -86,19 +102,19 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
     }
 
     // 2. Check if readable
-    if (!itemToRead.capabilities?.isReadable) {
+    if (!entityToRead.capabilities?.readable && !entityToRead.capabilities?.isReadable) {
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'narrator',
-            content: `There's nothing to read on the ${itemToRead.name}.`
+            content: `There's nothing to read on the ${entityToRead.name}.`
         }];
     }
 
     // 3. Check for stateMap (progressive content)
-    if (itemToRead.stateMap && Object.keys(itemToRead.stateMap).length > 0) {
-        const entityState = GameStateManager.getEntityState(state, itemId);
+    if (entityToRead.stateMap && Object.keys(entityToRead.stateMap).length > 0) {
+        const entityState = GameStateManager.getEntityState(state, entityId);
         const currentReadCount = entityState.readCount || 0;
-        const stateMapKeys = Object.keys(itemToRead.stateMap);
+        const stateMapKeys = Object.keys(entityToRead.stateMap);
 
         // Check if all content has been read
         if (currentReadCount >= stateMapKeys.length) {
@@ -111,7 +127,7 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
 
         // Get current state entry
         const currentStateKey = stateMapKeys[currentReadCount];
-        const stateMapEntry = itemToRead.stateMap[currentStateKey];
+        const stateMapEntry = entityToRead.stateMap[currentStateKey];
 
         if (!stateMapEntry || !stateMapEntry.description) {
             return [{
@@ -125,7 +141,7 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
         return [
             {
                 type: 'SET_ENTITY_STATE',
-                entityId: itemId,
+                entityId: entityId,
                 patch: { readCount: currentReadCount + 1, currentStateId: 'opened' }
             },
             {
@@ -133,48 +149,85 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
                 speaker: 'narrator',
                 content: stateMapEntry.description,
                 messageType: 'image',
-                imageId: itemId  // Will show "opened" image after state update
+                imageId: entityId  // Will show "opened" image after state update
             }
         ];
     }
 
     // 4. Check for onRead handler
-    const handler = HandlerResolver.getEffectiveHandler(itemToRead, 'read', state);
-    if (handler?.success) {
-        const effects: Effect[] = [];
+    const handler = HandlerResolver.getEffectiveHandler(entityToRead, 'read', state);
+    if (handler) {
+        // Evaluate conditions if they exist
+        const conditionsMet = handler.conditions
+            ? Validator.evaluateConditions(handler.conditions, state, game)
+            : true;
 
-        // Set state to 'opened' BEFORE showing message (for book/document images)
-        if (itemToRead.archetype === 'Book' || itemToRead.archetype === 'Document') {
+        const outcome = conditionsMet ? handler.success : handler.fail;
+
+        if (!outcome) {
+            // No outcome defined, skip
+        } else {
+            const effects: Effect[] = [];
+
+            // Set focus on the entity
             effects.push({
-                type: 'SET_ENTITY_STATE',
-                entityId: itemId,
-                patch: { currentStateId: 'opened' }
+                type: 'SET_FOCUS',
+                focusId: entityId,
+                focusType: entityType === 'object' ? 'object' : 'item',
+                transitionMessage: FocusResolver.getTransitionNarration(entityId, entityType === 'object' ? 'object' : 'item', state, game) || undefined
             });
-        }
 
-        if (handler.success.message) {
-            effects.push({
-                type: 'SHOW_MESSAGE',
-                speaker: 'narrator',
-                content: handler.success.message,
-                messageType: 'image',
-                imageId: itemId  // Will show "opened" image for books/documents
-            });
-        }
+            // Set state to 'opened' or 'unlocked' BEFORE showing message (for book/document/container images)
+            // Note: Don't override if outcome.effects already sets currentStateId
+            if (conditionsMet && (entityToRead.archetype === 'Book' || entityToRead.archetype === 'Document' || entityToRead.archetype === 'Container')) {
+                // Check if outcome.effects already sets currentStateId
+                const hasStateIdInEffects = outcome.effects?.some(
+                    (e: any) => e.type === 'SET_ENTITY_STATE' && e.entityId === entityId && e.patch?.currentStateId
+                );
+                if (!hasStateIdInEffects) {
+                    // Use 'unlocked' for containers, 'opened' for books/documents
+                    const stateId = entityToRead.archetype === 'Container' ? 'unlocked' : 'opened';
+                    const patch: any = { currentStateId: stateId };
 
-        if (handler.success.effects) {
-            effects.push(...handler.success.effects);
-        }
+                    // For containers, ensure isOpen remains true
+                    if (entityToRead.archetype === 'Container') {
+                        patch.isOpen = true;
+                    }
 
-        return effects;
+                    effects.push({
+                        type: 'SET_ENTITY_STATE',
+                        entityId: entityId,
+                        patch: patch
+                    });
+                }
+            }
+
+            // Add outcome effects first (if any)
+            if (outcome.effects) {
+                effects.push(...outcome.effects);
+            }
+
+            // Show message
+            if (outcome.message) {
+                effects.push({
+                    type: 'SHOW_MESSAGE',
+                    speaker: outcome.speaker || 'narrator',
+                    content: outcome.message,
+                    messageType: 'image',
+                    imageId: entityId  // Will show "opened" image for books/documents
+                });
+            }
+
+            return effects;
+        }
     }
 
     // 5. Fallback: just show description
     return [{
         type: 'SHOW_MESSAGE',
         speaker: 'narrator',
-        content: itemToRead.description,
+        content: entityToRead.description,
         messageType: 'image',
-        imageId: itemId
+        imageId: entityId
     }];
 }

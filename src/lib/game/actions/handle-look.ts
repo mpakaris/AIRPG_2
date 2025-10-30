@@ -2,6 +2,7 @@
  * handle-look - NEW ARCHITECTURE
  *
  * Handles looking around the current location.
+ * CLEARS FOCUS: Returns player to room-level view.
  * Returns Effect[] instead of mutating state directly.
  */
 
@@ -36,9 +37,24 @@ export async function handleLook(state: PlayerState, game: Game): Promise<Effect
     });
   }
 
-  return [{
+  // Build the message effect with location wide shot image if available
+  const messageEffect: Effect = {
     type: 'SHOW_MESSAGE',
     speaker: 'narrator',
     content: fullDescription.trim()
-  }];
+  };
+
+  // Add location image for wide shot view
+  if (location.sceneImage) {
+    messageEffect.messageType = 'image';
+    messageEffect.imageUrl = location.sceneImage.url;
+  }
+
+  return [
+    // Clear focus first - returns to room-level view
+    {
+      type: 'CLEAR_FOCUS'
+    },
+    messageEffect
+  ];
 }

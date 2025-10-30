@@ -8,7 +8,7 @@
 'use server';
 
 import type { Game, PlayerState, Effect } from "@/lib/game/types";
-import { Validator, HandlerResolver, VisibilityResolver } from "@/lib/game/engine";
+import { Validator, HandlerResolver, VisibilityResolver, FocusResolver } from "@/lib/game/engine";
 import { normalizeName } from "@/lib/utils";
 import { handleRead } from "@/lib/game/actions/handle-read";
 
@@ -71,19 +71,36 @@ export async function handleOpen(state: PlayerState, targetName: string, game: G
             const outcome = conditionsMet ? handler.success : handler.fail;
 
             // If conditions not met and we have a specific fail message, use it immediately
+            // BUT: Still set focus so player can try password/unlock actions
             if (!conditionsMet && outcome?.message) {
-                return [{
-                    type: 'SHOW_MESSAGE',
-                    speaker: 'narrator',
-                    content: outcome.message
-                }];
+                return [
+                    {
+                        type: 'SET_FOCUS',
+                        focusId: targetObjectId,
+                        focusType: 'object',
+                        transitionMessage: FocusResolver.getTransitionNarration(targetObjectId, 'object', state, game) || undefined
+                    },
+                    {
+                        type: 'SHOW_MESSAGE',
+                        speaker: 'narrator',
+                        content: outcome.message
+                    }
+                ];
             }
 
             // If conditions met, execute success
             if (conditionsMet && outcome) {
-                const effects: Effect[] = [];
+                const effects: Effect[] = [
+                    // Set focus on this object FIRST
+                    {
+                        type: 'SET_FOCUS',
+                        focusId: targetObjectId,
+                        focusType: 'object',
+                        transitionMessage: FocusResolver.getTransitionNarration(targetObjectId, 'object', state, game) || undefined
+                    }
+                ];
 
-                // Add outcome effects FIRST so state is updated before message shows
+                // Add outcome effects so state is updated before message shows
                 if (outcome.effects) {
                     effects.push(...outcome.effects);
                 }
@@ -117,15 +134,22 @@ export async function handleOpen(state: PlayerState, targetName: string, game: G
 
         // 5. No handler or no specific outcome - generic open behavior
         return [
+            // Set focus on this object
             {
-                type: 'SHOW_MESSAGE',
-                speaker: 'narrator',
-                content: `You open the ${targetObject.name}.`
+                type: 'SET_FOCUS',
+                focusId: targetObjectId,
+                focusType: 'object',
+                transitionMessage: FocusResolver.getTransitionNarration(targetObjectId, 'object', state, game) || undefined
             },
             {
                 type: 'SET_ENTITY_STATE',
                 entityId: targetObjectId,
                 patch: { isOpen: true }
+            },
+            {
+                type: 'SHOW_MESSAGE',
+                speaker: 'narrator',
+                content: `You open the ${targetObject.name}.`
             }
         ];
     }

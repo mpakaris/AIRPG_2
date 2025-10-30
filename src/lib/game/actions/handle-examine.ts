@@ -8,7 +8,7 @@
 'use server';
 
 import type { Game, PlayerState, Effect } from "@/lib/game/types";
-import { HandlerResolver, VisibilityResolver, GameStateManager } from "@/lib/game/engine";
+import { HandlerResolver, VisibilityResolver, GameStateManager, FocusResolver } from "@/lib/game/engine";
 import { normalizeName } from "@/lib/utils";
 import { handleRead } from "./handle-read";
 
@@ -98,13 +98,22 @@ export async function handleExamine(state: PlayerState, targetName: string, game
             messageText = item.alternateDescription;
         }
 
-        const effects: Effect[] = [{
-            type: 'SHOW_MESSAGE',
-            speaker: 'narrator',
-            content: messageText,
-            messageType: 'image',
-            imageId: itemId  // Image will be resolved by process-effects.ts via createMessage
-        }];
+        const effects: Effect[] = [
+            // Set focus on this item
+            {
+                type: 'SET_FOCUS',
+                focusId: itemId,
+                focusType: 'item',
+                transitionMessage: FocusResolver.getTransitionNarration(itemId, 'item', state, game) || undefined
+            },
+            {
+                type: 'SHOW_MESSAGE',
+                speaker: 'narrator',
+                content: messageText,
+                messageType: 'image',
+                imageId: itemId  // Image will be resolved by process-effects.ts via createMessage
+            }
+        ];
 
         if (!isAlreadyExamined) {
             effects.push({
@@ -146,13 +155,22 @@ export async function handleExamine(state: PlayerState, targetName: string, game
                 messageText = item.alternateDescription;
             }
 
-            const effects: Effect[] = [{
-                type: 'SHOW_MESSAGE',
-                speaker: 'narrator',
-                content: messageText,
-                messageType: 'image',
-                imageId: visibleItemId
-            }];
+            const effects: Effect[] = [
+                // Set focus on this item
+                {
+                    type: 'SET_FOCUS',
+                    focusId: visibleItemId,
+                    focusType: 'item',
+                    transitionMessage: FocusResolver.getTransitionNarration(visibleItemId, 'item', state, game) || undefined
+                },
+                {
+                    type: 'SHOW_MESSAGE',
+                    speaker: 'narrator',
+                    content: messageText,
+                    messageType: 'image',
+                    imageId: visibleItemId
+                }
+            ];
 
             if (!isAlreadyExamined) {
                 effects.push({
@@ -204,13 +222,22 @@ export async function handleExamine(state: PlayerState, targetName: string, game
             messageContent = targetObject.description;
         }
 
-        const effects: Effect[] = [{
-            type: 'SHOW_MESSAGE',
-            speaker: 'narrator',
-            content: messageContent,
-            messageType: 'image',
-            imageId: targetObjectId  // Image will be resolved by process-effects.ts via createMessage
-        }];
+        const effects: Effect[] = [
+            // Set focus on this object
+            {
+                type: 'SET_FOCUS',
+                focusId: targetObjectId,
+                focusType: 'object',
+                transitionMessage: FocusResolver.getTransitionNarration(targetObjectId, 'object', state, game) || undefined
+            },
+            {
+                type: 'SHOW_MESSAGE',
+                speaker: 'narrator',
+                content: messageContent,
+                messageType: 'image',
+                imageId: targetObjectId  // Image will be resolved by process-effects.ts via createMessage
+            }
+        ];
 
         if (!hasBeenExamined) {
             effects.push({

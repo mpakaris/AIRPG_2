@@ -8,17 +8,30 @@
 
 'use server';
 
-import type { Game, PlayerState, Effect } from "@/lib/game/types";
-import { Validator, VisibilityResolver } from "@/lib/game/engine";
+import type { Game, PlayerState, Effect, GameObjectId } from "@/lib/game/types";
+import { Validator, VisibilityResolver, FocusResolver } from "@/lib/game/engine";
 import { normalizeName } from "@/lib/utils";
 
 export async function handleUse(state: PlayerState, itemName: string, targetName: string, game: Game): Promise<Effect[]> {
   const normalizedItemName = normalizeName(itemName);
 
-  // 1. Find item in inventory
-  const itemId = state.inventory.find(id =>
+  // 1. Find item in inventory OR visible items
+  let itemId = state.inventory.find(id =>
     normalizeName(game.items[id]?.name).includes(normalizedItemName)
   );
+
+  // If not in inventory, check visible items
+  if (!itemId) {
+    const visibleEntities = VisibilityResolver.getVisibleEntities(state, game);
+    itemId = visibleEntities.items.find(id => {
+      const item = game.items[id as any];
+      if (!item) return false;
+      const itemNameNorm = normalizeName(item.name);
+      const altNames = item.alternateNames?.map(normalizeName) || [];
+      return itemNameNorm.includes(normalizedItemName) ||
+             altNames.some(alt => alt.includes(normalizedItemName));
+    });
+  }
 
   if (!itemId) {
     return [{
@@ -61,6 +74,24 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
         }];
       }
 
+      // FOCUS VALIDATION: Check if target is within current focus
+      if (state.currentFocusId && state.focusType === 'object') {
+        const entitiesInFocus = FocusResolver.getEntitiesInFocus(state, game);
+
+        // Check if target is the focused object itself or within it
+        const isInFocus = targetObjectId === state.currentFocusId ||
+                         entitiesInFocus.objects.includes(targetObjectId);
+
+        if (!isInFocus) {
+          // Target is out of focus - show helpful error
+          return [{
+            type: 'SHOW_MESSAGE',
+            speaker: 'agent',
+            content: FocusResolver.getOutOfFocusMessage('use ' + itemToUse.name + ' on', targetObject.name, state.currentFocusId, game)
+          }];
+        }
+      }
+
       // Check if object has onUse handlers
       const useHandlers = targetObject.handlers?.onUse;
       if (Array.isArray(useHandlers)) {
@@ -81,9 +112,17 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
           }
 
           // Build effects - IMPORTANT: State updates BEFORE messages
-          const effects: Effect[] = [];
+          const effects: Effect[] = [
+            // Set focus on the target object being used
+            {
+              type: 'SET_FOCUS',
+              focusId: targetObjectId,
+              focusType: 'object',
+              transitionMessage: FocusResolver.getTransitionNarration(targetObjectId, 'object', state, game) || undefined
+            }
+          ];
 
-          // Add outcome effects FIRST
+          // Add outcome effects
           if (outcome.effects && Array.isArray(outcome.effects)) {
             effects.push(...outcome.effects);
           }
@@ -163,20 +202,57 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
     // Build effects - IMPORTANT: State updates BEFORE messages
     const effects: Effect[] = [];
 
-    // Add outcome effects FIRST
+    // 1. Add state-changing effects FIRST (no messages yet)
     if (outcome.effects) {
-      effects.push(...outcome.effects);
+      for (const effect of outcome.effects) {
+        // Add state changes first
+        if (effect.type !== 'SHOW_MESSAGE') {
+          effects.push(effect);
+        }
+      }
     }
 
-    // Add message AFTER state updates
+    // 2. Add main handler message (will resolve imageId based on NEW state)
     if (outcome.message) {
+      // Detect if this item will resolve to a video URL after state changes
+      const item = game.items[itemId];
+
+      // Check if there's a SET_ENTITY_STATE effect that changes currentStateId
+      let newStateId = state.world?.[itemId]?.currentStateId || 'default';
+      if (outcome.effects) {
+        const stateChangeEffect = outcome.effects.find(
+          (e: any) => e.type === 'SET_ENTITY_STATE' && e.entityId === itemId && e.patch?.currentStateId
+        );
+        if (stateChangeEffect) {
+          newStateId = (stateChangeEffect as any).patch.currentStateId;
+        }
+      }
+
+      const mediaUrl = item?.media?.images?.[newStateId]?.url;
+      const isVideo = mediaUrl?.match(/\.(mp4|webm|ogg|mov)$/i);
+
+      console.log('[handle-use] Video detection for', itemId);
+      console.log('  - newStateId:', newStateId);
+      console.log('  - mediaUrl:', mediaUrl);
+      console.log('  - isVideo:', !!isVideo);
+      console.log('  - messageType will be:', isVideo ? 'video' : 'image');
+
       effects.push({
         type: 'SHOW_MESSAGE',
         speaker: 'narrator',
         content: outcome.message,
         imageId: itemId,  // Will resolve based on updated state
-        messageType: 'image'
+        messageType: isVideo ? 'video' : 'image'
       });
+    }
+
+    // 3. Add any additional SHOW_MESSAGE effects from outcome
+    if (outcome.effects) {
+      for (const effect of outcome.effects) {
+        if (effect.type === 'SHOW_MESSAGE') {
+          effects.push(effect);
+        }
+      }
     }
 
     return effects;

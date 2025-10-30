@@ -19,7 +19,7 @@ export class GameStateManager {
    * Apply a single effect to the player state
    * Returns a new PlayerState object (immutable)
    */
-  static apply(effect: Effect, state: PlayerState, messages: Message[] = []): { state: PlayerState, messages: Message[] } {
+  static apply(effect: Effect, state: PlayerState, messages: Message[] = [], game?: Game): { state: PlayerState, messages: Message[] } {
     // Deep clone state to ensure immutability
     const newState = JSON.parse(JSON.stringify(state)) as PlayerState;
     const newMessages = [...messages];
@@ -61,6 +61,36 @@ export class GameStateManager {
           break;
 
         // ============================================================================
+        // Focus System
+        // ============================================================================
+        case 'SET_FOCUS':
+          // Check if focus is actually changing
+          const focusChanging = newState.currentFocusId !== effect.focusId;
+
+          // Add transition message if provided and focus is changing
+          if (focusChanging && effect.transitionMessage) {
+            newMessages.push({
+              id: `focus-transition-${Date.now()}`,
+              sender: 'narrator',
+              senderName: 'Narrator',
+              type: 'text',
+              content: effect.transitionMessage,
+              timestamp: Date.now()
+            });
+          }
+
+          newState.previousFocusId = newState.currentFocusId;
+          newState.currentFocusId = effect.focusId;
+          newState.focusType = effect.focusType;
+          break;
+
+        case 'CLEAR_FOCUS':
+          newState.previousFocusId = newState.currentFocusId;
+          newState.currentFocusId = undefined;
+          newState.focusType = undefined;
+          break;
+
+        // ============================================================================
         // Inventory
         // ============================================================================
         case 'ADD_ITEM':
@@ -75,7 +105,20 @@ export class GameStateManager {
           break;
 
         case 'REMOVE_ITEM':
-          newState.inventory = newState.inventory.filter(id => id !== effect.itemId);
+          // IMPORTANT: Only remove items that are consumable
+          // This prevents accidentally removing important items like the phone
+          if (game) {
+            const item = game.items?.[effect.itemId as any];
+            if (item?.capabilities?.isConsumable) {
+              newState.inventory = newState.inventory.filter(id => id !== effect.itemId);
+            } else {
+              console.warn(`[GameStateManager] REMOVE_ITEM called for non-consumable item: ${effect.itemId}. Item NOT removed.`);
+            }
+          } else {
+            // Fallback: if no game object, remove anyway (backward compatibility)
+            console.warn(`[GameStateManager] REMOVE_ITEM called without game object for ${effect.itemId}. Removing anyway.`);
+            newState.inventory = newState.inventory.filter(id => id !== effect.itemId);
+          }
           break;
 
         // ============================================================================
@@ -300,11 +343,11 @@ export class GameStateManager {
    * Apply multiple effects in sequence
    * This is the main entry point for command processing
    */
-  static applyAll(effects: Effect[], state: PlayerState, messages: Message[] = []): { state: PlayerState, messages: Message[] } {
+  static applyAll(effects: Effect[], state: PlayerState, messages: Message[] = [], game?: Game): { state: PlayerState, messages: Message[] } {
     console.log('[GameStateManager.applyAll] ========================================');
     console.log('[GameStateManager.applyAll] Applying', effects.length, 'effects:', effects.map(e => e.type));
-    console.log('[GameStateManager.applyAll] INPUT STATE - Chalkboard isMoved:', state.world?.['obj_chalkboard_menu']?.isMoved);
-    console.log('[GameStateManager.applyAll] INPUT STATE - Iron pipe isVisible:', state.world?.['item_iron_pipe']?.isVisible);
+    console.log('[GameStateManager.applyAll] INPUT STATE - SD Card isVisible:', state.world?.['item_sd_card']?.isVisible);
+    console.log('[GameStateManager.applyAll] INPUT STATE - SD Card taken:', state.world?.['item_sd_card']?.taken);
 
     let currentState = state;
     let currentMessages = messages;
@@ -314,19 +357,19 @@ export class GameStateManager {
 
     for (const effect of effectsArray) {
       console.log('[GameStateManager.applyAll] Processing effect:', effect.type);
-      const result = GameStateManager.apply(effect, currentState, currentMessages);
+      const result = GameStateManager.apply(effect, currentState, currentMessages, game);
       currentState = result.state;
       currentMessages = result.messages;
 
       // Log state after each effect
       if (effect.type === 'SET_ENTITY_STATE' || effect.type === 'REVEAL_FROM_PARENT' || effect.type === 'REVEAL_ENTITY') {
-        console.log('[GameStateManager.applyAll] After', effect.type, '- Chalkboard isMoved:', currentState.world?.['obj_chalkboard_menu']?.isMoved);
-        console.log('[GameStateManager.applyAll] After', effect.type, '- Iron pipe isVisible:', currentState.world?.['item_iron_pipe']?.isVisible);
+        console.log('[GameStateManager.applyAll] After', effect.type, '- SD Card isVisible:', currentState.world?.['item_sd_card']?.isVisible);
+        console.log('[GameStateManager.applyAll] After', effect.type, '- SD Card taken:', currentState.world?.['item_sd_card']?.taken);
       }
     }
 
-    console.log('[GameStateManager.applyAll] OUTPUT STATE - Chalkboard isMoved:', currentState.world?.['obj_chalkboard_menu']?.isMoved);
-    console.log('[GameStateManager.applyAll] OUTPUT STATE - Iron pipe isVisible:', currentState.world?.['item_iron_pipe']?.isVisible);
+    console.log('[GameStateManager.applyAll] OUTPUT STATE - SD Card isVisible:', currentState.world?.['item_sd_card']?.isVisible);
+    console.log('[GameStateManager.applyAll] OUTPUT STATE - SD Card taken:', currentState.world?.['item_sd_card']?.taken);
     console.log('[GameStateManager.applyAll] ========================================');
 
     return { state: currentState, messages: currentMessages };
@@ -453,39 +496,39 @@ export class GameStateManager {
    * 2. ALL parents in the chain grant access
    */
   static isAccessible(state: PlayerState, game: Game, entityId: string): boolean {
-    if (entityId === 'item_iron_pipe') {
-      console.log('[isAccessible] Checking item_iron_pipe');
+    if (entityId === 'item_sd_card') {
+      console.log('[isAccessible] Checking item_sd_card');
     }
 
     // Check if entity is in inventory - always accessible
     if (GameStateManager.isInInventory(state, entityId)) {
-      if (entityId === 'item_iron_pipe') console.log('[isAccessible] ✅ In inventory');
+      if (entityId === 'item_sd_card') console.log('[isAccessible] ✅ In inventory');
       return true;
     }
 
     // Entity must be visible
     const entityState = GameStateManager.getEntityState(state, entityId);
-    if (entityId === 'item_iron_pipe') {
+    if (entityId === 'item_sd_card') {
       console.log('[isAccessible] entityState:', entityState);
     }
     if (entityState.isVisible === false) {
-      if (entityId === 'item_iron_pipe') console.log('[isAccessible] ❌ Not visible');
+      if (entityId === 'item_sd_card') console.log('[isAccessible] ❌ Not visible');
       return false;
     }
 
     // Check all parents in chain
     const ancestors = GameStateManager.getAncestors(state, entityId);
-    if (entityId === 'item_iron_pipe') {
+    if (entityId === 'item_sd_card') {
       console.log('[isAccessible] ancestors:', ancestors);
     }
     for (const ancestorId of ancestors) {
       if (!GameStateManager.parentGrantsAccess(state, game, ancestorId)) {
-        if (entityId === 'item_iron_pipe') console.log('[isAccessible] ❌ Parent', ancestorId, 'does not grant access');
+        if (entityId === 'item_sd_card') console.log('[isAccessible] ❌ Parent', ancestorId, 'does not grant access');
         return false;
       }
     }
 
-    if (entityId === 'item_iron_pipe') console.log('[isAccessible] ✅ Accessible');
+    if (entityId === 'item_sd_card') console.log('[isAccessible] ✅ Accessible');
     return true;
   }
 
@@ -539,7 +582,8 @@ export class GameStateManager {
       }
 
       // Movable entities must be moved (to reveal children)
-      if (caps.movable && parentEntity.children && parentState.isMoved !== true) {
+      // EXCEPTION: Containers use isOpen check, not isMoved (e.g., notebook is opened, not moved)
+      if (caps.movable && !caps.container && parentEntity.children && parentState.isMoved !== true) {
         // Only block if entity has children (reveals things)
         console.log('[parentGrantsAccess] ❌ Movable entity not moved (has children, isMoved:', parentState.isMoved, ')');
         return false;

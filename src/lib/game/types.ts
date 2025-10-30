@@ -70,6 +70,10 @@ export type Effect =
   | { type: 'SET_STATE_ID'; entityId: string; to: string }
   | { type: 'INC_COUNTER'; key: string; by?: number }
 
+  // Focus system
+  | { type: 'SET_FOCUS'; focusId: string; focusType: 'object' | 'item' | 'npc'; transitionMessage?: string }
+  | { type: 'CLEAR_FOCUS' }
+
   // Inventory
   | { type: 'ADD_ITEM'; itemId: string }
   | { type: 'REMOVE_ITEM'; itemId: string }
@@ -93,7 +97,7 @@ export type Effect =
   | { type: 'ENTER_PORTAL'; portalId: string }
 
   // UI/Media
-  | { type: 'SHOW_MESSAGE'; speaker?: 'narrator' | 'agent' | 'system' | string; content: string; imageId?: string; messageType?: Message['type'] }
+  | { type: 'SHOW_MESSAGE'; speaker?: 'narrator' | 'agent' | 'system' | string; content: string; imageId?: string; imageUrl?: string; messageType?: Message['type'] }
 
   // Timers (optional)
   | { type: 'START_TIMER'; timerId: string; ms: number; effect: Effect }
@@ -209,6 +213,11 @@ export type PlayerState = {
   currentLocationId: LocationId; // Can be a cell or a location
   inventory: ItemId[];
 
+  // Focus System: Track what the player is currently interacting with ("standing at")
+  currentFocusId?: string; // ID of the focused object/item/NPC
+  previousFocusId?: string; // Previous focus for transition messages
+  focusType?: 'object' | 'item' | 'npc'; // Type of focused entity
+
   // NEW: Flags as Record<string, boolean> for better performance
   flags: Record<string, boolean>;
 
@@ -278,21 +287,42 @@ export type OnUseWith = {
   fail?: Outcome;
 };
 
+/**
+ * Handler Taxonomy - See HANDLER_TAXONOMY.md for full documentation
+ *
+ * CORE HANDLERS (Use these):
+ * - onExamine: Visual inspection (outer appearance)
+ * - onOpen: Open lids/drawers/covers
+ * - onMove: Push/slide aside (reveals what's behind)
+ * - onRead: Read text content
+ * - onUse: Use item on object (via OnUseWith array)
+ * - onTake: Pick up item
+ * - onTalk: Start conversation with NPC
+ * - onUnlock: Validate password/code
+ *
+ * DEPRECATED (Don't use):
+ * - onBreak → Use onUse instead
+ * - onRemove → Use onMove instead
+ * - onSearch → Use onExamine instead
+ */
 export type Handlers = {
+  // Core handlers
   onExamine?: Rule;
   onMove?: Rule;
   onOpen?: Rule;
   onClose?: Rule;
   onUnlock?: Rule & { unlocksWith?: { itemId?: string; code?: string; phrase?: string; tag?: string } };
-  onBreak?: Rule & { requiredItemTag?: string; requiredItemId?: string };
-  onSearch?: Rule;
   onUse?: Rule | OnUseWith[];
   onRead?: Rule;
+  onTake?: Rule;
+  onTalk?: Rule;
+
+  // Legacy/specialized handlers (rarely used)
+  onBreak?: Rule & { requiredItemTag?: string; requiredItemId?: string }; // DEPRECATED: Use onUse instead
+  onSearch?: Rule; // DEPRECATED: Use onExamine instead
   onInput?: Rule;
   onEnter?: Rule;
   onExit?: Rule;
-  onTake?: Rule;
-  onTalk?: Rule;
 };
 
 export type StateOverrides = {
@@ -472,17 +502,20 @@ export type GameObject = {
   };
 
   handlers: {
+    // Core handlers (see HANDLER_TAXONOMY.md)
     onExamine?: Handler & { alternateMessage?: string };
-    onSearch?: Handler;
     onOpen?: Handler;
     onClose?: Handler;
-    onUnlock?: Handler;
-    onInput?: Handler;
-    onUse?: ItemHandler[]; // Can react to multiple items
-    onInsert?: ItemHandler[];
-    onRemove?: ItemHandler[];
     onMove?: Handler;
-    onBreak?: Handler;
+    onUnlock?: Handler;
+    onUse?: ItemHandler[]; // Can react to multiple items
+
+    // Deprecated/specialized handlers
+    onSearch?: Handler; // DEPRECATED: Use onExamine instead
+    onRemove?: ItemHandler[]; // DEPRECATED: Use onMove instead
+    onBreak?: Handler; // DEPRECATED: Use onUse instead
+    onInput?: Handler;
+    onInsert?: ItemHandler[];
     onReset?: Handler;
     onActivate?: Handler;
     onDeactivate?: Handler;
@@ -570,7 +603,8 @@ export type Item = {
   };
 
   media?: {
-    image?: ImageDetails;
+    image?: ImageDetails; // Legacy: single image
+    images?: Record<string, ImageDetails>; // NEW: state-based images (e.g., default, opened)
     sounds?: {
       onUse?: string;
       onCombine?: string;
@@ -816,6 +850,10 @@ export type Chapter = {
   objectives?: { flag: Flag, label: string }[];
   hints?: Hint[];
   startLocationId: LocationId; // Can be a cell or a location
+  startingFocus?: {
+    entityId: string;  // ID of the object/item/NPC to focus on initially
+    entityType: 'object' | 'item' | 'npc';
+  };
   introductionVideo?: string;
   completionVideo?: string;
   postChapterMessage?: string;
