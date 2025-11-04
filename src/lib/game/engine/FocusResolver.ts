@@ -236,6 +236,21 @@ export class FocusResolver {
             return null;
         }
 
+        // Skip transitions for personal equipment (phone, badge, etc.) - they're always "with you"
+        if (newFocusType === 'object') {
+            const obj = game.gameObjects[newFocusId as GameObjectId];
+            if (obj?.personal === true) {
+                return null;
+            }
+        }
+
+        // Skip transitions for objects that are children of other objects (already within reach)
+        // e.g., SD card inside notebook - you don't "walk toward" a small card
+        const entityState = GameStateManager.getEntityState(state, newFocusId);
+        if (entityState.parentId) {
+            return null; // It's inside something, no physical movement needed
+        }
+
         // Get entity name
         let entityName: string;
         switch (newFocusType) {

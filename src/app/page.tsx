@@ -2,6 +2,7 @@
 import { GameClient } from '@/components/game/GameClient';
 import { getInitialState } from '@/lib/game-state';
 import type { PlayerState, Message, Game, GameId } from '@/lib/game/types';
+import { toSerializableGame } from '@/lib/game/types';
 import { initializeFirebase } from '@/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { getGameData, createInitialMessages } from '@/app/actions';
@@ -57,5 +58,8 @@ export default async function Home() {
 
   const { playerState, messages } = await getInitialData(initialUserId, game);
 
-  return <GameClient game={game} initialGameState={playerState} initialMessages={messages} />;
+  // Convert to serializable game (removes functions that can't be passed to client components)
+  const serializableGame = toSerializableGame(game);
+
+  return <GameClient game={serializableGame} initialGameState={playerState} initialMessages={messages} />;
 }

@@ -7,15 +7,19 @@
 
 'use server';
 
-import type { Game, PlayerState, Effect } from "@/lib/game/types";
-import { HandlerResolver, VisibilityResolver, GameStateManager, FocusResolver } from "@/lib/game/engine";
+import type { Game, PlayerState, Effect, ItemId, GameObjectId } from "@/lib/game/types";
+import { HandlerResolver, GameStateManager, FocusResolver, Validator } from "@/lib/game/engine";
 import { normalizeName } from "@/lib/utils";
 import { handleRead } from "./handle-read";
+import { outcomeToMessageEffect, buildEffectsFromOutcome } from "@/lib/game/utils/outcome-helpers";
+import { findBestMatch } from "@/lib/game/utils/name-matching";
 
 const examinedObjectFlag = (id: string) => `examined_${id}`;
 
 export async function handleExamine(state: PlayerState, targetName: string, game: Game): Promise<Effect[]> {
     const normalizedTarget = normalizeName(targetName);
+
+    console.log('[handle-examine] Searching for:', targetName, '→ normalized:', normalizedTarget);
 
     if (!normalizedTarget) {
         return [{
@@ -25,43 +29,30 @@ export async function handleExamine(state: PlayerState, targetName: string, game
         }];
     }
 
-    // Helper function for robust name matching
-    const matchesName = (entity: any, searchName: string): boolean => {
-        if (!entity) return false;
+    // Check if this is "examine X with/on Y" pattern
+    // Only match if connector is followed by another word (not just "the", "a", "an")
+    // This prevents matching entity names like "Painting on the wall"
+    const withMatch = normalizedTarget.match(/^(.+?)\s+(with|on|using|in)\s+(?:the|a|an\s+)?(\w+[\w\s]*)$/);
+    if (withMatch && withMatch[1].trim() && withMatch[3].trim()) {
+        // Additional check: make sure we have TWO distinct entities, not one name with "on/with" in it
+        const itemPart = withMatch[1].trim();
+        const targetPart = withMatch[3].trim();
 
-        // Try matching against the entity name
-        if (normalizeName(entity.name).includes(searchName)) return true;
-
-        // Try matching against alternate names
-        if (entity.alternateNames) {
-            const matchesAlt = entity.alternateNames.some((altName: string) =>
-                normalizeName(altName).includes(searchName)
-            );
-            if (matchesAlt) return true;
+        // Skip if the target part is too short or common (likely part of entity name)
+        if (targetPart.length > 3 && !['wall', 'table', 'floor', 'ground'].includes(targetPart)) {
+            return await handleExamineItemOnTarget(state, itemPart, targetPart, game);
         }
+    }
 
-        // FALLBACK: Try matching against the entity ID (for AI mistakes)
-        const entityIdNormalized = normalizeName(entity.id);
-        if (entityIdNormalized === searchName || entityIdNormalized.includes(searchName) || searchName.includes(entityIdNormalized)) {
-            return true;
-        }
+    // Otherwise, standard examination
+    // LOCATION-AWARE SEARCH: Find best match (prioritizes current location)
+    const bestMatch = findBestMatch(normalizedTarget, state, game);
 
-        // Also try without the prefix and underscores
-        const idWithoutPrefix = entity.id.replace(/^(item_|obj_|npc_)/, '').replace(/_/g, '').toLowerCase();
-        const searchWithoutPrefix = searchName.replace(/^(item_|obj_|npc_)/, '').replace(/_/g, '');
-        if (idWithoutPrefix === searchWithoutPrefix || idWithoutPrefix.includes(searchWithoutPrefix) || searchWithoutPrefix.includes(idWithoutPrefix)) {
-            return true;
-        }
+    console.log('[handle-examine] Best match result:', bestMatch);
 
-        return false;
-    };
-
-    // 1. Check for item in inventory
-    const itemId = state.inventory.find(id =>
-        matchesName(game.items[id], normalizedTarget)
-    );
-
-    if (itemId) {
+    // Process the best match found
+    if (bestMatch?.category === 'inventory') {
+        const itemId = bestMatch.id as ItemId;
         const item = game.items[itemId];
         if (!item) {
             return [{
@@ -105,15 +96,27 @@ export async function handleExamine(state: PlayerState, targetName: string, game
                 focusId: itemId,
                 focusType: 'item',
                 transitionMessage: FocusResolver.getTransitionNarration(itemId, 'item', state, game) || undefined
-            },
-            {
+            }
+        ];
+
+        // Build message with media support
+        if (handler?.success) {
+            // Use outcome helper to extract media automatically
+            effects.push(outcomeToMessageEffect(
+                { message: messageText, ...handler.success },
+                itemId,
+                'item'
+            ));
+        } else {
+            // Fallback: standard message without outcome media
+            effects.push({
                 type: 'SHOW_MESSAGE',
                 speaker: 'narrator',
                 content: messageText,
                 messageType: 'image',
-                imageId: itemId  // Image will be resolved by process-effects.ts via createMessage
-            }
-        ];
+                imageId: itemId
+            });
+        }
 
         if (!isAlreadyExamined) {
             effects.push({
@@ -124,16 +127,9 @@ export async function handleExamine(state: PlayerState, targetName: string, game
         }
 
         return effects;
-    }
-
-    // 2. Check for visible items (not yet taken)
-    const visibleEntities = VisibilityResolver.getVisibleEntities(state, game);
-    const visibleItemId = visibleEntities.items.find(id =>
-        !state.inventory.includes(id as any) && matchesName(game.items[id as any], normalizedTarget)
-    );
-
-    if (visibleItemId) {
-        const item = game.items[visibleItemId as any];
+    } else if (bestMatch?.category === 'visible-item') {
+        const visibleItemId = bestMatch.id as ItemId;
+        const item = game.items[visibleItemId];
 
         // SMART REDIRECT: For books and documents, examining means reading
         if (item?.archetype === 'Book' || item?.archetype === 'Document' || item?.archetype === 'Media') {
@@ -162,15 +158,27 @@ export async function handleExamine(state: PlayerState, targetName: string, game
                     focusId: visibleItemId,
                     focusType: 'item',
                     transitionMessage: FocusResolver.getTransitionNarration(visibleItemId, 'item', state, game) || undefined
-                },
-                {
+                }
+            ];
+
+            // Build message with media support
+            if (handler?.success) {
+                // Use outcome helper to extract media automatically
+                effects.push(outcomeToMessageEffect(
+                    { message: messageText, ...handler.success },
+                    visibleItemId,
+                    'item'
+                ));
+            } else {
+                // Fallback: standard message without outcome media
+                effects.push({
                     type: 'SHOW_MESSAGE',
                     speaker: 'narrator',
                     content: messageText,
                     messageType: 'image',
                     imageId: visibleItemId
-                }
-            ];
+                });
+            }
 
             if (!isAlreadyExamined) {
                 effects.push({
@@ -182,15 +190,9 @@ export async function handleExamine(state: PlayerState, targetName: string, game
 
             return effects;
         }
-    }
-
-    // 3. Check for object in location
-    const targetObjectId = visibleEntities.objects.find(id =>
-        matchesName(game.gameObjects[id as any], normalizedTarget)
-    );
-
-    if (targetObjectId) {
-        const targetObject = game.gameObjects[targetObjectId as any];
+    } else if (bestMatch?.category === 'object') {
+        const targetObjectId = bestMatch.id as GameObjectId;
+        const targetObject = game.gameObjects[targetObjectId];
         if (!targetObject) {
             return [{
                 type: 'SHOW_MESSAGE',
@@ -229,15 +231,27 @@ export async function handleExamine(state: PlayerState, targetName: string, game
                 focusId: targetObjectId,
                 focusType: 'object',
                 transitionMessage: FocusResolver.getTransitionNarration(targetObjectId, 'object', state, game) || undefined
-            },
-            {
+            }
+        ];
+
+        // Build message with media support
+        if (handler?.success) {
+            // Use outcome helper to extract media automatically
+            effects.push(outcomeToMessageEffect(
+                { message: messageContent, ...handler.success },
+                targetObjectId,
+                'object'
+            ));
+        } else {
+            // Fallback: standard message without outcome media
+            effects.push({
                 type: 'SHOW_MESSAGE',
                 speaker: 'narrator',
                 content: messageContent,
                 messageType: 'image',
-                imageId: targetObjectId  // Image will be resolved by process-effects.ts via createMessage
-            }
-        ];
+                imageId: targetObjectId
+            });
+        }
 
         if (!hasBeenExamined) {
             effects.push({
@@ -254,5 +268,142 @@ export async function handleExamine(state: PlayerState, targetName: string, game
         type: 'SHOW_MESSAGE',
         speaker: 'system',
         content: game.systemMessages.notVisible(targetName)
+    }];
+}
+
+/**
+ * Handle "examine X with/on Y" pattern (e.g., "check sd card on phone")
+ */
+async function handleExamineItemOnTarget(state: PlayerState, itemName: string, targetName: string, game: Game): Promise<Effect[]> {
+    const normalizedItemName = normalizeName(itemName);
+    const normalizedTargetName = normalizeName(targetName);
+
+    // Find the item
+    const itemMatch = findBestMatch(normalizedItemName, state, game, {
+        searchInventory: true,
+        searchVisibleItems: true,
+        searchObjects: false
+    });
+
+    if (!itemMatch) {
+        return [{
+            type: 'SHOW_MESSAGE',
+            speaker: 'system',
+            content: game.systemMessages.notVisible(itemName)
+        }];
+    }
+
+    const itemId = itemMatch.id as ItemId;
+    const item = game.items[itemId];
+
+    // Find the target object
+    const targetMatch = findBestMatch(normalizedTargetName, state, game, {
+        searchInventory: false,
+        searchVisibleItems: false,
+        searchObjects: true
+    });
+
+    if (!targetMatch || targetMatch.category !== 'object') {
+        return [{
+            type: 'SHOW_MESSAGE',
+            speaker: 'system',
+            content: game.systemMessages.notVisible(targetName)
+        }];
+    }
+
+    const targetObjectId = targetMatch.id as GameObjectId;
+    const targetObject = game.gameObjects[targetObjectId];
+
+    if (!targetObject) {
+        return [{
+            type: 'SHOW_MESSAGE',
+            speaker: 'narrator',
+            content: `Can't use ${item.name} with ${targetName}.`
+        }];
+    }
+
+    // Check for handlers in this order: onExamine, onUse, onRead
+    // This allows examine/check to work like use/read for media items
+    const examineHandlers = targetObject.handlers?.onExamine;
+    const useHandlers = targetObject.handlers?.onUse;
+    const readHandlers = targetObject.handlers?.onRead;
+
+    // Try onExamine first (if it's an array of ItemHandlers)
+    if (Array.isArray(examineHandlers)) {
+        const specificHandler = examineHandlers.find((h: any) => h.itemId === itemId);
+        if (specificHandler) {
+            const conditionsMet = Validator.evaluateConditions(specificHandler.conditions, state, game);
+            const outcome = conditionsMet ? specificHandler.success : specificHandler.fail;
+
+            if (outcome) {
+                const effects: Effect[] = [];
+                // Only set focus if NOT personal equipment
+                if (targetObject.personal !== true) {
+                    effects.push({
+                        type: 'SET_FOCUS',
+                        focusId: targetObjectId,
+                        focusType: 'object',
+                        transitionMessage: FocusResolver.getTransitionNarration(targetObjectId, 'object', state, game) || undefined
+                    });
+                }
+                effects.push(...buildEffectsFromOutcome(outcome, targetObjectId, 'object'));
+                return effects;
+            }
+        }
+    }
+
+    // Fallback to onUse handlers (for "check sd card on phone" → plays video)
+    if (Array.isArray(useHandlers)) {
+        const specificHandler = useHandlers.find((h: any) => h.itemId === itemId);
+        if (specificHandler) {
+            const conditionsMet = Validator.evaluateConditions(specificHandler.conditions, state, game);
+            const outcome = conditionsMet ? specificHandler.success : specificHandler.fail;
+
+            if (outcome) {
+                const effects: Effect[] = [];
+                // Only set focus if NOT personal equipment
+                if (targetObject.personal !== true) {
+                    effects.push({
+                        type: 'SET_FOCUS',
+                        focusId: targetObjectId,
+                        focusType: 'object',
+                        transitionMessage: FocusResolver.getTransitionNarration(targetObjectId, 'object', state, game) || undefined
+                    });
+                }
+                effects.push(...buildEffectsFromOutcome(outcome, targetObjectId, 'object'));
+                return effects;
+            }
+        }
+    }
+
+    // Fallback to onRead handlers
+    if (Array.isArray(readHandlers)) {
+        const specificHandler = readHandlers.find((h: any) => h.itemId === itemId);
+        if (specificHandler) {
+            const conditionsMet = Validator.evaluateConditions(specificHandler.conditions, state, game);
+            const outcome = conditionsMet ? specificHandler.success : specificHandler.fail;
+
+            if (outcome) {
+                const effects: Effect[] = [];
+                // Only set focus if NOT personal equipment
+                if (targetObject.personal !== true) {
+                    effects.push({
+                        type: 'SET_FOCUS',
+                        focusId: targetObjectId,
+                        focusType: 'object',
+                        transitionMessage: FocusResolver.getTransitionNarration(targetObjectId, 'object', state, game) || undefined
+                    });
+                }
+                effects.push(...buildEffectsFromOutcome(outcome, targetObjectId, 'object'));
+                return effects;
+            }
+        }
+    }
+
+    // No handler found - default behavior: just describe both items
+    return [{
+        type: 'SHOW_MESSAGE',
+        speaker: 'narrator',
+        content: `You examine ${item.name} in the context of ${targetObject.name}. Nothing special stands out.`
     }];
 }

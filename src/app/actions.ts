@@ -6,7 +6,7 @@ import {
   generateStoryFromLogs
 } from '@/ai';
 import { AVAILABLE_COMMANDS } from '@/lib/game/commands';
-import type { Game, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectId, GameObjectState, ItemId, Flag, Effect, Chapter, ChapterId, ImageDetails, GameId, User, TokenUsage, Story, Portal, LocationState, CommandResult, CellId } from '@/lib/game/types';
+import type { Game, SerializableGame, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectId, GameObjectState, ItemId, Flag, Effect, Chapter, ChapterId, ImageDetails, GameId, User, TokenUsage, Story, Portal, LocationState, CommandResult, CellId } from '@/lib/game/types';
 import { initializeFirebase } from '@/firebase';
 import { doc, setDoc, getDoc, collection, getDocs } from 'firebase/firestore';
 import { getInitialState } from '@/lib/game-state';
@@ -26,6 +26,11 @@ import { handleTake } from '@/lib/game/actions/handle-take';
 import { handleTalk } from '@/lib/game/actions/handle-talk';
 import { handleUse } from '@/lib/game/actions/handle-use';
 import { handlePassword } from '@/lib/game/actions/handle-password';
+import { handleDrop } from '@/lib/game/actions/handle-drop';
+import { handleSearch } from '@/lib/game/actions/handle-search';
+import { handleBreak } from '@/lib/game/actions/handle-break';
+import { handleCombine } from '@/lib/game/actions/handle-combine';
+import { handleClose } from '@/lib/game/actions/handle-close';
 import { game as gameCartridge } from '@/lib/game/cartridge';
 import { handleHelp } from '@/lib/game/actions/handle-help';
 import { processEffects } from '@/lib/game/actions/process-effects';
@@ -150,14 +155,25 @@ export async function findOrCreateUser(userId: string): Promise<{ user: User | n
             };
             await setDoc(userRef, newUser);
             console.log(`New user created: ${userId}. Initializing game state.`);
-            
+
             const freshState = getInitialState(game);
             const initialMessages = await createInitialMessages(freshState, game);
             await logAndSave(userId, game.id, freshState, initialMessages);
 
             return { user: newUser, isNew: true };
         } else {
-            console.log(`Existing user found: ${userId}`);
+            // User exists, but check if player state exists
+            console.log(`Existing user found: ${userId}. Checking for player state...`);
+            const stateRef = doc(firestore, 'player_states', `${userId}_${game.id}`);
+            const stateSnap = await getDoc(stateRef);
+
+            if (!stateSnap.exists()) {
+                console.log(`Player state missing for ${userId}. Recreating...`);
+                const freshState = getInitialState(game);
+                const initialMessages = await createInitialMessages(freshState, game);
+                await logAndSave(userId, game.id, freshState, initialMessages);
+            }
+
             return { user: userSnap.data() as User, isNew: false };
         }
     } catch (error) {
@@ -176,7 +192,7 @@ export async function createInitialMessages(state: PlayerState, game: Game): Pro
 
     if (chapter.introductionVideo) {
         // Create video message with proper image property
-        const videoMessage = createMessage('narrator', narratorName, chapter.introduction || 'Watch this video to begin your journey...', 'video');
+        const videoMessage = createMessage('narrator', narratorName, chapter.introMessage || 'Watch this video to begin your journey...', 'video');
         // Manually set the image property since this isn't entity-based media
         videoMessage.image = {
             url: chapter.introductionVideo,
@@ -184,9 +200,15 @@ export async function createInitialMessages(state: PlayerState, game: Game): Pro
             hint: 'intro'
         };
         messages.push(videoMessage);
+    } else if (chapter.introMessage) {
+        // Use chapter-specific intro message if no video
+        messages.push(createMessage('narrator', narratorName, chapter.introMessage));
     }
 
-    messages.push(createMessage('narrator', narratorName, location.sceneDescription));
+    // Use location intro message (first-time entry) or fall back to scene description
+    const introText = location.introMessage || location.sceneDescription;
+    messages.push(createMessage('narrator', narratorName, introText));
+
     return messages;
 }
 
@@ -260,8 +282,28 @@ export async function processCommand(
             currentState = legacyResult.newState;
         } else if (lowerInput === 'restart') {
             return await resetGame(userId);
+        } else if (lowerInput.startsWith('/password ')) {
+            // EXPLICIT PASSWORD COMMAND: /password <phrase>
+            // This removes ambiguity - player explicitly indicates they're entering a password
+            const passwordPhrase = safePlayerInput.substring(10).trim(); // Remove "/password " prefix
+
+            if (!currentState.currentFocusId || currentState.focusType !== 'object') {
+                const needsFocusMessage = createMessage('system', systemName, game.systemMessages.needsFocus);
+                allMessagesForSession.push(needsFocusMessage);
+            } else {
+                // Route directly to password handler
+                effects = await handlePassword(currentState, passwordPhrase, game);
+                if (effects.length > 0) {
+                    const result = await processEffects(currentState, effects, game);
+                    currentState = result.newState;
+                    allMessagesForSession.push(...result.messages);
+                }
+            }
+
+            await logAndSave(userId, gameId, currentState, allMessagesForSession);
+            return { newState: currentState, messages: allMessagesForSession };
         } else {
-            // Let the AI interpret the command
+            // Let the AI interpret the command (natural language - could be anything!)
             const location = game.locations[currentState.currentLocationId];
             const examinedObjectFlag = (id: string) => `examined_${id}`;
 
@@ -383,14 +425,51 @@ export async function processCommand(
                     // NEW: handlePassword returns Effect[] and requires focus
                     effects = await handlePassword(currentState, commandToExecute, game);
                     break;
+                case 'drop':
+                case 'discard':
+                    // NEW: handleDrop returns Effect[]
+                    effects = await handleDrop(currentState, restOfCommand.replace(/"/g, ''), game);
+                    break;
+                case 'search':
+                    // NEW: handleSearch returns Effect[]
+                    effects = await handleSearch(currentState, restOfCommand.replace(/"/g, ''), game);
+                    break;
+                case 'break':
+                case 'smash':
+                case 'destroy':
+                    // NEW: handleBreak returns Effect[]
+                    effects = await handleBreak(currentState, restOfCommand.replace(/"/g, ''), game);
+                    break;
+                case 'combine':
+                case 'merge':
+                    // NEW: handleCombine returns Effect[]
+                    const combineMatch = restOfCommand.match(/^(.*?)\s+(with|and)\s+(.*)$/);
+                    if (combineMatch) {
+                        const item1 = combineMatch[1].trim().replace(/"/g, '');
+                        const item2 = combineMatch[3].trim().replace(/"/g, '');
+                        effects = await handleCombine(currentState, item1, item2, game);
+                    } else {
+                        effects = [{
+                            type: 'SHOW_MESSAGE',
+                            speaker: 'system',
+                            content: 'Use "combine item1 with item2" to combine two items.'
+                        }];
+                    }
+                    break;
                 case 'close':
                 case 'exit':
-                    if (currentState.interactingWithObject) {
+                    // Check if there's a target object to close
+                    if (restOfCommand && restOfCommand.trim()) {
+                        // NEW: handleClose returns Effect[] - close an object
+                        effects = await handleClose(currentState, restOfCommand.replace(/"/g, ''), game);
+                    } else if (currentState.interactingWithObject) {
+                        // Legacy: exit interaction
                         effects = [{type: 'END_INTERACTION'}];
                     } else if (currentState.activeConversationWith) {
+                        // Legacy: exit conversation
                         effects = [{type: 'END_CONVERSATION'}];
                     } else if (currentState.currentFocusId) {
-                        // Clear focus - return to room-level view
+                        // Legacy: clear focus - return to room-level view
                         effects = [{type: 'CLEAR_FOCUS'}];
                     }
                     break;

@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import type { Game, Message, PlayerState } from '@/lib/game/types';
+import type { SerializableGame, Message, PlayerState } from '@/lib/game/types';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
@@ -16,7 +16,7 @@ interface GameScreenProps {
   messages: Message[];
   onCommandSubmit: (command: string) => void;
   isLoading: boolean;
-  game: Game;
+  game: SerializableGame;
   playerState: PlayerState;
   commandInputValue: string;
   setCommandInputValue: (value: string) => void;

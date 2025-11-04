@@ -65,20 +65,36 @@ export type CommandResult = {
 
 export type Effect =
   | { type: 'ADD_ITEM'; itemId: ItemId }
-  | { type: 'SPAWN_ITEM'; itemId: ItemId; containerId: GameObjectId }
   | { type: 'REMOVE_ITEM'; itemId: ItemId } // From inventory
   | { type: 'REMOVE_ITEM_FROM_CONTAINER', itemId: ItemId, containerId: GameObjectId }
   | { type: 'DESTROY_ITEM'; itemId: ItemId } // From world
-  | { type: 'SET_FLAG'; flag: Flag }
+  | { type: 'SET_FLAG'; flag: Flag; value?: boolean } // Added value parameter for explicit true/false
   | { type: 'REVEAL_OBJECT'; objectId: GameObjectId }
-  | { type: 'SHOW_MESSAGE'; speaker: Message['sender']; senderName?: string; content: string; messageType?: Message['type']; imageId?: ItemId | NpcId | GameObjectId; imageUrl?: string; imageDescription?: string; imageHint?: string }
+  | { type: 'SHOW_MESSAGE'; speaker: Message['sender']; senderName?: string; content: string; messageType?: Message['type']; imageId?: ItemId | NpcId | GameObjectId; imageEntityType?: 'item' | 'object' | 'npc'; imageUrl?: string; imageDescription?: string; imageHint?: string }
   | { type: 'START_CONVERSATION'; npcId: NpcId }
   | { type: 'END_CONVERSATION' }
   | { type: 'START_INTERACTION'; objectId: string }
   | { type: 'END_INTERACTION' }
   | { type: 'SET_STATE'; targetId: GameObjectId | ItemId, to: string }
   | { type: 'SET_OBJECT_STATE', objectId: GameObjectId, state: Partial<GameObjectState> }
+  | { type: 'SET_ENTITY_STATE'; entityId: string; patch: Partial<EntityRuntimeState> } // NEW: Universal state setter
+  | { type: 'REVEAL_ENTITY'; entityId: string } // NEW: Make entity visible (sets isVisible: true)
+  | { type: 'HIDE_ENTITY'; entityId: string } // NEW: Make entity invisible (sets isVisible: false)
+  | { type: 'ADD_TO_CONTAINER'; entityId: string; containerId: string } // NEW: Add entity to container (sets parent/child)
+  | { type: 'REMOVE_FROM_CONTAINER'; entityId: string; containerId: string } // NEW: Remove entity from container
+  | { type: 'REVEAL_FROM_PARENT'; parentId: string } // NEW: Reveal all children of a parent
+  | { type: 'SET_PARENT'; entityId: string; parentId: string } // NEW: Set parent of entity
+  | { type: 'SET_STATE_ID'; entityId: string; to: string } // NEW: Set currentStateId
+  | { type: 'INC_COUNTER'; key: string; by?: number } // NEW: Increment counter
+  | { type: 'LINK_ENABLE'; linkId: string } // NEW: Enable link
+  | { type: 'LINK_DISABLE'; linkId: string } // NEW: Disable link
+  | { type: 'START_TIMER'; timerId: string; duration: number } // NEW: Start timer
+  | { type: 'CANCEL_TIMER'; timerId: string } // NEW: Cancel timer
+  | { type: 'SET_FOCUS'; focusId: string; focusType: 'object' | 'item' | 'npc'; transitionMessage?: string } // NEW: Set player focus
+  | { type: 'CLEAR_FOCUS' } // NEW: Clear player focus
   | { type: 'MOVE_TO_CELL', toCellId: CellId }
+  | { type: 'MOVE_TO_LOCATION'; toLocationId: LocationId } // NEW: Move player to location
+  | { type: 'TELEPORT'; toLocationId: LocationId } // NEW: Teleport player
   | { type: 'ENTER_PORTAL', portalId: PortalId }
   | { type: 'TELEPORT_PLAYER', toLocationId: LocationId }
   | { type: 'DEMOTE_NPC', npcId: NpcId }
@@ -242,10 +258,18 @@ export type MediaSet = {
   videoUrl?: string;
 };
 
+/**
+ * Outcome - Result of an action (success or fail)
+ * Used in the 12-verb interaction system
+ */
 export type Outcome = {
   message?: string;
   speaker?: 'narrator' | 'agent' | 'system';
-  media?: MediaSet;
+  media?: {
+    url?: string;           // Image or video URL
+    description?: string;   // Alt text / screen reader description
+    hint?: string;          // Optional hint about what this image shows
+  };
   effects?: Effect[];
 };
 
@@ -265,41 +289,51 @@ export type OnUseWith = {
 };
 
 /**
- * Handler Taxonomy - See HANDLER_TAXONOMY.md for full documentation
+ * Handlers - The 12-Verb Interaction System
+ * See /src/documentation/verb-system.md for full documentation
  *
- * CORE HANDLERS (Use these):
- * - onExamine: Visual inspection (outer appearance)
- * - onOpen: Open lids/drawers/covers
- * - onMove: Push/slide aside (reveals what's behind)
- * - onRead: Read text content
- * - onUse: Use item on object (via OnUseWith array)
- * - onTake: Pick up item
- * - onTalk: Start conversation with NPC
- * - onUnlock: Validate password/code
+ * CORE VERBS (12 - these are the ONLY verbs players can use):
+ * 1. onExamine - Visual inspection, study, look at
+ * 2. onTake - Pick up, grab, collect (items only)
+ * 3. onDrop - Drop, discard, leave (items only)
+ * 4. onUse - Use item (standalone or on object), apply, operate, activate
+ * 5. onCombine - Combine two items in inventory
+ * 6. onOpen - Open containers, doors, unlock
+ * 7. onClose - Close containers, doors, lock
+ * 8. onMove - Push, pull, slide, shift (reveals hidden items)
+ * 9. onBreak - Smash, destroy, damage (without using another item)
+ * 10. onRead - Read text on documents, screens, signs
+ * 11. onSearch - Look inside/under/behind, rummage through
+ * 12. onTalk - Initiate conversation with NPCs
  *
- * DEPRECATED (Don't use):
- * - onBreak → Use onUse instead
- * - onRemove → Use onMove instead
- * - onSearch → Use onExamine instead
+ * SPECIAL HANDLERS (not player-facing):
+ * - onUnlock - Password/code validation (triggered by other handlers)
+ * - onInput - Text input validation
+ * - onEnter/onExit - Location/cell transitions
  */
 export type Handlers = {
-  // Core handlers
+  // The 12 Core Verbs
   onExamine?: Rule;
-  onMove?: Rule;
+  onTake?: Rule;
+  onDrop?: Rule;
+  onUse?: Rule | OnUseWith[];
+  onCombine?: OnUseWith[];  // Combine with another item
   onOpen?: Rule;
   onClose?: Rule;
-  onUnlock?: Rule & { unlocksWith?: { itemId?: string; code?: string; phrase?: string; tag?: string } };
-  onUse?: Rule | OnUseWith[];
+  onMove?: Rule;
+  onBreak?: Rule;
   onRead?: Rule;
-  onTake?: Rule;
+  onSearch?: Rule;
   onTalk?: Rule;
 
-  // Legacy/specialized handlers (rarely used)
-  onBreak?: Rule & { requiredItemTag?: string; requiredItemId?: string }; // DEPRECATED: Use onUse instead
-  onSearch?: Rule; // DEPRECATED: Use onExamine instead
+  // Special handlers (not player-facing)
+  onUnlock?: Rule & { unlocksWith?: { itemId?: string; code?: string; phrase?: string; tag?: string } };
   onInput?: Rule;
   onEnter?: Rule;
   onExit?: Rule;
+
+  // Fallback message if player tries an undefined verb
+  defaultFailMessage?: string;
 };
 
 export type StateOverrides = {
@@ -419,8 +453,11 @@ export type EntityBase = {
 export type GameObject = {
   id: GameObjectId;
   name: string;
+  alternateNames?: string[]; // Alternative names for matching player input
   description: string;
   archetype: GameObjectType;
+
+  personal?: boolean; // Personal equipment (phone, badge, etc.) - always accessible, never in scene listings
 
   capabilities: {
     openable: boolean;
@@ -486,16 +523,20 @@ export type GameObject = {
     onMove?: Handler;
     onUnlock?: Handler;
     onUse?: ItemHandler[]; // Can react to multiple items
+    onRead?: ItemHandler[]; // Can react to multiple items being read with this object
+    onSearch?: Handler;
+    onBreak?: Handler;
 
     // Deprecated/specialized handlers
-    onSearch?: Handler; // DEPRECATED: Use onExamine instead
     onRemove?: ItemHandler[]; // DEPRECATED: Use onMove instead
-    onBreak?: Handler; // DEPRECATED: Use onUse instead
     onInput?: Handler;
     onInsert?: ItemHandler[];
     onReset?: Handler;
     onActivate?: Handler;
     onDeactivate?: Handler;
+
+    // Fallback message
+    defaultFailMessage?: string;
   };
 
   stateMap?: Record<string, {
@@ -537,6 +578,7 @@ export type GameObject = {
 export type Item = {
   id: ItemId;
   name: string;
+  alternateNames?: string[]; // Alternative names for matching player input
   archetype: ItemType;
   description: string;
   alternateDescription?: string;
@@ -590,13 +632,21 @@ export type Item = {
   };
 
   handlers: {
+    // The 12 Core Verbs (applicable to items)
+    onExamine?: Handler;
     onTake?: Handler;
+    onDrop?: Handler;
     onUse?: Handler | ItemHandler[];
+    onCombine?: ItemHandler[];
     onRead?: Handler;
+    onSearch?: Handler;
+    onBreak?: Handler;
+    onClose?: Handler;
+
+    // Special/legacy handlers
     onScan?: Handler;
     onAnalyze?: Handler;
     onPhotograph?: Handler;
-    onCombine?: ItemHandler[];
     defaultFailMessage?: string;
   };
 
@@ -781,7 +831,9 @@ export type Structure = {
 export type Location = {
   locationId: LocationId;
   name:string;
-  sceneDescription: string;
+  sceneDescription: string; // Brief description used in "look" command
+  introMessage?: string; // First-time entry narration (optional, uses sceneDescription if not provided)
+  lookAroundPrefix?: string; // Prefix for "look" command (e.g., "You scan the room..."), uses generic if not provided
   sceneImage?: ImageDetails;
   overworldDescription?: string;
   coord?: { x: number; y: number; z: number };
@@ -833,6 +885,7 @@ export type Chapter = {
     entityType: 'object' | 'item' | 'npc';
   };
   introductionVideo?: string;
+  introMessage?: string; // Opening narration when chapter starts (e.g., "The rain hammers down...")
   completionVideo?: string;
   postChapterMessage?: string;
   nextChapter?: { id: ChapterId, title: string, transitionCommand: string };
@@ -919,6 +972,22 @@ export type Game = {
   // System messages (all fallback/error text)
   systemMessages: SystemMessages;
 
+  // System media (generic images for common actions)
+  systemMedia?: {
+    take?: {
+      success?: ImageDetails;  // Generic "item goes into pocket/inventory" image
+      failure?: ImageDetails;  // Generic "can't take this" image
+    };
+    use?: {
+      success?: ImageDetails;
+      failure?: ImageDetails;
+    };
+    open?: {
+      success?: ImageDetails;
+      failure?: ImageDetails;
+    };
+  };
+
   // New World Model
   world: World;
   structures: Record<StructureId, Structure>;
@@ -932,3 +1001,14 @@ items: Record<ItemId, Item>;
   chapters: Record<ChapterId, Chapter>;
   startChapterId: ChapterId;
 };
+
+// Serializable version of Game for client components (no functions)
+export type SerializableGame = Omit<Game, 'systemMessages' | 'systemMedia' | 'promptContext' | 'objectInteractionPromptContext' | 'storyStyleGuide'>;
+
+/**
+ * Convert Game to SerializableGame (removes functions for client components)
+ */
+export function toSerializableGame(game: Game): SerializableGame {
+    const { systemMessages, systemMedia, promptContext, objectInteractionPromptContext, storyStyleGuide, ...serializable } = game;
+    return serializable;
+}

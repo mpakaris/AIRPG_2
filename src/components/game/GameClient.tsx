@@ -3,7 +3,7 @@
 
 import { useState, useTransition, type FC, useEffect } from 'react';
 import { processCommand, resetGame } from '@/app/actions';
-import type { Game, Message, PlayerState } from '@/lib/game/types';
+import type { SerializableGame, Message, PlayerState } from '@/lib/game/types';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { GameSidebar } from './GameSidebar';
 import { GameScreen } from './GameScreen';
@@ -13,7 +13,7 @@ import { UserRegistration } from './UserRegistration';
 import { LoaderCircle } from 'lucide-react';
 
 interface GameClientProps {
-  game: Game;
+  game: SerializableGame;
   initialGameState: PlayerState;
   initialMessages: Message[];
 }

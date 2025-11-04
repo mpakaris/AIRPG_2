@@ -4,7 +4,7 @@
 
 import { BookOpen, Box, Compass, ScrollText, Target, User, CheckCircle, Code, RotateCcw, MessageSquareShare, Send, Download, Sparkles } from 'lucide-react';
 import { FC, useState, useTransition, useEffect } from 'react';
-import type { Game, PlayerState, Flag, ChapterId, User as UserType } from '@/lib/game/types';
+import type { SerializableGame, PlayerState, Flag, ChapterId, User as UserType } from '@/lib/game/types';
 import {
   Sidebar,
   SidebarContent,
@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/alert-dialog"
 
 interface GameSidebarProps {
-  game: Game;
+  game: SerializableGame;
   playerState: PlayerState;
   onCommandSubmit: (command: string) => void;
   onResetGame: () => void;
@@ -47,9 +47,6 @@ const chapterCompletionFlag = (chapterId: ChapterId) => `chapter_${chapterId}_co
 
 
 export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommandSubmit, onResetGame, setCommandInputValue, userId, onStateUpdate }) => {
-  const chapter = game.chapters[game.startChapterId]; // Simplified for now
-  const location = game.locations[playerState.currentLocationId];
-  const inventoryItems = playerState.inventory.map(id => game.items[id]).filter(Boolean);
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
   const [user, setUser] = useState<UserType | null>(null);
@@ -59,9 +56,14 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
 
   const [objectivesVisible, setObjectivesVisible] = useState(isDevEnvironment);
 
+  // Safety checks for incomplete state
+  const chapter = game.chapters[game.startChapterId];
+  const location = playerState?.currentLocationId ? game.locations[playerState.currentLocationId] : null;
+  const inventoryItems = (playerState?.inventory || []).map(id => game.items[id]).filter(Boolean);
+
   // NEW: flags is now Record<string, boolean> instead of array
-  const isChapterComplete = !!playerState.flags?.[chapterCompletionFlag(game.startChapterId)];
-  const hasStory = !!playerState.stories?.[game.startChapterId];
+  const isChapterComplete = !!playerState?.flags?.[chapterCompletionFlag(game.startChapterId)];
+  const hasStory = !!playerState?.stories?.[game.startChapterId];
 
 
   useEffect(() => {

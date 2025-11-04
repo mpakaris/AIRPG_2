@@ -11,17 +11,20 @@
 import type { Game, PlayerState, Effect, GameObjectId } from "@/lib/game/types";
 import { Validator, HandlerResolver, VisibilityResolver, FocusResolver } from "@/lib/game/engine";
 import { normalizeName } from "@/lib/utils";
+import { buildEffectsFromOutcome } from "@/lib/game/utils/outcome-helpers";
+import { findBestMatch } from "@/lib/game/utils/name-matching";
 
 export async function handleMove(state: PlayerState, targetName: string, game: Game): Promise<Effect[]> {
     const normalizedTargetName = normalizeName(targetName);
 
-    // 1. Find target object using focus-aware search
-    const visibleEntities = VisibilityResolver.getVisibleEntities(state, game);
-    const targetObjectId = visibleEntities.objects.find(id =>
-        FocusResolver.matchesName(game.gameObjects[id as GameObjectId], normalizedTargetName)
-    );
+    // LOCATION-AWARE SEARCH: Find best match (prioritizes current location)
+    const bestMatch = findBestMatch(normalizedTargetName, state, game, {
+        searchInventory: false,
+        searchVisibleItems: false,
+        searchObjects: true  // Can only move objects
+    });
 
-    if (!targetObjectId) {
+    if (!bestMatch || bestMatch.category !== 'object') {
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'system',
@@ -29,7 +32,8 @@ export async function handleMove(state: PlayerState, targetName: string, game: G
         }];
     }
 
-    const targetObject = game.gameObjects[targetObjectId as GameObjectId];
+    const targetObjectId = bestMatch.id as GameObjectId;
+    const targetObject = game.gameObjects[targetObjectId];
     if (!targetObject) {
         return [{
             type: 'SHOW_MESSAGE',
@@ -39,7 +43,10 @@ export async function handleMove(state: PlayerState, targetName: string, game: G
     }
 
     // 2. FOCUS VALIDATION: Check if target is within current focus
-    if (state.currentFocusId && state.focusType === 'object') {
+    // Skip validation for personal equipment (phone, etc.) - they're always accessible
+    const isPersonalEquipment = targetObject.personal === true;
+
+    if (!isPersonalEquipment && state.currentFocusId && state.focusType === 'object') {
         const entitiesInFocus = FocusResolver.getEntitiesInFocus(state, game);
 
         // Check if target is the focused object itself or within it
@@ -99,32 +106,21 @@ export async function handleMove(state: PlayerState, targetName: string, game: G
         }];
     }
 
-    // 5. Build effects - IMPORTANT: State updates BEFORE messages
-    const effects: Effect[] = [
-        // Set focus on the object being moved
-        {
+    // 5. Build effects (with media support)
+    const effects: Effect[] = [];
+
+    // Only set focus if NOT personal equipment
+    if (!isPersonalEquipment) {
+        effects.push({
             type: 'SET_FOCUS',
             focusId: targetObjectId,
             focusType: 'object',
             transitionMessage: FocusResolver.getTransitionNarration(targetObjectId, 'object', state, game) || undefined
-        }
-    ];
-
-    // Add outcome effects so state is updated before message shows
-    if (outcome.effects) {
-        effects.push(...outcome.effects);
-    }
-
-    // Add message AFTER state updates (so createMessage sees updated state)
-    if (outcome.message) {
-        effects.push({
-            type: 'SHOW_MESSAGE',
-            speaker: outcome.speaker || 'narrator',
-            content: outcome.message,
-            imageId: targetObjectId,  // Will resolve image based on updated currentStateId
-            messageType: 'image'
         });
     }
+
+    // Use helper to build effects with automatic media extraction
+    effects.push(...buildEffectsFromOutcome(outcome, targetObjectId, 'object'));
 
     return effects;
 }

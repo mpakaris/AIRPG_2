@@ -23,18 +23,18 @@ export function createMessage(
   senderName: string,
   content: string,
   type: Message['type'] = 'text',
-  imageDetails?: { id: ItemId | NpcId | GameObjectId, game: Game, state: PlayerState, showEvenIfExamined?: boolean },
+  imageDetails?: { id: ItemId | NpcId | GameObjectId, game: Game, state: PlayerState, showEvenIfExamined?: boolean, entityType?: 'item' | 'object' | 'npc' },
   usage?: TokenUsage
 ): Message {
     let image: Message['image'];
 
     if (imageDetails) {
-        const { id, game, state, showEvenIfExamined } = imageDetails;
+        const { id, game, state, showEvenIfExamined, entityType } = imageDetails;
         // NEW: flags is now Record<string, boolean> instead of array
         const isAlreadyExamined = !!state.flags?.[examinedObjectFlag(id as string)];
 
         let shouldShowImage = true;
-        
+
         if (showEvenIfExamined !== true) {
             if (isAlreadyExamined) {
                 shouldShowImage = false;
@@ -42,11 +42,32 @@ export function createMessage(
         }
 
         if (shouldShowImage) {
-            const item = game.items[id as ItemId];
-            const npc = game.npcs[id as NpcId];
-            const gameObject = game.gameObjects[id as GameObjectId];
+            // If entityType is explicitly provided, only look in that collection
+            // This prevents confusion when IDs might be ambiguous
+            const item = (!entityType || entityType === 'item') ? game.items[id as ItemId] : undefined;
+            const npc = (!entityType || entityType === 'npc') ? game.npcs[id as NpcId] : undefined;
+            const gameObject = (!entityType || entityType === 'object') ? game.gameObjects[id as GameObjectId] : undefined;
 
-            if (gameObject?.media?.images) {
+            // IMPORTANT: Check items FIRST when entityType is 'item' to avoid ambiguity
+            if (item?.media && (!entityType || entityType === 'item')) {
+                // Check for new images format (with state support)
+                if (item.media.images) {
+                    const liveItem = getLiveItem(id as ItemId, state, game);
+                    const currentStateId = liveItem?.state.currentStateId || 'default';
+
+                    // Try to get image for current state (e.g., 'opened')
+                    if (currentStateId && item.media.images[currentStateId]) {
+                        image = item.media.images[currentStateId];
+                    } else {
+                        // Fallback to default image
+                        image = item.media.images.default || item.media.images[Object.keys(item.media.images)[0]];
+                    }
+                }
+                // Legacy format: single image
+                else if (item.media.image) {
+                    image = item.media.image;
+                }
+            } else if (gameObject?.media?.images && (!entityType || entityType === 'object')) {
                 const liveObject = getLiveGameObject(gameObject.id, state, game);
                 if (liveObject) {
                     const currentStateId = liveObject.state.currentStateId;
@@ -88,25 +109,7 @@ export function createMessage(
                         image = gameObject.media.images.default;
                     }
                 }
-            } else if (item?.media) {
-                // Check for new images format (with state support)
-                if (item.media.images) {
-                    const liveItem = getLiveItem(id as ItemId, state, game);
-                    const currentStateId = liveItem?.state.currentStateId || 'default';
-
-                    // Try to get image for current state (e.g., 'opened')
-                    if (currentStateId && item.media.images[currentStateId]) {
-                        image = item.media.images[currentStateId];
-                    } else {
-                        // Fallback to default image
-                        image = item.media.images.default || item.media.images[Object.keys(item.media.images)[0]];
-                    }
-                }
-                // Legacy format: single image
-                else if (item.media.image) {
-                    image = item.media.image;
-                }
-            } else if (npc?.image) {
+            } else if (npc?.image && (!entityType || entityType === 'npc')) {
                 image = npc.image;
             }
         }

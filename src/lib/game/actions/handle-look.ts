@@ -13,7 +13,12 @@ import { VisibilityResolver } from "@/lib/game/engine";
 
 export async function handleLook(state: PlayerState, game: Game): Promise<Effect[]> {
   const location = game.locations[state.currentLocationId];
-  let fullDescription = location.sceneDescription.trim();
+
+  // Use location-specific prefix or generic noir flavor
+  const prefix = location.lookAroundPrefix || "You look around carefully.";
+  const description = location.sceneDescription;
+
+  let fullDescription = `${prefix} ${description}`.trim();
 
   // Use VisibilityResolver to get visible entities
   const visibleEntities = VisibilityResolver.getVisibleEntities(state, game);

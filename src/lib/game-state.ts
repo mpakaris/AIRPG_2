@@ -22,13 +22,35 @@ export function getInitialState(game: Game): PlayerState {
   for (const gameObjectId in game.gameObjects) {
     const gameObject = game.gameObjects[gameObjectId as GameObjectId];
 
-    // Objects that start hidden (revealed by other actions)
-    const hiddenObjects = ['obj_wall_safe'];
-    const startsHidden = hiddenObjects.includes(gameObject.id);
+    // Check if object is a child of another object - if so, check parent state
+    let isHiddenChild = false;
+    for (const parentObjId in game.gameObjects) {
+      const parentObj = game.gameObjects[parentObjId as GameObjectId];
+      if (parentObj.children?.objects?.includes(gameObject.id as any)) {
+        // Object is a child - check parent accessibility based on capabilities
+        const parentState = parentObj.state || { isOpen: false, isLocked: false, isMoved: false };
+
+        // If parent is a container, check if it's open/unlocked
+        if (parentObj.capabilities?.container) {
+          // Containers: child hidden if parent is closed OR locked
+          if (!parentState.isOpen || parentState.isLocked) {
+            isHiddenChild = true;
+          }
+        }
+        // If parent is movable (non-container), check if it's moved
+        else if (parentObj.capabilities?.movable) {
+          // Movable objects: child hidden until parent is moved (e.g., safe behind painting)
+          if (!parentState.isMoved) {
+            isHiddenChild = true;
+          }
+        }
+        break;
+      }
+    }
 
     world[gameObject.id] = {
       // Universal properties
-      isVisible: !startsHidden, // Hidden objects start invisible
+      isVisible: !isHiddenChild, // Visible if not a hidden child (parent has been moved/revealed)
       discovered: false,
       currentStateId: gameObject.state?.currentStateId || 'default',
 
@@ -52,28 +74,33 @@ export function getInitialState(game: Game): PlayerState {
   for (const itemId in game.items) {
     const item = game.items[itemId as ItemId];
 
-    // Books on bookshelf are always visible
-    const alwaysVisibleItems = ['item_book_deal', 'item_book_time', 'item_book_justice'];
-    const isAlwaysVisible = alwaysVisibleItems.includes(item.id);
-
     // Check if item is a child of a container - if so, check parent state
     let isHiddenChild = false;
-    if (!isAlwaysVisible) {
-      for (const objId in game.gameObjects) {
-        const obj = game.gameObjects[objId as GameObjectId];
-        if (obj.children?.items?.includes(item.id as any)) {
-          // Item is a child - start hidden ONLY if parent is closed/locked/not moved
-          const parentState = obj.state || { isOpen: false, isLocked: false };
-          if (!parentState.isOpen || parentState.isLocked) {
-            isHiddenChild = true;
-          }
-          break;
+    for (const objId in game.gameObjects) {
+      const obj = game.gameObjects[objId as GameObjectId];
+      if (obj.children?.items?.includes(item.id as any)) {
+        // Item is a child - check parent accessibility based on capabilities
+        const parentState = obj.state || { isOpen: false, isLocked: false, isBroken: false };
+
+        // If parent is lockable and locked, child is hidden
+        if (obj.capabilities?.lockable && parentState.isLocked) {
+          isHiddenChild = true;
         }
+        // If parent is breakable (and NOT openable), child hidden until broken
+        else if (obj.capabilities?.breakable && !obj.capabilities?.openable && !parentState.isBroken) {
+          isHiddenChild = true;
+        }
+        // If parent is a regular container, child hidden until opened
+        else if (obj.capabilities?.container && !parentState.isOpen) {
+          isHiddenChild = true;
+        }
+
+        break;
       }
     }
 
     world[item.id] = {
-      isVisible: isAlwaysVisible || !isHiddenChild, // Always visible items or not hidden children
+      isVisible: !isHiddenChild, // Visible if not a hidden child (parent is open/unlocked)
       discovered: false,
       taken: false,
       readCount: item.state?.readCount || 0,

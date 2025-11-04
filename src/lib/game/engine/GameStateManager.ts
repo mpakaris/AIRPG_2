@@ -280,7 +280,8 @@ export class GameStateManager {
               id: effect.imageId,
               game,
               state,
-              showEvenIfExamined: true
+              showEvenIfExamined: true,
+              entityType: effect.imageEntityType  // Pass explicit entity type to prevent ambiguity
             } : undefined
           );
 

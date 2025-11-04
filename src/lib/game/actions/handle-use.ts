@@ -8,32 +8,23 @@
 
 'use server';
 
-import type { Game, PlayerState, Effect, GameObjectId } from "@/lib/game/types";
+import type { Game, PlayerState, Effect, GameObjectId, ItemId } from "@/lib/game/types";
 import { Validator, VisibilityResolver, FocusResolver } from "@/lib/game/engine";
 import { normalizeName } from "@/lib/utils";
+import { buildEffectsFromOutcome } from "@/lib/game/utils/outcome-helpers";
+import { findBestMatch } from "@/lib/game/utils/name-matching";
 
 export async function handleUse(state: PlayerState, itemName: string, targetName: string, game: Game): Promise<Effect[]> {
   const normalizedItemName = normalizeName(itemName);
 
-  // 1. Find item in inventory OR visible items
-  let itemId = state.inventory.find(id =>
-    normalizeName(game.items[id]?.name).includes(normalizedItemName)
-  );
+  // 1. LOCATION-AWARE SEARCH: Find item (prioritizes current location)
+  const itemMatch = findBestMatch(normalizedItemName, state, game, {
+    searchInventory: true,
+    searchVisibleItems: true,
+    searchObjects: false
+  });
 
-  // If not in inventory, check visible items
-  if (!itemId) {
-    const visibleEntities = VisibilityResolver.getVisibleEntities(state, game);
-    itemId = visibleEntities.items.find(id => {
-      const item = game.items[id as any];
-      if (!item) return false;
-      const itemNameNorm = normalizeName(item.name);
-      const altNames = item.alternateNames?.map(normalizeName) || [];
-      return itemNameNorm.includes(normalizedItemName) ||
-             altNames.some(alt => alt.includes(normalizedItemName));
-    });
-  }
-
-  if (!itemId) {
+  if (!itemMatch) {
     return [{
       type: 'SHOW_MESSAGE',
       speaker: 'system',
@@ -41,6 +32,7 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
     }];
   }
 
+  const itemId = itemMatch.id as ItemId;
   const itemToUse = game.items[itemId];
   if (!itemToUse) {
     return [{
@@ -53,19 +45,17 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
   // 2. If using item on a target
   if (targetName) {
     const normalizedTargetName = normalizeName(targetName);
-    const visibleEntities = VisibilityResolver.getVisibleEntities(state, game);
 
-    // Find target object
-    const targetObjectId = visibleEntities.objects.find(id => {
-      const obj = game.gameObjects[id as any];
-      if (!obj) return false;
-      const objName = normalizeName(obj.name);
-      const objTags = obj.design?.tags?.map(normalizeName) || [];
-      return objName.includes(normalizedTargetName) || objTags.includes(normalizedTargetName);
+    // LOCATION-AWARE SEARCH: Find target object (prioritizes current location)
+    const targetMatch = findBestMatch(normalizedTargetName, state, game, {
+      searchInventory: false,
+      searchVisibleItems: false,
+      searchObjects: true
     });
 
-    if (targetObjectId) {
-      const targetObject = game.gameObjects[targetObjectId as any];
+    if (targetMatch?.category === 'object') {
+      const targetObjectId = targetMatch.id as GameObjectId;
+      const targetObject = game.gameObjects[targetObjectId];
       if (!targetObject) {
         return [{
           type: 'SHOW_MESSAGE',
@@ -75,7 +65,10 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
       }
 
       // FOCUS VALIDATION: Check if target is within current focus
-      if (state.currentFocusId && state.focusType === 'object') {
+      // Skip validation for personal equipment (phone, etc.) - they're always accessible
+      const isPersonalEquipment = targetObject.personal === true;
+
+      if (!isPersonalEquipment && state.currentFocusId && state.focusType === 'object') {
         const entitiesInFocus = FocusResolver.getEntitiesInFocus(state, game);
 
         // Check if target is the focused object itself or within it
@@ -111,32 +104,21 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
             }];
           }
 
-          // Build effects - IMPORTANT: State updates BEFORE messages
-          const effects: Effect[] = [
-            // Set focus on the target object being used
-            {
+          // Build effects with media support
+          const effects: Effect[] = [];
+
+          // Only set focus if NOT personal equipment (phone doesn't need focus - it's always with you)
+          if (!isPersonalEquipment) {
+            effects.push({
               type: 'SET_FOCUS',
               focusId: targetObjectId,
               focusType: 'object',
               transitionMessage: FocusResolver.getTransitionNarration(targetObjectId, 'object', state, game) || undefined
-            }
-          ];
-
-          // Add outcome effects
-          if (outcome.effects && Array.isArray(outcome.effects)) {
-            effects.push(...outcome.effects);
-          }
-
-          // Add message AFTER state updates
-          if (outcome.message) {
-            effects.push({
-              type: 'SHOW_MESSAGE',
-              speaker: 'narrator',
-              content: outcome.message,
-              imageId: targetObjectId,  // Will resolve based on updated state
-              messageType: 'image'
             });
           }
+
+          // Use helper to build effects with automatic media extraction
+          effects.push(...buildEffectsFromOutcome(outcome, targetObjectId, 'object'));
 
           return effects;
         }
@@ -163,12 +145,14 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
       }];
     }
 
-    // Check if target is an item
-    const targetItemId = state.inventory.find(id =>
-      normalizeName(game.items[id]?.name).includes(normalizedTargetName)
-    );
+    // Check if target is an item (using location-aware search)
+    const targetItemMatch = findBestMatch(normalizedTargetName, state, game, {
+      searchInventory: true,
+      searchVisibleItems: true,
+      searchObjects: false
+    });
 
-    if (targetItemId) {
+    if (targetItemMatch) {
       // Item-on-item combination (not implemented yet)
       return [{
         type: 'SHOW_MESSAGE',
@@ -199,56 +183,9 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
       }];
     }
 
-    // Build effects - IMPORTANT: State updates BEFORE messages
-    const effects: Effect[] = [];
-
-    // 1. Add state-changing effects FIRST (no messages yet)
-    if (outcome.effects) {
-      for (const effect of outcome.effects) {
-        // Add state changes first
-        if (effect.type !== 'SHOW_MESSAGE') {
-          effects.push(effect);
-        }
-      }
-    }
-
-    // 2. Add main handler message (will resolve imageId based on NEW state)
-    if (outcome.message) {
-      // Detect if this item will resolve to a video URL after state changes
-      const item = game.items[itemId];
-
-      // Check if there's a SET_ENTITY_STATE effect that changes currentStateId
-      let newStateId = state.world?.[itemId]?.currentStateId || item?.state?.currentStateId || 'default';
-
-      if (outcome.effects) {
-        const stateChangeEffect = outcome.effects.find(
-          (e: any) => e.type === 'SET_ENTITY_STATE' && e.entityId === itemId && e.patch?.currentStateId
-        );
-        if (stateChangeEffect) {
-          newStateId = (stateChangeEffect as any).patch.currentStateId;
-        }
-      }
-
-      const mediaUrl = item?.media?.images?.[newStateId]?.url;
-      const isVideo = mediaUrl?.match(/\.(mp4|webm|ogg|mov)$/i);
-
-      effects.push({
-        type: 'SHOW_MESSAGE',
-        speaker: 'narrator',
-        content: outcome.message,
-        imageId: itemId,  // Will resolve based on updated state
-        messageType: isVideo ? 'video' : 'image'
-      });
-    }
-
-    // 3. Add any additional SHOW_MESSAGE effects from outcome
-    if (outcome.effects) {
-      for (const effect of outcome.effects) {
-        if (effect.type === 'SHOW_MESSAGE') {
-          effects.push(effect);
-        }
-      }
-    }
+    // Build effects with media support
+    // Use helper to automatically extract media and handle proper effect ordering
+    const effects = buildEffectsFromOutcome(outcome, itemId, 'item');
 
     return effects;
   }

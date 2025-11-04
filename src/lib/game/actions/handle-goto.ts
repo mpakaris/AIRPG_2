@@ -38,7 +38,17 @@ export async function handleGoto(state: PlayerState, targetName: string, game: G
     // Get entity name for response
     let entityName: string;
     if (match.type === 'object') {
-        entityName = game.gameObjects[match.id as GameObjectId]?.name || 'it';
+        const targetObject = game.gameObjects[match.id as GameObjectId];
+        entityName = targetObject?.name || 'it';
+
+        // Personal equipment (phone, badge, etc.) is always with you - can't "goto" it
+        if (targetObject?.personal === true) {
+            return [{
+                type: 'SHOW_MESSAGE',
+                speaker: 'narrator',
+                content: `${entityName} is already with you, Burt. You don't need to move to it - just use it directly.`
+            }];
+        }
     } else if (match.type === 'npc') {
         entityName = game.npcs?.[match.id as NpcId]?.name || 'them';
     } else {

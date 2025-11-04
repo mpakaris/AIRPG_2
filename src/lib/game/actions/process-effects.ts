@@ -27,25 +27,6 @@ export async function processEffects(initialState: PlayerState, effects: Effect[
                     newState.objectStates[effect.containerId].items = newState.objectStates[effect.containerId].items!.filter((id: ItemId) => id !== effect.itemId);
                 }
                 break;
-            case 'SPAWN_ITEM':
-                // LEGACY: Use ADD_TO_CONTAINER instead
-                const containerId = (effect as any).containerId;
-                if (containerId) {
-                    if (!newState.objectStates) newState.objectStates = {};
-                    if (!newState.objectStates[containerId]) {
-                        newState.objectStates[containerId] = {};
-                    }
-                    if (!newState.objectStates[containerId].items) {
-                        newState.objectStates[containerId].items = [];
-                    }
-                    if (!newState.objectStates[containerId].items!.includes((effect as any).itemId)) {
-                        const newItems = [...newState.objectStates[containerId].items!, (effect as any).itemId];
-                        newState.objectStates[containerId].items = newItems;
-                    }
-                } else {
-                    console.error(`SPAWN_ITEM effect for ${(effect as any).itemId} is missing a containerId.`);
-                }
-                break;
 
             case 'DESTROY_ITEM':
                 // LEGACY: Remove item from world entirely
