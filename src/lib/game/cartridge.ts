@@ -399,7 +399,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         archetype: 'Furniture',
         description: "A small bookshelf filled with used paperbacks is tucked into a corner.",
         capabilities: { openable: false, lockable: false, breakable: false, movable: false, powerable: false, container: true, readable: false, inputtable: false },
-        state: { isOpen: true, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
+        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
         inventory: { items: [], capacity: null },
         children: { items: ['item_book_deal', 'item_book_time', 'item_book_justice'] as ItemId[] },
         media: { images: { default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759604596/Bookshelf_Cafe_kn4poz.png', description: 'A bookshelf in a cafe.', hint: 'bookshelf reading corner' } } },
@@ -415,6 +415,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                     },
                     effects: [
                         { type: 'SET_FLAG', flag: 'has_seen_justice_book', value: true },
+                        { type: 'SET_ENTITY_STATE', entityId: 'obj_bookshelf', patch: { isOpen: true } },
                         { type: 'REVEAL_ENTITY', entityId: 'item_book_deal' },
                         { type: 'REVEAL_ENTITY', entityId: 'item_book_time' },
                         { type: 'REVEAL_ENTITY', entityId: 'item_book_justice' }

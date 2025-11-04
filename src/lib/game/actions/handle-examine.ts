@@ -11,7 +11,7 @@ import type { Game, PlayerState, Effect, ItemId, GameObjectId } from "@/lib/game
 import { HandlerResolver, GameStateManager, FocusResolver, Validator } from "@/lib/game/engine";
 import { normalizeName } from "@/lib/utils";
 import { handleRead } from "./handle-read";
-import { outcomeToMessageEffect, buildEffectsFromOutcome } from "@/lib/game/utils/outcome-helpers";
+import { buildEffectsFromOutcome } from "@/lib/game/utils/outcome-helpers";
 import { findBestMatch } from "@/lib/game/utils/name-matching";
 
 const examinedObjectFlag = (id: string) => `examined_${id}`;
@@ -108,8 +108,8 @@ export async function handleExamine(state: PlayerState, targetName: string, game
 
         // Build message with media support
         if (handler?.success) {
-            // Use outcome helper to extract media automatically
-            effects.push(outcomeToMessageEffect(
+            // Use outcome helper to extract message, media AND effects
+            effects.push(...buildEffectsFromOutcome(
                 { message: messageText, ...handler.success },
                 itemId,
                 'item'
@@ -177,8 +177,8 @@ export async function handleExamine(state: PlayerState, targetName: string, game
 
             // Build message with media support
             if (handler?.success) {
-                // Use outcome helper to extract media automatically
-                effects.push(outcomeToMessageEffect(
+                // Use outcome helper to extract message, media AND effects
+                effects.push(...buildEffectsFromOutcome(
                     { message: messageText, ...handler.success },
                     visibleItemId,
                     'item'
@@ -257,8 +257,8 @@ export async function handleExamine(state: PlayerState, targetName: string, game
 
         // Build message with media support
         if (handler?.success) {
-            // Use outcome helper to extract media automatically
-            effects.push(outcomeToMessageEffect(
+            // Use outcome helper to extract message, media AND effects
+            effects.push(...buildEffectsFromOutcome(
                 { message: messageContent, ...handler.success },
                 targetObjectId,
                 'object'

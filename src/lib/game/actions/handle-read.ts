@@ -56,6 +56,13 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
     });
 
     if (!itemMatch) {
+        // Debug: check if books are visible
+        const visibleEntities = require('@/lib/game/engine').VisibilityResolver.getVisibleEntities(state, game);
+        console.log('[handleRead] Item not found. Search term:', normalizedItemName);
+        console.log('[handleRead] Visible items:', visibleEntities.items);
+        console.log('[handleRead] Bookshelf state:', require('@/lib/game/engine').GameStateManager.getEntityState(state, 'obj_bookshelf'));
+        console.log('[handleRead] Book deal state:', require('@/lib/game/engine').GameStateManager.getEntityState(state, 'item_book_deal'));
+
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'system',

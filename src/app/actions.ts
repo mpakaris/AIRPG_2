@@ -508,6 +508,8 @@ export async function processCommand(
 
             // NEW: Apply effects through processEffects (which includes image resolution)
             if (effects.length > 0) {
+                console.log('[processCommand] Processing', effects.length, 'effects from verb:', verb);
+                console.log('[processCommand] Effects:', effects.map(e => e.type));
                 const result = await processEffects(currentState, effects, game);
                 currentState = result.newState;  // FIX: Use newState, not state!
                 allMessagesForSession.push(...result.messages);

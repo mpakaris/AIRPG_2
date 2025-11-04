@@ -11,7 +11,7 @@
 import type { Game, PlayerState, Effect, ItemId, GameObjectId } from "@/lib/game/types";
 import { HandlerResolver, VisibilityResolver, GameStateManager } from "@/lib/game/engine";
 import { normalizeName } from "@/lib/utils";
-import { outcomeToMessageEffect } from "@/lib/game/utils/outcome-helpers";
+import { buildEffectsFromOutcome } from "@/lib/game/utils/outcome-helpers";
 import { findBestMatch } from "@/lib/game/utils/name-matching";
 
 export async function handleTake(state: PlayerState, targetName: string, game: Game): Promise<Effect[]> {
@@ -78,8 +78,8 @@ export async function handleTake(state: PlayerState, targetName: string, game: G
     const failOutcome = item.handlers?.onTake?.fail;
 
     if (failOutcome?.media?.url) {
-      // Use outcome helper to extract media from handler
-      return [outcomeToMessageEffect(failOutcome, itemId as ItemId, 'item')];
+      // Use outcome helper to extract media AND effects from handler
+      return buildEffectsFromOutcome(failOutcome, itemId as ItemId, 'item');
     }
 
     // Fallback to system media
@@ -120,8 +120,8 @@ export async function handleTake(state: PlayerState, targetName: string, game: G
   const successOutcome = item.handlers?.onTake?.success;
 
   if (successOutcome?.media?.url) {
-    // Use outcome helper to extract media from handler
-    effects.push(outcomeToMessageEffect(successOutcome, itemId as ItemId, 'item'));
+    // Use outcome helper to extract media AND effects from handler
+    effects.push(...buildEffectsFromOutcome(successOutcome, itemId as ItemId, 'item'));
   } else {
     // Fallback to system media
     const successMessage = successOutcome?.message || `You take the ${item.name}.`;
