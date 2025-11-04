@@ -351,6 +351,8 @@ export async function processCommand(
             const verb = verbMatch ? verbMatch[1] : commandToExecute;
             const restOfCommand = commandToExecute.substring((verbMatch ? verbMatch[0].length : verb.length)).trim();
 
+            console.log('[processCommand] Verb:', verb, 'RestOfCommand:', restOfCommand);
+
             // NEW: Route to handlers that return Effect[]
             switch (verb) {
                 case 'examine':
@@ -413,11 +415,34 @@ export async function processCommand(
                     break;
                 case 'open':
                     // NEW: handleOpen returns Effect[]
-                    effects = await handleOpen(currentState, restOfCommand.replace(/"/g, ''), game);
+                    // Support "open X with Y" pattern
+                    const openWithMatch = restOfCommand.match(/^(.*?)\s+(?:with|using)\s+(.*)$/);
+                    if (openWithMatch) {
+                        console.log('[processCommand] OPEN pattern matched - target:', openWithMatch[1], 'item:', openWithMatch[2]);
+                        // Redirect to use handler for "open X with Y"
+                        const openTarget = openWithMatch[1].trim().replace(/"/g, '');
+                        const openItem = openWithMatch[2].trim().replace(/"/g, '');
+                        effects = await handleUse(currentState, openItem, openTarget, game);
+                    } else {
+                        effects = await handleOpen(currentState, restOfCommand.replace(/"/g, ''), game);
+                    }
                     break;
                 case 'read':
                     // NEW: handleRead returns Effect[]
-                    effects = await handleRead(currentState, restOfCommand.replace(/"/g, ''), game);
+                    // Support "read X with Y" pattern
+                    const readWithMatch = restOfCommand.match(/^(.*?)\s+(?:with|on|using)\s+(.*)$/);
+                    if (readWithMatch) {
+                        console.log('[processCommand] READ pattern matched - target:', readWithMatch[1], 'item:', readWithMatch[2]);
+                        // For reading, the syntax is "read TARGET with TOOL"
+                        // The target needs the tool, so we check target's onRead handlers
+                        // This is different from general USE where we "use ITEM on TARGET"
+                        const readTarget = readWithMatch[1].trim().replace(/"/g, '');
+                        const readTool = readWithMatch[2].trim().replace(/"/g, '');
+                        console.log('[processCommand] Calling handleUse with tool:', readTool, 'on target:', readTarget);
+                        effects = await handleUse(currentState, readTool, readTarget, game);
+                    } else {
+                        effects = await handleRead(currentState, restOfCommand.replace(/"/g, ''), game);
+                    }
                     break;
                 case 'password':
                 case 'say':

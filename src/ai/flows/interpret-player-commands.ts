@@ -60,7 +60,18 @@ const interpretPlayerCommandPrompt = ai.definePrompt({
   {{/each}}
 
   Based on the player's command, draft a response to the player and determine which command to execute.
-  Ensure the command is from the list of available commands (examine, take, go, goto, moveto, shift, use, talk, look, inventory, password).
+  Ensure the command starts with a valid verb from the list of available commands (examine, take, go, goto, moveto, shift, use, talk, look, inventory, password, read, open, break, search, drop, close, move, combine).
+
+  **IMPORTANT: MULTI-OBJECT COMMANDS ARE VALID**
+  - Commands like "read X with Y", "use X on Y", "open X with Y" are VALID and COMMON in this game
+  - When you see these patterns, DO NOT mark them as invalid
+  - DO NOT simplify them - preserve the full command exactly as the player typed it
+  - Examples of VALID commands:
+    - "read sd card on phone" → commandToExecute: "read sd card on phone" ✅
+    - "use key on safe" → commandToExecute: "use key on safe" ✅
+    - "open door with key" → commandToExecute: "open door with key" ✅
+    - "examine article with magnifying glass" → commandToExecute: "examine article with magnifying glass" ✅
+    - "check newspaper on table" → commandToExecute: "examine newspaper on table" ✅
 
   **IMPORTANT FOCUS COMMANDS:**
   - Use 'goto', 'moveto', or 'shift' when the player wants to position themselves at an object/NPC without performing an action (e.g., "go to the bookshelf", "move to the safe", "shift to the chalkboard")
@@ -69,6 +80,15 @@ const interpretPlayerCommandPrompt = ai.definePrompt({
   **IMPORTANT TAKE COMMAND VARIATIONS:**
   - Use 'take' for any of these player intents: "take", "grab", "pick up", "put in pocket", "add to inventory", "take with me"
   - Examples: "grab the key" → "take key", "put pipe in pocket" → "take pipe", "pick up the notebook" → "take notebook"
+
+  **IMPORTANT MULTI-OBJECT COMMANDS:**
+  - When the player uses "with", "on", "using", or "in" to specify a tool/item, preserve both objects in the command
+  - Examples:
+    - "read sd card on phone" → "read sd card on phone"
+    - "use key on safe" → "use key on safe"
+    - "open door with key" → "open door with key"
+    - "check article with magnifying glass" → "examine article with magnifying glass"
+  - Do NOT strip out the tool/item reference - the game engine needs both objects to process the command correctly
 
   Output should be formatted as valid JSON.
   `, safetySettings: [{

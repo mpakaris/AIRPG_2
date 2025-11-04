@@ -398,7 +398,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         name: 'Bookshelf',
         archetype: 'Furniture',
         description: "A small bookshelf filled with used paperbacks is tucked into a corner.",
-        capabilities: { openable: false, lockable: false, breakable: false, movable: true, powerable: false, container: false, readable: false, inputtable: false },
+        capabilities: { openable: false, lockable: false, breakable: false, movable: false, powerable: false, container: true, readable: false, inputtable: false },
         state: { isOpen: true, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
         inventory: { items: [], capacity: null },
         children: { items: ['item_book_deal', 'item_book_time', 'item_book_justice'] as ItemId[] },
@@ -414,7 +414,10 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         hint: 'Justice... that word keeps appearing'
                     },
                     effects: [
-                        { type: 'SET_FLAG', flag: 'has_seen_justice_book', value: true }
+                        { type: 'SET_FLAG', flag: 'has_seen_justice_book', value: true },
+                        { type: 'REVEAL_ENTITY', entityId: 'item_book_deal' },
+                        { type: 'REVEAL_ENTITY', entityId: 'item_book_time' },
+                        { type: 'REVEAL_ENTITY', entityId: 'item_book_justice' }
                     ]
                 }
             },
@@ -664,10 +667,10 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                     }
                 },
                 fail: {
-                    message: "Safe's open. Inside: manila folder. CONFIDENTIAL in red. What someone hid.",
+                    message: "Safe's open. Inside: manila folder. A secret document - There it is again, this spark in your eyes when you discover secret information. What someone hid.",
                     media: {
                         url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761263220/safe_behind_painting_open_tpmf0m.png',
-                        description: 'Open safe with confidential document',
+                        description: 'Open safe with secret document',
                         hint: 'A secret file'
                     }
                 }
@@ -1557,13 +1560,7 @@ const items: Record<ItemId, Item> = {
             onMove: { fail: { message: "It's on the shelf. Try READING it." } },
             // 9. BREAK
             onBreak: { fail: { message: "Cafe property. Try READING it instead." } },
-            // 10. READ
-            onRead: {
-                success: {
-                    message: "Ghost-written book about a real estate magnate. Not relevant to the case.",
-                    effects: [{ type: 'SET_ENTITY_STATE', entityId: 'item_book_deal', patch: { readCount: 1 } }]
-                }
-            },
+            // 10. READ - Uses stateMap for progressive content
             // 11. SEARCH
             onSearch: { fail: { message: "It's a book. Try READING it." } },
             // 12. TALK
@@ -1607,13 +1604,7 @@ const items: Record<ItemId, Item> = {
             onMove: { fail: { message: "It's on the shelf. Try READING it." } },
             // 9. BREAK
             onBreak: { fail: { message: "Cafe property. Try READING it instead." } },
-            // 10. READ
-            onRead: {
-                success: {
-                    message: "Spacetime theories. Complex. Won't solve murder.",
-                    effects: [{ type: 'SET_ENTITY_STATE', entityId: 'item_book_time', patch: { readCount: 1 } }]
-                }
-            },
+            // 10. READ - Uses stateMap for progressive content
             // 11. SEARCH
             onSearch: { fail: { message: "It's a book. Try READING it." } },
             // 12. TALK
@@ -1657,13 +1648,7 @@ const items: Record<ItemId, Item> = {
             onMove: { fail: { message: "It's on the shelf. Try READING it." } },
             // 9. BREAK
             onBreak: { fail: { message: "Cafe property. Try READING it instead." } },
-            // 10. READ
-            onRead: {
-                success: {
-                    message: "Against better judgment: 'His voice was smooth jazz on rain. Eyes held storms. She knew he'd get justice for her, or die trying.' Justice. Again.",
-                    effects: [{ type: 'SET_ENTITY_STATE', entityId: 'item_book_justice', patch: { readCount: 1 } }]
-                }
-            },
+            // 10. READ - Uses stateMap for progressive content
             // 11. SEARCH
             onSearch: { fail: { message: "It's a book. Try READING it." } },
             // 12. TALK
@@ -1934,16 +1919,16 @@ const locations: Record<LocationId, Location> = {
             }
         ],
         transitionTemplates: [
-            'You weave through the packed tables toward {entity}. A harried waiter nearly clips you with a tray of scones.',
-            'You shoulder past a couple arguing over lattes, eyes fixed on {entity}.',
-            'The din of conversation fades to white noise as you move toward {entity}.',
-            'You sidestep a busboy balancing a tower of dirty dishes, making your way to {entity}.',
-            'Coffee steam parts like a curtain as you cross the cafe toward {entity}.',
-            'You navigate the maze of mismatched chairs, approaching {entity}. The floorboards creak under your weight.',
-            'The jazz playing low from corner speakers follows you to {entity}. Saxophone. Always saxophone. The tune sounds familiar to you. ',
-            'You step around puddles tracked in from the rain, heading for {entity}. The smell of wet wool and espresso.',
-            'A businessman in a wrinkled suit nearly blocks your path. You slip past him toward {entity}.',
-            'You can hear the espresso machine hissing angrily as you make your way to {entity}, dodging elbows and coffee cups.'
+            'You weave through the packed tables toward the {entity}. A harried waiter nearly clips you with a tray of scones.',
+            'You shoulder past a couple arguing over lattes, eyes fixed on the {entity}.',
+            'The din of conversation fades to white noise as you move toward the {entity}.',
+            'You sidestep a busboy balancing a tower of dirty dishes, making your way to the {entity}.',
+            'Coffee steam parts like a curtain as you cross the cafe toward the {entity}.',
+            'You navigate the maze of mismatched chairs, approaching the {entity}. The floorboards creak under your weight.',
+            'The jazz playing low from corner speakers follows you to the {entity}. Saxophone. Always saxophone. The tune sounds familiar to you. ',
+            'You step around puddles tracked in from the rain, heading for the {entity}. The smell of wet wool and espresso.',
+            'A businessman in a wrinkled suit nearly blocks your path. You slip past him toward the {entity}.',
+            'You can hear the espresso machine hissing angrily as you make your way to the {entity}, dodging elbows and coffee cups.'
         ]
     }
 };
@@ -2065,12 +2050,16 @@ export const game: Game = {
 **// 1. Your Primary Task: Command Interpretation**
 Your single most important task is to translate the player's natural language input into a single, valid game command from the 'Available Game Commands' list. Use the exact entity names provided in the 'Visible Names' lists.
   - "look at the book" and "examine notebook" both become \`examine "Brown Notebook"\`.
-  - "open the safe with the key" and "use my key to open the safe" both become \`use "Deposit Box Key" on "Wall Safe"\`.
-  - "move the painting" or "look behind the art" both become \`move "Painting on the wall"\`.
+  - "open the safe with the key" and "use my key to open the safe" both become \`use "Brass Key" on "Wall Safe"\`.
+  - "read sd card on phone", "read sd card with phone", "check sd card on my phone" all become \`read "SD Card" on "Phone"\`.
+  - "move the painting" or "look behind the art" both become \`move "Wall painting"\`.
+  - "go to bookshelf", "move to the safe", "walk over to the barista" all become \`goto "Bookshelf"\`, \`goto "Wall Safe"\`, \`goto "Barista"\` (focus on object/NPC, not location travel).
   - "add the pipe to my inventory", "pick up the pipe", "grab the pipe", and "get the pipe" all become \`take "Iron Pipe"\`.
-  - "put the key in my pocket" becomes \`take "Wall Safe Key"\`.
+  - "put the key in my pocket" becomes \`take "Brass Key"\`.
   - "check my stuff" and "what do I have" both become \`inventory\`.
   - "hit the machine with the pipe", "smash the machine with pipe", "whack the coffee machine", and "break the machine with the pipe" all become \`use "Iron Pipe" on "Coffee Machine"\`.
+  - "check the card" and "examine sd card" both become \`examine "SD Card"\` (even if inside container).
+  - "read book The Art of the Deal", "check book Justice for My Love" become \`read "The Art of the Deal"\`, \`examine "Justice for My Love"\` (strip generic words like "book" from entity names).
 
 **// 2. Your Response Protocol**
 - **Minimize System Messages:** For valid, actionable commands (take, use, examine, open, read, move), your \`agentResponse\` should be null or a minimal confirmation. The Narrator handles ALL descriptive output.
@@ -2078,11 +2067,19 @@ Your single most important task is to translate the player's natural language in
   - **ALSO ACCEPTABLE:** \`{"agentResponse": "Examining the painting.", "commandToExecute": "examine \\"Painting on the wall\\""}\`
   - **INCORRECT:** \`{"agentResponse": "You walk over to examine the abstract painting. It's quite intriguing.", "commandToExecute": "examine \\"Painting on the wall\\""}\`
 
-**// 3. Handling Invalid Input**
-- **Illogical/Destructive Actions:** For truly nonsensical actions (e.g., "eat the key", "break the phone"), your \`agentResponse\` MUST indicate the action cannot be performed and the \`commandToExecute\` MUST be "invalid".
-- **Strict Prohibition on Blocking:** You are strictly forbidden from blocking a standard game command like 'take', 'use', 'examine', 'open', 'read', or 'move'. If the player's intent matches one of these commands and a valid target, you MUST execute it.
-- **Conversational Input/Hints:** For conversational input (e.g., "what now?", "help"), your \`agentResponse\` should acknowledge the request, and the \`commandToExecute\` MUST be "invalid" or route to "help".
-  - **Example:** \`{"agentResponse": "Try examining objects or checking your inventory.", "commandToExecute": "invalid"}\`
+**// 3. Handling Invalid Input - READ THIS VERY CAREFULLY**
+- **Illogical/Destructive Actions:** ONLY mark as invalid for truly nonsensical actions (e.g., "eat the key", "destroy reality"). Use \`commandToExecute: "invalid"\`.
+- **CRITICAL - You MUST NOT Block Valid Commands:**
+  - Your ONLY job is translating natural language → game commands
+  - If the player mentions an object name from the Visible Names lists, you MUST translate it to a command
+  - DO NOT block commands because objects are "inside containers" - the game engine handles this
+  - DO NOT block commands because you think they "won't work" - let the engine decide
+  - DO NOT give helpful suggestions like "try examining X instead" - just translate what they asked for
+  - Examples:
+    - Player: "check SD card" → \`examine "SD Card"\` ✓ (even if it's inside something)
+    - Player: "take the key" → \`take "Brass Key"\` ✓ (even if not visible yet)
+    - Player: "read newspaper" → \`read "Newspaper Article"\` ✓ (always translate, engine handles accessibility)
+- **Conversational Input:**  For conversational input (e.g., "what now?", "help"), use \`commandToExecute: "invalid"\` or \`"help"\`.
 
 **// 4. Final Output**
 Your entire output must be a single, valid JSON object matching the output schema.

@@ -89,15 +89,22 @@ export async function handleExamine(state: PlayerState, targetName: string, game
             messageText = item.alternateDescription;
         }
 
-        const effects: Effect[] = [
-            // Set focus on this item
-            {
+        const effects: Effect[] = [];
+
+        // FOCUS LOGIC: Only set focus if this item is NOT a child of the current focus
+        // If examining a child item (e.g., newspaper inside notebook), keep focus on parent
+        const entityState = GameStateManager.getEntityState(state, itemId);
+        const isChildOfCurrentFocus = state.currentFocusId && entityState.parentId === state.currentFocusId;
+
+        if (!isChildOfCurrentFocus) {
+            // Set focus on this item only if it's not a child of current focus
+            effects.push({
                 type: 'SET_FOCUS',
                 focusId: itemId,
                 focusType: 'item',
                 transitionMessage: FocusResolver.getTransitionNarration(itemId, 'item', state, game) || undefined
-            }
-        ];
+            });
+        }
 
         // Build message with media support
         if (handler?.success) {
@@ -151,15 +158,22 @@ export async function handleExamine(state: PlayerState, targetName: string, game
                 messageText = item.alternateDescription;
             }
 
-            const effects: Effect[] = [
-                // Set focus on this item
-                {
+            const effects: Effect[] = [];
+
+            // FOCUS LOGIC: Only set focus if this item is NOT a child of the current focus
+            // If examining a child item (e.g., newspaper inside notebook), keep focus on parent
+            const entityState = GameStateManager.getEntityState(state, visibleItemId);
+            const isChildOfCurrentFocus = state.currentFocusId && entityState.parentId === state.currentFocusId;
+
+            if (!isChildOfCurrentFocus) {
+                // Set focus on this item only if it's not a child of current focus
+                effects.push({
                     type: 'SET_FOCUS',
                     focusId: visibleItemId,
                     focusType: 'item',
                     transitionMessage: FocusResolver.getTransitionNarration(visibleItemId, 'item', state, game) || undefined
-                }
-            ];
+                });
+            }
 
             // Build message with media support
             if (handler?.success) {
@@ -224,15 +238,22 @@ export async function handleExamine(state: PlayerState, targetName: string, game
             messageContent = targetObject.description;
         }
 
-        const effects: Effect[] = [
-            // Set focus on this object
-            {
+        const effects: Effect[] = [];
+
+        // FOCUS LOGIC: Only set focus if this object is NOT a child of the current focus
+        // If examining a child object (e.g., SD card inside notebook), keep focus on parent
+        const entityState = GameStateManager.getEntityState(state, targetObjectId);
+        const isChildOfCurrentFocus = state.currentFocusId && entityState.parentId === state.currentFocusId;
+
+        if (!isChildOfCurrentFocus) {
+            // Set focus on this object only if it's not a child of current focus
+            effects.push({
                 type: 'SET_FOCUS',
                 focusId: targetObjectId,
                 focusType: 'object',
                 transitionMessage: FocusResolver.getTransitionNarration(targetObjectId, 'object', state, game) || undefined
-            }
-        ];
+            });
+        }
 
         // Build message with media support
         if (handler?.success) {

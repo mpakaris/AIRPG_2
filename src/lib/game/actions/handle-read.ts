@@ -9,11 +9,35 @@
 
 'use server';
 
-import type { Game, PlayerState, Effect } from "@/lib/game/types";
+import type { Game, PlayerState, Effect, GameObjectId, ItemId } from "@/lib/game/types";
 import { HandlerResolver, GameStateManager, VisibilityResolver, Validator, FocusResolver } from "@/lib/game/engine";
 import { normalizeName } from "@/lib/utils";
+import { buildEffectsFromOutcome } from "@/lib/game/utils/outcome-helpers";
+import { findBestMatch } from "@/lib/game/utils/name-matching";
 
 export async function handleRead(state: PlayerState, itemName: string, game: Game): Promise<Effect[]> {
+    if (!itemName) {
+        return [{
+            type: 'SHOW_MESSAGE',
+            speaker: 'system',
+            content: game.systemMessages.needsTarget.read
+        }];
+    }
+
+    // Check if this is "read X with/on Y" pattern (e.g., "read sd card on phone")
+    // DO THIS BEFORE NORMALIZING (need spaces for pattern matching)
+    const withMatch = itemName.match(/^(.+?)\s+(with|on|using|in)\s+(?:the|a|an\s+)?(.+)$/i);
+    if (withMatch && withMatch[1].trim() && withMatch[3].trim()) {
+        const itemPart = withMatch[1].trim();
+        const targetPart = withMatch[3].trim();
+
+        // Skip if the target part is too short (likely part of entity name)
+        if (targetPart.length > 2) {
+            return await handleReadItemWithTarget(state, itemPart, targetPart, game);
+        }
+    }
+
+    // Now normalize for standard read handling
     const normalizedItemName = normalizeName(itemName);
 
     if (!normalizedItemName) {
@@ -24,63 +48,14 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
         }];
     }
 
-    // Helper function to check if name matches (including alternateNames and ID)
-    const matchesName = (item: any, searchName: string): boolean => {
-        // Try matching against the item name
-        if (normalizeName(item.name).includes(searchName)) return true;
+    // Use findBestMatch for consistent, location-aware matching
+    const itemMatch = findBestMatch(normalizedItemName, state, game, {
+        searchInventory: true,
+        searchVisibleItems: true,
+        searchObjects: true  // Some readable things might be objects
+    });
 
-        // Try matching against alternate names
-        if (item.alternateNames) {
-            const matchesAlt = item.alternateNames.some((altName: string) =>
-                normalizeName(altName).includes(searchName)
-            );
-            if (matchesAlt) return true;
-        }
-
-        // FALLBACK: Try matching against the item ID (for AI mistakes)
-        // Check if searchName matches the item ID exactly or partially
-        const itemIdNormalized = normalizeName(item.id);
-        if (itemIdNormalized === searchName || itemIdNormalized.includes(searchName) || searchName.includes(itemIdNormalized)) {
-            return true;
-        }
-
-        // Also try without the prefix and underscores
-        const idWithoutPrefix = item.id.replace(/^item_/, '').replace(/_/g, '').toLowerCase();
-        const searchWithoutPrefix = searchName.replace(/^item_/, '').replace(/_/g, '');
-        if (idWithoutPrefix === searchWithoutPrefix || idWithoutPrefix.includes(searchWithoutPrefix) || searchWithoutPrefix.includes(idWithoutPrefix)) {
-            return true;
-        }
-
-        return false;
-    };
-
-    // 1. Find item in inventory OR visible entities (ITEMS first, then OBJECTS)
-    let itemId = state.inventory.find(id =>
-        matchesName(game.items[id], normalizedItemName)
-    );
-
-    let entityToRead: any = null;
-    let entityId: string | undefined = itemId;
-    let entityType: 'item' | 'object' = 'item';
-
-    // If not in inventory, check visible entities (items)
-    if (!itemId) {
-        const visibleEntities = VisibilityResolver.getVisibleEntities(state, game);
-        itemId = visibleEntities.items.find(id =>
-            matchesName(game.items[id as any], normalizedItemName)
-        );
-        if (itemId) {
-            entityId = itemId;
-            entityToRead = game.items[itemId];
-            entityType = 'item';
-        }
-    } else {
-        entityToRead = game.items[itemId];
-        entityType = 'item';
-    }
-
-    // If still not found, return error
-    if (!entityToRead) {
+    if (!itemMatch) {
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'system',
@@ -88,8 +63,18 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
         }];
     }
 
+    const entityId = itemMatch.id;
+    const entityType = itemMatch.category === 'object' ? 'object' : 'item';
+    const entityToRead = entityType === 'object'
+        ? game.gameObjects[entityId as GameObjectId]
+        : game.items[entityId as ItemId];
+
     // 2. Check if readable
-    if (!entityToRead.capabilities?.readable && !entityToRead.capabilities?.isReadable) {
+    const isReadable = entityType === 'item'
+        ? (entityToRead as any).capabilities?.isReadable
+        : (entityToRead as any).capabilities?.readable;
+
+    if (!isReadable) {
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'narrator',
@@ -98,17 +83,24 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
     }
 
     // 3. Check for stateMap (progressive content)
-    if (entityToRead.stateMap && Object.keys(entityToRead.stateMap).length > 0) {
+    if (entityToRead.stateMap && Object.keys(entityToRead.stateMap).length > 0 && entityId) {
         const entityState = GameStateManager.getEntityState(state, entityId);
         const currentReadCount = entityState.readCount || 0;
         const stateMapKeys = Object.keys(entityToRead.stateMap);
+
+        console.log('[handleRead] Progressive reading:', {
+            entityId,
+            currentReadCount,
+            stateMapKeys,
+            entityState
+        });
 
         // Check if all content has been read
         if (currentReadCount >= stateMapKeys.length) {
             return [{
                 type: 'SHOW_MESSAGE',
                 speaker: 'narrator',
-                content: game.systemMessages.alreadyReadAll(entityToRead.name)
+                content: entityId ? game.systemMessages.alreadyReadAll(entityToRead.name) : "Nothing more to read."
             }];
         }
 
@@ -141,20 +133,21 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
 
     // 4. Check for onRead handler
     const handler = entityToRead.handlers?.onRead;
-    if (handler && handler.success) {
+    if (handler && !Array.isArray(handler) && (handler as any).success) {
         const effects: Effect[] = [];
+        const successOutcome = (handler as any).success;
 
-        if (handler.success.message) {
+        if (successOutcome.message) {
             effects.push({
                 type: 'SHOW_MESSAGE',
                 speaker: 'narrator',
-                content: handler.success.message,
+                content: successOutcome.message,
                 messageType: 'text'
             });
         }
 
-        if (handler.success.effects) {
-            effects.push(...handler.success.effects);
+        if (successOutcome.effects) {
+            effects.push(...successOutcome.effects);
         }
 
         return effects;
@@ -166,6 +159,89 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
         speaker: 'narrator',
         content: entityToRead.description,
         messageType: 'image',
-        imageId: entityId
+        imageId: entityId as any
+    }];
+}
+
+/**
+ * Handle "read X with/on Y" pattern (e.g., "read sd card on phone")
+ * This allows reading objects that require tools/devices
+ */
+async function handleReadItemWithTarget(state: PlayerState, targetName: string, toolName: string, game: Game): Promise<Effect[]> {
+    // Find the target (thing to read - usually an object like SD card)
+    const targetMatch = findBestMatch(normalizeName(targetName), state, game, {
+        searchInventory: false,
+        searchVisibleItems: true,
+        searchObjects: true
+    });
+
+    if (!targetMatch) {
+        return [{
+            type: 'SHOW_MESSAGE',
+            speaker: 'system',
+            content: game.systemMessages.notVisible(targetName)
+        }];
+    }
+
+    // Find the tool (thing to read with - usually an item like phone)
+    const toolMatch = findBestMatch(normalizeName(toolName), state, game, {
+        searchInventory: true,
+        searchVisibleItems: true,
+        searchObjects: true
+    });
+
+    if (!toolMatch) {
+        return [{
+            type: 'SHOW_MESSAGE',
+            speaker: 'system',
+            content: game.systemMessages.notVisible(toolName)
+        }];
+    }
+
+    const toolId = toolMatch.id;
+    const targetId = targetMatch.id;
+    const target = targetMatch.category === 'object'
+        ? game.gameObjects[targetId as any]
+        : game.items[targetId as any];
+
+    if (!target) {
+        return [{
+            type: 'SHOW_MESSAGE',
+            speaker: 'narrator',
+            content: `Can't read ${targetName}.`
+        }];
+    }
+
+    // Check for onRead handlers that accept this tool
+    const readHandlers = target.handlers?.onRead;
+    if (Array.isArray(readHandlers)) {
+        const specificHandler = readHandlers.find((h: any) => h.itemId === toolId);
+        if (specificHandler) {
+            const conditionsMet = Validator.evaluateConditions(specificHandler.conditions, state, game);
+            const outcome = conditionsMet ? specificHandler.success : specificHandler.fail;
+
+            if (outcome) {
+                const effects: Effect[] = [];
+                // Set focus on target if it's not personal equipment (objects only)
+                const isPersonalEquipment = targetMatch.category === 'object' && (target as any).personal === true;
+                if (targetMatch.category === 'object' && !isPersonalEquipment) {
+                    effects.push({
+                        type: 'SET_FOCUS',
+                        focusId: targetId as GameObjectId,
+                        focusType: 'object',
+                        transitionMessage: FocusResolver.getTransitionNarration(targetId as GameObjectId, 'object', state, game) || undefined
+                    });
+                }
+                effects.push(...buildEffectsFromOutcome(outcome, targetId as any, targetMatch.category === 'object' ? 'object' : 'item'));
+                return effects;
+            }
+        }
+    }
+
+    // No handler found
+    return [{
+        type: 'SHOW_MESSAGE',
+        speaker: 'narrator',
+        content: `You can't read ${target.name} with ${toolName}.`
     }];
 }

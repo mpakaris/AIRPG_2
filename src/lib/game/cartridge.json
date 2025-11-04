@@ -5,7 +5,7 @@
   "setting": "Modern-day USA, 2025",
   "gameType": "Limited Open World",
   "narratorName": "Narrator",
-  "promptContext": "You are the System, responsible for interpreting player commands and translating them into valid game actions. Your role is purely technical—you analyze input and route it to the correct handler.\n\n**// 1. Your Primary Task: Command Interpretation**\nYour single most important task is to translate the player's natural language input into a single, valid game command from the 'Available Game Commands' list. Use the exact entity names provided in the 'Visible Names' lists.\n  - \"look at the book\" and \"examine notebook\" both become `examine \"Brown Notebook\"`.\n  - \"open the safe with the key\" and \"use my key to open the safe\" both become `use \"Deposit Box Key\" on \"Wall Safe\"`.\n  - \"move the painting\" or \"look behind the art\" both become `move \"Painting on the wall\"`.\n  - \"add the pipe to my inventory\", \"pick up the pipe\", \"grab the pipe\", and \"get the pipe\" all become `take \"Iron Pipe\"`.\n  - \"put the key in my pocket\" becomes `take \"Wall Safe Key\"`.\n  - \"check my stuff\" and \"what do I have\" both become `inventory`.\n  - \"hit the machine with the pipe\", \"smash the machine with pipe\", \"whack the coffee machine\", and \"break the machine with the pipe\" all become `use \"Iron Pipe\" on \"Coffee Machine\"`.\n\n**// 2. Your Response Protocol**\n- **Minimize System Messages:** For valid, actionable commands (take, use, examine, open, read, move), your `agentResponse` should be null or a minimal confirmation. The Narrator handles ALL descriptive output.\n  - **CORRECT:** `{\"agentResponse\": null, \"commandToExecute\": \"examine \\\"Painting on the wall\\\"\"}`\n  - **ALSO ACCEPTABLE:** `{\"agentResponse\": \"Examining the painting.\", \"commandToExecute\": \"examine \\\"Painting on the wall\\\"\"}`\n  - **INCORRECT:** `{\"agentResponse\": \"You walk over to examine the abstract painting. It's quite intriguing.\", \"commandToExecute\": \"examine \\\"Painting on the wall\\\"\"}`\n\n**// 3. Handling Invalid Input**\n- **Illogical/Destructive Actions:** For truly nonsensical actions (e.g., \"eat the key\", \"break the phone\"), your `agentResponse` MUST indicate the action cannot be performed and the `commandToExecute` MUST be \"invalid\".\n- **Strict Prohibition on Blocking:** You are strictly forbidden from blocking a standard game command like 'take', 'use', 'examine', 'open', 'read', or 'move'. If the player's intent matches one of these commands and a valid target, you MUST execute it.\n- **Conversational Input/Hints:** For conversational input (e.g., \"what now?\", \"help\"), your `agentResponse` should acknowledge the request, and the `commandToExecute` MUST be \"invalid\" or route to \"help\".\n  - **Example:** `{\"agentResponse\": \"Try examining objects or checking your inventory.\", \"commandToExecute\": \"invalid\"}`\n\n**// 4. Final Output**\nYour entire output must be a single, valid JSON object matching the output schema.\nYour reasoning must be a brief, step-by-step explanation of how you mapped the player's input to the chosen command.\n",
+  "promptContext": "You are the System, responsible for interpreting player commands and translating them into valid game actions. Your role is purely technical—you analyze input and route it to the correct handler.\n\n**// 1. Your Primary Task: Command Interpretation**\nYour single most important task is to translate the player's natural language input into a single, valid game command from the 'Available Game Commands' list. Use the exact entity names provided in the 'Visible Names' lists.\n  - \"look at the book\" and \"examine notebook\" both become `examine \"Brown Notebook\"`.\n  - \"open the safe with the key\" and \"use my key to open the safe\" both become `use \"Brass Key\" on \"Wall Safe\"`.\n  - \"read sd card on phone\", \"read sd card with phone\", \"check sd card on my phone\" all become `read \"SD Card\" on \"Phone\"`.\n  - \"move the painting\" or \"look behind the art\" both become `move \"Wall painting\"`.\n  - \"add the pipe to my inventory\", \"pick up the pipe\", \"grab the pipe\", and \"get the pipe\" all become `take \"Iron Pipe\"`.\n  - \"put the key in my pocket\" becomes `take \"Brass Key\"`.\n  - \"check my stuff\" and \"what do I have\" both become `inventory`.\n  - \"hit the machine with the pipe\", \"smash the machine with pipe\", \"whack the coffee machine\", and \"break the machine with the pipe\" all become `use \"Iron Pipe\" on \"Coffee Machine\"`.\n  - \"check the card\" and \"examine sd card\" both become `examine \"SD Card\"` (even if inside container).\n\n**// 2. Your Response Protocol**\n- **Minimize System Messages:** For valid, actionable commands (take, use, examine, open, read, move), your `agentResponse` should be null or a minimal confirmation. The Narrator handles ALL descriptive output.\n  - **CORRECT:** `{\"agentResponse\": null, \"commandToExecute\": \"examine \\\"Painting on the wall\\\"\"}`\n  - **ALSO ACCEPTABLE:** `{\"agentResponse\": \"Examining the painting.\", \"commandToExecute\": \"examine \\\"Painting on the wall\\\"\"}`\n  - **INCORRECT:** `{\"agentResponse\": \"You walk over to examine the abstract painting. It's quite intriguing.\", \"commandToExecute\": \"examine \\\"Painting on the wall\\\"\"}`\n\n**// 3. Handling Invalid Input - READ THIS VERY CAREFULLY**\n- **Illogical/Destructive Actions:** ONLY mark as invalid for truly nonsensical actions (e.g., \"eat the key\", \"destroy reality\"). Use `commandToExecute: \"invalid\"`.\n- **CRITICAL - You MUST NOT Block Valid Commands:**\n  - Your ONLY job is translating natural language → game commands\n  - If the player mentions an object name from the Visible Names lists, you MUST translate it to a command\n  - DO NOT block commands because objects are \"inside containers\" - the game engine handles this\n  - DO NOT block commands because you think they \"won't work\" - let the engine decide\n  - DO NOT give helpful suggestions like \"try examining X instead\" - just translate what they asked for\n  - Examples:\n    - Player: \"check SD card\" → `examine \"SD Card\"` ✓ (even if it's inside something)\n    - Player: \"take the key\" → `take \"Brass Key\"` ✓ (even if not visible yet)\n    - Player: \"read newspaper\" → `read \"Newspaper Article\"` ✓ (always translate, engine handles accessibility)\n- **Conversational Input:**  For conversational input (e.g., \"what now?\", \"help\"), use `commandToExecute: \"invalid\"` or `\"help\"`.\n\n**// 4. Final Output**\nYour entire output must be a single, valid JSON object matching the output schema.\nYour reasoning must be a brief, step-by-step explanation of how you mapped the player's input to the chosen command.\n",
   "objectInteractionPromptContext": "You are the System, processing the player's interaction with the {{objectName}}. Map the player's input to one of the available actions based on the object's capabilities.",
   "storyStyleGuide": "You are a master storyteller and a brilliant editor. Your task is to transform a raw log of a text-based RPG into a captivating, well-written narrative chapter for a crime noir book.\n\n**Style Guide:**\n- Write in the third person, past tense.\n- Adopt a classic crime noir tone: gritty, descriptive, with a focus on atmosphere and internal thought. The main character is FBI agent Burt Macklin.\n- Aim for a rich, descriptive style. Don't just state what happened; paint a picture. Describe the smells, the sounds, the quality of the light, the texture of objects.\n- Expand on the events in the log. Weave them into a cohesive story. Describe the setting in detail, Burt's observations, his internal monologue, and the flow of conversation.\n- Smooth out the \"game-like\" elements. Instead of \"Burt examined the notebook,\" write something like, \"Burt's eyes fell upon a worn leather notebook resting on the table. It seemed to pulse with forgotten secrets, its leather cover softened by decades of handling.\"\n- Your job is to pick the important moments and dialogue that drive the plot forward and flesh them out. Omit repetitive actions or dead ends, but expand on the crucial scenes.\n- Target a length of approximately 1000-1500 words to create a substantial and immersive chapter.\n- Format the output as a single block of prose. Do not use markdown, titles, or headings within the story itself.\n",
   "systemMedia": {
@@ -156,8 +156,7 @@
         "obj_magazine",
         "obj_bookshelf",
         "obj_painting",
-        "obj_coffee_machine",
-        "obj_player_phone"
+        "obj_coffee_machine"
       ],
       "npcs": [
         "npc_barista",
@@ -199,16 +198,16 @@
         }
       ],
       "transitionTemplates": [
-        "You weave through the packed tables toward {entity}. A harried waiter nearly clips you with a tray of scones.",
-        "You shoulder past a couple arguing over lattes, eyes fixed on {entity}.",
-        "The din of conversation fades to white noise as you move toward {entity}.",
-        "You sidestep a busboy balancing a tower of dirty dishes, making your way to {entity}.",
-        "Coffee steam parts like a curtain as you cross the cafe toward {entity}.",
-        "You navigate the maze of mismatched chairs, approaching {entity}. The floorboards creak under your weight.",
-        "The jazz playing low from corner speakers follows you to {entity}. Saxophone. Always saxophone. The tune sounds familiar to you. ",
-        "You step around puddles tracked in from the rain, heading for {entity}. The smell of wet wool and espresso.",
-        "A businessman in a wrinkled suit nearly blocks your path. You slip past him toward {entity}.",
-        "You can hear the espresso machine hissing angrily as you make your way to {entity}, dodging elbows and coffee cups."
+        "You weave through the packed tables toward the {entity}. A harried waiter nearly clips you with a tray of scones.",
+        "You shoulder past a couple arguing over lattes, eyes fixed on the {entity}.",
+        "The din of conversation fades to white noise as you move toward the {entity}.",
+        "You sidestep a busboy balancing a tower of dirty dishes, making your way to the {entity}.",
+        "Coffee steam parts like a curtain as you cross the cafe toward the {entity}.",
+        "You navigate the maze of mismatched chairs, approaching the {entity}. The floorboards creak under your weight.",
+        "The jazz playing low from corner speakers follows you to the {entity}. Saxophone. Always saxophone. The tune sounds familiar to you. ",
+        "You step around puddles tracked in from the rain, heading for the {entity}. The smell of wet wool and espresso.",
+        "A businessman in a wrinkled suit nearly blocks your path. You slip past him toward the {entity}.",
+        "You can hear the espresso machine hissing angrily as you make your way to the {entity}, dodging elbows and coffee cups."
       ]
     }
   },
@@ -303,7 +302,6 @@
       },
       "inventory": {
         "items": [
-          "item_sd_card",
           "item_newspaper_article"
         ],
         "capacity": 2,
@@ -312,8 +310,10 @@
       },
       "children": {
         "items": [
-          "item_sd_card",
           "item_newspaper_article"
+        ],
+        "objects": [
+          "obj_sd_card"
         ]
       },
       "media": {
@@ -492,8 +492,17 @@
                 "flag": "has_unlocked_notebook"
               },
               {
+                "type": "SET_ENTITY_STATE",
+                "entityId": "obj_brown_notebook",
+                "patch": {
+                  "isLocked": false,
+                  "isOpen": true,
+                  "currentStateId": "unlocked"
+                }
+              },
+              {
                 "type": "REVEAL_ENTITY",
-                "entityId": "item_sd_card"
+                "entityId": "obj_sd_card"
               },
               {
                 "type": "REVEAL_ENTITY",
@@ -622,17 +631,16 @@
                 "value": true
               },
               {
-                "type": "REVEAL_FROM_PARENT",
-                "entityId": "item_iron_pipe",
-                "parentId": "obj_chalkboard_menu"
-              },
-              {
                 "type": "SET_ENTITY_STATE",
                 "entityId": "obj_chalkboard_menu",
                 "patch": {
                   "currentStateId": "moved",
                   "isMoved": true
                 }
+              },
+              {
+                "type": "REVEAL_ENTITY",
+                "entityId": "item_iron_pipe"
               }
             ]
           },
@@ -926,7 +934,16 @@
     },
     "obj_painting": {
       "id": "obj_painting",
-      "name": "Painting on the wall",
+      "name": "Wall painting",
+      "alternateNames": [
+        "painting",
+        "wall painting",
+        "picture",
+        "art",
+        "abstract painting",
+        "canvas",
+        "frame"
+      ],
       "archetype": "Surface",
       "description": "An abstract painting hangs on the wall.",
       "capabilities": {
@@ -1031,17 +1048,16 @@
                 "value": true
               },
               {
-                "type": "REVEAL_FROM_PARENT",
-                "entityId": "obj_wall_safe",
-                "parentId": "obj_painting"
-              },
-              {
                 "type": "SET_ENTITY_STATE",
                 "entityId": "obj_painting",
                 "patch": {
                   "isMoved": true,
                   "currentStateId": "moved"
                 }
+              },
+              {
+                "type": "REVEAL_ENTITY",
+                "entityId": "obj_wall_safe"
               }
             ]
           },
@@ -1099,6 +1115,13 @@
     "obj_wall_safe": {
       "id": "obj_wall_safe",
       "name": "Wall Safe",
+      "alternateNames": [
+        "wall safe",
+        "safe",
+        "steel safe",
+        "metal safe",
+        "small safe"
+      ],
       "archetype": "Container",
       "description": "A small, steel safe is set into the wall.",
       "capabilities": {
@@ -1210,9 +1233,8 @@
                   }
                 },
                 {
-                  "type": "REVEAL_FROM_PARENT",
-                  "entityId": "item_secret_document",
-                  "parentId": "obj_wall_safe"
+                  "type": "REVEAL_ENTITY",
+                  "entityId": "item_secret_document"
                 },
                 {
                   "type": "REMOVE_ITEM",
@@ -1361,8 +1383,15 @@
         "currentStateId": "default"
       },
       "inventory": {
-        "items": [],
+        "items": [
+          "item_safe_key"
+        ],
         "capacity": 1
+      },
+      "children": {
+        "items": [
+          "item_safe_key"
+        ]
       },
       "media": {
         "images": {
@@ -1430,11 +1459,6 @@
                   "flag": "machine_is_broken"
                 },
                 {
-                  "type": "SPAWN_ITEM",
-                  "itemId": "item_safe_key",
-                  "containerId": "obj_coffee_machine"
-                },
-                {
                   "type": "SET_ENTITY_STATE",
                   "entityId": "obj_coffee_machine",
                   "patch": {
@@ -1442,6 +1466,10 @@
                     "isOpen": true,
                     "currentStateId": "broken"
                   }
+                },
+                {
+                  "type": "REVEAL_ENTITY",
+                  "entityId": "item_safe_key"
                 }
               ]
             },
@@ -1522,8 +1550,154 @@
         "content": "1.1"
       }
     },
-    "obj_player_phone": {
-      "id": "obj_player_phone",
+    "obj_sd_card": {
+      "id": "obj_sd_card",
+      "name": "SD Card",
+      "alternateNames": [
+        "sd card",
+        "card",
+        "memory card",
+        "sd",
+        "media card",
+        "black card"
+      ],
+      "archetype": "Device",
+      "description": "A small, modern SD card, looking strangely out of place in the old notebook. It probably fits in your phone.",
+      "capabilities": {
+        "openable": false,
+        "lockable": false,
+        "breakable": false,
+        "movable": false,
+        "powerable": false,
+        "container": false,
+        "readable": true,
+        "inputtable": false
+      },
+      "state": {
+        "isOpen": false,
+        "isLocked": false,
+        "isBroken": false,
+        "isPoweredOn": false,
+        "currentStateId": "closed"
+      },
+      "media": {
+        "images": {
+          "closed": {
+            "url": "https://res.cloudinary.com/dg912bwcc/image/upload/v1761812524/SD_Card_rokilu.png",
+            "description": "A black SD card.",
+            "hint": "sd card"
+          },
+          "opened": {
+            "url": "https://res.cloudinary.com/dg912bwcc/video/upload/v1759678377/CH_I_completion_jqtyme.mp4",
+            "description": "Video playing from SD card.",
+            "hint": "video"
+          }
+        }
+      },
+      "handlers": {
+        "onExamine": {
+          "success": {
+            "message": "Black SD card. Modern. Out of place in the old notebook. Standard size—fits most devices. Your FBI phone has a slot for external media like this.",
+            "media": {
+              "url": "https://res.cloudinary.com/dg912bwcc/image/upload/v1761812524/SD_Card_rokilu.png",
+              "description": "Black SD card",
+              "hint": "Your phone can read this"
+            }
+          }
+        },
+        "onUse": [
+          {
+            "itemId": "item_player_phone",
+            "conditions": [
+              {
+                "type": "STATE",
+                "entityId": "obj_sd_card",
+                "key": "currentStateId",
+                "equals": "closed"
+              }
+            ],
+            "success": {
+              "message": "Card slides into your phone. Screen flickers. Video loads—grainy, seventy years old. Music fills the cafe. Saxophone, smooth, melancholic. A tune that's been waiting.\n\nSilas Bloom. Musician. That song for Rose... they were in love. You hear it in every note.\n\nVideo ends. More questions than answers. Your mind races. Then you notice—the folded newspaper article, still in the notebook. Waiting.",
+              "media": {
+                "url": "https://res.cloudinary.com/dg912bwcc/video/upload/v1759678377/CH_I_completion_jqtyme.mp4",
+                "description": "Video from SD card: Silas Bloom playing saxophone",
+                "hint": "The video reveals Silas and Rose"
+              },
+              "effects": [
+                {
+                  "type": "SET_ENTITY_STATE",
+                  "entityId": "obj_sd_card",
+                  "patch": {
+                    "currentStateId": "opened"
+                  }
+                },
+                {
+                  "type": "SET_FLAG",
+                  "flag": "notebook_video_watched"
+                }
+              ]
+            },
+            "fail": {
+              "message": "You've already watched the video. The footage is burned into your memory."
+            }
+          }
+        ],
+        "onRead": [
+          {
+            "itemId": "item_player_phone",
+            "conditions": [
+              {
+                "type": "STATE",
+                "entityId": "obj_sd_card",
+                "key": "currentStateId",
+                "equals": "closed"
+              }
+            ],
+            "success": {
+              "message": "Card slides into your phone. Screen flickers. Video loads—grainy, seventy years old. Music fills the cafe. Saxophone, smooth, melancholic. A tune that's been waiting.\n\nSilas Bloom. Musician. That song for Rose... they were in love. You hear it in every note.\n\nVideo ends. More questions than answers. Your mind races. Then you notice—the folded newspaper article, still in the notebook. Waiting.",
+              "media": {
+                "url": "https://res.cloudinary.com/dg912bwcc/video/upload/v1759678377/CH_I_completion_jqtyme.mp4",
+                "description": "Video from SD card: Silas Bloom playing saxophone",
+                "hint": "The video reveals Silas and Rose"
+              },
+              "effects": [
+                {
+                  "type": "SET_ENTITY_STATE",
+                  "entityId": "obj_sd_card",
+                  "patch": {
+                    "currentStateId": "opened"
+                  }
+                },
+                {
+                  "type": "SET_FLAG",
+                  "flag": "notebook_video_watched"
+                }
+              ]
+            },
+            "fail": {
+              "message": "You've already watched the video. The footage is burned into your memory."
+            }
+          }
+        ],
+        "defaultFailMessage": "The SD card holds data. Try: EXAMINE it, or USE PHONE ON it."
+      },
+      "design": {
+        "authorNotes": "Media device containing the video clue about Silas Bloom. Requires phone to unlock/read.",
+        "tags": [
+          "sd card",
+          "media",
+          "device"
+        ]
+      },
+      "version": {
+        "schema": "1.0",
+        "content": "2.0"
+      }
+    }
+  },
+  "items": {
+    "item_player_phone": {
+      "id": "item_player_phone",
       "name": "Phone",
       "alternateNames": [
         "phone",
@@ -1534,24 +1708,19 @@
         "my phone",
         "fbi smartphone"
       ],
-      "archetype": "Device",
+      "archetype": "Tool",
       "description": "Your standard-issue FBI smartphone. It has a camera, secure messaging, and a slot for external media.",
-      "personal": true,
       "capabilities": {
-        "openable": false,
-        "lockable": false,
-        "breakable": false,
-        "movable": false,
-        "powerable": true,
-        "container": false,
-        "readable": true,
-        "inputtable": false
+        "isTakable": false,
+        "isReadable": false,
+        "isUsable": true,
+        "isCombinable": false,
+        "isConsumable": false,
+        "isScannable": false,
+        "isAnalyzable": false,
+        "isPhotographable": false
       },
       "state": {
-        "isOpen": false,
-        "isLocked": false,
-        "isBroken": false,
-        "isPoweredOn": true,
         "currentStateId": "default"
       },
       "media": {
@@ -1569,96 +1738,22 @@
             "message": "FBI-issue smartphone. Camera, secure messaging, media slot. Standard kit. Always in your pocket."
           }
         },
-        "onUse": [
-          {
-            "itemId": "item_sd_card",
-            "success": {
-              "message": "Card slides into your phone. Screen flickers. Video loads—grainy, seventy years old. Music fills the cafe. Saxophone, smooth, melancholic. A tune that's been waiting.\n\nSilas Bloom. Musician. That song for Rose... they were in love. You hear it in every note.\n\nVideo ends. More questions than answers. Your mind races. Then you notice—the folded newspaper article, still in the notebook. Waiting.",
-              "media": {
-                "url": "https://res.cloudinary.com/dg912bwcc/video/upload/v1759678377/CH_I_completion_jqtyme.mp4",
-                "description": "Video from SD card: Silas Bloom playing saxophone",
-                "hint": "The video reveals Silas and Rose"
-              },
-              "effects": [
-                {
-                  "type": "SET_ENTITY_STATE",
-                  "entityId": "item_sd_card",
-                  "patch": {
-                    "currentStateId": "opened"
-                  }
-                },
-                {
-                  "type": "SET_FLAG",
-                  "flag": "notebook_video_watched"
-                }
-              ]
-            },
-            "fail": {
-              "message": "Already watched. Can't rewatch yet."
-            }
-          }
-        ],
-        "onRead": [
-          {
-            "itemId": "item_sd_card",
-            "success": {
-              "message": "Card slides into your phone. Screen flickers. Video loads—grainy, seventy years old. Music fills the cafe. Saxophone, smooth, melancholic. A tune that's been waiting.\n\nSilas Bloom. Musician. That song for Rose... they were in love. You hear it in every note.\n\nVideo ends. More questions than answers. Your mind races. Then you notice—the folded newspaper article, still in the notebook. Waiting.",
-              "media": {
-                "url": "https://res.cloudinary.com/dg912bwcc/video/upload/v1759678377/CH_I_completion_jqtyme.mp4",
-                "description": "Video from SD card: Silas Bloom playing saxophone",
-                "hint": "The video reveals Silas and Rose"
-              },
-              "effects": [
-                {
-                  "type": "SET_ENTITY_STATE",
-                  "entityId": "item_sd_card",
-                  "patch": {
-                    "currentStateId": "opened"
-                  }
-                },
-                {
-                  "type": "SET_FLAG",
-                  "flag": "notebook_video_watched"
-                }
-              ]
-            },
-            "fail": {
-              "message": "Already watched. Can't rewatch yet."
-            }
-          }
-        ],
-        "onOpen": {
-          "fail": {
-            "message": "Not disassembling it. Try USING it with media cards."
-          }
-        },
-        "onMove": {
-          "fail": {
-            "message": "It's in your pocket. Always with you."
-          }
-        },
-        "onBreak": {
-          "fail": {
-            "message": "Bureau property. Not smashing it."
-          }
-        },
-        "defaultFailMessage": "The phone's a tool for reading media. Try: USE [media card] ON PHONE."
+        "defaultFailMessage": "The phone's a tool. Try USING it ON something that needs it."
       },
       "design": {
-        "authorNotes": "Player's primary tool for viewing media. Always accessible.",
+        "authorNotes": "Universal tool/key for media devices and locked objects throughout the game.",
         "tags": [
           "phone",
           "device",
-          "tool"
+          "tool",
+          "key"
         ]
       },
       "version": {
         "schema": "1.0",
-        "content": "2.0"
+        "content": "3.0"
       }
-    }
-  },
-  "items": {
+    },
     "item_iron_pipe": {
       "id": "item_iron_pipe",
       "name": "Iron Pipe",
@@ -1790,12 +1885,13 @@
     },
     "item_safe_key": {
       "id": "item_safe_key",
-      "name": "Wall Safe Key",
+      "name": "Brass Key",
       "alternateNames": [
-        "safe key",
+        "brass key",
         "key",
         "small key",
-        "ornate key"
+        "ornate key",
+        "safe key"
       ],
       "archetype": "Key",
       "description": "A small, ornate brass key. It looks like it might fit the wall safe behind the painting.",
@@ -1911,7 +2007,6 @@
       "name": "Business Card",
       "alternateNames": [
         "business card",
-        "card",
         "musicians card",
         "saxo card",
         "sax card"
@@ -2157,124 +2252,6 @@
       "version": {
         "schema": "1.0",
         "content": "1.0"
-      }
-    },
-    "item_sd_card": {
-      "id": "item_sd_card",
-      "name": "SD Card",
-      "alternateNames": [
-        "sd card",
-        "card",
-        "memory card",
-        "sd",
-        "media card"
-      ],
-      "archetype": "Media",
-      "description": "A small, modern SD card, looking strangely out of place in the old notebook. It probably fits in your phone.",
-      "alternateDescription": "You can \"use SD Card\" to see what's on it.",
-      "capabilities": {
-        "isTakable": true,
-        "isReadable": true,
-        "isUsable": true,
-        "isCombinable": false,
-        "isConsumable": false,
-        "isScannable": false,
-        "isAnalyzable": false,
-        "isPhotographable": false
-      },
-      "state": {
-        "currentStateId": "closed"
-      },
-      "media": {
-        "images": {
-          "closed": {
-            "url": "https://res.cloudinary.com/dg912bwcc/image/upload/v1761812524/SD_Card_rokilu.png",
-            "description": "A black SD card.",
-            "hint": "sd card"
-          },
-          "opened": {
-            "url": "https://res.cloudinary.com/dg912bwcc/video/upload/v1759678377/CH_I_completion_jqtyme.mp4",
-            "description": "Video playing from SD card.",
-            "hint": "video"
-          }
-        }
-      },
-      "handlers": {
-        "onExamine": {
-          "success": {
-            "message": "Black SD card. Modern. Out of place in the old notebook. Standard size—fits most devices. Your FBI phone has a slot for external media like this.",
-            "media": {
-              "url": "https://res.cloudinary.com/dg912bwcc/image/upload/v1761812524/SD_Card_rokilu.png",
-              "description": "Black SD card",
-              "hint": "Your phone can read this"
-            }
-          }
-        },
-        "onTake": {
-          "success": {
-            "message": "SD card goes in your pocket. Modern data in an old mystery."
-          },
-          "fail": {
-            "message": "Already have it."
-          }
-        },
-        "onDrop": {
-          "success": {
-            "message": "Card drops. Tiny. Black. Can pick it up later."
-          }
-        },
-        "onUse": {
-          "fail": {
-            "message": "Can't use the card by itself. Your FBI phone has a slot for external media—try using your phone."
-          }
-        },
-        "onOpen": {
-          "fail": {
-            "message": "It's a data card. Try USING it in your phone."
-          }
-        },
-        "onClose": {
-          "fail": {
-            "message": "Nothing to close. Try USING it."
-          }
-        },
-        "onMove": {
-          "fail": {
-            "message": "It's in your pocket. Try USING it."
-          }
-        },
-        "onBreak": {
-          "fail": {
-            "message": "Evidence. Don't destroy it. Try USING it."
-          }
-        },
-        "onRead": {
-          "fail": {
-            "message": "Can't read the SD card without a device. Your FBI phone has a media slot—try using your phone with the card."
-          }
-        },
-        "onSearch": {
-          "fail": {
-            "message": "It's a data card. Solid. Try USING it in your phone."
-          }
-        },
-        "onTalk": {
-          "fail": {
-            "message": "Data doesn't talk. Try USING it."
-          }
-        },
-        "defaultFailMessage": "The SD card holds data. Try: EXAMINE it, or USE it in your phone."
-      },
-      "design": {
-        "authorNotes": "Contains the video clue about Silas Bloom.",
-        "tags": [
-          "sd card",
-          "card"
-        ]
-      },
-      "version": {
-        "schema": "1.0",
-        "content": "1.1"
       }
     },
     "item_book_deal": {

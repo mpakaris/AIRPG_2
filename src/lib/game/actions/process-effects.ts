@@ -73,10 +73,11 @@ export async function processEffects(initialState: PlayerState, effects: Effect[
                 break;
 
             case 'INCREMENT_ITEM_READ_COUNT':
-                if (!newState.itemStates[effect.itemId]) {
-                    newState.itemStates[effect.itemId] = { readCount: 0 };
+                if (!newState.world[effect.itemId]) {
+                    newState.world[effect.itemId] = {};
                 }
-                newState.itemStates[effect.itemId].readCount = (newState.itemStates[effect.itemId].readCount || 0) + 1;
+                newState.world[effect.itemId].readCount = (newState.world[effect.itemId].readCount || 0) + 1;
+                console.log('[INCREMENT_ITEM_READ_COUNT]', effect.itemId, 'readCount now:', newState.world[effect.itemId].readCount);
                 break;
             case 'INCREMENT_NPC_INTERACTION':
                  if (!newState.npcStates[effect.npcId]) {

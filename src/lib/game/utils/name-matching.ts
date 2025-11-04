@@ -41,23 +41,56 @@ export function matchesName(entity: any, searchName: string): MatchResult {
 
     // PARTIAL MATCH (lower priority)
     // Check both directions: entity contains search OR search contains entity
-    if (entityName.includes(searchName)) {
-        // Search term is substring of entity name (e.g., "safe" matches "wall safe")
-        const score = 50 + (1 / entityName.length) * 10;
-        return { matches: true, score };
-    }
+    // BUT: Prevent tiny substring matches (e.g., "art" matching "article")
+    // Require BOTH strings to be >= 4 chars for substring matching
 
-    if (searchName.includes(entityName)) {
-        // Entity name is substring of search term (e.g., "the art of the deal" matches "book the art of the deal")
-        const score = 45 + (1 / entityName.length) * 10;
-        return { matches: true, score };
+    if (entityName.length >= 4 && searchName.length >= 4) {
+        if (entityName.includes(searchName)) {
+            // Search term is substring of entity name (e.g., "safe" matches "wall safe")
+            const score = 50 + (1 / entityName.length) * 10;
+            return { matches: true, score };
+        }
+
+        if (searchName.includes(entityName)) {
+            // Entity name is substring of search term (e.g., "book" matches "book the art of the deal")
+            const score = 45 + (1 / entityName.length) * 10;
+            return { matches: true, score };
+        }
     }
 
     // Check alternate names for partial match (both directions)
+    // Use word-based matching to prevent false matches (e.g., "art" in "article")
     if (entity.alternateNames) {
         for (const altName of entity.alternateNames) {
             const normalizedAlt = normalizeName(altName);
-            if (normalizedAlt.includes(searchName) || searchName.includes(normalizedAlt)) {
+
+            // Check if any word from altName matches any word from search
+            // Split the ORIGINAL strings (before normalization) to preserve word boundaries
+            const altWords = altName.toLowerCase().trim().split(/\s+/);
+
+            // For search, we need to reconstruct words from the original input
+            // Since searchName is already normalized (no spaces), we compare against each alt word
+            let hasWordMatch = false;
+
+            for (const altWord of altWords) {
+                const normalizedAltWord = normalizeName(altWord);
+
+                // Exact word match (e.g., "key" === "key")
+                if (normalizedAltWord === searchName) {
+                    hasWordMatch = true;
+                    break;
+                }
+
+                // Substring match: BOTH must be >= 4 chars to prevent "art" matching "article"
+                if (normalizedAltWord.length >= 4 && searchName.length >= 4) {
+                    if (normalizedAltWord.includes(searchName) || searchName.includes(normalizedAltWord)) {
+                        hasWordMatch = true;
+                        break;
+                    }
+                }
+            }
+
+            if (hasWordMatch) {
                 return { matches: true, score: 40 };
             }
         }
@@ -121,14 +154,13 @@ export type BestMatch = {
 } | null;
 
 /**
- * Finds the best matching entity with location awareness.
- * Prioritizes entities in current location over those in other locations.
+ * Finds the best matching entity with focus and location awareness.
+ * Prioritizes entities in current focus over inventory and location.
  *
  * PRIORITY:
- * 1. Current location - exact match (score + 1000)
- * 2. Current location - fuzzy match (score + 1000)
- * 3. Other location - exact match (score)
- * 4. Other location - fuzzy match (score)
+ * 1. Current focus - entities inside focused container (score + 2000) - HIGHEST
+ * 2. Current location / inventory (score + 1000) - HIGH
+ * 3. Other visible entities (base score) - MEDIUM
  *
  * @param searchName - Normalized search term
  * @param state - Current player state
@@ -166,20 +198,55 @@ export function findBestMatch(
         }
     }
 
+    // Get entities in current focus (if any)
+    let entitiesInFocus = { items: [] as string[], objects: [] as string[] };
+    if (state.currentFocusId) {
+        const { GameStateManager } = require("@/lib/game/engine");
+        // Get direct children of focused entity
+        const children = GameStateManager.getChildren(state, state.currentFocusId);
+        for (const childId of children) {
+            if (game.items[childId as ItemId]) {
+                entitiesInFocus.items.push(childId);
+            } else if (game.gameObjects[childId as GameObjectId]) {
+                entitiesInFocus.objects.push(childId);
+            }
+        }
+    }
+
     let bestMatch: BestMatch = null;
 
-    // Helper to update best match with location awareness
+    // Helper to check if entity is in current focus
+    const isInFocus = (id: string): boolean => {
+        return entitiesInFocus.items.includes(id) || entitiesInFocus.objects.includes(id);
+    };
+
+    // Helper to update best match with focus and location awareness
     const updateBestMatch = (
         id: string,
         category: 'inventory' | 'visible-item' | 'object',
         score: number,
         inCurrentLoc: boolean
     ) => {
-        // Add location boost: +1000 if in current location
-        const effectiveScore = inCurrentLoc ? score + 1000 : score;
-        const currentBestScore = bestMatch
-            ? (bestMatch.inCurrentLocation ? bestMatch.score + 1000 : bestMatch.score)
-            : -1;
+        // Priority boost logic:
+        // +2000 if in current focus (highest priority - beats inventory)
+        // +1000 if in current location or inventory
+        // +0 otherwise
+        let effectiveScore = score;
+        if (isInFocus(id)) {
+            effectiveScore += 2000; // HIGHEST PRIORITY
+        } else if (inCurrentLoc) {
+            effectiveScore += 1000; // HIGH PRIORITY
+        }
+
+        const currentBestScore = bestMatch ? (() => {
+            let score = bestMatch.score;
+            if (isInFocus(bestMatch.id)) {
+                score += 2000;
+            } else if (bestMatch.inCurrentLocation) {
+                score += 1000;
+            }
+            return score;
+        })() : -1;
 
         if (effectiveScore > currentBestScore) {
             bestMatch = { id, category, score, inCurrentLocation: inCurrentLoc };
@@ -211,14 +278,8 @@ export function findBestMatch(
 
     // 3. Search objects
     if (options.searchObjects) {
-        if (searchName.includes('painting')) {
-            console.log('[name-matching] DEBUG: Searching for', searchName, 'in visible objects:', visibleEntities.objects);
-        }
         for (const id of visibleEntities.objects) {
             const result = matchesName(game.gameObjects[id as GameObjectId], searchName);
-            if (id === 'obj_painting' || searchName.includes('painting')) {
-                console.log('[name-matching] Checking object:', id, 'name:', game.gameObjects[id as GameObjectId]?.name, 'against search:', searchName, 'result:', result);
-            }
             if (result.matches) {
                 const inCurrentLoc = isInCurrentLocation(id, 'object', state, game);
                 updateBestMatch(id, 'object', result.score, inCurrentLoc);
