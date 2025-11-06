@@ -13,6 +13,7 @@ import { HandlerResolver, VisibilityResolver, GameStateManager } from "@/lib/gam
 import { normalizeName } from "@/lib/utils";
 import { buildEffectsFromOutcome } from "@/lib/game/utils/outcome-helpers";
 import { findBestMatch } from "@/lib/game/utils/name-matching";
+import { getSmartNotFoundMessage } from "@/lib/game/utils/smart-messages";
 
 export async function handleTake(state: PlayerState, targetName: string, game: Game): Promise<Effect[]> {
   const normalizedTarget = normalizeName(targetName);
@@ -29,7 +30,8 @@ export async function handleTake(state: PlayerState, targetName: string, game: G
   const bestMatch = findBestMatch(normalizedTarget, state, game, {
     searchInventory: true,
     searchVisibleItems: true,
-    searchObjects: false  // Can't take objects
+    searchObjects: false,  // Can't take objects
+    requireFocus: true
   });
 
   // 1. Check if already in inventory
@@ -48,10 +50,15 @@ export async function handleTake(state: PlayerState, targetName: string, game: G
 
   // 2. Check if item found in visible entities
   if (!bestMatch || bestMatch.category !== 'visible-item') {
+    const smartMessage = getSmartNotFoundMessage(normalizedTarget, state, game, {
+      searchInventory: true,
+      searchVisibleItems: true,
+      searchObjects: false
+    });
     return [{
       type: 'SHOW_MESSAGE',
       speaker: 'narrator',
-      content: game.systemMessages.notVisible(targetName),
+      content: smartMessage.message,
       messageType: 'image',
       imageUrl: game.systemMedia?.take?.failure?.url,
       imageDescription: game.systemMedia?.take?.failure?.description,

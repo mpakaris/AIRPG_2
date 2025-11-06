@@ -29,7 +29,8 @@ export async function handleClose(state: PlayerState, targetName: string, game: 
   const bestMatch = findBestMatch(normalizedTargetName, state, game, {
     searchInventory: false,
     searchVisibleItems: false,
-    searchObjects: true
+    searchObjects: true,
+    requireFocus: true
   });
 
   if (!bestMatch || bestMatch.category !== 'object') {

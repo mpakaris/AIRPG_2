@@ -5,7 +5,8 @@
  * Centralizes media extraction logic so all handlers benefit.
  */
 
-import type { Outcome, Effect, GameObjectId, ItemId, NpcId } from "@/lib/game/types";
+import type { Outcome, Effect, GameObjectId, ItemId, NpcId, PlayerState, Game } from "@/lib/game/types";
+import { Validator } from "@/lib/game/engine";
 
 /**
  * Converts an Outcome to a SHOW_MESSAGE Effect.
@@ -94,4 +95,77 @@ export function buildEffectsFromOutcome(
   }
 
   return effects;
+}
+
+/**
+ * Resolves a handler that may be a single handler or an array of conditional handlers.
+ *
+ * This function supports two patterns:
+ * 1. Single handler with optional conditions
+ * 2. Array of conditional handlers (evaluated in order, first match wins)
+ *
+ * Use this for handlers that have state-based branching (e.g., door states, progressive reading).
+ * For itemId-based arrays (e.g., "use X on Y"), use the itemId pattern instead.
+ *
+ * @param handler - Single handler or array of conditional handlers
+ * @param state - Current player state for condition evaluation
+ * @param game - Game data for condition evaluation
+ * @returns The resolved handler (success/fail outcomes), or null if no conditions matched
+ *
+ * @example
+ * // Single handler
+ * const handler = resolveConditionalHandler(object.handlers.onOpen, state, game);
+ * if (handler) {
+ *   const outcome = evaluateHandlerOutcome(handler, state, game);
+ *   return buildEffectsFromOutcome(outcome, objectId, 'object');
+ * }
+ *
+ * // Array of conditional handlers (e.g., door with multiple states)
+ * onOpen: [
+ *   { conditions: [{ type: 'STATE', entityId: 'door', key: 'isOpen', equals: true }], success: {...} },
+ *   { conditions: [{ type: 'STATE', entityId: 'door', key: 'isLocked', equals: false }], success: {...} },
+ *   { conditions: [{ type: 'STATE', entityId: 'door', key: 'isLocked', equals: true }], success: {...} }
+ * ]
+ */
+export function resolveConditionalHandler(
+  handler: any,
+  state: PlayerState,
+  game: Game
+): { conditions?: any[], success?: Outcome, fail?: Outcome } | null {
+  // Handle array of conditional handlers
+  if (Array.isArray(handler)) {
+    for (const conditionalHandler of handler) {
+      const conditionsMet = Validator.evaluateConditions(conditionalHandler.conditions, state, game);
+      if (conditionsMet) {
+        return conditionalHandler;
+      }
+    }
+    // No conditions matched
+    return null;
+  }
+
+  // Handle single handler
+  if (handler) {
+    return handler;
+  }
+
+  return null;
+}
+
+/**
+ * Evaluates a resolved handler's outcome based on conditions.
+ * Use after resolveConditionalHandler to get the success/fail outcome.
+ *
+ * @param handler - Resolved handler from resolveConditionalHandler
+ * @param state - Current player state
+ * @param game - Game data
+ * @returns The success or fail outcome based on conditions
+ */
+export function evaluateHandlerOutcome(
+  handler: { conditions?: any[], success?: Outcome, fail?: Outcome },
+  state: PlayerState,
+  game: Game
+): Outcome | null {
+  const conditionsMet = Validator.evaluateConditions(handler.conditions, state, game);
+  return conditionsMet ? handler.success || null : handler.fail || null;
 }

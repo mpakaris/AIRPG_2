@@ -30,7 +30,8 @@ export async function handleBreak(state: PlayerState, targetName: string, game: 
   const bestMatch = findBestMatch(normalizedTargetName, state, game, {
     searchInventory: false,
     searchVisibleItems: false,
-    searchObjects: true  // Can only break objects
+    searchObjects: true,  // Can only break objects
+    requireFocus: true
   });
 
   if (!bestMatch || bestMatch.category !== 'object') {

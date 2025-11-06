@@ -95,6 +95,38 @@ const MessageContent: FC<{ message: Message }> = ({ message }) => {
 };
 
 
+// Split messages with both content and images into separate display items (WhatsApp-style)
+const splitMessagesForDisplay = (messages: Message[]): Array<Message & { isImageOnly?: boolean }> => {
+  const result: Array<Message & { isImageOnly?: boolean }> = [];
+
+  messages.forEach((message) => {
+    // If message has both content and image, split into two messages
+    if (message.content.trim() && message.image) {
+      // Text message first
+      result.push({
+        ...message,
+        id: `${message.id}-text`,
+        image: undefined,
+      });
+      // Image message second
+      result.push({
+        ...message,
+        id: `${message.id}-image`,
+        content: '',
+        isImageOnly: true,
+      });
+    } else {
+      // Message has only content or only image - keep as is
+      result.push({
+        ...message,
+        isImageOnly: !message.content.trim() && !!message.image,
+      });
+    }
+  });
+
+  return result;
+};
+
 const MessageLog: FC<Pick<GameScreenProps, 'messages'>> = ({ messages }) => {
   const scrollViewportRef = useRef<HTMLDivElement>(null);
 
@@ -107,12 +139,16 @@ const MessageLog: FC<Pick<GameScreenProps, 'messages'>> = ({ messages }) => {
     }
   }, [messages]);
 
+  const displayMessages = splitMessagesForDisplay(messages);
+
   return (
     <ScrollArea viewportRef={scrollViewportRef} className="h-full flex-grow">
       <div className="mx-auto max-w-4xl space-y-6 px-4 py-6">
-        {messages.map((message) => {
+        {displayMessages.map((message) => {
           const isPlayer = message.sender === 'player';
           const isAgent = message.sender === 'agent';
+          const isImageOnly = message.isImageOnly;
+
           return (
             <div
               key={message.id}
@@ -123,14 +159,16 @@ const MessageLog: FC<Pick<GameScreenProps, 'messages'>> = ({ messages }) => {
             >
               <div
                 className={cn(
-                  'max-w-[75%] rounded-2xl px-4 py-2',
+                  'max-w-[75%] rounded-2xl',
+                  !isImageOnly && 'px-4 py-2',
+                  isImageOnly && 'overflow-hidden',
                   isPlayer
                     ? 'rounded-br-none bg-primary text-primary-foreground'
                     : 'rounded-bl-none bg-muted',
                   isAgent && 'bg-blue-500/10 border border-blue-500/20'
                 )}
               >
-                {!isPlayer && (
+                {!isPlayer && !isImageOnly && (
                   <div
                     className={cn(
                       'text-xs font-bold text-primary mb-1',
@@ -140,7 +178,7 @@ const MessageLog: FC<Pick<GameScreenProps, 'messages'>> = ({ messages }) => {
                     {message.senderName}
                   </div>
                 )}
-                <MessageContent message={message} />
+                {message.content && <MessageContent message={message} />}
                  {message.image && typeof message.image.url === 'string' && (() => {
                     const src = message.image.url.trim();
                     const valid = src.startsWith('http://') || src.startsWith('https://') || src.startsWith('/');
@@ -159,11 +197,11 @@ const MessageLog: FC<Pick<GameScreenProps, 'messages'>> = ({ messages }) => {
                       return (
                         <Dialog>
                           <DialogTrigger asChild>
-                            <button className="mt-2 block w-full cursor-pointer">
+                            <button className={cn("block w-full cursor-pointer", !isImageOnly && "mt-2")}>
                               <video
                                 src={src}
                                 controls
-                                className="rounded-lg border-2 border-border w-full max-w-md"
+                                className="rounded-lg border-2 border-border w-full"
                                 preload="metadata"
                               >
                                 Your browser does not support the video tag.
@@ -189,13 +227,14 @@ const MessageLog: FC<Pick<GameScreenProps, 'messages'>> = ({ messages }) => {
                     return (
                       <Dialog>
                         <DialogTrigger asChild>
-                          <button className="mt-2 block w-full cursor-pointer">
+                          <button className={cn("block w-full cursor-pointer", !isImageOnly && "mt-2")}>
                             <Image
                               src={src}
                               alt={message.image.description || 'image'}
-                              width={200}
-                              height={200}
-                              className="rounded-lg border-2 border-border"
+                              width={400}
+                              height={300}
+                              className="rounded-lg w-full h-auto"
+                              style={{ objectFit: 'cover' }}
                               data-ai-hint={message.image.hint}
                             />
                           </button>

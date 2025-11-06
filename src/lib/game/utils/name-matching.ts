@@ -42,19 +42,38 @@ export function matchesName(entity: any, searchName: string): MatchResult {
     // PARTIAL MATCH (lower priority)
     // Check both directions: entity contains search OR search contains entity
     // BUT: Prevent tiny substring matches (e.g., "art" matching "article")
+    // AND: Prevent compound word mismatches (e.g., "book" matching "bookshelf")
     // Require BOTH strings to be >= 4 chars for substring matching
 
     if (entityName.length >= 4 && searchName.length >= 4) {
+        // Check if search term is a proper substring (with word boundaries)
+        // "safe" should match "wall safe" but "book" should NOT match "bookshelf"
         if (entityName.includes(searchName)) {
-            // Search term is substring of entity name (e.g., "safe" matches "wall safe")
-            const score = 50 + (1 / entityName.length) * 10;
-            return { matches: true, score };
+            // Check if it's a word boundary match (space before/after or at start/end)
+            const index = entityName.indexOf(searchName);
+            const beforeChar = index > 0 ? entityName[index - 1] : ' ';
+            const afterChar = index + searchName.length < entityName.length ? entityName[index + searchName.length] : ' ';
+
+            // Only match if there's a word boundary (space or start/end)
+            if (beforeChar === ' ' || afterChar === ' ' || beforeChar === '-' || afterChar === '-') {
+                // Search term is substring of entity name (e.g., "safe" matches "wall safe")
+                const score = 50 + (1 / entityName.length) * 10;
+                return { matches: true, score };
+            }
         }
 
         if (searchName.includes(entityName)) {
-            // Entity name is substring of search term (e.g., "book" matches "book the art of the deal")
-            const score = 45 + (1 / entityName.length) * 10;
-            return { matches: true, score };
+            // Check word boundary for entity name in search term
+            const index = searchName.indexOf(entityName);
+            const beforeChar = index > 0 ? searchName[index - 1] : ' ';
+            const afterChar = index + entityName.length < searchName.length ? searchName[index + entityName.length] : ' ';
+
+            // Only match if there's a word boundary
+            if (beforeChar === ' ' || afterChar === ' ' || beforeChar === '-' || afterChar === '-') {
+                // Entity name is substring of search term (e.g., "book" matches "book the art of the deal")
+                const score = 45 + (1 / entityName.length) * 10;
+                return { matches: true, score };
+            }
         }
     }
 
@@ -176,39 +195,81 @@ export function findBestMatch(
         searchInventory?: boolean;
         searchVisibleItems?: boolean;
         searchObjects?: boolean;
-    } = { searchInventory: true, searchVisibleItems: true, searchObjects: true }
+        requireFocus?: boolean;  // If true, ONLY search within current focus (+ inventory)
+    } = { searchInventory: true, searchVisibleItems: true, searchObjects: true, requireFocus: false }
 ): BestMatch {
-    const visibleEntities = { items: [], objects: [] } as { items: string[]; objects: string[] };
-
-    // Get visible entities if needed
-    if (options.searchVisibleItems || options.searchObjects) {
-        const { VisibilityResolver } = require("@/lib/game/engine");
-        const visible = VisibilityResolver.getVisibleEntities(state, game);
-        visibleEntities.items = visible.items;
-        visibleEntities.objects = visible.objects;
-
-        // ALSO add personal objects (they're always accessible but filtered from visibility)
-        if (options.searchObjects) {
-            for (const objectId in game.gameObjects) {
-                const obj = game.gameObjects[objectId as GameObjectId];
-                if (obj?.personal === true && !visibleEntities.objects.includes(objectId)) {
-                    visibleEntities.objects.push(objectId);
-                }
-            }
-        }
+    // Debug: log search for door
+    if (searchName.includes('door')) {
+        console.log('[findBestMatch] Searching for:', searchName);
+        console.log('[findBestMatch] Current focus:', state.currentFocusId);
+        console.log('[findBestMatch] Options:', options);
     }
+
+    const visibleEntities = { items: [], objects: [] } as { items: string[]; objects: string[] };
 
     // Get entities in current focus (if any)
     let entitiesInFocus = { items: [] as string[], objects: [] as string[] };
     if (state.currentFocusId) {
         const { GameStateManager } = require("@/lib/game/engine");
+
+        // IMPORTANT: Include the focused entity itself!
+        // Players should be able to interact with what they're focused on
+        if (game.items[state.currentFocusId as ItemId]) {
+            entitiesInFocus.items.push(state.currentFocusId);
+        } else if (game.gameObjects[state.currentFocusId as GameObjectId]) {
+            entitiesInFocus.objects.push(state.currentFocusId);
+        }
+
         // Get direct children of focused entity
         const children = GameStateManager.getChildren(state, state.currentFocusId);
+
+        // Debug: log children for bookshelf
+        if (state.currentFocusId === 'obj_bookshelf') {
+            console.log('[findBestMatch] Bookshelf children:', children);
+            console.log('[findBestMatch] Bookshelf state:', GameStateManager.getEntityState(state, 'obj_bookshelf'));
+        }
+
         for (const childId of children) {
             if (game.items[childId as ItemId]) {
                 entitiesInFocus.items.push(childId);
             } else if (game.gameObjects[childId as GameObjectId]) {
                 entitiesInFocus.objects.push(childId);
+            }
+        }
+
+        // Debug: log entities in focus
+        if (state.currentFocusId === 'obj_bookshelf') {
+            console.log('[findBestMatch] Entities in focus:', entitiesInFocus);
+        }
+    }
+
+    // If requireFocus is true AND we have a focus, ONLY search focus + inventory
+    if (options.requireFocus && state.currentFocusId) {
+        // Strict focus mode: only search within focus boundaries
+        // This includes the focused entity itself + its children
+        visibleEntities.items = entitiesInFocus.items;
+        visibleEntities.objects = entitiesInFocus.objects;
+
+        // Debug: log for door searches
+        if (searchName.includes('door')) {
+            console.log('[findBestMatch] Focus mode - searching:', visibleEntities);
+        }
+    } else {
+        // Normal mode: search all visible entities
+        if (options.searchVisibleItems || options.searchObjects) {
+            const { VisibilityResolver } = require("@/lib/game/engine");
+            const visible = VisibilityResolver.getVisibleEntities(state, game);
+            visibleEntities.items = visible.items;
+            visibleEntities.objects = visible.objects;
+
+            // ALSO add personal objects (they're always accessible but filtered from visibility)
+            if (options.searchObjects) {
+                for (const objectId in game.gameObjects) {
+                    const obj = game.gameObjects[objectId as GameObjectId];
+                    if (obj?.personal === true && !visibleEntities.objects.includes(objectId)) {
+                        visibleEntities.objects.push(objectId);
+                    }
+                }
             }
         }
     }

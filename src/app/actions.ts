@@ -6,7 +6,7 @@ import {
   generateStoryFromLogs
 } from '@/ai';
 import { AVAILABLE_COMMANDS } from '@/lib/game/commands';
-import type { Game, SerializableGame, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectId, GameObjectState, ItemId, Flag, Effect, Chapter, ChapterId, ImageDetails, GameId, User, TokenUsage, Story, Portal, LocationState, CommandResult, CellId } from '@/lib/game/types';
+import type { Game, SerializableGame, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectId, GameObjectState, ItemId, Flag, Effect, Chapter, ChapterId, ImageDetails, GameId, User, TokenUsage, Story, Portal, CommandResult, CellId } from '@/lib/game/types';
 import { initializeFirebase } from '@/firebase';
 import { doc, setDoc, getDoc, collection, getDocs } from 'firebase/firestore';
 import { getInitialState } from '@/lib/game-state';
@@ -162,13 +162,18 @@ export async function findOrCreateUser(userId: string): Promise<{ user: User | n
 
             return { user: newUser, isNew: true };
         } else {
-            // User exists, but check if player state exists
-            console.log(`Existing user found: ${userId}. Checking for player state...`);
+            // User exists, but check if player state and logs exist
+            console.log(`Existing user found: ${userId}. Checking for player state and logs...`);
             const stateRef = doc(firestore, 'player_states', `${userId}_${game.id}`);
-            const stateSnap = await getDoc(stateRef);
+            const logRef = doc(firestore, 'logs', `${userId}_${game.id}`);
 
-            if (!stateSnap.exists()) {
-                console.log(`Player state missing for ${userId}. Recreating...`);
+            const [stateSnap, logSnap] = await Promise.all([getDoc(stateRef), getDoc(logRef)]);
+
+            // Recreate if state is missing OR logs are missing/empty
+            const logsAreValid = logSnap.exists() && logSnap.data()?.messages?.length > 0;
+
+            if (!stateSnap.exists() || !logsAreValid) {
+                console.log(`Player state or logs missing/empty for ${userId}. Recreating...`);
                 const freshState = getInitialState(game);
                 const initialMessages = await createInitialMessages(freshState, game);
                 await logAndSave(userId, game.id, freshState, initialMessages);
@@ -305,34 +310,46 @@ export async function processCommand(
         } else {
             // Let the AI interpret the command (natural language - could be anything!)
             const location = game.locations[currentState.currentLocationId];
-            const examinedObjectFlag = (id: string) => `examined_${id}`;
 
-            const locationState: LocationState = currentState.locationStates?.[currentState.currentLocationId] || { objects: location.objects };
-            const visibleObjects = locationState.objects.map(id => getLiveGameObject(id, currentState, game)).filter(Boolean) as {gameLogic: GameObject, state: GameObjectState}[];
+            // IMPORTANT: Use VisibilityResolver to get ALL visible entities
+            // This includes entities revealed via REVEAL_FROM_PARENT (children of containers)
+            const { VisibilityResolver } = await import('@/lib/game/engine');
+            const visibleEntities = VisibilityResolver.getVisibleEntities(currentState, game);
 
-            let visibleEntityNames = visibleObjects.map(obj => obj.gameLogic.name);
-            visibleEntityNames.push(...currentState.inventory.map(id => game.items[id]?.name).filter(Boolean));
-
-            for (const obj of visibleObjects) {
-                const hasBeenExamined = GameStateManager.hasFlag(currentState, examinedObjectFlag(obj.gameLogic.id));
-                if (obj.state.isOpen && hasBeenExamined && obj.state.items) {
-                    for (const itemId of obj.state.items) {
-                        const item = game.items[itemId];
-                        if (item) {
-                            visibleEntityNames.push(item.name);
-                        }
-                    }
+            // Get names of all visible objects
+            let visibleEntityNames: string[] = [];
+            for (const objectId of visibleEntities.objects) {
+                const obj = game.gameObjects[objectId as GameObjectId];
+                if (obj) {
+                    visibleEntityNames.push(obj.name);
                 }
             }
 
-            const visibleNpcNames = location.npcs.map(id => game.npcs[id]?.name).filter(Boolean) as string[];
-            visibleEntityNames.push(...visibleNpcNames);
+            // Get names of all visible items (including inventory)
+            for (const itemId of visibleEntities.items) {
+                const item = game.items[itemId as ItemId];
+                if (item) {
+                    visibleEntityNames.push(item.name);
+                }
+            }
+
+            // Get names of all visible NPCs
+            const visibleNpcNames: string[] = [];
+            for (const npcId of visibleEntities.npcs) {
+                const npc = game.npcs[npcId as NpcId];
+                if (npc) {
+                    visibleNpcNames.push(npc.name);
+                    visibleEntityNames.push(npc.name);
+                }
+            }
 
             const { output: aiResponse, usage } = await guidePlayerWithNarrator({
                 promptContext: game.promptContext || '',
                 gameState: JSON.stringify({
                     ...currentState,
-                    objectStates: undefined, locationStates: undefined, portalStates: undefined, npcStates: undefined, stories: undefined
+                    world: undefined, // Too large for AI context
+                    stories: undefined, // Not needed for AI
+                    counters: undefined, // Analytics only
                 }, null, 2),
                 playerCommand: safePlayerInput,
                 availableCommands: AVAILABLE_COMMANDS.join(', '),

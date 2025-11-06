@@ -13,13 +13,13 @@ import { normalizeName } from "@/lib/utils";
 import { handleRead } from "./handle-read";
 import { buildEffectsFromOutcome } from "@/lib/game/utils/outcome-helpers";
 import { findBestMatch } from "@/lib/game/utils/name-matching";
+import { logEntityDebug } from "@/lib/game/utils/debug-helpers";
+import { getSmartNotFoundMessage } from "@/lib/game/utils/smart-messages";
 
 const examinedObjectFlag = (id: string) => `examined_${id}`;
 
 export async function handleExamine(state: PlayerState, targetName: string, game: Game): Promise<Effect[]> {
     const normalizedTarget = normalizeName(targetName);
-
-    console.log('[handle-examine] Searching for:', targetName, '→ normalized:', normalizedTarget);
 
     if (!normalizedTarget) {
         return [{
@@ -46,9 +46,13 @@ export async function handleExamine(state: PlayerState, targetName: string, game
 
     // Otherwise, standard examination
     // LOCATION-AWARE SEARCH: Find best match (prioritizes current location)
-    const bestMatch = findBestMatch(normalizedTarget, state, game);
-
-    console.log('[handle-examine] Best match result:', bestMatch);
+    // IMPORTANT: Respect focus boundaries to prevent cross-contamination
+    const bestMatch = findBestMatch(normalizedTarget, state, game, {
+        searchInventory: true,
+        searchVisibleItems: true,
+        searchObjects: true,
+        requireFocus: true
+    });
 
     // Process the best match found
     if (bestMatch?.category === 'inventory') {
@@ -215,6 +219,9 @@ export async function handleExamine(state: PlayerState, targetName: string, game
             }];
         }
 
+        // Debug logging for bookshelf/door
+        logEntityDebug('EXAMINE START', targetObjectId, state, game);
+
         const flag = examinedObjectFlag(targetObject.id);
         const hasBeenExamined = GameStateManager.hasFlag(state, flag);
 
@@ -303,14 +310,20 @@ async function handleExamineItemOnTarget(state: PlayerState, itemName: string, t
     const itemMatch = findBestMatch(normalizedItemName, state, game, {
         searchInventory: true,
         searchVisibleItems: true,
-        searchObjects: false
+        searchObjects: false,
+        requireFocus: true
     });
 
     if (!itemMatch) {
+        const smartMessage = getSmartNotFoundMessage(normalizedItemName, state, game, {
+            searchInventory: true,
+            searchVisibleItems: true,
+            searchObjects: false
+        });
         return [{
             type: 'SHOW_MESSAGE',
-            speaker: 'system',
-            content: game.systemMessages.notVisible(itemName)
+            speaker: 'narrator',
+            content: smartMessage.message
         }];
     }
 
@@ -321,14 +334,20 @@ async function handleExamineItemOnTarget(state: PlayerState, itemName: string, t
     const targetMatch = findBestMatch(normalizedTargetName, state, game, {
         searchInventory: false,
         searchVisibleItems: false,
+        requireFocus: true,
         searchObjects: true
     });
 
     if (!targetMatch || targetMatch.category !== 'object') {
+        const smartMessage = getSmartNotFoundMessage(normalizedTargetName, state, game, {
+            searchInventory: false,
+            searchVisibleItems: false,
+            searchObjects: true
+        });
         return [{
             type: 'SHOW_MESSAGE',
-            speaker: 'system',
-            content: game.systemMessages.notVisible(targetName)
+            speaker: 'narrator',
+            content: smartMessage.message
         }];
     }
 

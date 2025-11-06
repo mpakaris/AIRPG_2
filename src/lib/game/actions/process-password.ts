@@ -54,26 +54,28 @@ export async function processPassword(state: PlayerState, command: string, game:
     }
     
     const expectedPhrase = targetObject.gameLogic.input?.validation;
-    const handler = targetObject.gameLogic.handlers.onUnlock;
+    // Check for onPasswordSubmit first (new pattern), fallback to onUnlock (legacy)
+    const handler = (targetObject.gameLogic.handlers as any).onPasswordSubmit || targetObject.gameLogic.handlers.onUnlock;
 
     if (normalizeName(phrase) === normalizeName(expectedPhrase)) {
         const effects = [
             ...(handler?.success?.effects || []),
-            { type: 'SET_OBJECT_STATE' as const, objectId: targetObject.gameLogic.id, state: { isLocked: false, isOpen: true } },
+            // Only set isLocked: false (NOT isOpen) - let handler control opening behavior
+            { type: 'SET_OBJECT_STATE' as const, objectId: targetObject.gameLogic.id, state: { isLocked: false } },
             { type: 'SET_FLAG' as const, flag: examinedObjectFlag(targetObject.gameLogic.id) as any }
         ];
 
         const result = await processEffects(state, effects, game);
-        
+
         const unlockMessage = createMessage(
-            'narrator', 
-            narratorName, 
+            'narrator',
+            narratorName,
             handler?.success?.message || "It unlocks!",
             'image',
             { id: targetObject.gameLogic.id, game, state: result.newState!, showEvenIfExamined: true }
         );
         result.messages.unshift(unlockMessage);
-        
+
         return result;
     } else {
         const failMessage = handler?.fail?.message || 'That password doesn\'t work.';

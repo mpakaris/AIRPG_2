@@ -13,6 +13,7 @@
 
 import type { Effect, PlayerState, EntityRuntimeState, Message, Game, GameObject, GameObjectId } from '../types';
 import { createMessage } from '@/lib/utils';
+import { logEffectDebug } from '../utils/debug-helpers';
 
 export class GameStateManager {
   /**
@@ -44,6 +45,9 @@ export class GameStateManager {
             newState.world[effect.entityId] = {};
           }
           Object.assign(newState.world[effect.entityId], effect.patch);
+
+          // Debug logging for bookshelf/door
+          logEffectDebug(effect, effect.entityId, newState);
           break;
 
         case 'SET_STATE_ID':
@@ -125,6 +129,9 @@ export class GameStateManager {
         // World Graph (Visibility)
         // ============================================================================
         case 'REVEAL_ENTITY':
+          // Debug logging for bookshelf/door
+          logEffectDebug(effect, effect.entityId, newState);
+
           if (!newState.world[effect.entityId]) {
             newState.world[effect.entityId] = {};
           }

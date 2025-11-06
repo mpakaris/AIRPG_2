@@ -11,9 +11,9 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         description: 'A very worn, leather-bound notebook rests on a table.',
         capabilities: { openable: true, lockable: true, breakable: false, movable: false, powerable: false, container: true, readable: true, inputtable: true },
         state: { isOpen: false, isLocked: true, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        inventory: { items: ['item_newspaper_article'] as ItemId[], capacity: 2, allowTags: [], denyTags: [] },
+        inventory: { items: ['item_secret_document'] as ItemId[], capacity: 2, allowTags: [], denyTags: [] },
         children: {
-            items: ['item_newspaper_article'] as ItemId[],
+            items: ['item_secret_document'] as ItemId[],
             objects: ['obj_sd_card'] as GameObjectId[]
         },
         media: {
@@ -37,11 +37,11 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                     }
                 },
                 fail: {
-                    message: "Notebook's open. Brass clasp released. Inside: black SD card—modern, out of place against yellowed pages. Next to it, folded newspaper clipping, brown with age. Hidden deliberately.",
+                    message: "Notebook's open. Brass clasp released. Inside: black SD card—modern, out of place against yellowed pages. Next to it, a folded document marked CONFIDENTIAL in faded red ink. Hidden deliberately.",
                     media: {
                         url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759242346/Notebook_unlocked_fpxqgl.jpg',
                         description: 'Unlocked notebook revealing hidden contents',
-                        hint: 'SD card and newspaper clipping'
+                        hint: 'SD card and secret document'
                     }
                 }
             },
@@ -64,10 +64,10 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             onOpen: {
                 conditions: [{ type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: false }],
                 success: {
-                    message: "Notebook's open. Brass clasp unfastened. In the crease: black SD card—modern, cold, out of place. Next to it: newspaper clipping, brown with age. Different eras. Hidden together. Someone archived the past on modern media.",
+                    message: "Notebook's open. Brass clasp unfastened. In the crease: black SD card—modern, cold, out of place. Next to it: document marked CONFIDENTIAL, folded tight. Different eras. Hidden together. Someone archived the past on modern media.",
                     media: {
                         url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759242346/Notebook_unlocked_fpxqgl.jpg',
-                        description: 'Open notebook with SD card and clipping',
+                        description: 'Open notebook with SD card and secret document',
                         hint: 'Take the contents'
                     },
                     effects: [
@@ -111,7 +111,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                     { type: 'STATE', entityId: 'obj_brown_notebook', key: 'isOpen', equals: true }
                 ],
                 success: {
-                    message: "Pages yellowed, ink faded. Most entries illegible. But the hidden items—SD card, newspaper clipping—those are what matter. TAKE them.",
+                    message: "Pages yellowed, ink faded. Most entries illegible. But the hidden items—SD card, secret document—those are what matter. TAKE them.",
                     effects: []
                 },
                 fail: {
@@ -123,7 +123,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             onSearch: {
                 conditions: [{ type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: false }],
                 success: {
-                    message: "You search the pages. SD card, newspaper clipping—hidden in the center spread. TAKE them."
+                    message: "You search the pages. SD card, secret document—hidden in the center spread. TAKE them."
                 },
                 fail: {
                     message: "Locked. Can't search. Need the PASSWORD."
@@ -140,7 +140,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             // SPECIAL: Password unlock handler
             onUnlock: {
                 success: {
-                    message: "Brass clasp clicks. Cover swings open, leather creaks. Inside: black SD card—modern, digital, anachronistic. Next to it: newspaper clipping, brown with decades. Past preserved twice. Paper survived seventy years. Data survives longer. Both waiting.",
+                    message: "Brass clasp clicks. Cover swings open, leather creaks. Inside: black SD card—modern, digital, anachronistic. Next to it: folded document marked CONFIDENTIAL. Past preserved twice—analog and digital. Both waiting.",
                     media: {
                         url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759242346/Notebook_unlocked_fpxqgl.jpg',
                         description: 'Unlocked notebook revealing secrets',
@@ -149,8 +149,8 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                     effects: [
                         { type: 'SET_FLAG', flag: 'has_unlocked_notebook' as Flag },
                         { type: 'SET_ENTITY_STATE', entityId: 'obj_brown_notebook', patch: { isLocked: false, isOpen: true, currentStateId: 'unlocked' } },
-                        { type: 'REVEAL_ENTITY', entityId: 'obj_sd_card' },
-                        { type: 'REVEAL_ENTITY', entityId: 'item_newspaper_article' }
+                        { type: 'REVEAL_FROM_PARENT', entityId: 'obj_sd_card', parentId: 'obj_brown_notebook' },
+                        { type: 'REVEAL_FROM_PARENT', entityId: 'item_secret_document', parentId: 'obj_brown_notebook' }
                     ]
                 },
                 fail: {
@@ -242,7 +242,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                     effects: [
                         { type: 'SET_FLAG', flag: 'has_moved_chalkboard', value: true },
                         { type: 'SET_ENTITY_STATE', entityId: 'obj_chalkboard_menu', patch: { currentStateId: 'moved', isMoved: true } },
-                        { type: 'REVEAL_ENTITY', entityId: 'item_iron_pipe' }
+                        { type: 'REVEAL_FROM_PARENT', entityId: 'item_iron_pipe', parentId: 'obj_chalkboard_menu' }
                     ]
                 },
                 fail: {
@@ -398,10 +398,13 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         name: 'Bookshelf',
         archetype: 'Furniture',
         description: "A small bookshelf filled with used paperbacks is tucked into a corner.",
-        capabilities: { openable: false, lockable: false, breakable: false, movable: false, powerable: false, container: true, readable: false, inputtable: false },
+        capabilities: { openable: false, lockable: false, breakable: false, movable: true, powerable: false, container: true, readable: false, inputtable: false },
         state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
         inventory: { items: [], capacity: null },
-        children: { items: ['item_book_deal', 'item_book_time', 'item_book_justice'] as ItemId[] },
+        children: {
+            items: ['item_book_deal', 'item_book_time', 'item_book_justice'] as ItemId[],
+            objects: ['obj_hidden_door'] as GameObjectId[]
+        },
         media: { images: { default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759604596/Bookshelf_Cafe_kn4poz.png', description: 'A bookshelf in a cafe.', hint: 'bookshelf reading corner' } } },
         handlers: {
             // 1. EXAMINE - Visual inspection
@@ -416,9 +419,9 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                     effects: [
                         { type: 'SET_FLAG', flag: 'has_seen_justice_book', value: true },
                         { type: 'SET_ENTITY_STATE', entityId: 'obj_bookshelf', patch: { isOpen: true } },
-                        { type: 'REVEAL_ENTITY', entityId: 'item_book_deal' },
-                        { type: 'REVEAL_ENTITY', entityId: 'item_book_time' },
-                        { type: 'REVEAL_ENTITY', entityId: 'item_book_justice' }
+                        { type: 'REVEAL_FROM_PARENT', entityId: 'item_book_deal', parentId: 'obj_bookshelf' },
+                        { type: 'REVEAL_FROM_PARENT', entityId: 'item_book_time', parentId: 'obj_bookshelf' },
+                        { type: 'REVEAL_FROM_PARENT', entityId: 'item_book_justice', parentId: 'obj_bookshelf' }
                     ]
                 }
             },
@@ -451,10 +454,24 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                 }
             },
 
-            // 8. MOVE - Too heavy
+            // 8. MOVE - Conditional: reveals hidden door if document was read
             onMove: {
+                conditions: [{ type: 'FLAG', flag: 'read_secret_document', value: true }],
+                success: {
+                    message: "You remember the blueprint. Hidden room behind the bookshelf. You grip the side, pull hard. Solid oak groans against floor. Scraping. Dust rises.\n\nIt shifts. A few inches. Then more.\n\nBehind it: a door. Flush with the wall. No handle. Just a keypad. Someone hid this deliberately. The blueprint was right.",
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762368505/Secret_Door_Revealed_o27pj3.png',
+                        description: 'Bookshelf moved aside revealing hidden door',
+                        hint: 'A secret door with a keypad'
+                    },
+                    effects: [
+                        { type: 'SET_ENTITY_STATE', entityId: 'obj_bookshelf', patch: { isMoved: true, isOpen: true } },
+                        { type: 'REVEAL_FROM_PARENT', entityId: 'obj_hidden_door', parentId: 'obj_bookshelf' },
+                        { type: 'SET_FLAG', flag: 'bookshelf_moved', value: true }
+                    ]
+                },
                 fail: {
-                    message: "Solid oak, heavy. Not moving this alone. Try EXAMINING or READING the books."
+                    message: "Solid oak, heavy. No reason to move this. Try EXAMINING or READING the books."
                 }
             },
 
@@ -585,7 +602,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                     effects: [
                         { type: 'SET_FLAG', flag: 'has_moved_painting', value: true },
                         { type: 'SET_ENTITY_STATE', entityId: 'obj_painting', patch: { isMoved: true, currentStateId: 'moved' } },
-                        { type: 'REVEAL_ENTITY', entityId: 'obj_wall_safe' }
+                        { type: 'REVEAL_FROM_PARENT', entityId: 'obj_wall_safe', parentId: 'obj_painting' }
                     ]
                 },
                 fail: {
@@ -646,8 +663,8 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         description: 'A small, steel safe is set into the wall.',
         capabilities: { openable: true, lockable: true, breakable: false, movable: false, powerable: false, container: true, readable: false, inputtable: false },
         state: { isOpen: false, isLocked: true, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        inventory: { items: ['item_secret_document'] as ItemId[], capacity: 1 },
-        children: { items: ['item_secret_document'] as ItemId[] },
+        inventory: { items: ['item_newspaper_article'] as ItemId[], capacity: 1 },
+        children: { items: ['item_newspaper_article'] as ItemId[] },
         media: {
             images: {
                 default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761263220/safe_behind_Painting_dbo6qc.png', description: 'A closed wall safe.', hint: 'wall safe' },
@@ -668,11 +685,11 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                     }
                 },
                 fail: {
-                    message: "Safe's open. Inside: manila folder. A secret document - There it is again, this spark in your eyes when you discover secret information. What someone hid.",
+                    message: "Safe's open. Inside: yellowed newspaper clipping. Decades old. Someone preserved this deliberately. Why hide a newspaper article in a safe?",
                     media: {
                         url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761263220/safe_behind_painting_open_tpmf0m.png',
-                        description: 'Open safe with secret document',
-                        hint: 'A secret file'
+                        description: 'Open safe with newspaper clipping',
+                        hint: 'An old article'
                     }
                 }
             },
@@ -690,16 +707,16 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                     itemId: 'item_safe_key' as ItemId,
                     conditions: [{ type: 'NO_FLAG', flag: 'safe_is_unlocked' }],
                     success: {
-                        message: "Key slides in—perfect fit. One turn. Heavy clunk. Door swings. Inside: manila folder in sleeve. CONFIDENTIAL stamped in red. This is what they hid.",
+                        message: "Key slides in—perfect fit. One turn. Heavy clunk. Door swings. Inside: yellowed newspaper clipping, preserved behind glass sleeve. Decades old. Protected like treasure. This is what they hid.",
                         media: {
                             url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761263220/safe_behind_painting_open_tpmf0m.png',
-                            description: 'Safe unlocked revealing secret document',
+                            description: 'Safe unlocked revealing newspaper article',
                             hint: 'Someone hid this for a reason'
                         },
                         effects: [
                             { type: 'SET_FLAG', flag: 'safe_is_unlocked', value: true },
                             { type: 'SET_ENTITY_STATE', entityId: 'obj_wall_safe', patch: { isLocked: false, isOpen: true, currentStateId: 'unlocked' } },
-                            { type: 'REVEAL_ENTITY', entityId: 'item_secret_document' },
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_newspaper_article', parentId: 'obj_wall_safe' },
                             { type: 'REMOVE_ITEM', itemId: 'item_safe_key' }
                         ]
                     },
@@ -756,7 +773,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             onSearch: {
                 conditions: [{ type: 'FLAG', flag: 'safe_is_unlocked', value: true }],
                 success: {
-                    message: "You peer inside. Manila folder in document sleeve. CONFIDENTIAL. TAKE it."
+                    message: "You peer inside. Yellowed newspaper clipping in protective sleeve. Decades old. TAKE it."
                 },
                 fail: {
                     message: "Locked. Can't search a locked safe. Need the key."
@@ -866,7 +883,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         effects: [
                             { type: 'SET_FLAG', flag: 'machine_is_broken' as Flag },
                             { type: 'SET_ENTITY_STATE', entityId: 'obj_coffee_machine', patch: { isBroken: true, isOpen: true, currentStateId: 'broken' } },
-                            { type: 'REVEAL_ENTITY', entityId: 'item_safe_key' }
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_safe_key', parentId: 'obj_coffee_machine' }
                         ]
                     },
                     fail: {
@@ -956,6 +973,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         alternateNames: ['sd card', 'card', 'memory card', 'sd', 'media card', 'black card'],
         archetype: 'Device',
         description: 'A small, modern SD card, looking strangely out of place in the old notebook. It probably fits in your phone.',
+        transitionNarration: 'You lean in closer to examine the SD card tucked inside the notebook.',
         capabilities: { openable: false, lockable: false, breakable: false, movable: false, powerable: false, container: false, readable: true, inputtable: false },
         state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'closed' },
         media: {
@@ -1035,6 +1053,306 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             tags: ['sd card', 'media', 'device']
         },
         version: { schema: "1.0", content: "2.0" }
+    },
+    'obj_tablet': {
+        id: 'obj_tablet' as GameObjectId,
+        name: 'Tablet Computer',
+        alternateNames: ['tablet', 'computer', 'device', 'screen'],
+        archetype: 'Device',
+        description: 'A tablet computer sits on the desk, screen glowing with a cryptic puzzle.',
+        personal: true,
+        capabilities: { openable: false, lockable: false, breakable: false, movable: false, powerable: true, container: false, readable: true, inputtable: true },
+        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: true, currentStateId: 'default' },
+        inventory: { items: [], capacity: 0 },
+        media: {
+            images: {
+                default: { url: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=600', description: 'A tablet computer with glowing screen.', hint: 'digital tablet' }
+            }
+        },
+        input: {
+            type: 'phrase',
+            validation: 'placeholder_password',
+            hint: 'Puzzle requires a password... Visit the mini-game to find it.',
+            attempts: null,
+            lockout: null
+        },
+        handlers: {
+            // 1. EXAMINE - Visual inspection
+            onExamine: {
+                success: {
+                    message: "Tablet glows. Modern. Expensive. Screen shows a complex puzzle game—logic gates, cipher wheels, cryptic symbols. Below the puzzle, a message:\n\n'SOLVE TO UNLOCK. PASSWORD REQUIRED.'\n\nA URL at the bottom: https://airpg-minigames.vercel.app/games/tablet-puzzle\n\nThis is part of his game. A test. The kidnapper wants you to play.",
+                    media: {
+                        url: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=600',
+                        description: 'Tablet showing cryptic puzzle',
+                        hint: 'Mini-game puzzle'
+                    }
+                }
+            },
+
+            // 2. TAKE - Can't take tablet
+            onTake: {
+                fail: {
+                    message: "Bolted to the desk. Not moving. Try EXAMINING it or solving the puzzle."
+                }
+            },
+
+            // 4. USE - Direct to puzzle
+            onUse: {
+                fail: {
+                    message: "It's already powered on. Try EXAMINING the puzzle or visiting the mini-game URL."
+                }
+            },
+
+            // 6. OPEN - Not applicable
+            onOpen: {
+                fail: {
+                    message: "It's already displaying the puzzle. Try READING or EXAMINING it."
+                }
+            },
+
+            // 7. CLOSE - Can't close
+            onClose: {
+                fail: {
+                    message: "Can't power it down. The puzzle demands attention."
+                }
+            },
+
+            // 8. MOVE - Bolted down
+            onMove: {
+                fail: {
+                    message: "Bolted to desk. Professional install. Try solving the PUZZLE instead."
+                }
+            },
+
+            // 9. BREAK - Reinforced
+            onBreak: {
+                fail: {
+                    message: "Reinforced case. You'd damage it before breaking it. Try solving the PUZZLE."
+                }
+            },
+
+            // 10. READ - Read the puzzle
+            onRead: {
+                success: {
+                    message: "Screen text:\n\n'CRYPTOGRAPHIC LOGIC PUZZLE'\n'SOLVE ALL GATES TO REVEAL THE PASSPHRASE'\n\nMini-game: https://airpg-minigames.vercel.app/games/tablet-puzzle\n\nOnce solved, use: /password <answer>"
+                }
+            },
+
+            // 11. SEARCH - Examine tablet
+            onSearch: {
+                success: {
+                    message: "You examine the tablet. No physical buttons. Just the glowing puzzle screen. The answer is in the game. Visit the URL to solve it."
+                }
+            },
+
+            // Password submission (for future expansion)
+            onPasswordSubmit: {
+                success: {
+                    message: "Screen flashes green. 'CORRECT. ACCESS GRANTED.'\n\nNew files appear. Financial records. Offshore accounts. Shell corporations. All linked to Veridian Dynamics. This is evidence. Big evidence.\n\nBut this is flavor content for now. The real mystery is the phone call.",
+                    effects: [
+                        { type: 'SET_FLAG', flag: 'tablet_puzzle_solved', value: true }
+                    ]
+                },
+                fail: {
+                    message: "Screen flashes red. 'INCORRECT.' Try solving the puzzle at the mini-game URL first."
+                }
+            },
+
+            defaultFailMessage: "A tablet with a cryptic puzzle. Try: EXAMINE it, READ it, or visit https://airpg-minigames.vercel.app/games/tablet-puzzle"
+        },
+        design: {
+            authorNotes: "Tablet provides optional mini-game puzzle. Currently flavor content. Password validation can be updated when mini-game is built.",
+            tags: ['tablet', 'puzzle', 'minigame', 'flavor']
+        },
+        version: { schema: "1.0", content: "1.0" }
+    },
+    'obj_hidden_door': {
+        id: 'obj_hidden_door' as GameObjectId,
+        name: 'Hidden Door',
+        alternateNames: ['door', 'hidden door', 'secret door', 'keypad door', 'locked door', 'the door'],
+        archetype: 'Door',
+        description: 'A hidden door behind the bookshelf with a digital keypad.',
+        transitionNarration: 'Your curiosity wins and you take a step closer to have a look at the door.',
+        capabilities: { openable: true, lockable: true, breakable: false, movable: false, powerable: false, container: true, readable: false, inputtable: true },
+        state: { isOpen: false, isLocked: true, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
+        inventory: { items: [], capacity: 0 },
+        children: {
+            objects: ['obj_tablet'] as GameObjectId[]
+        },
+        media: {
+            images: {
+                default: { url: 'https://images.unsplash.com/photo-1614359953614-dcf28bc61b80?w=600', description: 'A hidden door with keypad.', hint: 'secret door' },
+                unlocked: { url: 'https://images.unsplash.com/photo-1519147433953-d90e6f751a5a?w=600', description: 'Open door revealing hidden room.', hint: 'open secret room' }
+            }
+        },
+        input: {
+            type: 'phrase',
+            validation: 'Justice for Rose Carmichael',
+            hint: 'Requires a password phrase...',
+            attempts: null,
+            lockout: null
+        },
+        handlers: {
+            // 1. EXAMINE - Visual inspection (FORCES focus shift even as child of bookshelf)
+            onExamine: {
+                conditions: [{ type: 'STATE', entityId: 'obj_hidden_door', key: 'isLocked', equals: true }],
+                success: {
+                    message: "Heavy steel door. Flush with the wall. Cold to touch—reinforced metal, military-grade. No handle, no hinges visible. Smooth matte finish.\n\nJust a digital keypad. Glowing faintly green. Numbers 0-9 and a small screen reading 'ENTER PASSPHRASE'. Professional installation. This was built to stay hidden.\n\nThe keypad waits. Use: /password <your guess>",
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762416324/hidden_door_detailed_kyansl.jpg',
+                        description: 'Hidden door with digital keypad',
+                        hint: 'Need the password phrase...'
+                    },
+                    effects: [
+                        { type: 'SET_FOCUS', focusId: 'obj_hidden_door', focusType: 'object' }
+                    ]
+                },
+                fail: {
+                    message: "Door's open. Inside: small hidden room. Dim. A desk with a tablet. And—wait. Someone's there. A girl. Tied to a chair. Eyes wide. Alive.",
+                    media: {
+                        url: 'https://images.unsplash.com/photo-1519147433953-d90e6f751a5a?w=600',
+                        description: 'Open secret room with victim',
+                        hint: 'The missing girl!'
+                    },
+                    effects: [
+                        { type: 'SET_FOCUS', focusId: 'obj_hidden_door', focusType: 'object' }
+                    ]
+                }
+            },
+
+            // 2. TAKE - Can't take door
+            onTake: {
+                fail: {
+                    message: "It's a door built into the wall. Try entering the PASSWORD to unlock it."
+                }
+            },
+
+            // 4. USE - Direct to password
+            onUse: {
+                fail: {
+                    message: "It needs a password. Use: /password <your guess>"
+                }
+            },
+
+            // 6. OPEN - Requires unlock first, then opens to reveal victim
+            onOpen: [
+                {
+                    // Door already open
+                    conditions: [{ type: 'STATE', entityId: 'obj_hidden_door', key: 'isOpen', equals: true }],
+                    success: {
+                        message: "Door's already open. The victim is inside, waiting. You can TALK to her."
+                    }
+                },
+                {
+                    // Door unlocked but not yet opened - THE BIG REVEAL
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_hidden_door', key: 'isLocked', equals: false },
+                        { type: 'STATE', entityId: 'obj_hidden_door', key: 'isOpen', equals: false }
+                    ],
+                    success: {
+                        message: "You grip the handle. Pull. Heavy door swings inward—smooth, silent hinges. Professional.\n\nSmall room. Dim light from a desk lamp. Tablet glowing. And—\n\nYour breath catches.\n\nA girl. Young. Tied to a chair. Duct tape over her mouth. Eyes wide, terrified but alive. Tears streak her face.\n\nThe missing victim. Rose Carmichael.\n\nShe's trying to speak. Muffled sounds. Urgent. Desperate.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762368566/Screenshot_2025-11-04_at_15.31.36_opzjnb.png',
+                            description: 'Open door revealing hidden room with kidnapped victim',
+                            hint: 'She knows something!'
+                        },
+                        effects: [
+                            { type: 'SET_ENTITY_STATE', entityId: 'obj_hidden_door', patch: { isOpen: true, currentStateId: 'unlocked' } },
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'npc_victim_girl', parentId: 'obj_hidden_door' },
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'obj_tablet', parentId: 'obj_hidden_door' },
+                            { type: 'SET_FLAG', flag: 'hidden_door_opened', value: true }
+                        ]
+                    }
+                },
+                {
+                    // Door still locked - need password first
+                    conditions: [{ type: 'STATE', entityId: 'obj_hidden_door', key: 'isLocked', equals: true }],
+                    success: {
+                        message: "Keypad locks it tight. Need the PASSWORD first.\n\nYou notice something new on the screen: 'WEB AUTH REQUIRED'\nBelow it, a URL flickers: https://airpg.vercel.app/puzzle\n\nTry: /password <your guess>",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762416485/Screenshot_2025-11-06_at_9.07.21_qpfubu.png',
+                            description: 'Access denied - keypad screen',
+                            hint: 'Need web authentication'
+                        }
+                    }
+                }
+            ],
+
+            // 7. CLOSE - Close open door
+            onClose: {
+                conditions: [{ type: 'STATE', entityId: 'obj_hidden_door', key: 'isOpen', equals: true }],
+                success: {
+                    message: "You swing the door shut. But why? The girl is still inside. Open it again."
+                },
+                fail: {
+                    message: "Already closed and locked."
+                }
+            },
+
+            // 8. MOVE - Can't move door
+            onMove: {
+                fail: {
+                    message: "Built into the wall. Not moving. Try entering the PASSWORD."
+                }
+            },
+
+            // 9. BREAK - Reinforced
+            onBreak: {
+                fail: {
+                    message: "Reinforced steel. You'd need explosives. Try the PASSWORD instead."
+                }
+            },
+
+            // 10. READ - Read keypad
+            onRead: {
+                success: {
+                    message: "Digital keypad. Small screen reads: 'ENTER PASSPHRASE'. Numbers 0-9. No hints. Use: /password <your guess>"
+                }
+            },
+
+            // 11. SEARCH - Search/check the door more carefully (provides password hint)
+            onSearch: {
+                success: {
+                    message: "You examine the keypad closely. No worn keys. No fingerprints. Clean. Professional.\n\nThe screen flickers briefly: 'HINT: Justice demands remembrance.' Then back to 'ENTER PASSPHRASE'.\n\nThink: What connects all the clues? The chalkboard, the books, the newspaper article... Justice for who?\n\nUse: /password <your full answer>",
+                    media: {
+                        url: 'https://images.unsplash.com/photo-1614359953614-dcf28bc61b80?w=600',
+                        description: 'Hidden door with digital keypad',
+                        hint: 'Justice demands remembrance...'
+                    }
+                }
+            },
+
+            // Password submission handler - UNLOCKS but does NOT open
+            onPasswordSubmit: {
+                success: {
+                    message: "Keypad beeps. Green light flashes. Locks disengage—heavy metallic clunks echo in sequence. Click. Click. Click.\n\nThe screen reads: 'ACCESS GRANTED'\n\nDoor's unlocked. Still closed. A handle waits. You can OPEN it now.",
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762416677/hidden_door_access_granted_c2mkro.jpg',
+                        description: 'Access granted - door unlocked',
+                        hint: 'Green light - access granted'
+                    },
+                    effects: [
+                        { type: 'SET_FLAG', flag: 'hidden_door_unlocked', value: true },
+                        { type: 'SET_ENTITY_STATE', entityId: 'obj_hidden_door', patch: { isLocked: false } }
+                    ]
+                },
+                fail: {
+                    message: "Keypad beeps. Red light flashes. \n\n'ACCESS DENIED' It seems the password is wrong.\n\nTry again. Use: /password <your guess>",
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762416485/Screenshot_2025-11-06_at_9.07.21_qpfubu.png',
+                        description: 'Access denied - incorrect password',
+                        hint: 'Red light - access denied'
+                    }
+                }
+            },
+
+            defaultFailMessage: "A hidden door with a digital keypad. Try: EXAMINE it, OPEN it, or enter /password <your guess>."
+        },
+        design: {
+            authorNotes: "Hidden door revealed after moving bookshelf. Unlocks with 'Justice for Rose Carmichael'. Contains victim NPC and tablet.",
+            tags: ['door', 'hidden', 'locked', 'puzzle']
+        },
+        version: { schema: "1.0", content: "1.0" }
     }
 };
 
@@ -1045,23 +1363,50 @@ const items: Record<ItemId, Item> = {
         alternateNames: ['phone', 'smartphone', 'cell phone', 'mobile', 'fbi phone', 'my phone', 'fbi smartphone'],
         archetype: 'Tool',
         description: "Your standard-issue FBI smartphone. It has a camera, secure messaging, and a slot for external media.",
-        capabilities: { isTakable: false, isReadable: false, isUsable: true, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+        capabilities: { isTakable: false, isReadable: false, isUsable: true, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false, inputtable: true },
         state: { currentStateId: 'default' },
         media: {
             images: {
                 default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759604596/FBI_phone_placeholder.png', description: 'FBI-issue smartphone', hint: 'fbi phone' }
             }
         },
+        input: {
+            type: 'phrase',
+            validation: '5554442025',
+            hint: 'Use: /password <phone number> to dial',
+            attempts: null,
+            lockout: null
+        },
         handlers: {
             // EXAMINE - Visual inspection
             onExamine: {
                 success: {
-                    message: "FBI-issue smartphone. Camera, secure messaging, media slot. Standard kit. Always in your pocket."
+                    message: "FBI-issue smartphone. Camera, secure messaging, media slot. Standard kit. Always in your pocket.\n\nYou can dial numbers using: /password <phone number>"
+                }
+            },
+
+            // Password/Phone Number Submit Handler
+            onPasswordSubmit: {
+                conditions: [{ type: 'FLAG', flag: 'know_full_phone_number', value: true }],
+                success: {
+                    message: "You dial 555-444-2025. Ring. Ring. Click.\n\nA voice. Cold. Mechanical. Synthesized.\n\n\"Well, well. Agent Burt Macklin. Congratulations. You've proven to be a worthy opponent. You found my little puzzle. Clever.\n\nYou may have won this round, but the game is far from over. More rounds are to come. I'll keep you busy, detective. Very busy.\n\nJustice... Justice will be served. For Rose. For Silas. For all of them.\n\nUntil next time.\"\n\nClick. Silence.\n\n---CHAPTER 1 COMPLETE---",
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759604596/FBI_phone_placeholder.png',
+                        description: 'Phone displaying call with synthesized voice',
+                        hint: 'Villain audio message'
+                    },
+                    effects: [
+                        { type: 'SET_FLAG', flag: 'villain_called', value: true },
+                        { type: 'SET_FLAG', flag: 'chapter_1_complete', value: true }
+                    ]
+                },
+                fail: {
+                    message: "You dial the number, but it doesn't connect. Either the number is wrong, or you're missing information. The note said 555-444-XXXX. Find the missing digits."
                 }
             },
 
             // Fallback
-            defaultFailMessage: "The phone's a tool. Try USING it ON something that needs it."
+            defaultFailMessage: "The phone's a tool. Try USING it ON something that needs it, or dial a number with /password <phone number>."
         },
         design: {
             authorNotes: "Universal tool/key for media devices and locked objects throughout the game.",
@@ -1649,20 +1994,168 @@ const items: Record<ItemId, Item> = {
             onMove: { fail: { message: "It's on the shelf. Try READING it." } },
             // 9. BREAK
             onBreak: { fail: { message: "Cafe property. Try READING it instead." } },
-            // 10. READ - Uses stateMap for progressive content
+            // 10. READ - Progressive content with note drop on 3rd read
+            onRead: [
+                {
+                    // First read
+                    conditions: [{ type: 'STATE', entityId: 'item_book_justice', key: 'readCount', equals: 0 }],
+                    success: {
+                        message: "Against your better judgment, you read a page. 'His voice was like smooth jazz on a rainy night, but his eyes held a storm. She knew then that he would get justice for her, or die trying.'",
+                        media: {
+                            url: 'https://the-openbook.com/wp-content/uploads/2023/02/cropped-the-open-book-nieuw.jpg?w=780&h=684',
+                            description: 'Open romance novel - page with dramatic text',
+                            hint: 'First page'
+                        },
+                        effects: [
+                            { type: 'INCREMENT_ITEM_READ_COUNT', itemId: 'item_book_justice' }
+                        ]
+                    }
+                },
+                {
+                    // Second read
+                    conditions: [{ type: 'STATE', entityId: 'item_book_justice', key: 'readCount', equals: 1 }],
+                    success: {
+                        message: "You flip to a random page. '...and in that moment, she knew their love was a clue, a puzzle box only they could unlock.' You close the book. That's enough of that.",
+                        media: {
+                            url: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=600',
+                            description: 'Open book showing middle pages',
+                            hint: 'Random page'
+                        },
+                        effects: [
+                            { type: 'INCREMENT_ITEM_READ_COUNT', itemId: 'item_book_justice' }
+                        ]
+                    }
+                },
+                {
+                    // Third read - NOTE DROPS!
+                    conditions: [{ type: 'STATE', entityId: 'item_book_justice', key: 'readCount', equals: 2 }],
+                    success: {
+                        message: "You open the book again. As you flip through the pages, a small piece of paper flutters out and lands on the floor. You pick it up.\n\nIt's a handwritten note. Ink faded but legible. Just a phone number:\n\n555-444-XXXX\n\nThe last four digits are scratched out. Someone hid this deliberately. Why?",
+                        media: {
+                            url: 'https://images.unsplash.com/photo-1586075010923-2dd4570fb338?w=600',
+                            description: 'A handwritten note falling from book pages',
+                            hint: 'Note with phone number!'
+                        },
+                        effects: [
+                            { type: 'INCREMENT_ITEM_READ_COUNT', itemId: 'item_book_justice' },
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_note_phone', parentId: 'item_book_justice' },
+                            { type: 'SET_FLAG', flag: 'note_dropped_from_book', value: true }
+                        ]
+                    }
+                },
+                {
+                    // Subsequent reads
+                    conditions: [{ type: 'STATE', entityId: 'item_book_justice', key: 'readCount', operator: '>=', value: 3 }],
+                    success: {
+                        message: "The back cover has a blurb: 'A story of love, loss, and the quest for justice.' The word 'justice' is practically leaping off the page. You already found the note.",
+                        media: {
+                            url: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600',
+                            description: 'Book back cover with blurb',
+                            hint: 'Back cover'
+                        }
+                    }
+                }
+            ],
             // 11. SEARCH
             onSearch: { fail: { message: "It's a book. Try READING it." } },
             // 12. TALK
             onTalk: { fail: { message: "Books don't talk. Try READING it." } },
             defaultFailMessage: "Romance novel. 'Justice' in the title. Try: EXAMINE or READ it."
         },
-        stateMap: {
-            'read0': { description: "Against your better judgment, you read a page. 'His voice was like smooth jazz on a rainy night, but his eyes held a storm. She knew then that he would get justice for her, or die trying.'" },
-            'read1': { description: "You flip to a random page. '...and in that moment, she knew their love was a clue, a puzzle box only they could unlock.' You close the book. That's enough of that." },
-            'read2': { description: "The back cover has a blurb: 'A story of love, loss, and the quest for justice.' The word 'justice' is practically leaping off the page." }
-        },
         design: { tags: ['book', 'clue'] },
         version: { schema: "1.0", content: "1.1" }
+    },
+    'item_note_phone': {
+        id: 'item_note_phone' as ItemId,
+        name: 'Handwritten Note',
+        alternateNames: ['note', 'paper', 'phone note', 'piece of paper', 'handwritten note'],
+        archetype: 'Document',
+        description: 'A small piece of paper with a phone number written on it: 555-444-XXXX. The last four digits are scratched out.',
+        capabilities: { isTakable: true, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+        state: { readCount: 0, currentStateId: 'default' },
+        media: {
+            images: {
+                default: { url: 'https://images.unsplash.com/photo-1586075010923-2dd4570fb338?w=600', description: 'A handwritten note on aged paper.', hint: 'note with phone number' }
+            }
+        },
+        handlers: {
+            // 1. EXAMINE - Visual inspection
+            onExamine: {
+                success: {
+                    message: "Faded ink. Handwritten. Phone number: 555-444-XXXX. Last four digits scratched out deliberately. Someone wanted this hidden, but not destroyed. Why hide only part of it?"
+                }
+            },
+            // 2. TAKE - Pick it up
+            onTake: {
+                success: {
+                    message: "You pick up the note. Fragile paper, faded ink. Phone number with missing digits. A puzzle piece.",
+                    effects: [
+                        { type: 'ADD_ITEM', itemId: 'item_note_phone' },
+                        { type: 'SET_ENTITY_STATE', entityId: 'item_note_phone', patch: { taken: true } }
+                    ]
+                },
+                fail: {
+                    message: "Already have it."
+                }
+            },
+            // 3. DROP - Drop it
+            onDrop: {
+                success: {
+                    message: "Note flutters to the ground. Can pick it up later."
+                }
+            },
+            // 4. USE - Can't use note
+            onUse: {
+                fail: {
+                    message: "It's just a note. Try READING it or EXAMINING it."
+                }
+            },
+            // 6. OPEN - Already open
+            onOpen: {
+                fail: {
+                    message: "It's a single piece of paper. Already open. Try READING it."
+                }
+            },
+            // 7. CLOSE - Can't close
+            onClose: {
+                fail: {
+                    message: "It's just a slip of paper. Can't close it."
+                }
+            },
+            // 8. MOVE - Just reposition
+            onMove: {
+                fail: {
+                    message: "It's in your hands. Try READING it."
+                }
+            },
+            // 9. BREAK - Don't destroy evidence
+            onBreak: {
+                fail: {
+                    message: "Evidence. Don't destroy it. Try READING it."
+                }
+            },
+            // 10. READ - Read the note
+            onRead: {
+                success: {
+                    message: "Phone number: 555-444-XXXX\n\nThe last four digits are scratched out. Black ink, deliberate strokes. Someone didn't want the full number found easily. But why leave part of it? A test? A clue?"
+                }
+            },
+            // 11. SEARCH - Search the note
+            onSearch: {
+                success: {
+                    message: "You hold it up to the light. No watermarks. No hidden text. Just the incomplete phone number. The answer must be somewhere else."
+                }
+            },
+            // 12. TALK - Can't talk to note
+            onTalk: {
+                fail: {
+                    message: "Notes don't talk. Try READING it."
+                }
+            },
+            defaultFailMessage: "A note with an incomplete phone number. Try: EXAMINE it, READ it, or SEARCH it."
+        },
+        design: { tags: ['note', 'clue', 'puzzle'] },
+        version: { schema: "1.0", content: "1.0" }
     },
     'item_secret_document': {
         id: 'item_secret_document' as ItemId,
@@ -1750,14 +2243,14 @@ const items: Record<ItemId, Item> = {
             // 10. READ - Read the document
             onRead: {
                 success: {
-                    message: "You open it. Dense. Financial reports, shell corporations, offshore accounts. All linked to one holding company. Hours to untangle this web. But one name repeats: Veridian Dynamics. This is big. Bigger than murder.",
+                    message: "You open it. Dense. Blueprints of the cafe. Floor plans, structural diagrams. But wait—there's a hidden room marked behind the bookshelf. This wasn't on any public records. Someone drew this in red ink. Separate entrance. Why hide this?\n\nNext pages: Financial reports, shell corporations, offshore accounts. All linked to one holding company: Veridian Dynamics. This is big. Bigger than murder.",
                     media: {
                         url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761773132/Screenshot_2025-10-29_at_22.24.23_w9e7vd.png',
-                        description: 'Open confidential document revealing financial conspiracy',
-                        hint: 'Veridian Dynamics appears repeatedly'
+                        description: 'Open confidential document revealing cafe blueprints and financial conspiracy',
+                        hint: 'Hidden room behind bookshelf? Veridian Dynamics appears repeatedly'
                     },
                     effects: [
-                        { type: 'SET_FLAG', flag: 'has_read_secret_document' as Flag }
+                        { type: 'SET_FLAG', flag: 'read_secret_document' as Flag, value: true }
                     ]
                 },
                 fail: {
@@ -1877,6 +2370,73 @@ const npcs: Record<NpcId, NPC> = {
             default: "Oh, I'm not sure about that, but have you tried our new matcha latte? It's simply wonderful!"
         },
         version: { schema: "2.0", content: "1.1" }
+    },
+    'npc_victim_girl': {
+        id: 'npc_victim_girl' as NpcId,
+        name: 'Rose Carmichael',
+        description: 'A young woman in her early 20s, bound to a chair with duct tape over her mouth. Her eyes are wide with fear and urgency. She desperately wants to tell you something.',
+        image: {
+            url: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400',
+            description: 'Portrait of a frightened young woman.',
+            hint: 'kidnapped victim'
+        },
+        importance: 'primary',
+        initialState: {
+            stage: 'active',
+            trust: 100,
+            attitude: 'desperate'
+        },
+        dialogueType: 'scripted',
+        persona: "You are Rose Carmichael, the kidnapped victim. You've been tied up in this hidden room for days. You're terrified but trying to stay calm. You know critical information about the case - specifically that the missing digits from the phone number are 2025. You're desperate to help the detective catch your kidnapper.",
+        welcomeMessage: 'Mmmmph! Mmph mmph! [She struggles against her bonds, trying desperately to speak through the tape]',
+        goodbyeMessage: "Please... find him. The number... 2025. That\'s all I know.",
+        conversationTrees: {
+            'reveal_digits': {
+                topic: 'Phone Number Digits',
+                availableWhen: [{ type: 'FLAG', flag: 'note_dropped_from_book', value: true }],
+                entries: [
+                    {
+                        id: 'first_contact',
+                        npcMessage: '[Muffled sounds through tape] Mmmmph! Mmmph!\n\n[You carefully remove the duct tape from her mouth]\n\nOh god, thank you! Please—you need to listen. My name is Rose Carmichael. I was kidnapped three days ago. The man who took me... he said something about a phone number. He was laughing, said he left you a note but scratched out the last digits.\n\nHe told me to tell you if you found me: The missing numbers are 2025. That\'s the year this all started for him. The year Rose died. My namesake.\n\nPlease, call that number. He wants you to. This is all part of his game.',
+                        playerOptions: [
+                            {
+                                choice: 'Are you hurt? Do you need help?',
+                                npcReply: 'I\'m scared but not hurt. He\'s been... almost gentle. Like I\'m valuable to him. Like bait. Please, just call that number. 555-444-2025. End this.',
+                                effects: [
+                                    { type: 'SET_FLAG', flag: 'victim_revealed_digits', value: true },
+                                    { type: 'SET_FLAG', flag: 'know_full_phone_number', value: true }
+                                ]
+                            },
+                            {
+                                choice: 'Who is he? Did you see his face?',
+                                npcReply: 'Masked. Always masked. But his voice... cold, calculated. He kept saying "Justice will be served." Over and over. The phone number is 555-444-2025. Call it. Please.',
+                                effects: [
+                                    { type: 'SET_FLAG', flag: 'victim_revealed_digits', value: true },
+                                    { type: 'SET_FLAG', flag: 'know_full_phone_number', value: true }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        id: 'after_reveal',
+                        availableAfter: 'first_contact',
+                        npcMessage: 'Please, use your phone to call 555-444-2025. That\'s all I know. End this nightmare.',
+                        playerOptions: [
+                            {
+                                choice: 'I\'ll call the number. Stay safe.',
+                                npcReply: 'Thank you. Please... be careful. He\'s dangerous. But he wants this confrontation. Call him.'
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        startConversationEffects: [{ type: 'SET_FLAG', flag: 'has_talked_to_victim' as Flag }],
+        limits: {
+            maxInteractions: 5,
+            interactionLimitResponse: "I\'ve told you everything I know. Please, just call 555-444-2025 on your phone. End this."
+        },
+        version: { schema: "2.0", content: "1.0" }
     }
 };
 
@@ -2187,6 +2747,15 @@ Your reasoning must be a brief, step-by-step explanation of how you mapped the p
     // Generic errors - System voice
     cantDoThat: "That action isn't available.",
     somethingWentWrong: "An unexpected error occurred.",
+  },
+
+  // System media - Images for common actions
+  systemMedia: {
+    move: {
+      url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762367184/GoTo_2_g7fc07.png',
+      description: 'Moving to location',
+      hint: 'movement'
+    }
   },
 
   // New World Model

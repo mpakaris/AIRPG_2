@@ -28,19 +28,19 @@ export function getInitialState(game: Game): PlayerState {
       const parentObj = game.gameObjects[parentObjId as GameObjectId];
       if (parentObj.children?.objects?.includes(gameObject.id as any)) {
         // Object is a child - check parent accessibility based on capabilities
-        const parentState = parentObj.state || { isOpen: false, isLocked: false, isMoved: false };
+        const parentState = parentObj.state || {};
 
         // If parent is a container, check if it's open/unlocked
         if (parentObj.capabilities?.container) {
           // Containers: child hidden if parent is closed OR locked
-          if (!parentState.isOpen || parentState.isLocked) {
+          if (!(parentState as any).isOpen || (parentState as any).isLocked) {
             isHiddenChild = true;
           }
         }
         // If parent is movable (non-container), check if it's moved
         else if (parentObj.capabilities?.movable) {
           // Movable objects: child hidden until parent is moved (e.g., safe behind painting)
-          if (!parentState.isMoved) {
+          if (!(parentState as any).isMoved) {
             isHiddenChild = true;
           }
         }
@@ -173,63 +173,6 @@ export function getInitialState(game: Game): PlayerState {
   }
 
   // ============================================================================
-  // Legacy State Structures (for backward compatibility)
-  // ============================================================================
-  const initialObjectStates: Record<GameObjectId, GameObjectState> = {};
-  for (const gameObjectId in game.gameObjects) {
-    const gameObject = game.gameObjects[gameObjectId as GameObjectId];
-    initialObjectStates[gameObject.id] = {
-      isLocked: gameObject.state.isLocked,
-      isOpen: gameObject.state.isOpen,
-      isBroken: gameObject.state.isBroken,
-      isPoweredOn: gameObject.state.isPoweredOn,
-      items: gameObject.inventory?.items ? [...gameObject.inventory.items] : [],
-      currentStateId: gameObject.state.currentStateId,
-    };
-  }
-
-  const initialItemStates: Record<ItemId, Partial<ItemState>> = {};
-  for (const itemId in game.items) {
-      const item = game.items[itemId as ItemId];
-      if (item.state) {
-          initialItemStates[item.id] = {
-              readCount: item.state.readCount || 0,
-              currentStateId: item.state.currentStateId || 'default'
-          };
-      }
-  }
-
-  const initialPortalStates: Record<PortalId, PortalState> = {};
-  for (const portalId in game.portals) {
-      const portal = game.portals[portalId as PortalId];
-      initialPortalStates[portal.portalId] = {
-          isLocked: portal.state.isLocked,
-          isOpen: portal.state.isOpen,
-      };
-  }
-
-  const initialNpcStates: Record<NpcId, NpcState> = {};
-  for (const npcId in game.npcs) {
-    const npc = game.npcs[npcId as NpcId];
-    initialNpcStates[npc.id] = {
-      stage: npc.initialState.stage,
-      importance: npc.importance,
-      trust: npc.initialState.trust,
-      attitude: npc.initialState.attitude,
-      completedTopics: [],
-      interactionCount: 0,
-    };
-  }
-
-  const initialLocationStates: Record<LocationId, LocationState> = {};
-    for (const locationId in game.locations) {
-        const location = game.locations[locationId as LocationId];
-        initialLocationStates[location.locationId] = {
-            objects: [...location.objects]
-        };
-    }
-
-  // ============================================================================
   // Find Starting Location
   // ============================================================================
   const startChapter = game.chapters[game.startChapterId];
@@ -242,7 +185,7 @@ export function getInitialState(game: Game): PlayerState {
   // ============================================================================
   // Return Complete PlayerState
   // ============================================================================
-  return {
+  const initialState: PlayerState = {
     currentGameId: game.id,
     currentChapterId: game.startChapterId,
     currentLocationId: startChapter.startLocationId,
@@ -259,18 +202,17 @@ export function getInitialState(game: Game): PlayerState {
 
     // NEW: Focus system - set starting focus from chapter
     currentFocusId: startChapter.startingFocus?.entityId,
-    previousFocusId: undefined,
     focusType: startChapter.startingFocus?.entityType,
-
-    // Legacy state structures (preserved for backward compatibility)
-    objectStates: initialObjectStates,
-    locationStates: initialLocationStates,
-    itemStates: initialItemStates,
-    portalStates: initialPortalStates,
-    npcStates: initialNpcStates,
 
     stories: {},
     activeConversationWith: null,
     interactingWithObject: null,
   };
+
+  // Only add previousFocusId if it's not undefined (Firestore doesn't accept undefined)
+  if (startChapter.startingFocus?.previousEntityId !== undefined) {
+    initialState.previousFocusId = startChapter.startingFocus.previousEntityId;
+  }
+
+  return initialState;
 }

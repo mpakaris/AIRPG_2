@@ -5,8 +5,9 @@ import type { Game, PlayerState, Effect, GameObjectId, ItemId } from "@/lib/game
 import { Validator, HandlerResolver, VisibilityResolver, FocusResolver } from "@/lib/game/engine";
 import { normalizeName } from "@/lib/utils";
 import { handleRead } from "@/lib/game/actions/handle-read";
-import { buildEffectsFromOutcome } from "@/lib/game/utils/outcome-helpers";
+import { buildEffectsFromOutcome, resolveConditionalHandler, evaluateHandlerOutcome } from "@/lib/game/utils/outcome-helpers";
 import { findBestMatch } from "@/lib/game/utils/name-matching";
+import { logEntityDebug } from "@/lib/game/utils/debug-helpers";
 
 export async function handleOpen(state: PlayerState, targetName: string, game: Game): Promise<Effect[]> {
     const normalizedTargetName = normalizeName(targetName);
@@ -15,7 +16,8 @@ export async function handleOpen(state: PlayerState, targetName: string, game: G
     const bestMatch = findBestMatch(normalizedTargetName, state, game, {
         searchInventory: false,
         searchVisibleItems: true,  // Check items (for readable items)
-        searchObjects: true
+        searchObjects: true,
+        requireFocus: true
     });
 
     // 1. Handle objects (doors, containers, etc.)
@@ -30,37 +32,17 @@ export async function handleOpen(state: PlayerState, targetName: string, game: G
             }];
         }
 
-        // Get effective handler first (to check for specific fail messages)
-        const handler = HandlerResolver.getEffectiveHandler(targetObject, 'open', state);
+        // Debug logging for bookshelf/door
+        logEntityDebug('OPEN START', targetObjectId, state, game);
 
-        // If handler exists, evaluate conditions
+        // Use helper to resolve conditional handler (supports both arrays and single handlers)
+        const handler = resolveConditionalHandler(targetObject.handlers?.onOpen, state, game);
+
         if (handler) {
-            const conditionsMet = Validator.evaluateConditions(handler.conditions, state, game);
-            const outcome = conditionsMet ? handler.success : handler.fail;
+            // Evaluate the handler's outcome based on conditions
+            const outcome = evaluateHandlerOutcome(handler, state, game);
 
-            // If conditions not met and we have a specific fail message, use it immediately
-            // BUT: Still set focus so player can try password/unlock actions
-            if (!conditionsMet && outcome?.message) {
-                const effects: Effect[] = [];
-
-                // Only set focus if NOT personal equipment
-                if (targetObject.personal !== true) {
-                    effects.push({
-                        type: 'SET_FOCUS',
-                        focusId: targetObjectId,
-                        focusType: 'object',
-                        transitionMessage: FocusResolver.getTransitionNarration(targetObjectId, 'object', state, game) || undefined
-                    });
-                }
-
-                // Use helper to extract media from outcome
-                effects.push(...buildEffectsFromOutcome(outcome, targetObjectId, 'object'));
-
-                return effects;
-            }
-
-            // If conditions met, execute success
-            if (conditionsMet && outcome) {
+            if (outcome) {
                 const effects: Effect[] = [];
 
                 // Only set focus if NOT personal equipment

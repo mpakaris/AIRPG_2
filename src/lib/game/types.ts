@@ -82,7 +82,7 @@ export type Effect =
   | { type: 'HIDE_ENTITY'; entityId: string } // NEW: Make entity invisible (sets isVisible: false)
   | { type: 'ADD_TO_CONTAINER'; entityId: string; containerId: string } // NEW: Add entity to container (sets parent/child)
   | { type: 'REMOVE_FROM_CONTAINER'; entityId: string; containerId: string } // NEW: Remove entity from container
-  | { type: 'REVEAL_FROM_PARENT'; parentId: string } // NEW: Reveal all children of a parent
+  | { type: 'REVEAL_FROM_PARENT'; entityId: string; parentId: string } // NEW: Reveal entity and establish parent relationship
   | { type: 'SET_PARENT'; entityId: string; parentId: string } // NEW: Set parent of entity
   | { type: 'SET_STATE_ID'; entityId: string; to: string } // NEW: Set currentStateId
   | { type: 'INC_COUNTER'; key: string; by?: number } // NEW: Increment counter
@@ -219,13 +219,6 @@ export type PlayerState = {
 
   // Optional analytics
   counters?: Record<string, number>;
-
-  // Legacy state structures (for backward compatibility during migration)
-  objectStates?: Record<GameObjectId, GameObjectState>;
-  locationStates?: Record<LocationId, LocationState>;
-  itemStates?: Record<ItemId, Partial<ItemState>>;
-  portalStates?: Record<PortalId, PortalState>;
-  npcStates?: Record<NpcId, NpcState>;
 
   stories: Record<ChapterId, Story>;
   activeConversationWith: NpcId | null;
@@ -986,6 +979,7 @@ export type Game = {
       success?: ImageDetails;
       failure?: ImageDetails;
     };
+    move?: ImageDetails;  // Generic "moving to location/object" image
   };
 
   // New World Model
@@ -1003,12 +997,12 @@ items: Record<ItemId, Item>;
 };
 
 // Serializable version of Game for client components (no functions)
-export type SerializableGame = Omit<Game, 'systemMessages' | 'systemMedia' | 'promptContext' | 'objectInteractionPromptContext' | 'storyStyleGuide'>;
+export type SerializableGame = Omit<Game, 'systemMessages' | 'promptContext' | 'objectInteractionPromptContext' | 'storyStyleGuide'>;
 
 /**
  * Convert Game to SerializableGame (removes functions for client components)
  */
 export function toSerializableGame(game: Game): SerializableGame {
-    const { systemMessages, systemMedia, promptContext, objectInteractionPromptContext, storyStyleGuide, ...serializable } = game;
+    const { systemMessages, promptContext, objectInteractionPromptContext, storyStyleGuide, ...serializable } = game;
     return serializable;
 }

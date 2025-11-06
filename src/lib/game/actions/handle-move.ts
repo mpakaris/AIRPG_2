@@ -21,7 +21,8 @@ export async function handleMove(state: PlayerState, targetName: string, game: G
     const bestMatch = findBestMatch(normalizedTargetName, state, game, {
         searchInventory: false,
         searchVisibleItems: false,
-        searchObjects: true  // Can only move objects
+        searchObjects: true,  // Can only move objects
+        requireFocus: true
     });
 
     if (!bestMatch || bestMatch.category !== 'object') {

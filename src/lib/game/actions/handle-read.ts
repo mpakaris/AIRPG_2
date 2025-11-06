@@ -12,8 +12,9 @@
 import type { Game, PlayerState, Effect, GameObjectId, ItemId } from "@/lib/game/types";
 import { HandlerResolver, GameStateManager, VisibilityResolver, Validator, FocusResolver } from "@/lib/game/engine";
 import { normalizeName } from "@/lib/utils";
-import { buildEffectsFromOutcome } from "@/lib/game/utils/outcome-helpers";
+import { buildEffectsFromOutcome, resolveConditionalHandler, evaluateHandlerOutcome } from "@/lib/game/utils/outcome-helpers";
 import { findBestMatch } from "@/lib/game/utils/name-matching";
+import { getSmartNotFoundMessage } from "@/lib/game/utils/smart-messages";
 
 export async function handleRead(state: PlayerState, itemName: string, game: Game): Promise<Effect[]> {
     if (!itemName) {
@@ -49,24 +50,26 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
     }
 
     // Use findBestMatch for consistent, location-aware matching
+    // IMPORTANT: Respect focus boundaries to prevent cross-contamination
     const itemMatch = findBestMatch(normalizedItemName, state, game, {
         searchInventory: true,
         searchVisibleItems: true,
-        searchObjects: true  // Some readable things might be objects
+        searchObjects: true,  // Some readable things might be objects
+        requireFocus: true    // Only search within current focus (if active)
     });
 
     if (!itemMatch) {
-        // Debug: check if books are visible
-        const visibleEntities = require('@/lib/game/engine').VisibilityResolver.getVisibleEntities(state, game);
-        console.log('[handleRead] Item not found. Search term:', normalizedItemName);
-        console.log('[handleRead] Visible items:', visibleEntities.items);
-        console.log('[handleRead] Bookshelf state:', require('@/lib/game/engine').GameStateManager.getEntityState(state, 'obj_bookshelf'));
-        console.log('[handleRead] Book deal state:', require('@/lib/game/engine').GameStateManager.getEntityState(state, 'item_book_deal'));
+        // Entity not found in focus - provide smart guidance
+        const smartMessage = getSmartNotFoundMessage(normalizedItemName, state, game, {
+            searchInventory: true,
+            searchVisibleItems: true,
+            searchObjects: true
+        });
 
         return [{
             type: 'SHOW_MESSAGE',
-            speaker: 'system',
-            content: game.systemMessages.notVisible(itemName)
+            speaker: 'narrator',
+            content: smartMessage.message
         }];
     }
 
@@ -138,26 +141,16 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
         ];
     }
 
-    // 4. Check for onRead handler
-    const handler = entityToRead.handlers?.onRead;
-    if (handler && !Array.isArray(handler) && (handler as any).success) {
-        const effects: Effect[] = [];
-        const successOutcome = (handler as any).success;
+    // 4. Check for onRead handler (supports both arrays and single handlers using helper)
+    const handler = resolveConditionalHandler(entityToRead.handlers?.onRead, state, game);
 
-        if (successOutcome.message) {
-            effects.push({
-                type: 'SHOW_MESSAGE',
-                speaker: 'narrator',
-                content: successOutcome.message,
-                messageType: 'text'
-            });
+    if (handler) {
+        // Evaluate the handler's outcome based on conditions
+        const outcome = evaluateHandlerOutcome(handler, state, game);
+
+        if (outcome) {
+            return buildEffectsFromOutcome(outcome, entityId as any, entityType);
         }
-
-        if (successOutcome.effects) {
-            effects.push(...successOutcome.effects);
-        }
-
-        return effects;
     }
 
     // 5. Fallback: just show description
@@ -179,14 +172,22 @@ async function handleReadItemWithTarget(state: PlayerState, targetName: string, 
     const targetMatch = findBestMatch(normalizeName(targetName), state, game, {
         searchInventory: false,
         searchVisibleItems: true,
-        searchObjects: true
+        searchObjects: true,
+        requireFocus: true  // Respect focus boundaries
     });
 
     if (!targetMatch) {
+        // Entity not found in focus - provide smart guidance
+        const smartMessage = getSmartNotFoundMessage(normalizeName(targetName), state, game, {
+            searchInventory: false,
+            searchVisibleItems: true,
+            searchObjects: true
+        });
+
         return [{
             type: 'SHOW_MESSAGE',
-            speaker: 'system',
-            content: game.systemMessages.notVisible(targetName)
+            speaker: 'narrator',
+            content: smartMessage.message
         }];
     }
 
@@ -194,7 +195,8 @@ async function handleReadItemWithTarget(state: PlayerState, targetName: string, 
     const toolMatch = findBestMatch(normalizeName(toolName), state, game, {
         searchInventory: true,
         searchVisibleItems: true,
-        searchObjects: true
+        searchObjects: true,
+        requireFocus: false  // Tools can be in inventory (always accessible)
     });
 
     if (!toolMatch) {

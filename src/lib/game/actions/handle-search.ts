@@ -29,7 +29,8 @@ export async function handleSearch(state: PlayerState, targetName: string, game:
   const bestMatch = findBestMatch(normalizedTargetName, state, game, {
     searchInventory: true,
     searchVisibleItems: true,
-    searchObjects: true
+    searchObjects: true,
+    requireFocus: true
   });
 
   if (!bestMatch) {

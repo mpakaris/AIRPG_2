@@ -11,6 +11,7 @@
 import type { Game, PlayerState, Effect, GameObjectId } from "@/lib/game/types";
 import { FocusResolver, Validator } from "@/lib/game/engine";
 import { normalizeName } from "@/lib/utils";
+import { logEntityDebug } from "@/lib/game/utils/debug-helpers";
 
 export async function handlePassword(
     state: PlayerState,
@@ -40,6 +41,9 @@ export async function handlePassword(
             content: game.systemMessages.focusSystemError
         }];
     }
+
+    // Debug logging for bookshelf/door
+    logEntityDebug('PASSWORD START', focusedObjectId, state, game);
 
     // Verify the focused object accepts password input
     if (!focusedObject.input || focusedObject.input.type !== 'phrase') {
@@ -83,31 +87,42 @@ export async function handlePassword(
 
     // Check if password matches
     const expectedPhrase = focusedObject.input.validation;
-    const handler = focusedObject.handlers?.onUnlock;
+    // Check for onPasswordSubmit first (new pattern), fallback to onUnlock (legacy)
+    const handler = (focusedObject.handlers as any)?.onPasswordSubmit || focusedObject.handlers?.onUnlock;
 
     if (normalizeName(phrase) === normalizeName(expectedPhrase)) {
         // SUCCESS: Password correct
-        const effects: Effect[] = [
-            {
+        // Start with handler effects (which may include state changes)
+        const effects: Effect[] = [...(handler?.success?.effects || [])];
+
+        // Only add SET_ENTITY_STATE if handler didn't already set it
+        // This allows handlers full control over unlock/open behavior
+        const hasStateChange = handler?.success?.effects?.some((e: any) =>
+            e.type === 'SET_ENTITY_STATE' && e.entityId === focusedObjectId
+        );
+
+        if (!hasStateChange) {
+            // Default behavior: unlock only (NOT open - let handler control that)
+            effects.unshift({
                 type: 'SET_ENTITY_STATE',
                 entityId: focusedObjectId,
-                patch: { isLocked: false, isOpen: true }
-            }
-        ];
-
-        // Add handler success effects if they exist
-        if (handler?.success?.effects) {
-            effects.push(...handler.success.effects);
+                patch: { isLocked: false }
+            });
         }
 
-        // Add success message
+        // Add success message with media support
         const successMessage = handler?.success?.message || "It unlocks!";
+        const successMedia = handler?.success?.media;
+
         effects.push({
             type: 'SHOW_MESSAGE',
             speaker: 'narrator',
             content: successMessage,
-            messageType: 'image',
-            imageId: focusedObjectId
+            messageType: successMedia ? 'image' : 'image',
+            imageId: successMedia ? undefined : focusedObjectId,
+            imageUrl: successMedia?.url,
+            imageDescription: successMedia?.description,
+            imageHint: successMedia?.hint
         });
 
         // Mark as examined
@@ -121,10 +136,16 @@ export async function handlePassword(
     } else {
         // FAILURE: Wrong password
         const failMessage = handler?.fail?.message || 'That password doesn\'t work.';
+        const failMedia = handler?.fail?.media;
+
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'narrator',
-            content: failMessage
+            content: failMessage,
+            messageType: failMedia ? 'image' : 'text',
+            imageUrl: failMedia?.url,
+            imageDescription: failMedia?.description,
+            imageHint: failMedia?.hint
         }];
     }
 }

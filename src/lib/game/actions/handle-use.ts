@@ -13,6 +13,7 @@ import { Validator, VisibilityResolver, FocusResolver } from "@/lib/game/engine"
 import { normalizeName } from "@/lib/utils";
 import { buildEffectsFromOutcome } from "@/lib/game/utils/outcome-helpers";
 import { findBestMatch } from "@/lib/game/utils/name-matching";
+import { getSmartNotFoundMessage } from "@/lib/game/utils/smart-messages";
 
 export async function handleUse(state: PlayerState, itemName: string, targetName: string, game: Game): Promise<Effect[]> {
   const normalizedItemName = normalizeName(itemName);
@@ -21,14 +22,20 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
   const itemMatch = findBestMatch(normalizedItemName, state, game, {
     searchInventory: true,
     searchVisibleItems: true,
-    searchObjects: false
+    searchObjects: false,
+    requireFocus: true
   });
 
   if (!itemMatch) {
+    const smartMessage = getSmartNotFoundMessage(normalizedItemName, state, game, {
+      searchInventory: true,
+      searchVisibleItems: true,
+      searchObjects: false
+    });
     return [{
       type: 'SHOW_MESSAGE',
-      speaker: 'system',
-      content: game.systemMessages.notVisible(itemName)
+      speaker: 'narrator',
+      content: smartMessage.message
     }];
   }
 
@@ -50,7 +57,8 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
     const targetMatch = findBestMatch(normalizedTargetName, state, game, {
       searchInventory: false,
       searchVisibleItems: false,
-      searchObjects: true
+      searchObjects: true,
+      requireFocus: true
     });
 
     if (targetMatch?.category === 'object') {
@@ -149,7 +157,8 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
     const targetItemMatch = findBestMatch(normalizedTargetName, state, game, {
       searchInventory: true,
       searchVisibleItems: true,
-      searchObjects: false
+      searchObjects: false,
+      requireFocus: true
     });
 
     if (targetItemMatch) {
