@@ -571,8 +571,9 @@ export class GameStateManager {
 
     // Check accessibility based on capabilities
     if (caps) {
-      // Containers must be open
-      if (caps.container && parentState.isOpen !== true) {
+      // Containers must be open (unless they're non-openable surfaces like counters)
+      // Non-openable containers grant access based on visibility (revealed via examine/search)
+      if (caps.container && caps.openable && parentState.isOpen !== true) {
         return false;
       }
 
@@ -623,7 +624,7 @@ export class GameStateManager {
       let reason: string | undefined;
       if (!grantsAccess) {
         const parentEntity = game.gameObjects?.[ancestorId as GameObjectId];
-        if (parentEntity?.capabilities?.container && parentState.isOpen !== true) {
+        if (parentEntity?.capabilities?.container && parentEntity?.capabilities?.openable && parentState.isOpen !== true) {
           reason = 'parent_closed';
         } else if (parentEntity?.capabilities?.lockable && parentState.isLocked === true) {
           reason = 'parent_locked';

@@ -96,7 +96,7 @@ export function useUser() {
             const devId = process.env.NEXT_PUBLIC_DEV_USER_ID;
             if (devId) {
                 // Use registerUser to ensure the dev user exists and their state is loaded.
-                await registerUser(devId); 
+                await registerUser(devId);
             } else {
                 console.error("NEXT_PUBLIC_DEV_USER_ID is not set in your .env file for development.");
             }

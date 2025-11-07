@@ -83,21 +83,18 @@ export async function handleTake(state: PlayerState, targetName: string, game: G
   // 3. Check if item is takable
   if (item.capabilities && !item.capabilities.isTakable) {
     const failOutcome = item.handlers?.onTake?.fail;
+    const failMessage = failOutcome?.message || `You can't take the ${item.name}.`;
+    const failMedia = failOutcome?.media;
 
-    if (failOutcome?.media?.url) {
-      // Use outcome helper to extract media AND effects from handler
-      return buildEffectsFromOutcome(failOutcome, itemId as ItemId, 'item');
-    }
-
-    // Fallback to system media
     return [{
       type: 'SHOW_MESSAGE',
       speaker: 'narrator',
-      content: failOutcome?.message || `You can't take the ${item.name}.`,
+      content: failMessage,
       messageType: 'image',
-      imageUrl: game.systemMedia?.take?.failure?.url,
-      imageDescription: game.systemMedia?.take?.failure?.description,
-      imageHint: game.systemMedia?.take?.failure?.hint
+      // Use custom handler media if present, otherwise fall back to system media
+      imageUrl: failMedia?.url || game.systemMedia?.take?.failure?.url,
+      imageDescription: failMedia?.description || game.systemMedia?.take?.failure?.description,
+      imageHint: failMedia?.hint || game.systemMedia?.take?.failure?.hint
     }];
   }
 
@@ -125,32 +122,21 @@ export async function handleTake(state: PlayerState, targetName: string, game: G
 
   // Add success message with media support
   const successOutcome = item.handlers?.onTake?.success;
+  const successMessage = successOutcome?.message || `You take the ${item.name}.`;
 
-  if (successOutcome?.media?.url) {
-    // Use outcome helper to extract media AND effects from handler
-    effects.push(...buildEffectsFromOutcome(successOutcome, itemId as ItemId, 'item'));
-  } else {
-    // Fallback to system media
-    const successMessage = successOutcome?.message || `You take the ${item.name}.`;
+  // Check if handler has custom media
+  const customMedia = successOutcome?.media;
 
-    // ALWAYS provide both imageId (for item-specific images) AND imageUrl (as fallback)
-    // The resolution order in GameStateManager.SHOW_MESSAGE:
-    // 1. Try to resolve imageId (item's state-based image)
-    // 2. If item's image has url=undefined, createMessage returns no image
-    // 3. Then imageUrl is used as fallback (system generic image)
-    effects.push({
-      type: 'SHOW_MESSAGE',
-      speaker: 'narrator',
-      content: successMessage,
-      messageType: 'image',
-      imageId: itemId as ItemId,
-      imageEntityType: 'item',
-      // Fallback to system generic image if item doesn't provide one
-      imageUrl: game.systemMedia?.take?.success?.url,
-      imageDescription: game.systemMedia?.take?.success?.description,
-      imageHint: game.systemMedia?.take?.success?.hint
-    });
-  }
+  effects.push({
+    type: 'SHOW_MESSAGE',
+    speaker: 'narrator',
+    content: successMessage,
+    messageType: 'image',
+    // Use custom handler media if present, otherwise fall back to system media
+    imageUrl: customMedia?.url || game.systemMedia?.take?.success?.url,
+    imageDescription: customMedia?.description || game.systemMedia?.take?.success?.description,
+    imageHint: customMedia?.hint || game.systemMedia?.take?.success?.hint
+  });
 
   return effects;
 }

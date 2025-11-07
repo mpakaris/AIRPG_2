@@ -103,6 +103,7 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
           // Evaluate conditions
           const conditionsMet = Validator.evaluateConditions(specificHandler.conditions, state, game);
           const outcome = conditionsMet ? specificHandler.success : specificHandler.fail;
+          const isFail = !conditionsMet;
 
           if (!outcome) {
             return [{
@@ -126,7 +127,7 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
           }
 
           // Use helper to build effects with automatic media extraction
-          effects.push(...buildEffectsFromOutcome(outcome, targetObjectId, 'object'));
+          effects.push(...buildEffectsFromOutcome(outcome, targetObjectId, 'object', game, isFail));
 
           return effects;
         }
@@ -183,6 +184,7 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
     // Evaluate conditions
     const conditionsMet = Validator.evaluateConditions(onUseHandler.conditions, state, game);
     const outcome = conditionsMet ? onUseHandler.success : onUseHandler.fail;
+    const isFail = !conditionsMet;
 
     if (!outcome) {
       return [{
@@ -194,7 +196,7 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
 
     // Build effects with media support
     // Use helper to automatically extract media and handle proper effect ordering
-    const effects = buildEffectsFromOutcome(outcome, itemId, 'item');
+    const effects = buildEffectsFromOutcome(outcome, itemId, 'item', game, isFail);
 
     return effects;
   }

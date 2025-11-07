@@ -46,6 +46,21 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initia
     startResetTransition(async () => {
         try {
             const result = await resetGame(userId);
+
+            // In dev mode, if shouldReload is true, reload the browser
+            if (result.shouldReload) {
+                toast({
+                  title: "Game Reset",
+                  description: "Deleting all data and reloading...",
+                });
+                // Give the toast time to show, then reload
+                setTimeout(() => {
+                    window.location.reload();
+                }, 500);
+                return;
+            }
+
+            // In production mode, just update state
             setPlayerState(result.newState);
             setMessages(result.messages);
             toast({

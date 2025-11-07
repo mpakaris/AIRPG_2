@@ -11,7 +11,7 @@
 import type { Game, PlayerState, Effect, GameObjectId, ItemId } from "@/lib/game/types";
 import { Validator, HandlerResolver, VisibilityResolver, FocusResolver } from "@/lib/game/engine";
 import { normalizeName } from "@/lib/utils";
-import { buildEffectsFromOutcome } from "@/lib/game/utils/outcome-helpers";
+import { buildEffectsFromOutcome, evaluateHandlerOutcome } from "@/lib/game/utils/outcome-helpers";
 import { findBestMatch } from "@/lib/game/utils/name-matching";
 
 export async function handleSearch(state: PlayerState, targetName: string, game: Game): Promise<Effect[]> {
@@ -86,9 +86,8 @@ export async function handleSearch(state: PlayerState, targetName: string, game:
     }];
   }
 
-  // 4. Evaluate conditions
-  const conditionsMet = Validator.evaluateConditions(handler.conditions, state, game);
-  const outcome = conditionsMet ? handler.success : handler.fail;
+  // 4. Evaluate handler outcome
+  const { outcome, isFail } = evaluateHandlerOutcome(handler, state, game);
 
   if (!outcome) {
     if (handler.fallback) {
@@ -122,7 +121,9 @@ export async function handleSearch(state: PlayerState, targetName: string, game:
   effects.push(...buildEffectsFromOutcome(
     outcome,
     targetObjectId ? (targetObjectId as GameObjectId) : (targetItemId as ItemId),
-    targetObjectId ? 'object' : 'item'
+    targetObjectId ? 'object' : 'item',
+    game,
+    isFail
   ));
 
   return effects;

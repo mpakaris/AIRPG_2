@@ -8,7 +8,7 @@ import {
 import { AVAILABLE_COMMANDS } from '@/lib/game/commands';
 import type { Game, SerializableGame, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectId, GameObjectState, ItemId, Flag, Effect, Chapter, ChapterId, ImageDetails, GameId, User, TokenUsage, Story, Portal, CommandResult, CellId } from '@/lib/game/types';
 import { initializeFirebase } from '@/firebase';
-import { doc, setDoc, getDoc, collection, getDocs } from 'firebase/firestore';
+import { doc, setDoc, getDoc, collection, getDocs, query, where, deleteDoc } from 'firebase/firestore';
 import { getInitialState } from '@/lib/game-state';
 import { dispatchMessage } from '@/lib/whinself-service';
 import { createMessage } from '@/lib/utils';
@@ -599,7 +599,7 @@ export async function processCommand(
     }
 }
 
-export async function resetGame(userId: string): Promise<CommandResult> {
+export async function resetGame(userId: string): Promise<CommandResult & { shouldReload?: boolean }> {
     if (!userId) {
         throw new Error("User ID is required to reset the game.");
     }
@@ -608,16 +608,39 @@ export async function resetGame(userId: string): Promise<CommandResult> {
         throw new Error("Could not load game data to reset game.");
     }
     const gameId = game.id;
-    const freshState = getInitialState(game);
-    const initialMessages = await createInitialMessages(freshState, game);
 
-    await logAndSave(userId, gameId, freshState, initialMessages);
-
+    // In development mode, delete all user data and signal a reload
     if (process.env.NEXT_PUBLIC_NODE_ENV === 'development') {
-        for (const message of initialMessages) {
-            await dispatchMessage(userId, message);
+        const { firestore } = initializeFirebase();
+        const userRef = doc(firestore, 'users', userId);
+        const stateRef = doc(firestore, 'player_states', `${userId}_${gameId}`);
+        const logRef = doc(firestore, 'logs', `${userId}_${gameId}`);
+
+        try {
+            console.log(`[RESET] Deleting all data for dev user: ${userId}`);
+            await Promise.all([
+                deleteDoc(userRef),
+                deleteDoc(stateRef),
+                deleteDoc(logRef)
+            ]);
+            console.log(`[RESET] Successfully deleted user, state, and logs for ${userId}`);
+
+            // Return signal to reload the browser
+            return {
+                newState: getInitialState(game),
+                messages: [],
+                shouldReload: true
+            };
+        } catch (error) {
+            console.error("[RESET] Error deleting user data:", error);
+            throw new Error("Failed to delete user data. Please try again.");
         }
     }
+
+    // In production, just reset state and logs without deleting user
+    const freshState = getInitialState(game);
+    const initialMessages = await createInitialMessages(freshState, game);
+    await logAndSave(userId, gameId, freshState, initialMessages);
 
     return { newState: freshState, messages: initialMessages };
 }

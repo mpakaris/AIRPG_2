@@ -129,6 +129,7 @@ function processCombineHandler(
   // Evaluate conditions
   const conditionsMet = Validator.evaluateConditions(handler.conditions, state, game);
   const outcome = conditionsMet ? handler.success : handler.fail;
+  const isFail = !conditionsMet;
 
   if (!outcome) {
     return [{
@@ -139,7 +140,7 @@ function processCombineHandler(
   }
 
   // Build effects (with media support)
-  const effects: Effect[] = buildEffectsFromOutcome(outcome, primaryId, 'item');
+  const effects: Effect[] = buildEffectsFromOutcome(outcome, primaryId, 'item', game, isFail);
 
   return effects;
 }

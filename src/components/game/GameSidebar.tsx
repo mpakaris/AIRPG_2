@@ -2,7 +2,7 @@
 
 'use client';
 
-import { BookOpen, Box, Compass, ScrollText, Target, User, CheckCircle, Code, RotateCcw, MessageSquareShare, Send, Download, Sparkles } from 'lucide-react';
+import { Box, Code, RotateCcw } from 'lucide-react';
 import { FC, useState, useTransition, useEffect } from 'react';
 import type { SerializableGame, PlayerState, Flag, ChapterId, User as UserType } from '@/lib/game/types';
 import {
@@ -118,85 +118,6 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
         {user && <p className="text-sm text-muted-foreground">Playing as: {userId}</p>}
       </SidebarHeader>
       <SidebarContent>
-        {location && (
-            <>
-            <SidebarGroup>
-                <SidebarGroupLabel className="flex items-center gap-2">
-                    <Compass />
-                    Location
-                </SidebarGroupLabel>
-                <p className="px-2 text-sm text-muted-foreground">{location.name}</p>
-            </SidebarGroup>
-
-            <SidebarGroup>
-                <SidebarGroupLabel className="flex items-center gap-2">
-                    <User />
-                    NPCs Present
-                </SidebarGroupLabel>
-                {location.npcs.length > 0 ? (
-                    <p className="px-2 text-sm text-muted-foreground">
-                        {location.npcs.map(id => game.npcs[id]?.name).filter(Boolean).join(", ")}
-                    </p>
-                ) : (
-                    <p className="px-2 text-sm text-muted-foreground italic">
-                        You are alone here.
-                    </p>
-                )}
-            </SidebarGroup>
-            </>
-        )}
-        <SidebarGroup>
-          <SidebarGroupLabel className="flex items-center gap-2">
-            <Target />
-            Overall Objective
-          </SidebarGroupLabel>
-          <p className="px-2 text-sm text-muted-foreground">{chapter.goal}</p>
-        </SidebarGroup>
-
-        {chapter.objectives && chapter.objectives.length > 0 && (
-            <SidebarGroup>
-                <SidebarGroupLabel className='flex items-center gap-2'>
-                    <ScrollText />
-                    Chapter Objectives
-                </SidebarGroupLabel>
-                
-                {!objectivesVisible && !isDevEnvironment ? (
-                  <div className='px-2'>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="outline" size="sm">Show Objectives</Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Excitement often comes from not knowing everything.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => setObjectivesVisible(true)}>
-                            Show
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
-                ) : (
-                  <div className='flex flex-col gap-2 px-2 text-sm text-muted-foreground'>
-                      {chapter.objectives.map((obj) => (
-                          <div key={obj.flag} className='flex items-center gap-2'>
-                              <CheckCircle className={cn('h-4 w-4 text-muted', isObjectiveComplete(obj.flag) && 'text-green-500')} />
-                              <span className={cn(isObjectiveComplete(obj.flag) && 'line-through')}>
-                                  {obj.label}
-                              </span>
-                          </div>
-                      ))}
-                  </div>
-                )}
-            </SidebarGroup>
-        )}
-        
         <SidebarGroup>
           <SidebarGroupLabel className="flex items-center gap-2">
             <Box />
@@ -241,17 +162,14 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
                     Dev Controls
                 </SidebarGroupLabel>
                 <div className='flex flex-col gap-2 px-2'>
-                    <Button variant="destructive" size="sm" onClick={onResetGame}><RotateCcw className='mr-2 h-4 w-4'/>Reset Game</Button>
-                    <Button variant="outline" size="sm" onClick={() => onCommandSubmit('look around')}>Look Around</Button>
-                    <Button variant="outline" size="sm" onClick={() => onCommandSubmit('examine notebook')}>Examine Notebook</Button>
-                    <Button variant="outline" size="sm" onClick={() => onCommandSubmit('password for brown notebook "Justice for Silas Bloom"')}>Unlock Notebook</Button>
-                    <Button variant="outline" size="sm" onClick={() => onCommandSubmit('watch video')}>Watch Video</Button>
-                    <Button variant="outline" size="sm" onClick={() => onCommandSubmit('read article')}>Read Article</Button>
-                    <Button variant="outline" size="sm" onClick={() => onCommandSubmit('talk to barista')}>Talk to Barista</Button>
-                    <Button variant="outline" size="sm" onClick={() => onCommandSubmit('ask about man')}>Ask about man</Button>
-                    <Button variant="outline" size="sm" onClick={() => onCommandSubmit('ask for name')}>Ask for name</Button>
-                    <Button variant="outline" size="sm" onClick={() => handleDevCommand(game.startChapterId)}>Complete Chapter I</Button>
-                    <Button variant="outline" disabled>Complete Chapter II</Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={onResetGame}
+                    >
+                      <RotateCcw className='mr-2 h-4 w-4'/>
+                      Reset Game
+                    </Button>
                 </div>
             </SidebarGroup>
         )}

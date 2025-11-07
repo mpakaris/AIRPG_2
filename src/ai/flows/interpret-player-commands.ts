@@ -72,10 +72,25 @@ const interpretPlayerCommandPrompt = ai.definePrompt({
     - "open door with key" → commandToExecute: "open door with key" ✅
     - "examine article with magnifying glass" → commandToExecute: "examine article with magnifying glass" ✅
     - "check newspaper on table" → commandToExecute: "examine newspaper on table" ✅
+    - "check the drawer" → commandToExecute: "examine drawer" ✅ (NOT "open drawer" ❌)
+    - "check drawers" → commandToExecute: "examine drawer" ✅ (NOT "open drawer" ❌)
+
+  **IMPORTANT CHECK/LOOK COMMANDS:**
+  - "check X" → ALWAYS use "examine X" for inspecting objects/items (NEVER "open X")
+  - "check inside X" or "check X for items" → Use "search X" for looking inside containers
+  - Examples:
+    - "check the counter" → "examine counter" ✅
+    - "check the drawer" → "examine drawer" ✅ (NOT "open drawer")
+    - "check drawers" → "examine drawer" ✅ (NOT "open drawer")
+    - "check inside drawer" → "search drawer" ✅
+    - "check the safe" → "examine safe" ✅
+  - RULE: "check" = visual inspection = "examine", NOT opening/manipulating
 
   **IMPORTANT FOCUS COMMANDS:**
-  - Use 'goto', 'moveto', or 'shift' when the player wants to position themselves at an object/NPC without performing an action (e.g., "go to the bookshelf", "move to the safe", "shift to the chalkboard")
-  - Use 'go' only for moving between locations/rooms
+  - Use 'goto', 'moveto', or 'shift' when the player wants to position themselves at an object/NPC without performing an action
+  - Examples: "go to the bookshelf" → "goto bookshelf", "move to the safe" → "moveto safe", "approach the counter" → "goto counter", "walk to the door" → "goto door"
+  - Use 'go' only for moving between locations/rooms (not objects)
+  - Note: 'examine', 'search', and 'goto' all set focus, so players don't need to explicitly "go to" before interacting
 
   **IMPORTANT TAKE COMMAND VARIATIONS:**
   - Use 'take' for any of these player intents: "take", "grab", "pick up", "put in pocket", "add to inventory", "take with me"

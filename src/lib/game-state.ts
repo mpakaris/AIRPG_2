@@ -32,8 +32,12 @@ export function getInitialState(game: Game): PlayerState {
 
         // If parent is a container, check if it's open/unlocked
         if (parentObj.capabilities?.container) {
-          // Containers: child hidden if parent is closed OR locked
-          if (!(parentState as any).isOpen || (parentState as any).isLocked) {
+          // If container is NOT openable, children are hidden until revealed (e.g., via examination)
+          if (!parentObj.capabilities?.openable) {
+            isHiddenChild = true;
+          }
+          // If container IS openable, children hidden if parent is closed OR locked
+          else if (!(parentState as any).isOpen || (parentState as any).isLocked) {
             isHiddenChild = true;
           }
         }
@@ -90,9 +94,16 @@ export function getInitialState(game: Game): PlayerState {
         else if (obj.capabilities?.breakable && !obj.capabilities?.openable && !parentState.isBroken) {
           isHiddenChild = true;
         }
-        // If parent is a regular container, child hidden until opened
-        else if (obj.capabilities?.container && !parentState.isOpen) {
-          isHiddenChild = true;
+        // If parent is a container
+        else if (obj.capabilities?.container) {
+          // If container is NOT openable, children are hidden until revealed (e.g., via examination)
+          if (!obj.capabilities?.openable) {
+            isHiddenChild = true;
+          }
+          // If container IS openable, children hidden if not open
+          else if (!parentState.isOpen) {
+            isHiddenChild = true;
+          }
         }
 
         break;

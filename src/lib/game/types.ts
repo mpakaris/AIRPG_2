@@ -556,6 +556,12 @@ export type GameObject = {
     items?: string[];
   };
 
+  // NPCs located near this object (for proximity-based talk restrictions)
+  nearbyNpcs?: NpcId[];
+
+  // Optional transition narration when player focuses on this object
+  transitionNarration?: string;
+
   design: {
     tags?: string[];
     authorNotes?: string;
@@ -703,29 +709,38 @@ export type NPC = {
   description: string;
   image?: ImageDetails;
 
+  // Type system for conversation handling
+  npcType: 'type1' | 'type2';  // type1 = story-critical with canned answers, type2 = AI-generated flavor
   importance: 'primary' | 'supporting' | 'ambient';
   initialState: {
     stage: 'active' | 'completed' | 'demoted';
     trust: number;
     attitude: 'friendly' | 'neutral' | 'hostile' | 'suspicious';
   };
-  
+
   dialogueType: 'scripted' | 'freeform' | 'tree';
-  persona?: string;
+  persona?: string;  // AI persona for Type 2 NPCs (freeform dialogue)
   welcomeMessage: string;
   goodbyeMessage: string;
   startConversationEffects?: Effect[];
 
   limits?: {
-    maxInteractions?: number;
+    maxInteractions?: number;  // For Type 2: typically 5
     cooldownSec?: number;
-    interactionLimitResponse?: string;
+    interactionLimitResponse?: string;  // Message when limit reached
   };
 
+  // Progressive reveal system (Type 1 NPCs)
+  progressiveReveals?: {
+    triggerOnInteraction: number;  // Which interaction triggers this (e.g., 2 or 3)
+    topicId: string;  // Which topic becomes available
+    conditions?: Condition[];  // Optional conditions
+  }[];
+
   demoteRules?: {
-    onFlagsAll?: Flag[];
-    onGiveItemsAny?: ItemId[];
-    onTopicCompletedAll?: string[];
+    onFlagsAll?: Flag[];  // Demote when all flags are set
+    onGiveItemsAny?: ItemId[];  // Demote when any of these items given
+    onTopicCompletedAll?: string[];  // Demote when all topics completed
     then: {
       setStage: 'demoted';
       setImportance: 'ambient';
@@ -748,9 +763,10 @@ export type NPC = {
     onAskAbout?: AskAboutHandler[];
     onAccuse?: Handler;
     onBribe?: Handler;
+    onTalk?: Rule;  // Handler for initial talk attempt (can check proximity)
   };
 
-  topics?: Topic[];
+  topics?: Topic[];  // Type 1: 20+ canned conversation topics
 
   knowledge?: {
     clueId: string;
@@ -980,6 +996,7 @@ export type Game = {
       failure?: ImageDetails;
     };
     move?: ImageDetails;  // Generic "moving to location/object" image
+    actionFailed?: ImageDetails[];  // Pool of random "action failed" images
   };
 
   // New World Model

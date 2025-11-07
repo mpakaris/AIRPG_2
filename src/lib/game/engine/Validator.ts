@@ -60,9 +60,22 @@ export class Validator {
     }
 
     if (!Validator.hasCapability(capabilities, requiredCapability)) {
+      // Proper past participle forms
+      const pastParticiples: Record<string, string> = {
+        'move': 'moved',
+        'break': 'broken',
+        'read': 'read',
+        'use': 'used',
+        'open': 'opened',
+        'close': 'closed',
+        'take': 'taken',
+        'combine': 'combined',
+      };
+      const pastForm = pastParticiples[verb.toLowerCase()] || `${verb}ed`;
+
       return {
         valid: false,
-        reason: `This entity cannot be ${verb}ed.`,
+        reason: `This entity cannot be ${pastForm}.`,
       };
     }
 

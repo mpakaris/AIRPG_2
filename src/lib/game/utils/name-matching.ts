@@ -237,6 +237,35 @@ export function findBestMatch(
             }
         }
 
+        // IMPORTANT: If focused entity has a parent, also include parent and siblings
+        // This allows interacting with siblings when focused on a child
+        // Example: focused on drawer → can also access coffee machine (sibling)
+        const parentId = GameStateManager.getParent(state, state.currentFocusId);
+        if (parentId) {
+            // Add parent to focus
+            if (game.items[parentId as ItemId]) {
+                entitiesInFocus.items.push(parentId);
+            } else if (game.gameObjects[parentId as GameObjectId]) {
+                entitiesInFocus.objects.push(parentId);
+            }
+
+            // Add all siblings (other children of the same parent)
+            const siblings = GameStateManager.getChildren(state, parentId);
+            for (const siblingId of siblings) {
+                if (siblingId !== state.currentFocusId) { // Don't add self again
+                    if (game.items[siblingId as ItemId]) {
+                        if (!entitiesInFocus.items.includes(siblingId)) {
+                            entitiesInFocus.items.push(siblingId);
+                        }
+                    } else if (game.gameObjects[siblingId as GameObjectId]) {
+                        if (!entitiesInFocus.objects.includes(siblingId)) {
+                            entitiesInFocus.objects.push(siblingId);
+                        }
+                    }
+                }
+            }
+        }
+
         // Debug: log entities in focus
         if (state.currentFocusId === 'obj_bookshelf') {
             console.log('[findBestMatch] Entities in focus:', entitiesInFocus);

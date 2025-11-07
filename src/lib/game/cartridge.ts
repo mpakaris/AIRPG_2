@@ -824,6 +824,187 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         },
         version: { schema: "1.0", content: "1.1" }
     },
+    'obj_counter': {
+        id: 'obj_counter' as GameObjectId,
+        name: 'Counter',
+        alternateNames: ['counter', 'cafe counter', 'bar', 'service counter'],
+        archetype: 'Surface',
+        description: 'A long wooden counter with a worn finish. The heart of the cafe. Coffee machine hums on top, drawer underneath.',
+        transitionNarration: 'You step up to the counter. The barista and manager glance at you.',
+        capabilities: { openable: false, lockable: false, breakable: false, movable: false, powerable: false, container: true, readable: false, inputtable: false },
+        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
+        children: {
+            objects: ['obj_coffee_machine', 'obj_drawer'] as GameObjectId[]
+        },
+        nearbyNpcs: ['npc_barista', 'npc_cafe_manager'] as NpcId[],
+        media: {
+            images: {
+                default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759604596/Cafe_Counter_placeholder.png', description: 'The cafe counter with coffee machine and staff.', hint: 'counter' }
+            }
+        },
+        handlers: {
+            onExamine: {
+                success: {
+                    message: "Long wooden counter. Worn wood, coffee stains. Coffee machine sits on top, humming. Below—drawers. The kind that might hide things. Tools, receipts, whatever staff doesn't want customers seeing. Worth checking.",
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759684408/counter_area_r6qq8z.png',
+                        description: 'The cafe counter with coffee machine and drawers underneath',
+                        hint: 'Those drawers look interesting...'
+                    },
+                    effects: [
+                        { type: 'REVEAL_FROM_PARENT', entityId: 'obj_drawer', parentId: 'obj_counter' },
+                        { type: 'REVEAL_FROM_PARENT', entityId: 'obj_coffee_machine', parentId: 'obj_counter' }
+                    ]
+                }
+            },
+            onTake: {
+                fail: {
+                    message: "It's built into the floor. Not going anywhere."
+                }
+            },
+            defaultFailMessage: "It's a counter. Try: EXAMINE it or interact with what's on it."
+        },
+        design: {
+            authorNotes: "Central object for cafe interactions. Houses coffee machine, drawer with saw, and serves as focus point for NPC conversations.",
+            tags: ['counter', 'furniture', 'hub']
+        },
+        version: { schema: "1.0", content: "1.0" }
+    },
+    'obj_drawer': {
+        id: 'obj_drawer' as GameObjectId,
+        name: 'Drawer',
+        alternateNames: ['drawer', 'counter drawer', 'the drawer', 'drawers'],
+        archetype: 'Container',
+        description: 'A drawer built into the counter. Not locked—just closed. Staff storage.',
+        capabilities: { openable: true, lockable: true, breakable: false, movable: false, powerable: false, container: true, readable: false, inputtable: false },
+        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'closed' },
+        inventory: { items: ['item_recip_saw'] as ItemId[], capacity: 3 },
+        children: { items: ['item_recip_saw'] as ItemId[] },
+        media: {
+            images: {
+                closed: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762429217/counter_drawer_examine_ryb0us.png', description: 'A closed drawer under the counter.', hint: 'drawer not locked' },
+                open: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762429158/counter_drawer_power_tool_tvt3o5.png', description: 'Open drawer revealing a reciprocating saw and tools.', hint: 'power saw inside' },
+                empty: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762466481/counter_drawer_empty_ud8wzi.png', description: 'Open drawer, now empty.', hint: 'drawer empty' }
+            }
+        },
+        handlers: {
+            onExamine: [
+                {
+                    conditions: [{ type: 'STATE', entityId: 'obj_drawer', key: 'isOpen', equals: false }],
+                    success: {
+                        message: "Built into the counter. No lock—just a handle. Staff storage. One pull and it's open.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762429217/counter_drawer_examine_ryb0us.png',
+                            description: 'A drawer built into the counter',
+                            hint: 'Just needs to be opened...'
+                        }
+                    }
+                },
+                {
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_drawer', key: 'isOpen', equals: true },
+                        { type: 'IN_INVENTORY', itemId: 'item_recip_saw' }
+                    ],
+                    success: {
+                        message: "Drawer's open. Empty now. The saw's in your pocket. Just receipts and tape left.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762466481/counter_drawer_empty_ud8wzi.png',
+                            description: 'Empty drawer',
+                            hint: 'Nothing useful left'
+                        }
+                    }
+                },
+                {
+                    conditions: [{ type: 'STATE', entityId: 'obj_drawer', key: 'isOpen', equals: true }],
+                    success: {
+                        message: "Drawer's open. Inside: a reciprocating saw, some receipts, tape. Tools of the trade.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762429158/counter_drawer_power_tool_tvt3o5.png',
+                            description: 'Open drawer with reciprocating saw visible',
+                            hint: 'Power saw and tools'
+                        }
+                    }
+                }
+            ],
+            onOpen: [
+                {
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_drawer', key: 'isOpen', equals: false },
+                        { type: 'IN_INVENTORY', itemId: 'item_recip_saw' }
+                    ],
+                    success: {
+                        message: "You pull the handle. Drawer slides open. Empty. If there was something inside of it, you cleared it out already.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762466481/counter_drawer_empty_ud8wzi.png',
+                            description: 'Empty drawer',
+                            hint: 'Nothing left inside'
+                        },
+                        effects: [
+                            { type: 'SET_ENTITY_STATE', entityId: 'obj_drawer', patch: { isOpen: true, currentStateId: 'empty' } }
+                        ]
+                    }
+                },
+                {
+                    conditions: [{ type: 'STATE', entityId: 'obj_drawer', key: 'isOpen', equals: false }],
+                    success: {
+                        message: "You pull the handle. Drawer slides open smooth. Inside: reciprocating saw—professional grade. Fresh blade. Receipts underneath, tape, random tools. The saw's the prize. Could cut through metal, pipe, whatever.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762429158/counter_drawer_power_tool_tvt3o5.png',
+                            description: 'Open drawer revealing a reciprocating saw',
+                            hint: 'A power saw for cutting!'
+                        },
+                        effects: [
+                            { type: 'SET_ENTITY_STATE', entityId: 'obj_drawer', patch: { isOpen: true, currentStateId: 'open' } },
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_recip_saw', parentId: 'obj_drawer' }
+                        ]
+                    }
+                },
+                {
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_drawer', key: 'isOpen', equals: true },
+                        { type: 'IN_INVENTORY', itemId: 'item_recip_saw' }
+                    ],
+                    success: {
+                        message: "Already open. Empty. The saw's in your pocket.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762466481/counter_drawer_empty_ud8wzi.png',
+                            description: 'Empty drawer',
+                            hint: 'Nothing left inside'
+                        }
+                    }
+                },
+                {
+                    conditions: [{ type: 'STATE', entityId: 'obj_drawer', key: 'isOpen', equals: true }],
+                    success: {
+                        message: "Already open. The saw is there for the taking.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762429158/counter_drawer_power_tool_tvt3o5.png',
+                            description: 'Open drawer with saw still inside',
+                            hint: 'Saw still available'
+                        }
+                    }
+                }
+            ],
+            onClose: {
+                conditions: [{ type: 'STATE', entityId: 'obj_drawer', key: 'isOpen', equals: true }],
+                success: {
+                    message: "You slide it shut. The lock's broken now though.",
+                    effects: [
+                        { type: 'SET_ENTITY_STATE', entityId: 'obj_drawer', patch: { isOpen: false, currentStateId: 'closed' } }
+                    ]
+                },
+                fail: {
+                    message: "Drawer's already closed. Safety and all..."
+                }
+            },
+            defaultFailMessage: "A drawer under the counter. Try: EXAMINE, OPEN, or SEARCH it."
+        },
+        design: {
+            authorNotes: "Contains reciprocating saw for cutting iron pipe or other metal. Not locked, just closed—easy to open.",
+            tags: ['drawer', 'container', 'tool storage']
+        },
+        version: { schema: "1.0", content: "1.0" }
+    },
     'obj_coffee_machine': {
         id: 'obj_coffee_machine' as GameObjectId,
         name: 'Coffee Machine',
@@ -1533,6 +1714,55 @@ const items: Record<ItemId, Item> = {
         design: {
             authorNotes: "Tool for breaking objects like the coffee machine.",
             tags: ['pipe']
+        },
+        version: { schema: "1.0", content: "1.0" }
+    },
+    'item_recip_saw': {
+        id: 'item_recip_saw' as ItemId,
+        name: 'Reciprocating Saw',
+        alternateNames: ['reciprocating saw', 'recip saw', 'saw', 'power saw', 'electric saw', 'sawzall'],
+        archetype: 'Tool',
+        description: 'A reciprocating saw with a fresh blade. Perfect for cutting through metal.',
+        capabilities: { isTakable: true, isReadable: false, isUsable: true, isCombinable: false, isConsumable: true, isScannable: false, isAnalyzable: false, isPhotographable: false },
+        state: { currentStateId: 'revealed', readCount: 0 },
+        media: {
+            images: {
+                revealed: {
+                    url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759604596/recip_saw.png',
+                    description: 'A reciprocating saw in the drawer.',
+                    hint: 'power saw for cutting'
+                },
+                taken: {
+                    url: undefined as any,  // Will use systemMedia.take.success
+                    description: 'Reciprocating saw in your possession',
+                    hint: 'saw taken'
+                }
+            }
+        },
+        handlers: {
+            onExamine: {
+                success: {
+                    message: "Reciprocating saw. Fresh blade. Corded. The kind contractors use for demolition. Cut through pipe, rebar, whatever. Blade's sharp—ready to work."
+                }
+            },
+            onTake: {
+                success: {
+                    message: "You grab the saw. Heavy. Professional grade. This'll cut through just about anything. You close the drawer—y'know? Just to make sure nobody hurts himself. Safety first after all.",
+                    effects: [
+                        { type: 'ADD_ITEM', itemId: 'item_recip_saw' },
+                        { type: 'SET_ENTITY_STATE', entityId: 'item_recip_saw', patch: { currentStateId: 'taken', taken: true } },
+                        { type: 'SET_ENTITY_STATE', entityId: 'obj_drawer', patch: { isOpen: false, currentStateId: 'closed' } }
+                    ]
+                },
+                fail: {
+                    message: "Already have it."
+                }
+            },
+            defaultFailMessage: "A reciprocating saw. Try: EXAMINE, TAKE, or USE it on something to cut."
+        },
+        design: {
+            authorNotes: "Power tool for cutting through iron pipe or other metal obstacles. Alternative to brute force.",
+            tags: ['tool', 'power tool', 'cutting']
         },
         version: { schema: "1.0", content: "1.0" }
     },
@@ -2284,12 +2514,14 @@ const npcs: Record<NpcId, NPC> = {
     'npc_barista': {
         id: 'npc_barista' as NpcId,
         name: 'Barista',
+        alternateNames: ['barista', 'bartender', 'coffee guy', 'server'],
         description: 'A tired-looking man in his late 20s, with faded tattoos and a cynical arch to his eyebrow. He seems to have seen a thousand stories like yours and is not easily impressed.',
         image: {
             url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759241505/Cafe_barrista_hpwona.png',
             description: 'A portrait of the cafe barista.',
             hint: 'male barista'
         },
+        npcType: 'type1',  // Type 1: Story-critical NPC with canned answers
         importance: 'primary',
         initialState: {
             stage: 'active',
@@ -2301,7 +2533,16 @@ const npcs: Record<NpcId, NPC> = {
         welcomeMessage: 'What can I get for you? Or are you just here to brood? Either is fine.',
         goodbyeMessage: "Alright, I've got Pumpkin spice lattes to craft. Good luck with... whatever it is you're doing.",
         startConversationEffects: [{ type: 'SET_FLAG', flag: 'has_talked_to_barista' as Flag }],
-        limits: { maxInteractions: 15, interactionLimitResponse: "Seriously, I've got a line of customers. I can't keep chatting. The coffee machine calls." },
+        limits: { maxInteractions: 20, interactionLimitResponse: "Seriously, I've got a line of customers. I can't keep chatting. The coffee machine calls." },
+
+        // PROGRESSIVE REVEALS: Business card unlocked on 3rd interaction
+        progressiveReveals: [
+            {
+                triggerOnInteraction: 3,  // After 3rd conversation turn
+                topicId: 't_give_card'
+            }
+        ],
+
         demoteRules: {
             onFlagsAll: ['has_received_business_card' as Flag],
             then: { setStage: 'demoted', setImportance: 'ambient' }
@@ -2312,27 +2553,40 @@ const npcs: Record<NpcId, NPC> = {
             defaultResponse: "Look, I told you what I know. I've got work to do."
         },
         topics: [
-            { topicId: 't_greet', label: 'Greeting', keywords: ["hello", "hi", "how are you"], response: { message: 'Another day, another dollar. What do you need?' } },
-            { topicId: 't_coffee', label: 'Ask about coffee', keywords: ["coffee", "drink", "menu", "order", "buy", "latte", "cappuccino", "espresso"], response: { message: 'The coffee is hot and the pastries are day-old. The menu is on the board. Let me know if you can decipher my handwriting.' } },
-            { topicId: 't_prices', label: 'Ask about prices', keywords: ["price", "cost", "how much"], response: { message: 'More than it should be, less than I want to charge. The prices are on the board.' } },
-            { topicId: 't_reco', label: 'Ask for recommendation', keywords: ["recommend", "good", "special"], response: { message: 'The espresso will wake you up. The scones... well, they exist.' } },
-            { topicId: 't_man', label: 'Ask about the man in black', keywords: ["man", "regular", "customer", "guy", "who left", "who was sitting here", "the man"], response: { message: "The guy in the black coat? Yeah, he's a regular. Comes in, stares at his notebook, doesn't say much. Pays in cash. My favorite kind of customer." } },
-            { topicId: 't_musician', label: 'Ask about his job', keywords: ["musician", "saxophone", "job", "background", "what does he do"], response: { message: "I hear he's a musician. Plays the saxophone out on the corner most days. Keeps to himself, you know?" } },
-            { topicId: 't_notebook', label: 'Ask about the notebook', keywords: ["notebook", "book", "his", "what was he doing"], response: { message: "Always scribbling in that old notebook of his. Looked like he was writing the next great American novel, or maybe just his grocery list. Who knows."} },
-            { 
-              topicId: 't_give_card', 
-              label: 'Ask about what he left/his name', 
-              keywords: ["business card", "left", "name", "note", "anything else", "what did he leave", "ask about silas bloom", "silas bloom", "know his name"], 
+            { topicId: 't_greet', label: 'Greeting', keywords: ["hello", "hi", "how are you", "hey", "good morning", "good afternoon"], response: { message: 'Another day, another dollar. What do you need?' } },
+            { topicId: 't_coffee', label: 'Ask about coffee', keywords: ["coffee", "drink", "menu", "order", "buy", "latte", "cappuccino", "espresso", "beverage"], response: { message: 'The coffee is hot and the pastries are day-old. The menu is on the board. Let me know if you can decipher my handwriting.' } },
+            { topicId: 't_prices', label: 'Ask about prices', keywords: ["price", "cost", "how much", "expensive", "cheap"], response: { message: 'More than it should be, less than I want to charge. The prices are on the board.' } },
+            { topicId: 't_reco', label: 'Ask for recommendation', keywords: ["recommend", "good", "special", "best", "favorite", "suggest"], response: { message: 'The espresso will wake you up. The scones... well, they exist.' } },
+            { topicId: 't_man', label: 'Ask about the man in black', keywords: ["man", "regular", "customer", "guy", "who left", "who was sitting here", "the man", "person"], response: { message: "The guy in the black coat? Yeah, he's a regular. Comes in, stares at his notebook, doesn't say much. Pays in cash. My favorite kind of customer." } },
+            { topicId: 't_musician', label: 'Ask about his job', keywords: ["musician", "saxophone", "job", "background", "what does he do", "occupation", "work"], response: { message: "I hear he's a musician. Plays the saxophone out on the corner most days. Keeps to himself, you know?" } },
+            { topicId: 't_notebook', label: 'Ask about the notebook', keywords: ["notebook", "book", "his", "what was he doing", "writing", "journal"], response: { message: "Always scribbling in that old notebook of his. Looked like he was writing the next great American novel, or maybe just his grocery list. Who knows."} },
+            { topicId: 't_cafe', label: 'Ask about the cafe', keywords: ["cafe", "place", "here", "daily grind", "establishment"], response: { message: "It's a job. I make coffee, people drink it. The manager tries to make it feel 'cozy'. I just clean up after people." } },
+            { topicId: 't_day', label: 'Ask about his day', keywords: ["day", "shift", "busy", "slow", "customers"], response: { message: "Same as always. Pour coffee, wipe counters, listen to people's problems. The usual." } },
+            { topicId: 't_weather', label: 'Comment on weather', keywords: ["rain", "weather", "cold", "wet"], response: { message: "Rain brings customers. They want something warm. Good for business, I guess." } },
+            { topicId: 't_manager', label: 'Ask about manager', keywords: ["manager", "boss", "woman", "lady"], response: { message: "Brenda? She's... enthusiastic. Very positive. Sometimes exhaustingly so. But she pays on time." } },
+            { topicId: 't_name', label: 'Ask his name', keywords: ["name", "called", "your name"], response: { message: "Name's Jake. Not that it matters much. I'm just the guy who makes your coffee." } },
+            { topicId: 't_tips', label: 'Comment on tips', keywords: ["tip", "tips", "money"], response: { message: "Tips are appreciated. Pays for my Netflix subscription." } },
+            { topicId: 't_case', label: 'Ask about investigation', keywords: ["investigation", "case", "detective", "police", "crime"], response: { message: "Look, I don't know anything about any case. I just work here. You want answers, talk to the cops." } },
+            { topicId: 't_suspicious', label: 'Ask about suspicious behavior', keywords: ["suspicious", "strange", "weird", "unusual", "odd"], response: { message: "In a downtown cafe? Everything's suspicious. Half the customers are probably on the run from something." } },
+            { topicId: 't_regulars', label: 'Ask about other regulars', keywords: ["regulars", "customers", "people", "who comes here"], response: { message: "We get all types. Office workers, students, tourists. The usual city crowd." } },
+            { topicId: 't_hours', label: 'Ask about hours', keywords: ["hours", "open", "close", "schedule"], response: { message: "6 AM to 9 PM. I'm here most mornings. Lucky me." } },
+            { topicId: 't_food', label: 'Ask about food', keywords: ["food", "pastries", "muffin", "scone", "sandwich"], response: { message: "Pastries are from yesterday. Still edible. The sandwiches are fresh, at least." } },
+            { topicId: 't_compliment', label: 'Compliment him', keywords: ["good job", "great", "nice", "excellent"], response: { message: "Thanks, I guess. Just doing my job. You want that coffee or not?" } },
+            {
+              topicId: 't_give_card',
+              label: 'Ask about what he left/his name',
+              keywords: ["business card", "left", "name", "note", "anything else", "what did he leave", "ask about silas bloom", "silas bloom", "know his name", "card", "leave anything"],
               once: true,
-              response: { 
+              conditions: { requiredFlagsAll: ['topic_revealed_npc_barista_t_give_card' as Flag] },  // Only available after progressive reveal
+              response: {
                 message: "You know, he left this here the other day. Said I could have it. Some business card. If you're that interested, you can take it. It's just collecting dust.",
                 effects: [
                     { type: 'ADD_ITEM', itemId: 'item_business_card' as ItemId },
                     { type: 'SET_FLAG', flag: 'has_received_business_card' as Flag },
-                    { type: 'SHOW_MESSAGE', speaker: 'narrator', content: "The barista slides a business card across the counter. It's been added to your inventory.", messageType: 'image', imageId: 'item_business_card' },
+                    { type: 'SHOW_MESSAGE', speaker: 'narrator', content: "The barista slides a business card across the counter. It's been added to your inventory.", messageType: 'image', imageId: 'item_business_card' as ItemId, imageEntityType: 'item' },
                     { type: 'END_CONVERSATION' }
                 ]
-              } 
+              }
             },
             { topicId: 't_insult', label: 'React to insult', keywords: ["stupid", "idiot", "useless", "rude", "dumb"], response: { message: "Hey, I get paid to pour coffee, not to be your punching bag. Watch it." } }
         ],
@@ -2341,102 +2595,188 @@ const npcs: Record<NpcId, NPC> = {
             noMoreHelp: "I told you all I know. I've got work to do.",
             offTopic: "I'm not sure what you mean by that.",
         },
-        version: { schema: "2.0", content: "1.1" }
+        version: { schema: "2.0", content: "1.2" }
     },
     'npc_manager': {
         id: 'npc_manager' as NpcId,
         name: 'Cafe Manager',
+        alternateNames: ['manager', 'brenda', 'lady', 'woman'],
         description: 'A cheerful woman in her late 40s, with a permanent, slightly-too-wide smile. She radiates a relentless positivity that feels slightly out of place in the grim city.',
         image: {
             url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759604054/cafe_manager_punwhs.png',
             description: 'Portrait of the cafe manager.',
             hint: 'female manager'
         },
+        npcType: 'type2',  // Type 2: Flavor NPC with AI-generated responses
         importance: 'ambient',
         initialState: {
             stage: 'active',
             trust: 50,
             attitude: 'friendly'
         },
-        dialogueType: 'freeform',
+        dialogueType: 'freeform',  // AI-generated responses
         persona: "You are Brenda, the relentlessly cheerful and bubbly manager of 'The Daily Grind' cafe. You love talking about your 'Artisan Coffee of the Week', the daily specials, and the local community art you hang on the walls. You are completely oblivious to any crime or mystery. Your job is to be a fountain of pleasant, slightly-vacant small talk. Keep your responses short, sweet, and upbeat! Use a wide variety of positive adjectives and avoid repeating words like 'divine'. Use modern currency like dollars and cents.",
         welcomeMessage: "Welcome to The Daily Grind! How can I make your day a little brighter? Can I interest you in a 'Sunshine Muffin'? They're 10% off!",
         goodbyeMessage: "Have a wonderfully caffeinated day! Come back soon!",
         limits: {
-            maxInteractions: 10,
+            maxInteractions: 5,  // Type 2 limit: 5 interactions
             interactionLimitResponse: "It has been so lovely chatting with you, but I really must get back to managing. The muffins won't bake themselves, you know! Have a super day!",
         },
         fallbacks: {
             default: "Oh, I'm not sure about that, but have you tried our new matcha latte? It's simply wonderful!"
         },
-        version: { schema: "2.0", content: "1.1" }
+        version: { schema: "2.0", content: "1.2" }
     },
     'npc_victim_girl': {
         id: 'npc_victim_girl' as NpcId,
         name: 'Rose Carmichael',
+        alternateNames: ['rose', 'victim', 'girl', 'woman', 'rose carmichael'],
         description: 'A young woman in her early 20s, bound to a chair with duct tape over her mouth. Her eyes are wide with fear and urgency. She desperately wants to tell you something.',
         image: {
             url: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400',
             description: 'Portrait of a frightened young woman.',
             hint: 'kidnapped victim'
         },
+        npcType: 'type1',  // Type 1: Story-critical NPC with canned answers
         importance: 'primary',
         initialState: {
             stage: 'active',
             trust: 100,
-            attitude: 'desperate'
+            attitude: 'friendly'  // Changed from 'desperate' which isn't a valid option
         },
         dialogueType: 'scripted',
         persona: "You are Rose Carmichael, the kidnapped victim. You've been tied up in this hidden room for days. You're terrified but trying to stay calm. You know critical information about the case - specifically that the missing digits from the phone number are 2025. You're desperate to help the detective catch your kidnapper.",
         welcomeMessage: 'Mmmmph! Mmph mmph! [She struggles against her bonds, trying desperately to speak through the tape]',
-        goodbyeMessage: "Please... find him. The number... 2025. That\'s all I know.",
-        conversationTrees: {
-            'reveal_digits': {
-                topic: 'Phone Number Digits',
-                availableWhen: [{ type: 'FLAG', flag: 'note_dropped_from_book', value: true }],
-                entries: [
-                    {
-                        id: 'first_contact',
-                        npcMessage: '[Muffled sounds through tape] Mmmmph! Mmmph!\n\n[You carefully remove the duct tape from her mouth]\n\nOh god, thank you! Please—you need to listen. My name is Rose Carmichael. I was kidnapped three days ago. The man who took me... he said something about a phone number. He was laughing, said he left you a note but scratched out the last digits.\n\nHe told me to tell you if you found me: The missing numbers are 2025. That\'s the year this all started for him. The year Rose died. My namesake.\n\nPlease, call that number. He wants you to. This is all part of his game.',
-                        playerOptions: [
-                            {
-                                choice: 'Are you hurt? Do you need help?',
-                                npcReply: 'I\'m scared but not hurt. He\'s been... almost gentle. Like I\'m valuable to him. Like bait. Please, just call that number. 555-444-2025. End this.',
-                                effects: [
-                                    { type: 'SET_FLAG', flag: 'victim_revealed_digits', value: true },
-                                    { type: 'SET_FLAG', flag: 'know_full_phone_number', value: true }
-                                ]
-                            },
-                            {
-                                choice: 'Who is he? Did you see his face?',
-                                npcReply: 'Masked. Always masked. But his voice... cold, calculated. He kept saying "Justice will be served." Over and over. The phone number is 555-444-2025. Call it. Please.',
-                                effects: [
-                                    { type: 'SET_FLAG', flag: 'victim_revealed_digits', value: true },
-                                    { type: 'SET_FLAG', flag: 'know_full_phone_number', value: true }
-                                ]
-                            }
-                        ]
-                    },
-                    {
-                        id: 'after_reveal',
-                        availableAfter: 'first_contact',
-                        npcMessage: 'Please, use your phone to call 555-444-2025. That\'s all I know. End this nightmare.',
-                        playerOptions: [
-                            {
-                                choice: 'I\'ll call the number. Stay safe.',
-                                npcReply: 'Thank you. Please... be careful. He\'s dangerous. But he wants this confrontation. Call him.'
-                            }
-                        ]
-                    }
-                ]
+        goodbyeMessage: "Please... find him. The number... 2025. That's all I know.",
+
+        // PROGRESSIVE REVEALS: Phone digits revealed on 2nd interaction
+        progressiveReveals: [
+            {
+                triggerOnInteraction: 2,  // After 2nd conversation turn
+                topicId: 't_phone_digits'
             }
-        },
+        ],
+
         startConversationEffects: [{ type: 'SET_FLAG', flag: 'has_talked_to_victim' as Flag }],
         limits: {
-            maxInteractions: 5,
-            interactionLimitResponse: "I\'ve told you everything I know. Please, just call 555-444-2025 on your phone. End this."
+            maxInteractions: 20,
+            interactionLimitResponse: "I've told you everything I know. Please, just call 555-444-2025 on your phone. End this."
         },
-        version: { schema: "2.0", content: "1.0" }
+        demoteRules: {
+            onFlagsAll: ['victim_revealed_digits' as Flag],
+            then: { setStage: 'demoted', setImportance: 'ambient' }
+        },
+        postCompletionProfile: {
+            welcomeMessage: "Thank you for finding me. Please, call the number.",
+            goodbyeMessage: "Be careful. He's dangerous.",
+            defaultResponse: "555-444-2025. That's all I know. Please call it."
+        },
+        topics: [
+            {
+                topicId: 't_remove_tape',
+                label: 'Remove tape',
+                keywords: ["remove tape", "take off", "free", "untie", "help", "release"],
+                once: true,
+                response: {
+                    message: "[You carefully remove the duct tape from her mouth]\n\nOh god, thank you! Please—you need to listen. My name is Rose Carmichael. I was kidnapped three days ago. The man who took me... he's insane. He talks about justice, about Rose, about 1943. He left clues for you. He wants you to find me. This is all part of his twisted game.",
+                    effects: [
+                        { type: 'SET_FLAG', flag: 'tape_removed' as Flag }
+                    ]
+                }
+            },
+            {
+                topicId: 't_hurt',
+                label: 'Are you hurt?',
+                keywords: ["hurt", "injured", "okay", "alright", "safe", "fine"],
+                conditions: { requiredFlagsAll: ['tape_removed' as Flag] },
+                response: {
+                    message: "I'm scared but not hurt. He's been... almost gentle. Like I'm valuable to him. Like bait. He wants you here. He wants you to solve his puzzles."
+                }
+            },
+            {
+                topicId: 't_kidnapper',
+                label: 'Who is the kidnapper?',
+                keywords: ["kidnapper", "who", "man", "he", "face", "identity", "name"],
+                conditions: { requiredFlagsAll: ['tape_removed' as Flag] },
+                response: {
+                    message: "Masked. Always masked. But his voice... cold, calculated. He kept saying 'Justice will be served.' Over and over. And he mentioned 1943, and Rose. The year Rose died, he said."
+                }
+            },
+            {
+                topicId: 't_why',
+                label: 'Why did he take you?',
+                keywords: ["why", "reason", "motive", "take", "kidnap"],
+                conditions: { requiredFlagsAll: ['tape_removed' as Flag] },
+                response: {
+                    message: "He said... he said my name is important. Rose Carmichael. Like the other Rose. The one who died in 1943. He's obsessed with her. With that case."
+                }
+            },
+            {
+                topicId: 't_clues',
+                label: 'What clues did he leave?',
+                keywords: ["clues", "hints", "puzzles", "left", "evidence"],
+                conditions: { requiredFlagsAll: ['tape_removed' as Flag] },
+                response: {
+                    message: "He hid things in the cafe. A notebook, books, safes. He wants you to piece it together. He's testing you, like he's the puppetmaster."
+                }
+            },
+            {
+                topicId: 't_escape',
+                label: 'Can you escape?',
+                keywords: ["escape", "untie", "free", "leave", "run"],
+                conditions: { requiredFlagsAll: ['tape_removed' as Flag] },
+                response: {
+                    message: "The ropes are too tight. I've tried. And even if I could... where would I go? He could be anywhere. You need to stop him."
+                }
+            },
+            {
+                topicId: 't_time',
+                label: 'How long have you been here?',
+                keywords: ["time", "long", "days", "when", "how long"],
+                conditions: { requiredFlagsAll: ['tape_removed' as Flag] },
+                response: {
+                    message: "Three days. Maybe four. I've lost track. It feels like forever."
+                }
+            },
+            {
+                topicId: 't_phone_digits',
+                label: 'Phone number digits',
+                keywords: ["phone", "number", "digits", "call", "555", "phone number", "missing", "scratched"],
+                once: true,
+                conditions: { requiredFlagsAll: ['tape_removed' as Flag, 'topic_revealed_npc_victim_girl_t_phone_digits' as Flag] },  // Only after progressive reveal
+                response: {
+                    message: "The man who took me... he said something about a phone number. He was laughing, said he left you a note but scratched out the last digits.\n\nHe told me to tell you if you found me: The missing numbers are 2025. That's the year this all started for him. The year Rose died. My namesake.\n\nPlease, call that number. He wants you to. 555-444-2025. This is all part of his game.",
+                    effects: [
+                        { type: 'SET_FLAG', flag: 'victim_revealed_digits' as Flag },
+                        { type: 'SET_FLAG', flag: 'know_full_phone_number' as Flag }
+                    ]
+                }
+            },
+            {
+                topicId: 't_call',
+                label: 'About calling the number',
+                keywords: ["call", "phone", "dial", "555-444-2025", "number"],
+                conditions: { requiredFlagsAll: ['victim_revealed_digits' as Flag] },
+                response: {
+                    message: "555-444-2025. Please, use your phone to call it. That's the final piece. He's waiting for you to call. End this nightmare."
+                }
+            },
+            {
+                topicId: 't_comfort',
+                label: 'Comfort her',
+                keywords: ["comfort", "okay", "safe", "don't worry", "help"],
+                conditions: { requiredFlagsAll: ['tape_removed' as Flag] },
+                response: {
+                    message: "Thank you. Just... please catch him. Don't let him hurt anyone else. Find the phone number. Call it. Stop him."
+                }
+            }
+        ],
+        fallbacks: {
+            default: "Please... help me. Find the clues. Solve his puzzles. Stop him before it's too late.",
+            noMoreHelp: "I've told you everything I know. 555-444-2025. Call it.",
+            offTopic: "I... I don't know. Please, just focus on catching him."
+        },
+        version: { schema: "2.0", content: "1.1" }
     }
 };
 
@@ -2457,14 +2797,14 @@ const locations: Record<LocationId, Location> = {
         sceneDescription: 'You are inside The Daily Grind. It\'s a bustling downtown cafe, smelling of coffee and rain.',
         sceneImage: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761156561/bustling_cafe_bluwgq.jpg', description: 'A view of the bustling cafe interior.', hint: 'bustling cafe' },
         coord: { x: 1, y: 1, z: 0 },
-        objects: ['obj_brown_notebook', 'obj_chalkboard_menu', 'obj_magazine', 'obj_bookshelf', 'obj_painting', 'obj_coffee_machine'] as GameObjectId[],
-        npcs: ['npc_barista', 'npc_manager'] as NpcId[],
+        objects: ['obj_brown_notebook', 'obj_chalkboard_menu', 'obj_magazine', 'obj_bookshelf', 'obj_painting', 'obj_counter'] as GameObjectId[],
+        npcs: ['npc_barista', 'npc_cafe_manager'] as NpcId[],
         entryPortals: ['portal_street_to_cafe' as PortalId],
         exitPortals: ['portal_cafe_to_street' as PortalId],
         zones: [
             {
                 title: 'At the main counter',
-                objectIds: ['obj_chalkboard_menu', 'obj_coffee_machine']
+                objectIds: ['obj_chalkboard_menu', 'obj_counter']
             },
             {
                 title: 'On the wall',
@@ -2559,10 +2899,6 @@ const chapters: Record<ChapterId, Chapter> = {
         id: 'ch1-the-cafe' as ChapterId,
         title: 'A Blast from the Past',
         goal: "Find out what's inside the notebook and the safe.",
-        startingFocus: {
-            entityId: 'obj_brown_notebook',
-            entityType: 'object'
-        },
         introductionVideo: 'https://res.cloudinary.com/dg912bwcc/video/upload/f_mp4/v1759670681/CH_I_Intro_ccy0og.mp4',
         completionVideo: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759678377/CH_I_completion_jqtyme.mp4',
         postChapterMessage: "Looks like we've got everything from this place. I'm thinking our next stop should be the jazz club mentioned in the article.",
@@ -2673,7 +3009,24 @@ Your reasoning must be a brief, step-by-step explanation of how you mapped the p
         description: 'Cannot take this item',
         hint: 'unable to take'
       }
-    }
+    },
+    move: {
+      url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762367184/GoTo_2_g7fc07.png',
+      description: 'Moving to location',
+      hint: 'movement'
+    },
+    actionFailed: [
+      {
+        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762502526/action_failed_b5048i.png',
+        description: 'Action failed - disappointment',
+        hint: 'that didn\'t work'
+      },
+      {
+        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762502682/action_failed_2_vph9rk.png',
+        description: 'Action failed - frustration',
+        hint: 'no luck'
+      }
+    ]
   },
 
   // System Messages - Noir detective atmosphere (Narrator + System voice)
@@ -2749,14 +3102,6 @@ Your reasoning must be a brief, step-by-step explanation of how you mapped the p
     somethingWentWrong: "An unexpected error occurred.",
   },
 
-  // System media - Images for common actions
-  systemMedia: {
-    move: {
-      url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762367184/GoTo_2_g7fc07.png',
-      description: 'Moving to location',
-      hint: 'movement'
-    }
-  },
 
   // New World Model
   world: world,

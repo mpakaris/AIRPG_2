@@ -146,10 +146,10 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
 
     if (handler) {
         // Evaluate the handler's outcome based on conditions
-        const outcome = evaluateHandlerOutcome(handler, state, game);
+        const { outcome, isFail } = evaluateHandlerOutcome(handler, state, game);
 
         if (outcome) {
-            return buildEffectsFromOutcome(outcome, entityId as any, entityType);
+            return buildEffectsFromOutcome(outcome, entityId as any, entityType, game, isFail);
         }
     }
 
@@ -228,6 +228,7 @@ async function handleReadItemWithTarget(state: PlayerState, targetName: string, 
         if (specificHandler) {
             const conditionsMet = Validator.evaluateConditions(specificHandler.conditions, state, game);
             const outcome = conditionsMet ? specificHandler.success : specificHandler.fail;
+            const isFail = !conditionsMet;
 
             if (outcome) {
                 const effects: Effect[] = [];
@@ -241,7 +242,7 @@ async function handleReadItemWithTarget(state: PlayerState, targetName: string, 
                         transitionMessage: FocusResolver.getTransitionNarration(targetId as GameObjectId, 'object', state, game) || undefined
                     });
                 }
-                effects.push(...buildEffectsFromOutcome(outcome, targetId as any, targetMatch.category === 'object' ? 'object' : 'item'));
+                effects.push(...buildEffectsFromOutcome(outcome, targetId as any, targetMatch.category === 'object' ? 'object' : 'item', game, isFail));
                 return effects;
             }
         }

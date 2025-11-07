@@ -9,6 +9,18 @@ import type { Outcome, Effect, GameObjectId, ItemId, NpcId, PlayerState, Game } 
 import { Validator } from "@/lib/game/engine";
 
 /**
+ * Gets a random fail image from the system media pool
+ */
+function getRandomFailImage(game?: Game) {
+  if (!game?.systemMedia?.actionFailed || game.systemMedia.actionFailed.length === 0) {
+    return null;
+  }
+  const pool = game.systemMedia.actionFailed;
+  const randomIndex = Math.floor(Math.random() * pool.length);
+  return pool[randomIndex];
+}
+
+/**
  * Converts an Outcome to a SHOW_MESSAGE Effect.
  * Automatically extracts media (url, description, hint) from outcome if present.
  * Falls back to entity-based image resolution if no media provided.
@@ -16,12 +28,16 @@ import { Validator } from "@/lib/game/engine";
  * @param outcome - The success/fail outcome from handler
  * @param fallbackEntityId - Optional entity ID for image fallback (object/item/npc)
  * @param entityType - Type of entity for image resolution ('object' | 'item' | 'npc')
+ * @param game - Optional game object for accessing system media
+ * @param isFail - Whether this is a fail outcome (for random fail images)
  * @returns SHOW_MESSAGE Effect with proper media handling
  */
 export function outcomeToMessageEffect(
   outcome: Outcome,
   fallbackEntityId?: GameObjectId | ItemId | NpcId,
-  entityType?: 'object' | 'item' | 'npc'
+  entityType?: 'object' | 'item' | 'npc',
+  game?: Game,
+  isFail?: boolean
 ): Effect {
   // Detect media type from URL extension
   const getMediaType = (url?: string): 'image' | 'video' | 'text' => {
@@ -31,23 +47,39 @@ export function outcomeToMessageEffect(
   };
 
   const hasOutcomeMedia = outcome.media?.url !== undefined;
-  const mediaType = getMediaType(outcome.media?.url);
+
+  // If this is a fail outcome with no custom media, use random fail image
+  let mediaUrl = outcome.media?.url;
+  let mediaDescription = outcome.media?.description;
+  let mediaHint = outcome.media?.hint;
+
+  if (isFail && !hasOutcomeMedia && game) {
+    const failImage = getRandomFailImage(game);
+    if (failImage) {
+      mediaUrl = failImage.url;
+      mediaDescription = failImage.description;
+      mediaHint = failImage.hint;
+    }
+  }
+
+  const finalHasMedia = hasOutcomeMedia || (isFail && mediaUrl !== undefined);
+  const mediaType = getMediaType(mediaUrl);
 
   return {
     type: 'SHOW_MESSAGE',
     speaker: outcome.speaker || 'narrator',
     content: outcome.message || '',
 
-    // Use outcome.media if present, otherwise fall back to entity image
-    imageUrl: hasOutcomeMedia ? outcome.media?.url : undefined,
-    imageDescription: hasOutcomeMedia ? outcome.media?.description : undefined,
-    imageHint: hasOutcomeMedia ? outcome.media?.hint : undefined,
+    // Use outcome.media if present, or random fail image, otherwise fall back to entity image
+    imageUrl: finalHasMedia ? mediaUrl : undefined,
+    imageDescription: finalHasMedia ? mediaDescription : undefined,
+    imageHint: finalHasMedia ? mediaHint : undefined,
 
-    // Fallback to entity-based image resolution if no outcome media
-    imageId: !hasOutcomeMedia && fallbackEntityId ? fallbackEntityId : undefined,
-    imageEntityType: !hasOutcomeMedia && fallbackEntityId ? entityType : undefined,
+    // Fallback to entity-based image resolution if no outcome media and not a fail
+    imageId: !finalHasMedia && fallbackEntityId ? fallbackEntityId : undefined,
+    imageEntityType: !finalHasMedia && fallbackEntityId ? entityType : undefined,
 
-    messageType: hasOutcomeMedia ? mediaType : (fallbackEntityId ? 'image' : 'text')
+    messageType: finalHasMedia ? mediaType : (fallbackEntityId ? 'image' : 'text')
   };
 }
 
@@ -62,12 +94,16 @@ export function outcomeToMessageEffect(
  * @param outcome - The success/fail outcome from handler
  * @param fallbackEntityId - Optional entity ID for image fallback
  * @param entityType - Type of entity for image resolution
+ * @param game - Optional game object for accessing system media
+ * @param isFail - Whether this is a fail outcome (for random fail images)
  * @returns Array of effects in correct order
  */
 export function buildEffectsFromOutcome(
   outcome: Outcome,
   fallbackEntityId?: GameObjectId | ItemId | NpcId,
-  entityType?: 'object' | 'item' | 'npc'
+  entityType?: 'object' | 'item' | 'npc',
+  game?: Game,
+  isFail?: boolean
 ): Effect[] {
   const effects: Effect[] = [];
 
@@ -82,7 +118,7 @@ export function buildEffectsFromOutcome(
 
   // 2. Add main message with media support
   if (outcome.message) {
-    effects.push(outcomeToMessageEffect(outcome, fallbackEntityId, entityType));
+    effects.push(outcomeToMessageEffect(outcome, fallbackEntityId, entityType, game, isFail));
   }
 
   // 3. Add any additional SHOW_MESSAGE effects from outcome
@@ -159,13 +195,31 @@ export function resolveConditionalHandler(
  * @param handler - Resolved handler from resolveConditionalHandler
  * @param state - Current player state
  * @param game - Game data
- * @returns The success or fail outcome based on conditions
+ * @returns Object with the outcome and whether it was a fail
  */
 export function evaluateHandlerOutcome(
   handler: { conditions?: any[], success?: Outcome, fail?: Outcome },
   state: PlayerState,
   game: Game
-): Outcome | null {
+): { outcome: Outcome | null, isFail: boolean } {
   const conditionsMet = Validator.evaluateConditions(handler.conditions, state, game);
-  return conditionsMet ? handler.success || null : handler.fail || null;
+  if (conditionsMet) {
+    return { outcome: handler.success || null, isFail: false };
+  } else {
+    return { outcome: handler.fail || null, isFail: true };
+  }
+}
+
+/**
+ * Legacy function for backwards compatibility.
+ * Returns just the outcome without the isFail flag.
+ * @deprecated Use evaluateHandlerOutcome instead
+ */
+export function getLegacyHandlerOutcome(
+  handler: { conditions?: any[], success?: Outcome, fail?: Outcome },
+  state: PlayerState,
+  game: Game
+): Outcome | null {
+  const result = evaluateHandlerOutcome(handler, state, game);
+  return result.outcome;
 }

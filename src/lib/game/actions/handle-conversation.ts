@@ -64,23 +64,62 @@ async function handleFreeformChat(npc: NPC, state: PlayerState, playerInput: str
 
 
 async function handleScriptedChat(npc: NPC, state: PlayerState, playerInput: string, game: Game): Promise<CommandResult> {
-    const liveNpcState = getLiveNpc(npc.id, state, npc);
+    // First, increment interaction count
+    const { newState: stateAfterIncrement } = await processEffects(state, [{ type: 'INCREMENT_NPC_INTERACTION', npcId: npc.id }], game);
 
+    const liveNpcState = getLiveNpc(npc.id, stateAfterIncrement, npc);
+
+    // Check if NPC is demoted (moved to Type 2 or completed)
     if (liveNpcState.stage === 'demoted' && npc.postCompletionProfile) {
         const message = npc.postCompletionProfile.defaultResponse || "I have nothing more to say.";
-        return { newState: state, messages: [createMessage(npc.id, npc.name, `"${message}"`)] };
+        return { newState: stateAfterIncrement, messages: [createMessage(npc.id, npc.name, `"${message}"`)] };
     }
-    
+
+    // PROGRESSIVE REVEALS: Check if new topics should be unlocked based on interaction count
+    if (npc.progressiveReveals && liveNpcState.interactionCount > 0) {
+        for (const reveal of npc.progressiveReveals) {
+            // Check if this is the right interaction to trigger reveal
+            if (reveal.triggerOnInteraction === liveNpcState.interactionCount) {
+                // Check conditions (if any)
+                let conditionsMet = true;
+                if (reveal.conditions) {
+                    conditionsMet = reveal.conditions.every(condition => {
+                        if (condition.type === 'FLAG') {
+                            return !!stateAfterIncrement.flags?.[condition.flag] === condition.value;
+                        }
+                        // Add more condition types as needed
+                        return true;
+                    });
+                }
+
+                // If conditions met, mark topic as newly available (via flag)
+                if (conditionsMet) {
+                    const revealFlag = `topic_revealed_${npc.id}_${reveal.topicId}`;
+                    if (!stateAfterIncrement.flags?.[revealFlag]) {
+                        const { newState: stateAfterReveal } = await processEffects(
+                            stateAfterIncrement,
+                            [{ type: 'SET_FLAG', flag: revealFlag, value: true }],
+                            game
+                        );
+                        // Use the updated state for the rest of the conversation
+                        Object.assign(stateAfterIncrement, stateAfterReveal);
+                    }
+                }
+            }
+        }
+    }
+
+    // Filter available topics (including newly revealed ones)
     const availableTopics = (npc.topics || []).filter(topic => {
         const { conditions, once, topicId } = topic;
         if (once && liveNpcState.completedTopics.includes(topicId)) {
             return false;
         }
         // NEW: flags is now Record<string, boolean> instead of array
-        if (conditions?.requiredFlagsAll && !conditions.requiredFlagsAll.every(flag => !!state.flags?.[flag])) {
+        if (conditions?.requiredFlagsAll && !conditions.requiredFlagsAll.every(flag => !!stateAfterIncrement.flags?.[flag])) {
             return false;
         }
-        if (conditions?.forbiddenFlagsAny && conditions.forbiddenFlagsAny.some(flag => !!state.flags?.[flag])) {
+        if (conditions?.forbiddenFlagsAny && conditions.forbiddenFlagsAny.some(flag => !!stateAfterIncrement.flags?.[flag])) {
             return false;
         }
         return true;
@@ -88,7 +127,7 @@ async function handleScriptedChat(npc: NPC, state: PlayerState, playerInput: str
 
     if (availableTopics.length === 0) {
         const fallback = npc.fallbacks?.noMoreHelp || npc.fallbacks?.default || "I have nothing more to say.";
-        return { newState: state, messages: [createMessage(npc.id, npc.name, `"${fallback}"`)] };
+        return { newState: stateAfterIncrement, messages: [createMessage(npc.id, npc.name, `"${fallback}"`)] };
     }
 
     const { output: aiResponse, usage } = await selectNpcResponse({
@@ -96,24 +135,24 @@ async function handleScriptedChat(npc: NPC, state: PlayerState, playerInput: str
         npcName: npc.name,
         cannedResponses: availableTopics
     });
-    
+
     const selectedTopic = npc.topics?.find(t => t.topicId === aiResponse.topic);
 
     if (!selectedTopic) {
         const fallback = npc.fallbacks?.offTopic || npc.fallbacks?.default || "I'm not sure what you mean by that.";
-        return { newState: state, messages: [createMessage(npc.id, npc.name, `"${fallback}"`)] };
+        return { newState: stateAfterIncrement, messages: [createMessage(npc.id, npc.name, `"${fallback}"`)] };
     }
-    
+
     let effectsToProcess = [...(selectedTopic.response.effects || [])];
-    
+
     if (selectedTopic.once) {
         effectsToProcess.push({ type: 'COMPLETE_NPC_TOPIC', npcId: npc.id, topicId: selectedTopic.topicId });
     }
-    
+
     const initialMessage = createMessage(npc.id, npc.name, `"${selectedTopic.response.message}"`, 'text', undefined, usage);
-    
-    let { newState, messages } = await processEffects(state, effectsToProcess, game);
-    
+
+    let { newState, messages } = await processEffects(stateAfterIncrement, effectsToProcess, game);
+
     const stateAfterDemotionCheck = await checkDemotion(npc, newState, game);
     newState = stateAfterDemotionCheck;
 

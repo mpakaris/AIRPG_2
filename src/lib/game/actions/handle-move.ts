@@ -64,9 +64,20 @@ export async function handleMove(state: PlayerState, targetName: string, game: G
         }
     }
 
-    // 2. Validate action
+    // 2. Get effective handler first (to check for custom fail messages)
+    const handler = HandlerResolver.getEffectiveHandler(targetObject, 'move', state);
+
+    // 3. Validate action (but use custom handler fail message if available)
     const validation = Validator.validate('move', targetObjectId, state, game);
     if (!validation.valid) {
+        // Check if handler has a custom fail message
+        if (handler?.fail?.message) {
+            return [{
+                type: 'SHOW_MESSAGE',
+                speaker: 'narrator',
+                content: handler.fail.message
+            }];
+        }
         // Use fallback message or validation reason
         const message = validation.reason || HandlerResolver.getFallbackMessage(targetObject, 'notMovable');
         return [{
@@ -75,9 +86,6 @@ export async function handleMove(state: PlayerState, targetName: string, game: G
             content: message
         }];
     }
-
-    // 3. Get effective handler (with stateMap composition)
-    const handler = HandlerResolver.getEffectiveHandler(targetObject, 'move', state);
 
     if (!handler) {
         return [{

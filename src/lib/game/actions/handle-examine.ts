@@ -116,7 +116,9 @@ export async function handleExamine(state: PlayerState, targetName: string, game
             effects.push(...buildEffectsFromOutcome(
                 { message: messageText, ...handler.success },
                 itemId,
-                'item'
+                'item',
+                game,
+                false // Using success outcome, so not a fail
             ));
         } else {
             // Fallback: standard message without outcome media
@@ -185,7 +187,9 @@ export async function handleExamine(state: PlayerState, targetName: string, game
                 effects.push(...buildEffectsFromOutcome(
                     { message: messageText, ...handler.success },
                     visibleItemId,
-                    'item'
+                    'item',
+                    game,
+                    false // Using success outcome, so not a fail
                 ));
             } else {
                 // Fallback: standard message without outcome media
@@ -268,7 +272,9 @@ export async function handleExamine(state: PlayerState, targetName: string, game
             effects.push(...buildEffectsFromOutcome(
                 { message: messageContent, ...handler.success },
                 targetObjectId,
-                'object'
+                'object',
+                game,
+                false // Using success outcome, so not a fail
             ));
         } else {
             // Fallback: standard message without outcome media
@@ -374,6 +380,7 @@ async function handleExamineItemOnTarget(state: PlayerState, itemName: string, t
         if (specificHandler) {
             const conditionsMet = Validator.evaluateConditions(specificHandler.conditions, state, game);
             const outcome = conditionsMet ? specificHandler.success : specificHandler.fail;
+            const isFail = !conditionsMet;
 
             if (outcome) {
                 const effects: Effect[] = [];
@@ -386,7 +393,7 @@ async function handleExamineItemOnTarget(state: PlayerState, itemName: string, t
                         transitionMessage: FocusResolver.getTransitionNarration(targetObjectId, 'object', state, game) || undefined
                     });
                 }
-                effects.push(...buildEffectsFromOutcome(outcome, targetObjectId, 'object'));
+                effects.push(...buildEffectsFromOutcome(outcome, targetObjectId, 'object', game, isFail));
                 return effects;
             }
         }
@@ -398,6 +405,7 @@ async function handleExamineItemOnTarget(state: PlayerState, itemName: string, t
         if (specificHandler) {
             const conditionsMet = Validator.evaluateConditions(specificHandler.conditions, state, game);
             const outcome = conditionsMet ? specificHandler.success : specificHandler.fail;
+            const isFail = !conditionsMet;
 
             if (outcome) {
                 const effects: Effect[] = [];
@@ -410,7 +418,7 @@ async function handleExamineItemOnTarget(state: PlayerState, itemName: string, t
                         transitionMessage: FocusResolver.getTransitionNarration(targetObjectId, 'object', state, game) || undefined
                     });
                 }
-                effects.push(...buildEffectsFromOutcome(outcome, targetObjectId, 'object'));
+                effects.push(...buildEffectsFromOutcome(outcome, targetObjectId, 'object', game, isFail));
                 return effects;
             }
         }
@@ -422,6 +430,7 @@ async function handleExamineItemOnTarget(state: PlayerState, itemName: string, t
         if (specificHandler) {
             const conditionsMet = Validator.evaluateConditions(specificHandler.conditions, state, game);
             const outcome = conditionsMet ? specificHandler.success : specificHandler.fail;
+            const isFail = !conditionsMet;
 
             if (outcome) {
                 const effects: Effect[] = [];
@@ -434,7 +443,7 @@ async function handleExamineItemOnTarget(state: PlayerState, itemName: string, t
                         transitionMessage: FocusResolver.getTransitionNarration(targetObjectId, 'object', state, game) || undefined
                     });
                 }
-                effects.push(...buildEffectsFromOutcome(outcome, targetObjectId, 'object'));
+                effects.push(...buildEffectsFromOutcome(outcome, targetObjectId, 'object', game, isFail));
                 return effects;
             }
         }

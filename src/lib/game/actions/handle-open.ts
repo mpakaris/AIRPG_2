@@ -32,6 +32,25 @@ export async function handleOpen(state: PlayerState, targetName: string, game: G
             }];
         }
 
+        // Check if object is openable
+        if (targetObject.capabilities && !targetObject.capabilities.openable) {
+            // Use custom fail message from onOpen handler if available
+            const handler = resolveConditionalHandler(targetObject.handlers?.onOpen, state, game);
+            if (handler?.fail?.message) {
+                return [{
+                    type: 'SHOW_MESSAGE',
+                    speaker: 'narrator',
+                    content: handler.fail.message
+                }];
+            }
+            // Generic fallback for non-openable objects
+            return [{
+                type: 'SHOW_MESSAGE',
+                speaker: 'narrator',
+                content: targetObject.handlers?.defaultFailMessage || `You can't open the ${targetObject.name}.`
+            }];
+        }
+
         // Debug logging for bookshelf/door
         logEntityDebug('OPEN START', targetObjectId, state, game);
 
@@ -40,7 +59,7 @@ export async function handleOpen(state: PlayerState, targetName: string, game: G
 
         if (handler) {
             // Evaluate the handler's outcome based on conditions
-            const outcome = evaluateHandlerOutcome(handler, state, game);
+            const { outcome, isFail } = evaluateHandlerOutcome(handler, state, game);
 
             if (outcome) {
                 const effects: Effect[] = [];
@@ -56,7 +75,7 @@ export async function handleOpen(state: PlayerState, targetName: string, game: G
                 }
 
                 // Use helper to build effects with automatic media extraction
-                effects.push(...buildEffectsFromOutcome(outcome, targetObjectId, 'object'));
+                effects.push(...buildEffectsFromOutcome(outcome, targetObjectId, 'object', game, isFail));
 
                 return effects;
             }
