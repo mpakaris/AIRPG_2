@@ -14,22 +14,49 @@
  * 1. Deterministic - same state always gives same handler
  * 2. Composable - stateMap overrides layer on top
  * 3. Explicit - no magic, clear resolution order
+ *
+ * CRITICAL: Conditional Handler Arrays
+ * =====================================
+ * Handlers can be either a single Rule or an array of conditional Rules:
+ *
+ * Single handler:
+ *   onExamine: {
+ *     success: { message: "...", media: {...} }
+ *   }
+ *
+ * Conditional handler array:
+ *   onExamine: [
+ *     { conditions: [{type: 'HAS_ITEM', itemId: 'key'}], success: {...} },
+ *     { conditions: [{type: 'FLAG', flag: 'broken'}], success: {...} },
+ *     { conditions: [], success: {...} }  // default fallback
+ *   ]
+ *
+ * When getEffectiveHandler encounters an array, it MUST resolve which handler
+ * to use by evaluating conditions. This is critical for:
+ * - Containers showing different states (with item vs empty)
+ * - Progressive interactions (door states, reading stages)
+ * - Conditional media (different images based on game state)
+ *
+ * DO NOT return the raw array - always resolve to a single Rule or undefined.
+ * Handlers are evaluated in order, first matching condition wins.
  */
 
 import type { Game, GameObject, Item, NPC, Portal, Rule, Handlers, PlayerState } from '../types';
 import { GameStateManager } from './GameStateManager';
+import { Validator } from './Validator';
 
 export type EntityWithHandlers = GameObject | Item | NPC | Portal;
 
 export class HandlerResolver {
   /**
    * Get the effective handler for a specific action (verb)
-   * This takes into account stateMap overrides
+   * This takes into account stateMap overrides and resolves conditional handler arrays
    */
   static getEffectiveHandler(
     entity: EntityWithHandlers,
     verb: string,
-    state: PlayerState
+    state: PlayerState,
+    game?: Game
   ): Rule | undefined {
     const entityState = GameStateManager.getEntityState(state, entity.id);
     const currentStateId = entityState.currentStateId || 'default';
@@ -41,7 +68,7 @@ export class HandlerResolver {
         const verbKey = `on${verb.charAt(0).toUpperCase()}${verb.slice(1).toLowerCase()}` as keyof Handlers;
         const overrideHandler = stateOverrides.overrides[verbKey];
         if (overrideHandler) {
-          return overrideHandler as Rule;
+          return HandlerResolver.resolveHandler(overrideHandler as any, state, game);
         }
       }
     }
@@ -51,8 +78,7 @@ export class HandlerResolver {
       const verbKey = `on${verb.charAt(0).toUpperCase()}${verb.slice(1).toLowerCase()}` as keyof typeof entity.handlers;
       const handler = entity.handlers[verbKey];
       if (handler) {
-        // Handle both old and new handler formats
-        return handler as any; // This will be a Rule or legacy Handler
+        return HandlerResolver.resolveHandler(handler as any, state, game);
       }
     }
 
@@ -60,6 +86,82 @@ export class HandlerResolver {
 
     // 4. No handler found
     return undefined;
+  }
+
+  /**
+   * Resolve a handler that may be a single Rule or an array of conditional Rules
+   * For arrays, returns the first Rule whose conditions match
+   *
+   * CRITICAL: This method is essential for proper media resolution in containers.
+   *
+   * Example use case - Coffee machine with hidden key:
+   *
+   * onExamine: [
+   *   {
+   *     conditions: [
+   *       { type: 'FLAG', flag: 'machine_is_broken', value: true },
+   *       { type: 'HAS_ITEM', itemId: 'item_safe_key' }
+   *     ],
+   *     success: {
+   *       message: "The cavity's empty now - you took the key.",
+   *       media: { url: '...broken_empty.png', ... }  // Empty image
+   *     }
+   *   },
+   *   {
+   *     conditions: [{ type: 'FLAG', flag: 'machine_is_broken', value: true }],
+   *     success: {
+   *       message: "Inside the cavity: brass key.",
+   *       media: { url: '...broken_with_key.png', ... }  // Image with key
+   *     }
+   *   },
+   *   {
+   *     conditions: [],  // Default
+   *     success: {
+   *       message: "The panel rattles.",
+   *       media: { url: '...intact.png', ... }  // Intact image
+   *     }
+   *   }
+   * ]
+   *
+   * Without this resolution:
+   * - Handler would be returned as raw array
+   * - Media URLs would be ignored
+   * - System would fall back to entity.media.images[currentStateId]
+   * - Wrong image would be shown
+   *
+   * With this resolution:
+   * - Conditions evaluated in order (most specific to least specific)
+   * - First matching handler returned
+   * - Explicit media URLs preserved
+   * - Correct image shown based on game state
+   *
+   * @param handler - Single Rule or array of conditional Rules
+   * @param state - Current player state for condition evaluation
+   * @param game - Game data needed for condition evaluation
+   * @returns Resolved single Rule, or undefined if no conditions match
+   */
+  private static resolveHandler(
+    handler: Rule | Rule[],
+    state: PlayerState,
+    game?: Game
+  ): Rule | undefined {
+    // If handler is an array, resolve to first matching condition
+    if (Array.isArray(handler)) {
+      for (const conditionalHandler of handler) {
+        const conditionsMet = game
+          ? Validator.evaluateConditions(conditionalHandler.conditions, state, game)
+          : !conditionalHandler.conditions || conditionalHandler.conditions.length === 0;
+
+        if (conditionsMet) {
+          return conditionalHandler;
+        }
+      }
+      // No conditions matched
+      return undefined;
+    }
+
+    // Single handler - return as-is
+    return handler;
   }
 
   /**

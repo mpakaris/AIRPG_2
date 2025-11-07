@@ -224,6 +224,10 @@ export class FocusResolver {
     /**
      * Get a transition message when focus changes
      * First checks for location-specific atmospheric templates, then falls back to generic ones
+     *
+     * IMPORTANT: NPCs should NOT be used as focus targets in goto/movement commands.
+     * NPCs are not zones - only objects can be zones.
+     * If newFocusType is 'npc', this will return a message but it should rarely be called this way.
      */
     static getTransitionNarration(
         newFocusId: string,

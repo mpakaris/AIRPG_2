@@ -26,25 +26,60 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         input: { type: 'phrase', validation: 'Justice for Silas Bloom', hint: 'Stuck? Maybe this will help: https://airpg-minigames.vercel.app/games/the-notebook', attempts: null, lockout: null },
         handlers: {
             // 1. EXAMINE - Visual inspection
-            onExamine: {
-                conditions: [{ type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: true }],
-                success: {
-                    message: "The leather is worn soft under your fingers, decades pressed into its surface. It smells of old paper, dust, and something darker—leather tanned with secrets. The brass clasp gleams cold, locked tight, guarding what’s inside.\n\nYour fingers trace it, metal biting faintly. No keyhole, no obvious way in—just a mechanism waiting for something it has been expecting. A thrill runs through you. You don’t know what’s inside, and yet its weight presses against your chest, heavy with possibility.\n\nUsually, you feel like the chess player, setting the moves. Now, strangely, you feel like the pawn in someone else’s game—small, exposed, uneasy, and yet drawn irresistibly.\n\nThe notebook radiates threat, subtle and insistent. Every crease and dent seems deliberate, alive with intentions. A flicker of fear curls with excitement, making every nerve tingle.\n\nHolding it, you feel the pulse of history brushing against your own, the quiet danger of secrets someone spent decades guarding. Alone, trembling slightly, you realize this moment—this touch, this weight—is a turning point. You don’t know what’s inside, and that is precisely what makes it irresistible.",
-                    media: {
-                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759242347/Notebook_locked_ngfes0.png',
-                        description: 'Locked leather notebook with brass clasp',
-                        hint: 'Needs a password phrase...'
+            onExamine: [
+                {
+                    // Most specific: Locked
+                    conditions: [{ type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: true }],
+                    success: {
+                        message: "The leather is worn soft under your fingers, decades pressed into its surface. It smells of old paper, dust, and something darker—leather tanned with secrets. The brass clasp gleams cold, locked tight, guarding what's inside.\n\nYour fingers trace it, metal biting faintly. No keyhole, no obvious way in—just a mechanism waiting for something it has been expecting. A thrill runs through you. You don't know what's inside, and yet its weight presses against your chest, heavy with possibility.\n\nUsually, you feel like the chess player, setting the moves. Now, strangely, you feel like the pawn in someone else's game—small, exposed, uneasy, and yet drawn irresistibly.\n\nThe notebook radiates threat, subtle and insistent. Every crease and dent seems deliberate, alive with intentions. A flicker of fear curls with excitement, making every nerve tingle.\n\nHolding it, you feel the pulse of history brushing against your own, the quiet danger of secrets someone spent decades guarding. Alone, trembling slightly, you realize this moment—this touch, this weight—is a turning point. You don't know what's inside, and that is precisely what makes it irresistible.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759242347/Notebook_locked_ngfes0.png',
+                            description: 'Locked leather notebook with brass clasp',
+                            hint: 'Needs a password phrase...'
+                        }
                     }
                 },
-                fail: {
-                    message: "Notebook's open. Brass clasp released. Inside: black SD card—modern, out of place against yellowed pages. Next to it, a folded document marked CONFIDENTIAL in faded red ink. Hidden deliberately.",
-                    media: {
-                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759242346/Notebook_unlocked_fpxqgl.jpg',
-                        description: 'Unlocked notebook revealing hidden contents',
-                        hint: 'SD card and secret document'
+                {
+                    // Unlocked + both items gone (document taken AND video watched)
+                    conditions: [
+                        { type: 'HAS_ITEM', itemId: 'item_secret_document' },
+                        { type: 'FLAG', flag: 'notebook_video_watched', value: true }
+                    ],
+                    success: {
+                        message: "Notebook's open. Brass clasp unfastened. Inside: yellowed pages, faded ink, illegible entries. The SD card and secret document—both gone. You took what was hidden here. Just empty pages remain."
+                    }
+                },
+                {
+                    // Unlocked + only document taken (video not watched)
+                    conditions: [
+                        { type: 'HAS_ITEM', itemId: 'item_secret_document' }
+                    ],
+                    success: {
+                        message: "Notebook's open. Brass clasp released. Inside: the black SD card still rests against yellowed pages—modern, out of place. The secret document is gone. You took it."
+                    }
+                },
+                {
+                    // Unlocked + only video watched (document not taken)
+                    conditions: [
+                        { type: 'FLAG', flag: 'notebook_video_watched', value: true }
+                    ],
+                    success: {
+                        message: "Notebook's open. Brass clasp unfastened. Inside: the folded document marked CONFIDENTIAL still waits in faded red ink. The SD card is there too—you've already watched the video. The footage is burned into your memory."
+                    }
+                },
+                {
+                    // Default: Unlocked + nothing taken/watched
+                    conditions: [],
+                    success: {
+                        message: "Notebook's open. Brass clasp released. Inside: black SD card—modern, out of place against yellowed pages. Next to it, a folded document marked CONFIDENTIAL in faded red ink. Hidden deliberately.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759242346/Notebook_unlocked_fpxqgl.jpg',
+                            description: 'Unlocked notebook revealing hidden contents',
+                            hint: 'SD card and secret document'
+                        }
                     }
                 }
-            },
+            ],
 
             // 2. TAKE - Evidence, stays on table
             onTake: {
@@ -61,23 +96,70 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             },
 
             // 6. OPEN - Requires unlock
-            onOpen: {
-                conditions: [{ type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: false }],
-                success: {
-                    message: "Notebook's open. Brass clasp unfastened. In the crease: black SD card—modern, cold, out of place. Next to it: document marked CONFIDENTIAL, folded tight. Different eras. Hidden together. Someone archived the past on modern media.",
-                    media: {
-                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759242346/Notebook_unlocked_fpxqgl.jpg',
-                        description: 'Open notebook with SD card and secret document',
-                        hint: 'Take the contents'
-                    },
-                    effects: [
-                        { type: 'SET_ENTITY_STATE', entityId: 'obj_brown_notebook', patch: { isOpen: true, currentStateId: 'unlocked' } }
-                    ]
+            onOpen: [
+                {
+                    // Unlocked + both items gone
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: false },
+                        { type: 'HAS_ITEM', itemId: 'item_secret_document' },
+                        { type: 'FLAG', flag: 'notebook_video_watched', value: true }
+                    ],
+                    success: {
+                        message: "Notebook's already open. Brass clasp unfastened. Inside: yellowed pages, faded ink. The SD card and secret document—both gone. You took what was hidden here.",
+                        effects: [
+                            { type: 'SET_ENTITY_STATE', entityId: 'obj_brown_notebook', patch: { isOpen: true, currentStateId: 'unlocked' } }
+                        ]
+                    }
                 },
-                fail: {
-                    message: "Brass clasp won't budge. Needs a PASSWORD—phrase, not key. Someone made sure this stayed hidden.\n\nUse: /password <your guess>\n\nStuck? https://airpg-minigames.vercel.app/games/the-notebook"
+                {
+                    // Unlocked + only document taken
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: false },
+                        { type: 'HAS_ITEM', itemId: 'item_secret_document' }
+                    ],
+                    success: {
+                        message: "Notebook's open. Brass clasp unfastened. In the crease: the black SD card still rests there—modern, cold, out of place. The secret document is gone.",
+                        effects: [
+                            { type: 'SET_ENTITY_STATE', entityId: 'obj_brown_notebook', patch: { isOpen: true, currentStateId: 'unlocked' } }
+                        ]
+                    }
+                },
+                {
+                    // Unlocked + only video watched
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: false },
+                        { type: 'FLAG', flag: 'notebook_video_watched', value: true }
+                    ],
+                    success: {
+                        message: "Notebook's open. Brass clasp unfastened. In the crease: document marked CONFIDENTIAL, folded tight. The SD card is there too—you've watched the video already.",
+                        effects: [
+                            { type: 'SET_ENTITY_STATE', entityId: 'obj_brown_notebook', patch: { isOpen: true, currentStateId: 'unlocked' } }
+                        ]
+                    }
+                },
+                {
+                    // Unlocked + nothing taken
+                    conditions: [{ type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: false }],
+                    success: {
+                        message: "Notebook's open. Brass clasp unfastened. In the crease: black SD card—modern, cold, out of place. Next to it: document marked CONFIDENTIAL, folded tight. Different eras. Hidden together. Someone archived the past on modern media.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759242346/Notebook_unlocked_fpxqgl.jpg',
+                            description: 'Open notebook with SD card and secret document',
+                            hint: 'Take the contents'
+                        },
+                        effects: [
+                            { type: 'SET_ENTITY_STATE', entityId: 'obj_brown_notebook', patch: { isOpen: true, currentStateId: 'unlocked' } }
+                        ]
+                    }
+                },
+                {
+                    // Locked
+                    conditions: [],
+                    fail: {
+                        message: "Brass clasp won't budge. Needs a PASSWORD—phrase, not key. Someone made sure this stayed hidden.\n\nUse: /password <your guess>\n\nStuck? https://airpg-minigames.vercel.app/games/the-notebook"
+                    }
                 }
-            },
+            ],
 
             // 7. CLOSE - Close open notebook
             onClose: {
@@ -105,30 +187,112 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             },
 
             // 10. READ - Read contents (requires open)
-            onRead: {
-                conditions: [
-                    { type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: false },
-                    { type: 'STATE', entityId: 'obj_brown_notebook', key: 'isOpen', equals: true }
-                ],
-                success: {
-                    message: "Pages yellowed, ink faded. Most entries illegible. But the hidden items—SD card, secret document—those are what matter. TAKE them.",
-                    effects: []
+            onRead: [
+                {
+                    // Unlocked + both items gone
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: false },
+                        { type: 'STATE', entityId: 'obj_brown_notebook', key: 'isOpen', equals: true },
+                        { type: 'HAS_ITEM', itemId: 'item_secret_document' },
+                        { type: 'FLAG', flag: 'notebook_video_watched', value: true }
+                    ],
+                    success: {
+                        message: "Pages yellowed, ink faded. Most entries illegible. The hidden items—SD card, secret document—both gone. You took them already.",
+                        effects: []
+                    }
                 },
-                fail: {
-                    message: "Locked. Can't read it. Needs PASSWORD. Stuck? https://airpg-minigames.vercel.app/games/the-notebook"
+                {
+                    // Unlocked + only document taken
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: false },
+                        { type: 'STATE', entityId: 'obj_brown_notebook', key: 'isOpen', equals: true },
+                        { type: 'HAS_ITEM', itemId: 'item_secret_document' }
+                    ],
+                    success: {
+                        message: "Pages yellowed, ink faded. Most entries illegible. The SD card is still here—you can use your phone to read it. The secret document is gone.",
+                        effects: []
+                    }
+                },
+                {
+                    // Unlocked + only video watched
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: false },
+                        { type: 'STATE', entityId: 'obj_brown_notebook', key: 'isOpen', equals: true },
+                        { type: 'FLAG', flag: 'notebook_video_watched', value: true }
+                    ],
+                    success: {
+                        message: "Pages yellowed, ink faded. Most entries illegible. The secret document is still here—TAKE it. You've already watched the SD card video.",
+                        effects: []
+                    }
+                },
+                {
+                    // Unlocked + nothing taken
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: false },
+                        { type: 'STATE', entityId: 'obj_brown_notebook', key: 'isOpen', equals: true }
+                    ],
+                    success: {
+                        message: "Pages yellowed, ink faded. Most entries illegible. But the hidden items—SD card, secret document—those are what matter. TAKE them.",
+                        effects: []
+                    }
+                },
+                {
+                    // Locked
+                    conditions: [],
+                    fail: {
+                        message: "Locked. Can't read it. Needs PASSWORD. Stuck? https://airpg-minigames.vercel.app/games/the-notebook"
+                    }
                 }
-            },
+            ],
 
             // 11. SEARCH - Search contents
-            onSearch: {
-                conditions: [{ type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: false }],
-                success: {
-                    message: "You search the pages. SD card, secret document—hidden in the center spread. TAKE them."
+            onSearch: [
+                {
+                    // Unlocked + both items gone
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: false },
+                        { type: 'HAS_ITEM', itemId: 'item_secret_document' },
+                        { type: 'FLAG', flag: 'notebook_video_watched', value: true }
+                    ],
+                    success: {
+                        message: "You search the pages. Empty. The SD card and secret document—both gone. You took them already."
+                    }
                 },
-                fail: {
-                    message: "Locked. Can't search. Need the PASSWORD."
+                {
+                    // Unlocked + only document taken
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: false },
+                        { type: 'HAS_ITEM', itemId: 'item_secret_document' }
+                    ],
+                    success: {
+                        message: "You search the pages. The SD card is still here—use your phone to read it. The secret document is gone."
+                    }
+                },
+                {
+                    // Unlocked + only video watched
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: false },
+                        { type: 'FLAG', flag: 'notebook_video_watched', value: true }
+                    ],
+                    success: {
+                        message: "You search the pages. The secret document is still hidden in the center spread—TAKE it. You've already watched the SD card video."
+                    }
+                },
+                {
+                    // Unlocked + nothing taken
+                    conditions: [{ type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: false }],
+                    success: {
+                        message: "You search the pages. SD card, secret document—hidden in the center spread. TAKE them."
+                    }
+                },
+                {
+                    // Locked
+                    conditions: [],
+                    fail: {
+                        message: "Locked. Can't search. Need the PASSWORD."
+                    }
                 }
-            },
+            ],
 
             // 12. TALK - Can't talk to notebook
             onTalk: {
@@ -190,16 +354,49 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         },
         handlers: {
             // 1. EXAMINE - Visual inspection
-            onExamine: {
-                success: {
-                    message: "The wooden frame leaned crooked, chalk dust clinging to its corners. Brick peered through behind it, cold and stubborn.\n\nToday's special read: 'Three scones for the price of two.'\n\nA deal as sweet as justice.\n\nThat word—justice—hung heavy, deliberate. Someone had been here, leaving breadcrumbs.\n\nThe board didn't sit flush with the wall; a shadow slipped behind it, hiding something patient, waiting. The smell of bread and dust mixed, comforting and uneasy. \n\nIt wasn’t just a menu. It was a message, a lure, a warning -  or was it not?",
-                    media: {
-                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759603706/Chalkboard_h61haz.png',
-                        description: 'Chalkboard menu with handwritten specials',
-                        hint: 'Not flush with the wall...'
+            onExamine: [
+                {
+                    // Most specific: moved AND pipe taken
+                    conditions: [
+                        { type: 'FLAG', flag: 'has_moved_chalkboard', value: true },
+                        { type: 'HAS_ITEM', itemId: 'item_iron_pipe' }
+                    ],
+                    success: {
+                        message: "The chalkboard leans against the wall where you left it. Behind where it used to hang, there's just exposed brick and a light patch of dust. The iron pipe is gone - you took it. Nothing else hidden here.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759603706/Chalkboard_h61haz.png',
+                            description: 'Moved chalkboard with empty space behind it',
+                            hint: 'You already took what was hidden here'
+                        }
+                    }
+                },
+                {
+                    // Less specific: moved but pipe NOT taken
+                    conditions: [
+                        { type: 'FLAG', flag: 'has_moved_chalkboard', value: true }
+                    ],
+                    success: {
+                        message: "The board's moved. Behind it: heavy iron pipe against exposed brick. Cold steel, rust at the joints. Still waiting there.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761261134/iron_pipe_bpcofa.png',
+                            description: 'Iron pipe revealed behind chalkboard',
+                            hint: 'Could be useful for breaking things...'
+                        }
+                    }
+                },
+                {
+                    // Default: not moved yet
+                    conditions: [],
+                    success: {
+                        message: "The wooden frame leaned crooked, chalk dust clinging to its corners. Brick peered through behind it, cold and stubborn.\n\nToday's special read: 'Three scones for the price of two.'\n\nA deal as sweet as justice.\n\nThat word—justice—hung heavy, deliberate. Someone had been here, leaving breadcrumbs.\n\nThe board didn't sit flush with the wall; a shadow slipped behind it, hiding something patient, waiting. The smell of bread and dust mixed, comforting and uneasy. \n\nIt wasn't just a menu. It was a message, a lure, a warning -  or was it not?",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759603706/Chalkboard_h61haz.png',
+                            description: 'Chalkboard menu with handwritten specials',
+                            hint: 'Not flush with the wall...'
+                        }
                     }
                 }
-            },
+            ],
 
             // 2. TAKE - Can't take furniture
             onTake: {
@@ -674,25 +871,49 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         },
         handlers: {
             // 1. EXAMINE - Visual inspection
-            onExamine: {
-                conditions: [{ type: 'NO_FLAG', flag: 'safe_is_unlocked' }],
-                success: {
-                    message: "Small. Serious. Steel, flush mount, pro install. Cold. Brass keyhole under the handle. Not residential. Someone needed secure storage, hidden behind art. Lock's pristine.",
-                    media: {
-                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761263220/safe_behind_Painting_dbo6qc.png',
-                        description: 'Locked wall safe with keyhole',
-                        hint: 'Need the key...'
+            onExamine: [
+                {
+                    // Most specific: unlocked AND article taken
+                    conditions: [
+                        { type: 'FLAG', flag: 'safe_is_unlocked', value: true },
+                        { type: 'HAS_ITEM', itemId: 'item_newspaper_article' }
+                    ],
+                    success: {
+                        message: "Safe's open. Empty now - you took the newspaper clipping. Just bare metal inside. Whatever was hidden here, you found it.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761293940/safe_behind_painting_open_empty_pn2js2.png',
+                            description: 'Open, empty wall safe',
+                            hint: 'You already took what was inside'
+                        }
                     }
                 },
-                fail: {
-                    message: "Safe's open. Inside: yellowed newspaper clipping. Decades old. Someone preserved this deliberately. Why hide a newspaper article in a safe?",
-                    media: {
-                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761263220/safe_behind_painting_open_tpmf0m.png',
-                        description: 'Open safe with newspaper clipping',
-                        hint: 'An old article'
+                {
+                    // Less specific: unlocked but article NOT taken
+                    conditions: [
+                        { type: 'FLAG', flag: 'safe_is_unlocked', value: true }
+                    ],
+                    success: {
+                        message: "Safe's open. Inside: yellowed newspaper clipping. Decades old. Someone preserved this deliberately. Why hide a newspaper article in a safe?",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761263220/safe_behind_painting_open_tpmf0m.png',
+                            description: 'Open safe with newspaper clipping',
+                            hint: 'An old article'
+                        }
+                    }
+                },
+                {
+                    // Default: NOT unlocked
+                    conditions: [],
+                    success: {
+                        message: "Small. Serious. Steel, flush mount, pro install. Cold. Brass keyhole under the handle. Not residential. Someone needed secure storage, hidden behind art. Lock's pristine.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761263220/safe_behind_Painting_dbo6qc.png',
+                            description: 'Locked wall safe with keyhole',
+                            hint: 'Need the key...'
+                        }
                     }
                 }
-            },
+            ],
 
             // 2. TAKE - Can't take wall-mounted safe
             onTake: {
@@ -903,7 +1124,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                 {
                     conditions: [
                         { type: 'STATE', entityId: 'obj_drawer', key: 'isOpen', equals: true },
-                        { type: 'IN_INVENTORY', itemId: 'item_recip_saw' }
+                        { type: 'HAS_ITEM', itemId: 'item_recip_saw' }
                     ],
                     success: {
                         message: "Drawer's open. Empty now. The saw's in your pocket. Just receipts and tape left.",
@@ -930,7 +1151,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                 {
                     conditions: [
                         { type: 'STATE', entityId: 'obj_drawer', key: 'isOpen', equals: false },
-                        { type: 'IN_INVENTORY', itemId: 'item_recip_saw' }
+                        { type: 'HAS_ITEM', itemId: 'item_recip_saw' }
                     ],
                     success: {
                         message: "You pull the handle. Drawer slides open. Empty. If there was something inside of it, you cleared it out already.",
@@ -962,7 +1183,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                 {
                     conditions: [
                         { type: 'STATE', entityId: 'obj_drawer', key: 'isOpen', equals: true },
-                        { type: 'IN_INVENTORY', itemId: 'item_recip_saw' }
+                        { type: 'HAS_ITEM', itemId: 'item_recip_saw' }
                     ],
                     success: {
                         message: "Already open. Empty. The saw's in your pocket.",
@@ -1017,30 +1238,58 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         media: {
             images: {
                 default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761211151/coffee_machine_detail_frexuu.png', description: 'A high-end Italian coffee machine.', hint: 'coffee machine' },
-                broken: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761211151/coffee_machine_detail_broken_slkpfd.png', description: 'The shattered remains of the coffee machine\'s side panel.', hint: 'broken machine' }
+                broken: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761211151/coffee_machine_detail_broken_slkpfd.png', description: 'The shattered remains of the coffee machine\'s side panel.', hint: 'broken machine' },
+                broken_empty: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762517001/counter_coffee_machine_broken_empty_ayeoql.png', description: 'Broken coffee machine with empty cavity', hint: 'You already took what was hidden' }
             }
         },
         handlers: {
             // 1. EXAMINE - Visual inspection
-            onExamine: {
-                conditions: [{ type: 'NO_FLAG', flag: 'machine_is_broken' }],
-                success: {
-                    message: "Chrome and steel, Italian pride. But wrong—a service panel on the right side, warped. Screws stripped. Someone forced it shut fast. The panel rattles. Wouldn't take much to BREAK it open.",
-                    media: {
-                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761211151/coffee_machine_detail_frexuu.png',
-                        description: 'Coffee machine with suspicious service panel',
-                        hint: 'That panel looks forced shut...'
+            // IMPORTANT: Conditional handler array for state-based media
+            // See: src/documentation/handler-resolution-and-media.md
+            // Order matters: most specific conditions first, default last
+            onExamine: [
+                {
+                    // Most specific: broken AND key taken
+                    conditions: [
+                        { type: 'FLAG', flag: 'machine_is_broken', value: true },
+                        { type: 'HAS_ITEM', itemId: 'item_safe_key' }
+                    ],
+                    success: {
+                        message: "Shattered panel, broken plastic. The cavity's empty now - you took the key. Someone hid it here, didn't want it found easy. But you found it.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762517001/counter_coffee_machine_broken_empty_ayeoql.png',
+                            description: 'Broken coffee machine with empty cavity',
+                            hint: 'You already took what was hidden'
+                        }
                     }
                 },
-                fail: {
-                    message: "Shattered panel, broken plastic. The key's gone. Someone hid it here, didn't want it found easy.",
-                    media: {
-                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761211151/coffee_machine_detail_broken_slkpfd.png',
-                        description: 'Broken coffee machine with revealed cavity',
-                        hint: 'The hiding spot is exposed'
+                {
+                    // Less specific: broken but key NOT taken
+                    conditions: [
+                        { type: 'FLAG', flag: 'machine_is_broken', value: true }
+                    ],
+                    success: {
+                        message: "Shattered panel, broken plastic. Inside the cavity: brass key. Someone hid it here, didn't want it found easy.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761211151/coffee_machine_detail_broken_slkpfd.png',
+                            description: 'Broken coffee machine with revealed key',
+                            hint: 'The hiding spot is exposed'
+                        }
+                    }
+                },
+                {
+                    // Default: NOT broken
+                    conditions: [],
+                    success: {
+                        message: "Chrome and steel, Italian pride. But wrong—a service panel on the right side, warped. Screws stripped. Someone forced it shut fast. The panel rattles. Wouldn't take much to BREAK it open.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761211151/coffee_machine_detail_frexuu.png',
+                            description: 'Coffee machine with suspicious service panel',
+                            hint: 'That panel looks forced shut...'
+                        }
                     }
                 }
-            },
+            ],
 
             // 2. TAKE - Can't take bolted furniture
             onTake: {
@@ -1799,7 +2048,8 @@ const items: Record<ItemId, Item> = {
                     message: "Brass key goes in your pocket. One step closer.",
                     effects: [
                         { type: 'ADD_ITEM', itemId: 'item_safe_key' },
-                        { type: 'SET_ENTITY_STATE', entityId: 'item_safe_key', patch: { taken: true } }
+                        { type: 'SET_ENTITY_STATE', entityId: 'item_safe_key', patch: { taken: true } },
+                        { type: 'SET_ENTITY_STATE', entityId: 'obj_coffee_machine', patch: { currentStateId: 'broken_empty' } }
                     ]
                 },
                 fail: {
@@ -2262,7 +2512,7 @@ const items: Record<ItemId, Item> = {
                     success: {
                         message: "You open the book again. As you flip through the pages, a small piece of paper flutters out and lands on the floor. You pick it up.\n\nIt's a handwritten note. Ink faded but legible. Just a phone number:\n\n555-444-XXXX\n\nThe last four digits are scratched out. Someone hid this deliberately. Why?",
                         media: {
-                            url: 'https://images.unsplash.com/photo-1586075010923-2dd4570fb338?w=600',
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762518484/counter_bookshelf_note_puesuy.png',
                             description: 'A handwritten note falling from book pages',
                             hint: 'Note with phone number!'
                         },
@@ -2305,7 +2555,7 @@ const items: Record<ItemId, Item> = {
         state: { readCount: 0, currentStateId: 'default' },
         media: {
             images: {
-                default: { url: 'https://images.unsplash.com/photo-1586075010923-2dd4570fb338?w=600', description: 'A handwritten note on aged paper.', hint: 'note with phone number' }
+                default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762518484/counter_bookshelf_note_puesuy.png', description: 'A handwritten note on aged paper.', hint: 'note with phone number' }
             }
         },
         handlers: {
@@ -3041,7 +3291,7 @@ Your reasoning must be a brief, step-by-step explanation of how you mapped the p
 
     // Visibility errors - Narrator voice (atmospheric)
     notVisible: (itemName: string) =>
-      `There's no "${itemName}" here. Either it's somewhere else, or hidden from view.`,
+      `There's no ${itemName} here. Either it's somewhere else, or hidden from view.`,
 
     // Inventory - Narrator describing state
     inventoryEmpty: "Your pockets are empty. Nothing collected yet.",

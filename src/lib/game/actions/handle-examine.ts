@@ -80,7 +80,7 @@ export async function handleExamine(state: PlayerState, targetName: string, game
         let messageText = HandlerResolver.getEffectiveDescription(item, state) || item.description;
 
         // Check for onExamine handler
-        const handler = HandlerResolver.getEffectiveHandler(item, 'examine', state);
+        const handler = HandlerResolver.getEffectiveHandler(item, 'examine', state, game);
         if (handler) {
             // Legacy support: check for alternateMessage
             const legacyHandler = item.handlers?.onExamine as any;
@@ -157,7 +157,7 @@ export async function handleExamine(state: PlayerState, targetName: string, game
             const isAlreadyExamined = GameStateManager.hasFlag(state, flag);
             let messageText = HandlerResolver.getEffectiveDescription(item, state) || item.description;
 
-            const handler = HandlerResolver.getEffectiveHandler(item, 'examine', state);
+            const handler = HandlerResolver.getEffectiveHandler(item, 'examine', state, game);
             if (handler?.success?.message) {
                 messageText = handler.success.message;
             } else if (isAlreadyExamined && item.alternateDescription) {
@@ -233,7 +233,7 @@ export async function handleExamine(state: PlayerState, targetName: string, game
         let messageContent = HandlerResolver.getEffectiveDescription(targetObject, state);
 
         // Check for onExamine handler
-        const handler = HandlerResolver.getEffectiveHandler(targetObject, 'examine', state);
+        const handler = HandlerResolver.getEffectiveHandler(targetObject, 'examine', state, game);
         if (handler) {
             // Legacy support: check for alternateMessage
             const legacyHandler = targetObject.handlers?.onExamine as any;

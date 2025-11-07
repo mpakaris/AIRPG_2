@@ -65,7 +65,7 @@ export async function handleMove(state: PlayerState, targetName: string, game: G
     }
 
     // 2. Get effective handler first (to check for custom fail messages)
-    const handler = HandlerResolver.getEffectiveHandler(targetObject, 'move', state);
+    const handler = HandlerResolver.getEffectiveHandler(targetObject, 'move', state, game);
 
     // 3. Validate action (but use custom handler fail message if available)
     const validation = Validator.validate('move', targetObjectId, state, game);

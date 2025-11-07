@@ -3,6 +3,31 @@
  *
  * Helper functions for converting Outcome objects to Effect objects.
  * Centralizes media extraction logic so all handlers benefit.
+ *
+ * MEDIA RESOLUTION PRIORITY
+ * =========================
+ * When creating SHOW_MESSAGE effects, media is resolved in this order:
+ *
+ * 1. EXPLICIT OUTCOME MEDIA (highest priority)
+ *    - outcome.media.url from handler's success/fail
+ *    - Used for: state-specific images (container empty vs full)
+ *    - Example: Coffee machine showing empty cavity after key taken
+ *
+ * 2. RANDOM FAIL IMAGES (fail outcomes only)
+ *    - game.systemMedia.actionFailed pool
+ *    - Used when: fail outcome has no explicit media
+ *
+ * 3. ENTITY-BASED RESOLUTION (fallback)
+ *    - imageId + imageEntityType passed to createMessage()
+ *    - Resolves via: entity.media.images[currentStateId] or entity.media.image
+ *    - Used when: no explicit media provided in outcome
+ *
+ * CRITICAL: Order matters!
+ * - Explicit media should always take precedence
+ * - This allows handlers to override entity default images
+ * - Essential for containers that change appearance (empty vs full)
+ *
+ * See also: HandlerResolver.resolveHandler() for conditional handler resolution
  */
 
 import type { Outcome, Effect, GameObjectId, ItemId, NpcId, PlayerState, Game } from "@/lib/game/types";

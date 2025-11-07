@@ -68,7 +68,7 @@ export async function handleClose(state: PlayerState, targetName: string, game: 
   }
 
   // 3. Get effective handler (with stateMap composition)
-  const handler = HandlerResolver.getEffectiveHandler(targetObject, 'close', state);
+  const handler = HandlerResolver.getEffectiveHandler(targetObject, 'close', state, game);
 
   if (!handler) {
     // No handler - check if object is closeable

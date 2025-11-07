@@ -69,7 +69,7 @@ export async function handleBreak(state: PlayerState, targetName: string, game: 
   }
 
   // 3. Get effective handler (with stateMap composition)
-  const handler = HandlerResolver.getEffectiveHandler(targetObject, 'break', state);
+  const handler = HandlerResolver.getEffectiveHandler(targetObject, 'break', state, game);
 
   if (!handler) {
     // No handler - check if object is breakable

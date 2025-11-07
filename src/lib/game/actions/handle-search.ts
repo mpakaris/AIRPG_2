@@ -74,7 +74,7 @@ export async function handleSearch(state: PlayerState, targetName: string, game:
   }
 
   // 3. Get effective handler (with stateMap composition)
-  const handler = HandlerResolver.getEffectiveHandler(target, 'search', state);
+  const handler = HandlerResolver.getEffectiveHandler(target, 'search', state, game);
 
   if (!handler) {
     // No handler - provide helpful fallback

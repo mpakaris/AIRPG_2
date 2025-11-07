@@ -141,14 +141,24 @@ const splitMessagesForDisplay = (
 
 const MessageLog: FC<Pick<GameScreenProps, "messages">> = ({ messages }) => {
   const scrollViewportRef = useRef<HTMLDivElement>(null);
+  const endOfMessagesRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (scrollViewportRef.current) {
-      scrollViewportRef.current.scrollTo({
-        top: scrollViewportRef.current.scrollHeight,
-        behavior: "smooth",
-      });
+  // Scroll to bottom function
+  const scrollToBottom = () => {
+    if (endOfMessagesRef.current) {
+      endOfMessagesRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
     }
+  };
+
+  // Scroll to bottom whenever messages change
+  useEffect(() => {
+    // Immediate scroll
+    scrollToBottom();
+
+    // Delayed scroll to account for image loading
+    const timeoutId = setTimeout(scrollToBottom, 100);
+
+    return () => clearTimeout(timeoutId);
   }, [messages]);
 
   const displayMessages = splitMessagesForDisplay(messages);
@@ -230,6 +240,14 @@ const MessageLog: FC<Pick<GameScreenProps, "messages">> = ({ messages }) => {
                                 controls
                                 className="rounded-lg border-2 border-border w-full"
                                 preload="metadata"
+                                onLoadedMetadata={() => {
+                                  // Scroll to bottom after video metadata loads
+                                  setTimeout(() => {
+                                    if (endOfMessagesRef.current) {
+                                      endOfMessagesRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
+                                    }
+                                  }, 50);
+                                }}
                               >
                                 Your browser does not support the video tag.
                               </video>
@@ -270,6 +288,14 @@ const MessageLog: FC<Pick<GameScreenProps, "messages">> = ({ messages }) => {
                               className="rounded-lg w-1/2 h-auto mx-auto"
                               style={{ objectFit: "cover" }}
                               data-ai-hint={message.image.hint}
+                              onLoad={() => {
+                                // Scroll to bottom after image loads
+                                setTimeout(() => {
+                                  if (endOfMessagesRef.current) {
+                                    endOfMessagesRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
+                                  }
+                                }, 50);
+                              }}
                             />
                           </button>
                         </DialogTrigger>
@@ -292,6 +318,7 @@ const MessageLog: FC<Pick<GameScreenProps, "messages">> = ({ messages }) => {
             </div>
           );
         })}
+        <div ref={endOfMessagesRef} />
       </div>
     </ScrollArea>
   );

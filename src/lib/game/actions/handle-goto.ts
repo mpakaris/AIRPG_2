@@ -8,8 +8,37 @@
 
 'use server';
 
-import type { Game, PlayerState, Effect, GameObjectId, NpcId } from "@/lib/game/types";
+import type { Game, PlayerState, Effect, GameObjectId, NpcId, LocationId, ItemId } from "@/lib/game/types";
 import { VisibilityResolver, FocusResolver } from "@/lib/game/engine";
+import { normalizeName } from "@/lib/utils";
+
+/**
+ * Helper to find which location contains a specific object or item
+ */
+function findLocationContaining(entityId: GameObjectId | ItemId, entityType: 'object' | 'item', game: Game): LocationId | undefined {
+    for (const location of Object.values(game.locations)) {
+        if (entityType === 'object' && location.gameObjects?.includes(entityId as GameObjectId)) {
+            return location.locationId;
+        }
+        if (entityType === 'item' && location.items?.includes(entityId as ItemId)) {
+            return location.locationId;
+        }
+    }
+    return undefined;
+}
+
+/**
+ * Helper to find parent object if entity is a child
+ */
+function findParentInGame(entityId: GameObjectId | ItemId, game: Game): GameObjectId | undefined {
+    for (const [parentId, parentObj] of Object.entries(game.gameObjects)) {
+        if (parentObj.children?.objects?.includes(entityId as GameObjectId) ||
+            parentObj.children?.items?.includes(entityId as ItemId)) {
+            return parentId as GameObjectId;
+        }
+    }
+    return undefined;
+}
 
 export async function handleGoto(state: PlayerState, targetName: string, game: Game): Promise<Effect[]> {
     if (!targetName) {
@@ -20,12 +49,61 @@ export async function handleGoto(state: PlayerState, targetName: string, game: G
         }];
     }
 
-    // Use FocusResolver to find the target entity
-    const match = FocusResolver.findEntity(targetName, state, game, {
+    // First try to find in current location (fast path)
+    let match = FocusResolver.findEntity(targetName, state, game, {
         searchInventory: false,  // Can't "goto" items in inventory
         searchVisible: true,
         requireFocus: false      // Can goto anything visible
     });
+
+    // If not found in current location, search globally across all locations
+    let needsLocationChange = false;
+    let targetLocationId: LocationId | undefined;
+
+    if (!match) {
+        const normalizedTargetName = normalizeName(targetName);
+        const { matchesName } = await import('@/lib/game/utils/name-matching');
+
+        // GLOBAL SEARCH: Manually search all objects across all locations
+        let bestScore = 0;
+        let bestObjectId: GameObjectId | undefined;
+        let bestObjectLocationId: LocationId | undefined;
+
+        // Search through all game objects
+        for (const [objId, obj] of Object.entries(game.gameObjects)) {
+            const matchResult = matchesName(obj, normalizedTargetName);
+
+            if (matchResult.matches && matchResult.score > bestScore) {
+                // Check if this object is in any location (or its parent is)
+                const parentId = findParentInGame(objId as GameObjectId, game);
+                const objectToLocate = parentId || (objId as GameObjectId);
+                const locationId = findLocationContaining(objectToLocate, 'object', game);
+
+                if (locationId) {
+                    bestScore = matchResult.score;
+                    bestObjectId = objId as GameObjectId;
+                    bestObjectLocationId = locationId;
+                }
+            }
+        }
+
+        // NOTE: NPCs are NOT searched here because they are not zones/focus targets.
+        // NPCs cannot be navigated to - only objects can be zone targets.
+        // Players interact with NPCs through TALK command, not GO TO.
+
+        if (bestObjectId && bestObjectLocationId) {
+            // Found a match in another location
+            match = {
+                id: bestObjectId,
+                type: 'object'
+            };
+            targetLocationId = bestObjectLocationId;
+
+            if (targetLocationId !== state.currentLocationId) {
+                needsLocationChange = true;
+            }
+        }
+    }
 
     if (!match) {
         return [{
@@ -49,10 +127,10 @@ export async function handleGoto(state: PlayerState, targetName: string, game: G
                 content: `${requestedEntityName} is already with you, Burt. You don't need to move to it - just use it directly.`
             }];
         }
-    } else if (match.type === 'npc') {
-        requestedEntityName = game.npcs?.[match.id as NpcId]?.name || 'them';
     } else {
-        // Items can't be "gone to" unless they're placed objects
+        // NPCs and items can't be "gone to"
+        // NPCs should be interacted with via TALK command
+        // Items should be examined or taken
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'system',
@@ -66,13 +144,12 @@ export async function handleGoto(state: PlayerState, targetName: string, game: G
     const parentId = GameStateManager.getParent(state, match.id);
 
     let targetFocusId = match.id;
-    let targetFocusType = match.type as 'object' | 'npc';
+    let targetFocusType: 'object' = 'object'; // Only objects can be focus targets
 
-    if (parentId && match.type === 'object') {
+    if (parentId) {
         // Child entity - focus on parent instead (for engine purposes)
         // But keep the requested entity name for player messaging
         targetFocusId = parentId;
-        targetFocusType = 'object';
     }
 
     // Already at this focus?
@@ -92,6 +169,41 @@ export async function handleGoto(state: PlayerState, targetName: string, game: G
 
     // Set focus with transition message
     const effects: Effect[] = [];
+
+    // If we need to change location, add location change effects first
+    if (needsLocationChange && targetLocationId) {
+        const targetLocation = game.locations[targetLocationId];
+        if (targetLocation) {
+            effects.push({
+                type: 'MOVE_TO_LOCATION',
+                toLocationId: targetLocationId
+            });
+            effects.push({
+                type: 'END_CONVERSATION'
+            });
+            effects.push({
+                type: 'END_INTERACTION'
+            });
+            effects.push({
+                type: 'SHOW_MESSAGE',
+                speaker: 'system',
+                content: game.systemMessages.locationTransition(targetLocation.name)
+            });
+            // Add location scene description
+            const locationEffect: Effect = {
+                type: 'SHOW_MESSAGE',
+                speaker: 'narrator',
+                content: targetLocation.sceneDescription
+            };
+            if (targetLocation.sceneImage) {
+                locationEffect.messageType = 'image';
+                locationEffect.imageUrl = targetLocation.sceneImage.url;
+                locationEffect.imageDescription = targetLocation.sceneImage.description;
+                locationEffect.imageHint = targetLocation.sceneImage.hint;
+            }
+            effects.push(locationEffect);
+        }
+    }
 
     // Add visual indicator for "go to" action from cartridge
     if (game.systemMedia?.move) {
