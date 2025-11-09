@@ -18,4 +18,9 @@ This does everything the game command does, but it also completely resets the ga
 Important: Before running either command, please make sure you have created a .env file and added your FIREBASE_SERVICE_ACCOUNT_KEY to it, as the script needs this to securely connect to your database.
 
 
+Summary of commands:
+  - npm run db:bake - Just convert TypeScript to JSON (already done)
+  - npm run db:seed:game - Use this to update game content without resetting progress
+  - npm run db:seed - Update everything + reset player state
 
+  Go ahead and run npm run db:seed:game to push your changes!
