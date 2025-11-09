@@ -31,6 +31,8 @@ import { handleSearch } from '@/lib/game/actions/handle-search';
 import { handleBreak } from '@/lib/game/actions/handle-break';
 import { handleCombine } from '@/lib/game/actions/handle-combine';
 import { handleClose } from '@/lib/game/actions/handle-close';
+import { handleCall } from '@/lib/game/actions/handle-call';
+import { handleDeviceCommand } from '@/lib/game/actions/handle-device-command';
 import { game as gameCartridge } from '@/lib/game/cartridge';
 import { handleHelp } from '@/lib/game/actions/handle-help';
 import { processEffects } from '@/lib/game/actions/process-effects';
@@ -285,6 +287,17 @@ export async function processCommand(
             const legacyResult = await handleConversation(currentState, safePlayerInput, game);
             allMessagesForSession.push(...legacyResult.messages);
             currentState = legacyResult.newState;
+        } else if (currentState.activeDeviceFocus) {
+            // DEVICE FOCUS MODE: Route commands to device-specific handler
+            effects = await handleDeviceCommand(currentState, safePlayerInput, game);
+            if (effects.length > 0) {
+                const result = await processEffects(currentState, effects, game);
+                currentState = result.newState;
+                allMessagesForSession.push(...result.messages);
+            }
+
+            await logAndSave(userId, gameId, currentState, allMessagesForSession);
+            return { newState: currentState, messages: allMessagesForSession };
         } else if (lowerInput === 'restart') {
             return await resetGame(userId);
         } else if (lowerInput.startsWith('/password ')) {
@@ -443,6 +456,11 @@ export async function processCommand(
                  case 'talk':
                      // NEW: handleTalk returns Effect[]
                      effects = await handleTalk(currentState, restOfCommand.replace('to ', ''), game);
+                     break;
+                 case 'call':
+                 case 'dial':
+                     // NEW: handleCall returns Effect[]
+                     effects = await handleCall(currentState, restOfCommand, game);
                      break;
                  case 'use':
                     const useOnMatch = restOfCommand.match(/^(.*?)\s+on\s+(.*)$/);

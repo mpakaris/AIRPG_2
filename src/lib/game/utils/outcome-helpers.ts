@@ -64,10 +64,18 @@ export function outcomeToMessageEffect(
   game?: Game,
   isFail?: boolean
 ): Effect {
-  // Detect media type from URL extension
-  const getMediaType = (url?: string): 'image' | 'video' | 'text' => {
+  // Detect media type from URL extension or explicit type field
+  const getMediaType = (url?: string, explicitType?: string): 'image' | 'video' | 'audio' | 'text' => {
     if (!url) return 'text';
-    if (url.match(/\.(mp4|webm|ogg|mov)$/i)) return 'video';
+
+    // Use explicit type if provided in outcome.media.type
+    if (explicitType === 'audio') return 'audio';
+    if (explicitType === 'video') return 'video';
+    if (explicitType === 'image') return 'image';
+
+    // Otherwise detect from URL extension
+    if (url.match(/\.(mp4|webm|mov)$/i)) return 'video';
+    if (url.match(/\.(mp3|wav|m4a|aac|ogg)$/i)) return 'audio';
     return 'image';
   };
 
@@ -77,6 +85,7 @@ export function outcomeToMessageEffect(
   let mediaUrl = outcome.media?.url;
   let mediaDescription = outcome.media?.description;
   let mediaHint = outcome.media?.hint;
+  let explicitMediaType = (outcome.media as any)?.type; // Get explicit type from outcome.media.type
 
   if (isFail && !hasOutcomeMedia && game) {
     const failImage = getRandomFailImage(game);
@@ -88,7 +97,7 @@ export function outcomeToMessageEffect(
   }
 
   const finalHasMedia = hasOutcomeMedia || (isFail && mediaUrl !== undefined);
-  const mediaType = getMediaType(mediaUrl);
+  const mediaType = getMediaType(mediaUrl, explicitMediaType);
 
   return {
     type: 'SHOW_MESSAGE',

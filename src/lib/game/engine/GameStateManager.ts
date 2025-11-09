@@ -98,6 +98,17 @@ export class GameStateManager {
           break;
 
         // ============================================================================
+        // Device Focus System (phone, laptop, etc.)
+        // ============================================================================
+        case 'SET_DEVICE_FOCUS':
+          newState.activeDeviceFocus = effect.deviceId;
+          break;
+
+        case 'CLEAR_DEVICE_FOCUS':
+          newState.activeDeviceFocus = null;
+          break;
+
+        // ============================================================================
         // Inventory
         // ============================================================================
         case 'ADD_ITEM':

@@ -1820,56 +1820,167 @@ const items: Record<ItemId, Item> = {
         alternateNames: ['phone', 'smartphone', 'cell phone', 'mobile', 'fbi phone', 'my phone', 'fbi smartphone'],
         archetype: 'Tool',
         description: "Your standard-issue FBI smartphone. It has a camera, secure messaging, and a slot for external media.",
-        capabilities: { isTakable: false, isReadable: false, isUsable: true, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false, inputtable: true },
+        capabilities: { isTakable: false, isReadable: false, isUsable: true, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         state: { currentStateId: 'default' },
         media: {
             images: {
-                default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759604596/FBI_phone_placeholder.png', description: 'FBI-issue smartphone', hint: 'fbi phone' }
+                default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762705398/Pulls_out_Phone_zrekhi.png', description: 'FBI-issue smartphone', hint: 'fbi phone' }
             }
-        },
-        input: {
-            type: 'phrase',
-            validation: '5554442025',
-            hint: 'Use: /password <phone number> to dial',
-            attempts: null,
-            lockout: null
         },
         handlers: {
             // EXAMINE - Visual inspection
             onExamine: {
                 success: {
-                    message: "FBI-issue smartphone. Camera, secure messaging, media slot. Standard kit. Always in your pocket.\n\nYou can dial numbers using: /password <phone number>"
+                    message: "FBI-issue smartphone. Camera, secure messaging, media slot. Standard kit. Always in your pocket.\n\nYou can USE PHONE to enter phone mode and make calls."
                 }
             },
 
-            // Password/Phone Number Submit Handler
-            onPasswordSubmit: {
-                conditions: [{ type: 'FLAG', flag: 'know_full_phone_number', value: true }],
+            // USE - Enter phone mode
+            onUse: {
                 success: {
-                    message: "You dial 555-444-2025. Ring. Ring. Click.\n\nA voice. Cold. Mechanical. Synthesized.\n\n\"Well, well. Agent Burt Macklin. Congratulations. You've proven to be a worthy opponent. You found my little puzzle. Clever.\n\nYou may have won this round, but the game is far from over. More rounds are to come. I'll keep you busy, detective. Very busy.\n\nJustice... Justice will be served. For Rose. For Silas. For all of them.\n\nUntil next time.\"\n\nClick. Silence.\n\n---CHAPTER 1 COMPLETE---",
+                    message: "You take out your FBI phone. The screen lights up.",
                     media: {
-                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759604596/FBI_phone_placeholder.png',
-                        description: 'Phone displaying call with synthesized voice',
-                        hint: 'Villain audio message'
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762705398/Pulls_out_Phone_zrekhi.png',
+                        description: 'Pulling out FBI phone from jacket',
+                        hint: 'Taking out phone'
                     },
                     effects: [
-                        { type: 'SET_FLAG', flag: 'villain_called', value: true },
-                        { type: 'SET_FLAG', flag: 'chapter_1_complete', value: true }
+                        { type: 'SET_DEVICE_FOCUS', deviceId: 'item_player_phone' as ItemId },
+                        {
+                            type: 'SHOW_MESSAGE',
+                            speaker: 'system',
+                            content: 'Phone Mode Active\n\nType CALL <number> to dial.\nType HELP for available commands.\nType PUT PHONE AWAY or CLOSE PHONE when done.'
+                        }
                     ]
-                },
-                fail: {
-                    message: "You dial the number, but it doesn't connect. Either the number is wrong, or you're missing information. The note said 555-444-XXXX. Find the missing digits."
                 }
             },
 
+            // Call Handler - Dial phone numbers (only works in device focus mode)
+            onCall: [
+                {
+                    // SUCCESS: Has both clues (note + victim girl conversation)
+                    phoneNumber: '555-444-2025',
+                    conditions: [
+                        { type: 'FLAG', flag: 'note_dropped_from_book', value: true },
+                        { type: 'FLAG', flag: 'victim_revealed_digits', value: true }
+                    ],
+                    success: {
+                        message: "You dial 555-444-2025.\n\nThe line clicks. Static hisses. Then—a voice. Cold. Measured. Deliberate.\n\n[AUDIO MESSAGE PLAYS]\n\n\"Well, well. Agent Burt Macklin. Congratulations. You've proven to be a worthy opponent. You found my little puzzle. Clever.\n\nYou may have won this round, but the game is far from over. More rounds are to come. I'll keep you busy, detective. Very busy.\n\nJustice... Justice will be served. For Rose. For Silas. For all of them.\n\nUntil next time.\"\n\nThe call ends abruptly. No callback number. Just the echo of that voice.\n\n---CHAPTER 1 COMPLETE---",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1762703179/CH_I___Villain___Voice_Message_du7fsn.mp3',
+                            description: 'Voice message from the villain',
+                            hint: 'Villain audio message',
+                            type: 'audio'
+                        },
+                        effects: [
+                            { type: 'SET_FLAG', flag: 'villain_called', value: true },
+                            { type: 'SET_FLAG', flag: 'chapter_1_complete', value: true },
+                            { type: 'ADD_ITEM', itemId: 'item_audio_message' as ItemId }
+                        ]
+                    },
+                    fail: {
+                        message: "You have the first 7 digits: 555-444. But the last four are scratched out on the note. You need to find the missing piece."
+                    }
+                },
+                {
+                    // Partial number - player found note but not last 4 digits
+                    phoneNumber: '555-444',
+                    conditions: [
+                        { type: 'FLAG', flag: 'note_dropped_from_book', value: true }
+                    ],
+                    success: {
+                        message: "You try dialing 555-444, but that's not enough. You need the complete 10-digit number. The last four digits are scratched out on the note. Find the missing piece."
+                    }
+                },
+                {
+                    // Default fallback - wrong number (plays automated message)
+                    phoneNumber: '*',
+                    conditions: [],
+                    success: {
+                        message: "You dial the number.\n\n[Automated voice]: \"The number you have dialed is currently not available. Please check the number and try again.\"\n\nThe line goes dead.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1762705354/wrong_number_kazuze.mp3',
+                            description: 'Automated wrong number message',
+                            hint: 'Number not available',
+                            type: 'audio'
+                        }
+                    }
+                }
+            ],
+
             // Fallback
-            defaultFailMessage: "The phone's a tool. Try USING it ON something that needs it, or dial a number with /password <phone number>."
+            defaultFailMessage: "The phone's a tool. Try USING it ON something that needs it, or CALL a phone number."
         },
         design: {
             authorNotes: "Universal tool/key for media devices and locked objects throughout the game.",
             tags: ['phone', 'device', 'tool', 'key']
         },
         version: { schema: "1.0", content: "3.0" }
+    },
+    'item_audio_message': {
+        id: 'item_audio_message' as ItemId,
+        name: 'Voicemail Recording',
+        alternateNames: ['voicemail', 'voice message', 'recording', 'audio message', 'villain message', 'message', 'call recording'],
+        archetype: 'Document',
+        description: 'Recorded voicemail from 555-444-2025. That voice... cold, precise. Every word chosen deliberately.',
+        capabilities: { isTakable: false, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+        state: { currentStateId: 'default', readCount: 0 },
+        media: {
+            images: {
+                default: {
+                    url: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1762703179/CH_I___Villain___Voice_Message_du7fsn.mp3',
+                    description: 'Audio recording of villain voicemail',
+                    hint: 'Voice message from unknown caller',
+                    type: 'audio'
+                }
+            }
+        },
+        handlers: {
+            // EXAMINE - Inspect the recording
+            onExamine: {
+                success: {
+                    message: "Voicemail from 555-444-2025. Timestamp: Tonight. Duration: 47 seconds. That voice—who is this?"
+                }
+            },
+
+            // READ - Listen to the message again
+            onRead: {
+                success: {
+                    message: "You listen to the voicemail again.\n\n[AUDIO PLAYS]\n\n\"Well, well. Agent Burt Macklin. Congratulations. You've proven to be a worthy opponent. You found my little puzzle. Clever.\n\nYou may have won this round, but the game is far from over. More rounds are to come. I'll keep you busy, detective. Very busy.\n\nJustice... Justice will be served. For Rose. For Silas. For all of them.\n\nUntil next time.\"\n\nThat voice—cold, precise. Every word chosen deliberately. Who is this?",
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1762703179/CH_I___Villain___Voice_Message_du7fsn.mp3',
+                        description: 'Replaying villain voicemail',
+                        hint: 'Audio message',
+                        type: 'audio'
+                    },
+                    effects: [
+                        { type: 'INCREMENT_ITEM_READ_COUNT', itemId: 'item_audio_message' }
+                    ]
+                }
+            },
+
+            // TAKE - Can't take digital recordings
+            onTake: {
+                fail: {
+                    message: "It's a digital recording stored on your phone. Already in your call history."
+                }
+            },
+
+            // USE - Can't use recordings
+            onUse: {
+                fail: {
+                    message: "It's an audio recording. Try READ or EXAMINE to listen to it again."
+                }
+            },
+
+            // Fallback
+            defaultFailMessage: "It's a voicemail recording. Try: EXAMINE to see details, or READ to listen again."
+        },
+        design: {
+            authorNotes: "Villain's first contact - Chapter 1 climax. Digital item (not takeable, stays in phone).",
+            tags: ['audio', 'clue', 'villain', 'chapter-end']
+        },
+        version: { schema: "1.0", content: "1.0" }
     },
     'item_iron_pipe': {
         id: 'item_iron_pipe' as ItemId,

@@ -34,6 +34,12 @@ export const AVAILABLE_COMMANDS = [
   // NPCs
   'talk to <npc>',
 
+  // Phone/Communication
+  'call <phone number>',
+  'dial <phone number>',
+  'call <phone number> on <device>',
+  'dial <phone number> with <device>',
+
   // System
   'inventory',
   'help',

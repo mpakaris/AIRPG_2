@@ -92,6 +92,8 @@ export type Effect =
   | { type: 'CANCEL_TIMER'; timerId: string } // NEW: Cancel timer
   | { type: 'SET_FOCUS'; focusId: string; focusType: 'object' | 'item' | 'npc'; transitionMessage?: string } // NEW: Set player focus
   | { type: 'CLEAR_FOCUS' } // NEW: Clear player focus
+  | { type: 'SET_DEVICE_FOCUS'; deviceId: GameObjectId | ItemId } // NEW: Enter device mode (phone, laptop, etc.)
+  | { type: 'CLEAR_DEVICE_FOCUS' } // NEW: Exit device mode
   | { type: 'MOVE_TO_CELL', toCellId: CellId }
   | { type: 'MOVE_TO_LOCATION'; toLocationId: LocationId } // NEW: Move player to location
   | { type: 'TELEPORT'; toLocationId: LocationId } // NEW: Teleport player
@@ -222,6 +224,7 @@ export type PlayerState = {
 
   stories: Record<ChapterId, Story>;
   activeConversationWith: NpcId | null;
+  activeDeviceFocus: GameObjectId | ItemId | null; // Device focus mode (phone, laptop, etc.)
   interactingWithObject: GameObjectId | null;
 };
 
@@ -281,6 +284,13 @@ export type OnUseWith = {
   fail?: Outcome;
 };
 
+export type OnCallHandler = {
+  phoneNumber?: string;  // Phone number to match (e.g., "555-444-2025"). Use "*" for fallback/default.
+  conditions?: Condition[];
+  success?: Outcome;
+  fail?: Outcome;
+};
+
 /**
  * Handlers - The 12-Verb Interaction System
  * See /src/documentation/verb-system.md for full documentation
@@ -324,6 +334,7 @@ export type Handlers = {
   onInput?: Rule;
   onEnter?: Rule;
   onExit?: Rule;
+  onCall?: OnCallHandler[];  // Phone calling handler (for devices like phones)
 
   // Fallback message if player tries an undefined verb
   defaultFailMessage?: string;

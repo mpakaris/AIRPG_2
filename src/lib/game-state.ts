@@ -231,6 +231,7 @@ export function getInitialState(game: Game): PlayerState {
 
     stories: {},
     activeConversationWith: null,
+    activeDeviceFocus: null,
     interactingWithObject: null,
   };
 

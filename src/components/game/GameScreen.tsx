@@ -220,10 +220,43 @@ const MessageLog: FC<Pick<GameScreenProps, "messages">> = ({ messages }) => {
                       return null;
                     }
 
+                    // Check if this is an audio URL (by file extension OR message type)
+                    const isAudioUrl =
+                      src.match(/\.(mp3|wav|m4a|aac|ogg)$/i) ||
+                      message.type === "audio";
+
                     // Check if this is a video URL (by file extension OR message type)
                     const isVideoUrl =
-                      src.match(/\.(mp4|webm|ogg|mov)$/i) ||
+                      src.match(/\.(mp4|webm|mov)$/i) ||
                       message.type === "video";
+
+                    if (isAudioUrl) {
+                      return (
+                        <div className={cn(!isImageOnly && "mt-2")}>
+                          <audio
+                            src={src}
+                            controls
+                            className="w-full rounded-lg border-2 border-border bg-muted/30 p-2"
+                            preload="metadata"
+                            onLoadedMetadata={() => {
+                              // Scroll to bottom after audio metadata loads
+                              setTimeout(() => {
+                                if (endOfMessagesRef.current) {
+                                  endOfMessagesRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
+                                }
+                              }, 50);
+                            }}
+                          >
+                            Your browser does not support the audio element.
+                          </audio>
+                          {message.image.description && (
+                            <p className="text-xs text-muted-foreground mt-1 text-center">
+                              {message.image.description}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    }
 
                     if (isVideoUrl) {
                       return (
