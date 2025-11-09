@@ -2,12 +2,13 @@
  * handle-talk - NEW ARCHITECTURE
  *
  * Handles initiating conversations with NPCs.
- * REQUIRES PROXIMITY: Player must be focused on an object with nearbyNpcs or be in same location as NPC.
  *
- * Focus-based talk system:
- * - If player is focused on an object (e.g., counter), check nearbyNpcs property
- * - If no focus, check location.npcs for NPCs in the room
- * - This prevents "talk to barista" from working across the entire cafe
+ * NPCs as Zones:
+ * - NPCs are treated as focusable entities (zones of their own)
+ * - "talk to X" searches all NPCs in the location (not just nearby)
+ * - Automatically shifts focus to the NPC
+ * - Shows transition message
+ * - Starts conversation
  */
 
 'use server';
@@ -28,27 +29,8 @@ export async function handleTalk(state: PlayerState, npcName: string, game: Game
         }];
     }
 
-    // PROXIMITY CHECK: Determine which NPCs are accessible based on focus
-    let accessibleNpcIds: NpcId[] = [];
-
-    if (state.currentFocusId && state.focusType === 'object') {
-        // Player is focused on an object - check nearbyNpcs property
-        const focusedObject = game.gameObjects[state.currentFocusId as GameObjectId];
-
-        if (focusedObject?.nearbyNpcs && focusedObject.nearbyNpcs.length > 0) {
-            accessibleNpcIds = focusedObject.nearbyNpcs;
-        } else {
-            // Focused on object without nearby NPCs
-            return [{
-                type: 'SHOW_MESSAGE',
-                speaker: 'narrator',
-                content: `There's no one near the ${focusedObject?.name || 'object'} to talk to. You need to go to where people are.`
-            }];
-        }
-    } else {
-        // No focus - allow talking to any NPC in the location
-        accessibleNpcIds = location.npcs || [];
-    }
+    // SEARCH ALL NPCs IN LOCATION: Check all revealed NPCs in current location
+    const accessibleNpcIds = location.npcs || [];
 
     if (accessibleNpcIds.length === 0) {
         return [{
@@ -72,32 +54,44 @@ export async function handleTalk(state: PlayerState, npcName: string, game: Game
     }
 
     if (!bestMatch) {
-        // NPC not found in accessible NPCs
-        // Check if they're in the location but not accessible
-        const npcInLocation = location.npcs.find(npcId => {
-            const npc = game.npcs[npcId];
-            return npc && matchesName(npc, normalizedNpcName).matches;
-        });
-
-        if (npcInLocation && !accessibleNpcIds.includes(npcInLocation)) {
-            const npc = game.npcs[npcInLocation];
-            return [{
-                type: 'SHOW_MESSAGE',
-                speaker: 'narrator',
-                content: `You can see ${npc.name} in the cafe, but you're not close enough to talk. Try going to where they are.`
-            }];
-        }
-
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'narrator',
-            content: `There's no one called "${npcName}" nearby.`
+            content: `There's no one called "${npcName}" here.`
         }];
     }
 
-    // NPC FOUND: Start conversation
+    // NPC FOUND: Start conversation with transition
     const npc = game.npcs[bestMatch.npcId];
     const effects: Effect[] = [];
+
+    // FIND WHERE NPC IS LOCATED: Search for objects that have this NPC in nearbyNpcs
+    let npcLocation = '';
+    for (const objId of location.objects) {
+        const obj = game.gameObjects[objId];
+        if (obj?.nearbyNpcs?.includes(npc.id)) {
+            npcLocation = obj.name;
+            break;
+        }
+    }
+
+    // TRANSITION MESSAGE: Show where you're going to talk to them
+    const transitionMessage = npcLocation
+        ? `You make your way to the ${npcLocation} to talk to ${npc.name}.`
+        : `You approach ${npc.name}.`;
+
+    effects.push({
+        type: 'SHOW_MESSAGE',
+        speaker: 'narrator',
+        content: transitionMessage
+    });
+
+    // SHIFT FOCUS: Focus on the NPC directly
+    effects.push({
+        type: 'SET_FOCUS',
+        focusId: npc.id,
+        focusType: 'npc'
+    });
 
     // Increment interaction count
     effects.push({
@@ -123,7 +117,7 @@ export async function handleTalk(state: PlayerState, npcName: string, game: Game
         content: `You are now talking to ${npc.name}. Type your message to continue the conversation. To end the conversation, type 'goodbye'.`
     });
 
-    // Welcome message from NPC
+    // Welcome message from NPC with media
     const welcomeMessage = npc.welcomeMessage || "Hello.";
     effects.push({
         type: 'SHOW_MESSAGE',
@@ -138,7 +132,7 @@ export async function handleTalk(state: PlayerState, npcName: string, game: Game
     // Mark NPC as examined
     effects.push({
         type: 'SET_FLAG',
-        flag: `examined_${npc.id}`,
+        flag: `examined_${npc.id}` as any,
         value: true
     });
 

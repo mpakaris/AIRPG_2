@@ -6,6 +6,51 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 AIRPG_2 is a text-based adventure game (AI-powered RPG) built with Next.js 15, Firebase, and Google Genkit AI. The game uses natural language processing to interpret player commands and generate dynamic narrative responses. It features a hybrid data architecture where game content ("cartridges") is defined in TypeScript but deployed to Firebase Firestore for production.
 
+---
+
+## 🚨 CRITICAL DEVELOPMENT PRINCIPLES
+
+**READ BEFORE EVERY CODE CHANGE**: See `DEVELOPMENT-PRINCIPLES.md` for detailed guidelines.
+
+### Key Rules (Never Violate These)
+
+1. **Think Global, Not Local**
+   - ❌ NEVER fix issues by modifying a single object/entity
+   - ✅ ALWAYS fix the underlying system that all objects use
+   - Question: "Will this solution work for 1000 games or just this one object?"
+
+2. **Follow Documented Patterns**
+   - Check: `src/documentation/handler-resolution-and-media.md`
+   - Use Pattern 1 (Binary) for simple yes/no states
+   - Use Pattern 2 (Multi-State) for complex branching logic
+   - Order conditions: most specific → least specific
+
+3. **Preserve Parent-Child Relationships**
+   - Children MUST be revealed via `REVEAL_FROM_PARENT`
+   - NEVER break `parentId` connections
+   - Verify accessibility chain after changes
+
+4. **Update Documentation**
+   - Code changes → Documentation updates (required, not optional)
+   - New patterns → Add to `src/documentation/`
+   - Bug fixes → Update `src/documentation/backlog.md`
+
+5. **Maintain Architectural Consistency**
+   - NPCs are NOT zones (see `src/documentation/focus-and-zones.md`)
+   - Explicit media takes priority over entity-based (see handler-resolution-and-media.md)
+   - Progressive discovery must be consistent (backlog.md #001)
+
+### Quick Validation Checklist
+
+Before committing:
+- [ ] Is this a global fix or local workaround? (Must be global)
+- [ ] Does it follow existing patterns? (Check documentation)
+- [ ] Are parent-child relationships intact?
+- [ ] Is documentation updated?
+- [ ] Tested on multiple objects/entities?
+
+---
+
 ## Development Commands
 
 ### Running the application
@@ -161,3 +206,6 @@ import { GameClient } from '@/components/game/GameClient';
 - **WhatsApp integration**: `src/lib/whinself-service.ts` provides optional WhatsApp message dispatch
 - **Game constants**: Available commands defined in `src/lib/game/commands.ts`
 - **Documentation**: Entity schemas in `src/documentation/` describe game object structure
+  - `engine-features.md` - Effect types, NPC behaviors, initialization, special commands
+  - `npc-schema.md` - NPC structure, demotion, progressive reveals, topics
+  - `handler-resolution-and-media.md` - Handler patterns and media resolution

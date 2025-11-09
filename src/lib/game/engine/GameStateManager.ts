@@ -37,6 +37,9 @@ export class GameStateManager {
         // State and Flags
         // ============================================================================
         case 'SET_FLAG':
+          if (!newState.flags) {
+            newState.flags = {};
+          }
           newState.flags[effect.flag] = effect.value;
           break;
 
@@ -334,6 +337,25 @@ export class GameStateManager {
 
         case 'END_CONVERSATION':
           newState.activeConversationWith = null;
+          break;
+
+        case 'INCREMENT_NPC_INTERACTION':
+          if (!newState.world[effect.npcId]) {
+            newState.world[effect.npcId] = {};
+          }
+          newState.world[effect.npcId].interactionCount = (newState.world[effect.npcId].interactionCount || 0) + 1;
+          break;
+
+        case 'COMPLETE_NPC_TOPIC':
+          if (!newState.world[effect.npcId]) {
+            newState.world[effect.npcId] = {};
+          }
+          if (!newState.world[effect.npcId].completedTopics) {
+            newState.world[effect.npcId].completedTopics = [];
+          }
+          if (!newState.world[effect.npcId].completedTopics.includes(effect.topicId)) {
+            newState.world[effect.npcId].completedTopics.push(effect.topicId);
+          }
           break;
 
         case 'START_INTERACTION':

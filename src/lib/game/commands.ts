@@ -37,6 +37,7 @@ export const AVAILABLE_COMMANDS = [
   // System
   'inventory',
   'help',
+  '/map',  // Show map of current chapter
   '/password <phrase or PIN>',  // Explicit password command (when focused on locked object)
   'password for <object> "<phrase>"',
   'say "<phrase>" to <object>',

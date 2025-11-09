@@ -2,12 +2,16 @@
 'use server';
 
 import { generateNpcChatter, selectNpcResponse } from "@/ai";
-import type { Game, NPC, NpcId, NpcState, PlayerState, Topic, CommandResult } from "@/lib/game/types";
+import type { Game, NPC, NpcId, NpcState, PlayerState, Topic, CommandResult, Effect } from "@/lib/game/types";
 import { createMessage } from "@/lib/utils";
 import { processEffects } from "@/lib/game/actions/process-effects";
 import { getLiveNpc } from "@/lib/game/utils/helpers";
 
-const CONVERSATION_END_KEYWORDS = ['goodbye', 'bye', 'leave', 'stop', 'end', 'exit', 'thank you and goodbye'];
+const CONVERSATION_END_KEYWORDS = [
+    'goodbye', 'good bye', 'bye', 'see you', 'see ya', 'cya', 'c u', 'later',
+    'leave', 'stop', 'end', 'exit', 'quit', 'done',
+    'thank you and goodbye', 'thanks bye', 'gotta go', 'gtg'
+];
 
 function isEndingConversation(input: string): boolean {
     const lowerInput = input.toLowerCase().trim();
@@ -35,7 +39,7 @@ async function checkDemotion(npc: NPC, state: PlayerState, game: Game): Promise<
         const { newState } = await processEffects(state, [{ type: 'DEMOTE_NPC', npcId: npc.id }], game);
         return newState;
     }
-    
+
     return state;
 }
 
@@ -171,7 +175,24 @@ export async function handleConversation(state: PlayerState, playerInput: string
     let stateAfterDemotionCheck = await checkDemotion(npc, { ...state }, game);
 
     if (isEndingConversation(playerInput)) {
-        return await processEffects(stateAfterDemotionCheck, [{type: 'END_CONVERSATION'}], game);
+        const effects: Effect[] = [
+            {
+                type: 'SHOW_MESSAGE',
+                speaker: npcId,
+                senderName: npc.name,
+                content: `"${npc.goodbyeMessage || 'Goodbye.'}"`,
+                messageType: 'text'
+            },
+            {
+                type: 'SHOW_MESSAGE',
+                speaker: 'system',
+                content: `You ended the conversation with ${npc.name}. Type your next command to continue.`
+            },
+            {
+                type: 'END_CONVERSATION'
+            }
+        ];
+        return await processEffects(stateAfterDemotionCheck, effects, game);
     }
     
     if (npc.dialogueType === 'scripted') {

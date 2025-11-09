@@ -243,6 +243,125 @@ onRead: [
 
 ---
 
+## Handler Patterns: Binary vs Multi-State
+
+There are **two universal patterns** for conditional handlers. Choose based on complexity:
+
+### Pattern 1: Binary Success/Fail (Simple)
+
+**Use when**: Simple yes/no state, one action with two outcomes
+
+**Example**: Coffee machine - break if not broken, otherwise message
+
+```typescript
+onUse: [
+  {
+    itemId: 'item_iron_pipe',
+    conditions: [{ type: 'NO_FLAG', flag: 'machine_is_broken' }],
+    success: {
+      message: "Pipe meets panel. Sharp crack. Machine breaks open.",
+      effects: [
+        { type: 'SET_FLAG', flag: 'machine_is_broken', value: true },
+        { type: 'REVEAL_FROM_PARENT', entityId: 'item_key', parentId: 'obj_machine' }
+      ]
+    },
+    fail: {
+      message: "Already broken. One hit was enough."
+    }
+  }
+]
+```
+
+**How it works**:
+- If `conditions` evaluate to TRUE → use `success`
+- If `conditions` evaluate to FALSE → use `fail`
+- One handler, two outcomes
+
+### Pattern 2: Multi-State Branching (Complex)
+
+**Use when**: Multiple distinct game states, different outcomes for each
+
+**Example**: Bookshelf - destroyed / ready to cut / not ready yet
+
+```typescript
+onUse: [
+  {
+    // State 1: Already destroyed
+    itemId: 'item_recip_saw',
+    conditions: [{ type: 'FLAG', flag: 'bookshelf_destroyed', value: true }],
+    success: {
+      message: "Already destroyed. The hidden door is exposed."
+    }
+  },
+  {
+    // State 2: Ready to cut (has knowledge)
+    itemId: 'item_recip_saw',
+    conditions: [
+      { type: 'FLAG', flag: 'read_secret_document', value: true },
+      { type: 'NO_FLAG', flag: 'bookshelf_destroyed' }
+    ],
+    success: {
+      message: "You fire up the saw. Wood screams. Door revealed.",
+      effects: [
+        { type: 'SET_FLAG', flag: 'bookshelf_destroyed', value: true },
+        { type: 'REVEAL_FROM_PARENT', entityId: 'obj_hidden_door', parentId: 'obj_bookshelf' }
+      ]
+    }
+  },
+  {
+    // State 3: Not ready (lacks knowledge)
+    itemId: 'item_recip_saw',
+    conditions: [{ type: 'NO_FLAG', flag: 'read_secret_document' }],
+    success: {
+      message: "Hmmm the battery seems too low. Wait until it's charged fully."
+    }
+  }
+]
+```
+
+**How it works**:
+- Handlers evaluated **top to bottom**
+- First handler whose conditions match is used
+- Each handler represents a distinct game state
+- Order from **most specific to least specific**
+
+### Choosing the Right Pattern
+
+| Scenario | Pattern | Why |
+|----------|---------|-----|
+| Break/open/unlock once | Binary | Simple on/off state |
+| Progressive stages | Multi-State | Different effects at each stage |
+| Knowledge-gated actions | Multi-State | Need to check multiple prerequisites |
+| Container empty/full | Multi-State | Three states: closed, open+item, open+empty |
+| Simple blocking | Binary | Can do / can't do |
+| Charging/waiting mechanics | Multi-State | Not ready / ready / already done |
+
+### Hybrid Approach
+
+You can also combine both patterns:
+
+```typescript
+onUse: [
+  {
+    // Check special case first
+    itemId: 'item_tool',
+    conditions: [{ type: 'FLAG', flag: 'already_used' }],
+    success: { message: "Already done." }
+  },
+  {
+    // Then use success/fail for main logic
+    itemId: 'item_tool',
+    conditions: [{ type: 'FLAG', flag: 'has_permission' }],
+    success: { message: "Action performed!", effects: [...] },
+    fail: { message: "Not ready yet." }
+  }
+]
+```
+
+**Key Principle**: Order handlers from **most specific conditions** to **least specific**. The first matching handler wins.
+
+---
+
 ## Common Mistakes to Avoid
 
 ### ❌ DON'T: Make Local Fixes to Individual Objects

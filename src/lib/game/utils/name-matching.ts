@@ -220,16 +220,30 @@ export function findBestMatch(
             entitiesInFocus.objects.push(state.currentFocusId);
         }
 
-        // Get direct children of focused entity
-        const children = GameStateManager.getChildren(state, state.currentFocusId);
+        // Get ALL descendants of focused entity (including grandchildren)
+        // This is needed for items that have items as children (e.g., note inside book)
+        const getAllDescendants = (parentId: string): string[] => {
+            const children = GameStateManager.getChildren(state, parentId);
+            const allDescendants: string[] = [...children];
+
+            // Recursively get descendants of each child
+            for (const childId of children) {
+                const grandchildren = getAllDescendants(childId);
+                allDescendants.push(...grandchildren);
+            }
+
+            return allDescendants;
+        };
+
+        const allDescendants = getAllDescendants(state.currentFocusId);
 
         // Debug: log children for bookshelf
         if (state.currentFocusId === 'obj_bookshelf') {
-            console.log('[findBestMatch] Bookshelf children:', children);
+            console.log('[findBestMatch] Bookshelf descendants:', allDescendants);
             console.log('[findBestMatch] Bookshelf state:', GameStateManager.getEntityState(state, 'obj_bookshelf'));
         }
 
-        for (const childId of children) {
+        for (const childId of allDescendants) {
             if (game.items[childId as ItemId]) {
                 entitiesInFocus.items.push(childId);
             } else if (game.gameObjects[childId as GameObjectId]) {

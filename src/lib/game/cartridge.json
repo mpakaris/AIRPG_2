@@ -5,7 +5,7 @@
   "setting": "Modern-day USA, 2025",
   "gameType": "Limited Open World",
   "narratorName": "Narrator",
-  "promptContext": "You are the System, responsible for interpreting player commands and translating them into valid game actions. Your role is purely technical—you analyze input and route it to the correct handler.\n\n**// 1. Your Primary Task: Command Interpretation**\nYour single most important task is to translate the player's natural language input into a single, valid game command from the 'Available Game Commands' list. Use the exact entity names provided in the 'Visible Names' lists.\n  - \"look at the book\" and \"examine notebook\" both become `examine \"Brown Notebook\"`.\n  - \"open the safe with the key\" and \"use my key to open the safe\" both become `use \"Brass Key\" on \"Wall Safe\"`.\n  - \"read sd card on phone\", \"read sd card with phone\", \"check sd card on my phone\" all become `read \"SD Card\" on \"Phone\"`.\n  - \"move the painting\" or \"look behind the art\" both become `move \"Wall painting\"`.\n  - \"go to bookshelf\", \"move to the safe\", \"walk over to the barista\" all become `goto \"Bookshelf\"`, `goto \"Wall Safe\"`, `goto \"Barista\"` (focus on object/NPC, not location travel).\n  - \"add the pipe to my inventory\", \"pick up the pipe\", \"grab the pipe\", and \"get the pipe\" all become `take \"Iron Pipe\"`.\n  - \"put the key in my pocket\" becomes `take \"Brass Key\"`.\n  - \"check my stuff\" and \"what do I have\" both become `inventory`.\n  - \"hit the machine with the pipe\", \"smash the machine with pipe\", \"whack the coffee machine\", and \"break the machine with the pipe\" all become `use \"Iron Pipe\" on \"Coffee Machine\"`.\n  - \"check the card\" and \"examine sd card\" both become `examine \"SD Card\"` (even if inside container).\n  - \"read book The Art of the Deal\", \"check book Justice for My Love\" become `read \"The Art of the Deal\"`, `examine \"Justice for My Love\"` (strip generic words like \"book\" from entity names).\n\n**// 2. Your Response Protocol**\n- **Minimize System Messages:** For valid, actionable commands (take, use, examine, open, read, move), your `agentResponse` should be null or a minimal confirmation. The Narrator handles ALL descriptive output.\n  - **CORRECT:** `{\"agentResponse\": null, \"commandToExecute\": \"examine \\\"Painting on the wall\\\"\"}`\n  - **ALSO ACCEPTABLE:** `{\"agentResponse\": \"Examining the painting.\", \"commandToExecute\": \"examine \\\"Painting on the wall\\\"\"}`\n  - **INCORRECT:** `{\"agentResponse\": \"You walk over to examine the abstract painting. It's quite intriguing.\", \"commandToExecute\": \"examine \\\"Painting on the wall\\\"\"}`\n\n**// 3. Handling Invalid Input - READ THIS VERY CAREFULLY**\n- **Illogical/Destructive Actions:** ONLY mark as invalid for truly nonsensical actions (e.g., \"eat the key\", \"destroy reality\"). Use `commandToExecute: \"invalid\"`.\n- **CRITICAL - You MUST NOT Block Valid Commands:**\n  - Your ONLY job is translating natural language → game commands\n  - If the player mentions an object name from the Visible Names lists, you MUST translate it to a command\n  - DO NOT block commands because objects are \"inside containers\" - the game engine handles this\n  - DO NOT block commands because you think they \"won't work\" - let the engine decide\n  - DO NOT give helpful suggestions like \"try examining X instead\" - just translate what they asked for\n  - Examples:\n    - Player: \"check SD card\" → `examine \"SD Card\"` ✓ (even if it's inside something)\n    - Player: \"take the key\" → `take \"Brass Key\"` ✓ (even if not visible yet)\n    - Player: \"read newspaper\" → `read \"Newspaper Article\"` ✓ (always translate, engine handles accessibility)\n- **Conversational Input:**  For conversational input (e.g., \"what now?\", \"help\"), use `commandToExecute: \"invalid\"` or `\"help\"`.\n\n**// 4. Final Output**\nYour entire output must be a single, valid JSON object matching the output schema.\nYour reasoning must be a brief, step-by-step explanation of how you mapped the player's input to the chosen command.\n",
+  "promptContext": "You are the System, responsible for interpreting player commands and translating them into valid game actions. Your role is purely technical—you analyze input and route it to the correct handler.\n\n**// 1. Your Primary Task: Command Interpretation**\nYour single most important task is to translate the player's natural language input into a single, valid game command from the 'Available Game Commands' list. Use the exact entity names provided in the 'Visible Names' lists.\n  - \"look at the book\" and \"examine notebook\" both become `examine \"Brown Notebook\"`.\n  - \"open the safe with the key\" and \"use my key to open the safe\" both become `use \"Brass Key\" on \"Wall Safe\"`.\n  - \"read sd card on phone\", \"read sd card with phone\", \"check sd card on my phone\" all become `read \"SD Card\" on \"Phone\"`.\n  - \"move the painting\" or \"look behind the art\" both become `move \"Wall painting\"`.\n  - \"go to bookshelf\", \"move to the safe\", \"walk over to the counter\" all become `goto \"Bookshelf\"`, `goto \"Wall Safe\"`, `goto \"Counter\"` (focus on object, not location travel).\n  - \"talk to barista\", \"speak with the manager\", \"chat with rose\" all become `talk to \"Barista\"`, `talk to \"Cafe Manager\"`, `talk to \"Rose\"` (IMPORTANT: use \"talk to\" for NPCs, NOT \"goto\").\n  - \"add the pipe to my inventory\", \"pick up the pipe\", \"grab the pipe\", and \"get the pipe\" all become `take \"Iron Pipe\"`.\n  - \"put the key in my pocket\" becomes `take \"Brass Key\"`.\n  - \"check my stuff\" and \"what do I have\" both become `inventory`.\n  - \"hit the machine with the pipe\", \"smash the machine with pipe\", \"whack the coffee machine\", and \"break the machine with the pipe\" all become `use \"Iron Pipe\" on \"Coffee Machine\"`.\n  - \"check the card\" and \"examine sd card\" both become `examine \"SD Card\"` (even if inside container).\n  - \"read book The Art of the Deal\", \"check book Justice for My Love\" become `read \"The Art of the Deal\"`, `examine \"Justice for My Love\"` (strip generic words like \"book\" from entity names).\n\n**// 2. Your Response Protocol**\n- **Minimize System Messages:** For valid, actionable commands (take, use, examine, open, read, move), your `agentResponse` should be null or a minimal confirmation. The Narrator handles ALL descriptive output.\n  - **CORRECT:** `{\"agentResponse\": null, \"commandToExecute\": \"examine \\\"Painting on the wall\\\"\"}`\n  - **ALSO ACCEPTABLE:** `{\"agentResponse\": \"Examining the painting.\", \"commandToExecute\": \"examine \\\"Painting on the wall\\\"\"}`\n  - **INCORRECT:** `{\"agentResponse\": \"You walk over to examine the abstract painting. It's quite intriguing.\", \"commandToExecute\": \"examine \\\"Painting on the wall\\\"\"}`\n\n**// 3. Handling Invalid Input - READ THIS VERY CAREFULLY**\n- **Illogical/Destructive Actions:** ONLY mark as invalid for truly nonsensical actions (e.g., \"eat the key\", \"destroy reality\"). Use `commandToExecute: \"invalid\"`.\n- **CRITICAL - You MUST NOT Block Valid Commands:**\n  - Your ONLY job is translating natural language → game commands\n  - If the player mentions an object name from the Visible Names lists, you MUST translate it to a command\n  - DO NOT block commands because objects are \"inside containers\" - the game engine handles this\n  - DO NOT block commands because you think they \"won't work\" - let the engine decide\n  - DO NOT give helpful suggestions like \"try examining X instead\" - just translate what they asked for\n  - Examples:\n    - Player: \"check SD card\" → `examine \"SD Card\"` ✓ (even if it's inside something)\n    - Player: \"take the key\" → `take \"Brass Key\"` ✓ (even if not visible yet)\n    - Player: \"read newspaper\" → `read \"Newspaper Article\"` ✓ (always translate, engine handles accessibility)\n- **Conversational Input:**  For conversational input (e.g., \"what now?\", \"help\"), use `commandToExecute: \"invalid\"` or `\"help\"`.\n\n**// 4. Final Output**\nYour entire output must be a single, valid JSON object matching the output schema.\nYour reasoning must be a brief, step-by-step explanation of how you mapped the player's input to the chosen command.\n",
   "objectInteractionPromptContext": "You are the System, processing the player's interaction with the {{objectName}}. Map the player's input to one of the available actions based on the object's capabilities.",
   "storyStyleGuide": "You are a master storyteller and a brilliant editor. Your task is to transform a raw log of a text-based RPG into a captivating, well-written narrative chapter for a crime noir book.\n\n**Style Guide:**\n- Write in the third person, past tense.\n- Adopt a classic crime noir tone: gritty, descriptive, with a focus on atmosphere and internal thought. The main character is FBI agent Burt Macklin.\n- Aim for a rich, descriptive style. Don't just state what happened; paint a picture. Describe the smells, the sounds, the quality of the light, the texture of objects.\n- Expand on the events in the log. Weave them into a cohesive story. Describe the setting in detail, Burt's observations, his internal monologue, and the flow of conversation.\n- Smooth out the \"game-like\" elements. Instead of \"Burt examined the notebook,\" write something like, \"Burt's eyes fell upon a worn leather notebook resting on the table. It seemed to pulse with forgotten secrets, its leather cover softened by decades of handling.\"\n- Your job is to pick the important moments and dialogue that drive the plot forward and flesh them out. Omit repetitive actions or dead ends, but expand on the crucial scenes.\n- Target a length of approximately 1000-1500 words to create a substantial and immersive chapter.\n- Format the output as a single block of prose. Do not use markdown, titles, or headings within the story itself.\n",
   "systemMedia": {
@@ -177,7 +177,8 @@
       ],
       "npcs": [
         "npc_barista",
-        "npc_cafe_manager"
+        "npc_manager",
+        "npc_victim_girl"
       ],
       "entryPortals": [
         "portal_street_to_cafe"
@@ -787,7 +788,8 @@
             "effects": [
               {
                 "type": "SET_FLAG",
-                "flag": "has_unlocked_notebook"
+                "flag": "has_unlocked_notebook",
+                "value": true
               },
               {
                 "type": "SET_ENTITY_STATE",
@@ -1147,8 +1149,8 @@
       "capabilities": {
         "openable": false,
         "lockable": false,
-        "breakable": false,
-        "movable": true,
+        "breakable": true,
+        "movable": false,
         "powerable": false,
         "container": true,
         "readable": false,
@@ -1229,11 +1231,75 @@
             "message": "It's furniture, not evidence. Try EXAMINING the books or SEARCHING the shelf."
           }
         },
-        "onUse": {
-          "fail": {
-            "message": "It's a shelf for books. Try EXAMINING, READING, or SEARCHING it."
+        "onUse": [
+          {
+            "itemId": "item_recip_saw",
+            "conditions": [
+              {
+                "type": "FLAG",
+                "flag": "bookshelf_destroyed",
+                "value": true
+              }
+            ],
+            "success": {
+              "message": "Already destroyed. The hidden door is exposed."
+            }
+          },
+          {
+            "itemId": "item_recip_saw",
+            "conditions": [
+              {
+                "type": "FLAG",
+                "flag": "read_secret_document",
+                "value": true
+              },
+              {
+                "type": "NO_FLAG",
+                "flag": "bookshelf_destroyed"
+              }
+            ],
+            "success": {
+              "message": "You remember the blueprint. Hidden room behind the bookshelf.\n\nYou fire up the reciprocating saw. Blade bites into oak. Wood screams. Sawdust sprays. You cut vertically down the side, then horizontally. The shelf shudders, splits. You kick it aside.\n\nBehind it: a door. Flush with the wall. No handle. Just a keypad. Someone hid this deliberately. The blueprint was right.",
+              "media": {
+                "url": "https://res.cloudinary.com/dg912bwcc/image/upload/v1762368505/Secret_Door_Revealed_o27pj3.png",
+                "description": "Destroyed bookshelf revealing hidden door",
+                "hint": "A secret door with a keypad"
+              },
+              "effects": [
+                {
+                  "type": "SET_FLAG",
+                  "flag": "bookshelf_destroyed",
+                  "value": true
+                },
+                {
+                  "type": "SET_ENTITY_STATE",
+                  "entityId": "obj_bookshelf",
+                  "patch": {
+                    "isBroken": true,
+                    "isOpen": true
+                  }
+                },
+                {
+                  "type": "REVEAL_FROM_PARENT",
+                  "entityId": "obj_hidden_door",
+                  "parentId": "obj_bookshelf"
+                }
+              ]
+            }
+          },
+          {
+            "itemId": "item_recip_saw",
+            "conditions": [
+              {
+                "type": "NO_FLAG",
+                "flag": "read_secret_document"
+              }
+            ],
+            "success": {
+              "message": "Hmmm the battery seems too low. Wait until it's charged fully."
+            }
           }
-        },
+        ],
         "onOpen": {
           "fail": {
             "message": "Open shelving. Nothing to open. Try READING or SEARCHING the books."
@@ -1245,48 +1311,13 @@
           }
         },
         "onMove": {
-          "conditions": [
-            {
-              "type": "FLAG",
-              "flag": "read_secret_document",
-              "value": true
-            }
-          ],
-          "success": {
-            "message": "You remember the blueprint. Hidden room behind the bookshelf. You grip the side, pull hard. Solid oak groans against floor. Scraping. Dust rises.\n\nIt shifts. A few inches. Then more.\n\nBehind it: a door. Flush with the wall. No handle. Just a keypad. Someone hid this deliberately. The blueprint was right.",
-            "media": {
-              "url": "https://res.cloudinary.com/dg912bwcc/image/upload/v1762368505/Secret_Door_Revealed_o27pj3.png",
-              "description": "Bookshelf moved aside revealing hidden door",
-              "hint": "A secret door with a keypad"
-            },
-            "effects": [
-              {
-                "type": "SET_ENTITY_STATE",
-                "entityId": "obj_bookshelf",
-                "patch": {
-                  "isMoved": true,
-                  "isOpen": true
-                }
-              },
-              {
-                "type": "REVEAL_FROM_PARENT",
-                "entityId": "obj_hidden_door",
-                "parentId": "obj_bookshelf"
-              },
-              {
-                "type": "SET_FLAG",
-                "flag": "bookshelf_moved",
-                "value": true
-              }
-            ]
-          },
           "fail": {
-            "message": "Solid oak, heavy. No reason to move this. Try EXAMINING or READING the books."
+            "message": "Too heavy to move. Solid oak, bolted down maybe. You'd need something more destructive. Maybe check the drawer at the counter for tools."
           }
         },
         "onBreak": {
           "fail": {
-            "message": "Solid oak. You're not smashing this with bare hands. Besides, try EXAMINING the books first."
+            "message": "Solid oak. You're not smashing this with bare hands. You'd need a saw or something powerful. Check the counter drawer for tools."
           }
         },
         "onRead": {
@@ -1828,7 +1859,7 @@
       },
       "nearbyNpcs": [
         "npc_barista",
-        "npc_cafe_manager"
+        "npc_manager"
       ],
       "media": {
         "images": {
@@ -2277,7 +2308,8 @@
               "effects": [
                 {
                   "type": "SET_FLAG",
-                  "flag": "machine_is_broken"
+                  "flag": "machine_is_broken",
+                  "value": true
                 },
                 {
                   "type": "SET_ENTITY_STATE",
@@ -2456,7 +2488,8 @@
                 },
                 {
                   "type": "SET_FLAG",
-                  "flag": "notebook_video_watched"
+                  "flag": "notebook_video_watched",
+                  "value": true
                 }
               ]
             },
@@ -2493,7 +2526,8 @@
                 },
                 {
                   "type": "SET_FLAG",
-                  "flag": "notebook_video_watched"
+                  "flag": "notebook_video_watched",
+                  "value": true
                 }
               ]
             },
@@ -2688,6 +2722,9 @@
           "obj_tablet"
         ]
       },
+      "nearbyNpcs": [
+        "npc_victim_girl"
+      ],
       "media": {
         "images": {
           "default": {
@@ -3578,11 +3615,13 @@
               },
               {
                 "type": "SET_FLAG",
-                "flag": "notebook_article_read"
+                "flag": "notebook_article_read",
+                "value": true
               },
               {
                 "type": "SET_FLAG",
-                "flag": "notebook_interaction_complete"
+                "flag": "notebook_interaction_complete",
+                "value": true
               }
             ]
           },
@@ -3985,7 +4024,7 @@
             "success": {
               "message": "You open the book again. As you flip through the pages, a small piece of paper flutters out and lands on the floor. You pick it up.\n\nIt's a handwritten note. Ink faded but legible. Just a phone number:\n\n555-444-XXXX\n\nThe last four digits are scratched out. Someone hid this deliberately. Why?",
               "media": {
-                "url": "https://images.unsplash.com/photo-1586075010923-2dd4570fb338?w=600",
+                "url": "https://res.cloudinary.com/dg912bwcc/image/upload/v1762518484/counter_bookshelf_note_puesuy.png",
                 "description": "A handwritten note falling from book pages",
                 "hint": "Note with phone number!"
               },
@@ -4345,7 +4384,8 @@
       "startConversationEffects": [
         {
           "type": "SET_FLAG",
-          "flag": "has_talked_to_barista"
+          "flag": "has_talked_to_barista",
+          "value": true
         }
       ],
       "limits": {
@@ -4665,7 +4705,7 @@
             ]
           },
           "response": {
-            "message": "You know, he left this here the other day. Said I could have it. Some business card. If you're that interested, you can take it. It's just collecting dust.",
+            "message": "You know, he left this here the other day. Said I could have it. Some business card. If you're that interested, you can take it. It's just collecting dust. Now, if you'll excuse me, I've got work to do.",
             "effects": [
               {
                 "type": "ADD_ITEM",
@@ -4673,7 +4713,8 @@
               },
               {
                 "type": "SET_FLAG",
-                "flag": "has_received_business_card"
+                "flag": "has_received_business_card",
+                "value": true
               },
               {
                 "type": "SHOW_MESSAGE",
@@ -4682,9 +4723,6 @@
                 "messageType": "image",
                 "imageId": "item_business_card",
                 "imageEntityType": "item"
-              },
-              {
-                "type": "END_CONVERSATION"
               }
             ]
           }
@@ -4779,22 +4817,6 @@
       "persona": "You are Rose Carmichael, the kidnapped victim. You've been tied up in this hidden room for days. You're terrified but trying to stay calm. You know critical information about the case - specifically that the missing digits from the phone number are 2025. You're desperate to help the detective catch your kidnapper.",
       "welcomeMessage": "Mmmmph! Mmph mmph! [She struggles against her bonds, trying desperately to speak through the tape]",
       "goodbyeMessage": "Please... find him. The number... 2025. That's all I know.",
-      "progressiveReveals": [
-        {
-          "triggerOnInteraction": 2,
-          "topicId": "t_phone_digits"
-        }
-      ],
-      "startConversationEffects": [
-        {
-          "type": "SET_FLAG",
-          "flag": "has_talked_to_victim"
-        }
-      ],
-      "limits": {
-        "maxInteractions": 20,
-        "interactionLimitResponse": "I've told you everything I know. Please, just call 555-444-2025 on your phone. End this."
-      },
       "demoteRules": {
         "onFlagsAll": [
           "victim_revealed_digits"
@@ -4808,6 +4830,23 @@
         "welcomeMessage": "Thank you for finding me. Please, call the number.",
         "goodbyeMessage": "Be careful. He's dangerous.",
         "defaultResponse": "555-444-2025. That's all I know. Please call it."
+      },
+      "progressiveReveals": [
+        {
+          "triggerOnInteraction": 2,
+          "topicId": "t_phone_digits"
+        }
+      ],
+      "startConversationEffects": [
+        {
+          "type": "SET_FLAG",
+          "flag": "has_talked_to_victim",
+          "value": true
+        }
+      ],
+      "limits": {
+        "maxInteractions": 20,
+        "interactionLimitResponse": "I've told you everything I know. Please, just call 555-444-2025 on your phone. End this."
       },
       "topics": [
         {
@@ -4827,7 +4866,8 @@
             "effects": [
               {
                 "type": "SET_FLAG",
-                "flag": "tape_removed"
+                "flag": "tape_removed",
+                "value": true
               }
             ]
           }
@@ -4974,11 +5014,13 @@
             "effects": [
               {
                 "type": "SET_FLAG",
-                "flag": "victim_revealed_digits"
+                "flag": "victim_revealed_digits",
+                "value": true
               },
               {
                 "type": "SET_FLAG",
-                "flag": "know_full_phone_number"
+                "flag": "know_full_phone_number",
+                "value": true
               }
             ]
           }

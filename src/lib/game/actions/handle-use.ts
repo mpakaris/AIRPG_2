@@ -96,40 +96,45 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
       // Check if object has onUse handlers
       const useHandlers = targetObject.handlers?.onUse;
       if (Array.isArray(useHandlers)) {
-        // Find handler for this specific item
-        const specificHandler = useHandlers.find(h => h.itemId === itemId);
+        // Find ALL handlers for this specific item
+        const matchingHandlers = useHandlers.filter(h => h.itemId === itemId);
 
-        if (specificHandler) {
-          // Evaluate conditions
-          const conditionsMet = Validator.evaluateConditions(specificHandler.conditions, state, game);
-          const outcome = conditionsMet ? specificHandler.success : specificHandler.fail;
-          const isFail = !conditionsMet;
+        if (matchingHandlers.length > 0) {
+          // Evaluate conditions for each matching handler
+          // Return the FIRST one where conditions match
+          for (const handler of matchingHandlers) {
+            const conditionsMet = Validator.evaluateConditions(handler.conditions, state, game);
+            const outcome = conditionsMet ? handler.success : handler.fail;
+            const isFail = !conditionsMet;
 
-          if (!outcome) {
-            return [{
-              type: 'SHOW_MESSAGE',
-              speaker: 'narrator',
-              content: game.systemMessages.useDidntWork
-            }];
+            // If we have an outcome (either success with met conditions, or fail with unmet conditions)
+            if (outcome) {
+              // Build effects with media support
+              const effects: Effect[] = [];
+
+              // Only set focus if NOT personal equipment (phone doesn't need focus - it's always with you)
+              if (!isPersonalEquipment) {
+                effects.push({
+                  type: 'SET_FOCUS',
+                  focusId: targetObjectId,
+                  focusType: 'object',
+                  transitionMessage: FocusResolver.getTransitionNarration(targetObjectId, 'object', state, game) || undefined
+                });
+              }
+
+              // Use helper to build effects with automatic media extraction
+              effects.push(...buildEffectsFromOutcome(outcome, targetObjectId, 'object', game, isFail));
+
+              return effects;
+            }
           }
 
-          // Build effects with media support
-          const effects: Effect[] = [];
-
-          // Only set focus if NOT personal equipment (phone doesn't need focus - it's always with you)
-          if (!isPersonalEquipment) {
-            effects.push({
-              type: 'SET_FOCUS',
-              focusId: targetObjectId,
-              focusType: 'object',
-              transitionMessage: FocusResolver.getTransitionNarration(targetObjectId, 'object', state, game) || undefined
-            });
-          }
-
-          // Use helper to build effects with automatic media extraction
-          effects.push(...buildEffectsFromOutcome(outcome, targetObjectId, 'object', game, isFail));
-
-          return effects;
+          // If we get here, we found matching handlers but none had outcomes
+          return [{
+            type: 'SHOW_MESSAGE',
+            speaker: 'narrator',
+            content: game.systemMessages.useDidntWork
+          }];
         }
       }
 

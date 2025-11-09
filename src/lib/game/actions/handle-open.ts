@@ -81,8 +81,21 @@ export async function handleOpen(state: PlayerState, targetName: string, game: G
             }
         }
 
-        // Generic fallback if no specific handler - set isOpen to true
+        // Generic fallback if no specific handler
         const effects: Effect[] = [];
+
+        // Check if object is locked (use runtime state from GameStateManager)
+        const { GameStateManager } = require('@/lib/game/engine');
+        const runtimeState = GameStateManager.getEntityState(state, targetObjectId);
+        const isLocked = runtimeState.isLocked === true;
+
+        if (isLocked) {
+            return [{
+                type: 'SHOW_MESSAGE',
+                speaker: 'narrator',
+                content: `The ${targetObject.name} is locked. You'll need to unlock it first.`
+            }];
+        }
 
         // Only set focus if NOT personal equipment
         if (targetObject.personal !== true) {

@@ -311,7 +311,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         hint: 'The password worked'
                     },
                     effects: [
-                        { type: 'SET_FLAG', flag: 'has_unlocked_notebook' as Flag },
+                        { type: 'SET_FLAG', flag: 'has_unlocked_notebook' as Flag, value: true },
                         { type: 'SET_ENTITY_STATE', entityId: 'obj_brown_notebook', patch: { isLocked: false, isOpen: true, currentStateId: 'unlocked' } },
                         { type: 'REVEAL_FROM_PARENT', entityId: 'obj_sd_card', parentId: 'obj_brown_notebook' },
                         { type: 'REVEAL_FROM_PARENT', entityId: 'item_secret_document', parentId: 'obj_brown_notebook' }
@@ -595,7 +595,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         name: 'Bookshelf',
         archetype: 'Furniture',
         description: "A small bookshelf filled with used paperbacks is tucked into a corner.",
-        capabilities: { openable: false, lockable: false, breakable: false, movable: true, powerable: false, container: true, readable: false, inputtable: false },
+        capabilities: { openable: false, lockable: false, breakable: true, movable: false, powerable: false, container: true, readable: false, inputtable: false },
         state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
         inventory: { items: [], capacity: null },
         children: {
@@ -630,12 +630,52 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                 }
             },
 
-            // 4. USE - No item usage
-            onUse: {
-                fail: {
-                    message: "It's a shelf for books. Try EXAMINING, READING, or SEARCHING it."
+            // 4. USE - Use recip saw to cut through it
+            // IMPORTANT: Conditional handler array for state-based interaction
+            // See: src/documentation/handler-resolution-and-media.md
+            onUse: [
+                {
+                    // Case 1: Already destroyed
+                    itemId: 'item_recip_saw' as ItemId,
+                    conditions: [
+                        { type: 'FLAG', flag: 'bookshelf_destroyed', value: true }
+                    ],
+                    success: {
+                        message: "Already destroyed. The hidden door is exposed."
+                    }
+                },
+                {
+                    // Case 2: Document read, ready to cut
+                    itemId: 'item_recip_saw' as ItemId,
+                    conditions: [
+                        { type: 'FLAG', flag: 'read_secret_document', value: true },
+                        { type: 'NO_FLAG', flag: 'bookshelf_destroyed' }
+                    ],
+                    success: {
+                        message: "You remember the blueprint. Hidden room behind the bookshelf.\n\nYou fire up the reciprocating saw. Blade bites into oak. Wood screams. Sawdust sprays. You cut vertically down the side, then horizontally. The shelf shudders, splits. You kick it aside.\n\nBehind it: a door. Flush with the wall. No handle. Just a keypad. Someone hid this deliberately. The blueprint was right.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762368505/Secret_Door_Revealed_o27pj3.png',
+                            description: 'Destroyed bookshelf revealing hidden door',
+                            hint: 'A secret door with a keypad'
+                        },
+                        effects: [
+                            { type: 'SET_FLAG', flag: 'bookshelf_destroyed' as Flag, value: true },
+                            { type: 'SET_ENTITY_STATE', entityId: 'obj_bookshelf', patch: { isBroken: true, isOpen: true } },
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'obj_hidden_door', parentId: 'obj_bookshelf' }
+                        ]
+                    }
+                },
+                {
+                    // Case 3: Document NOT read yet - battery low
+                    itemId: 'item_recip_saw' as ItemId,
+                    conditions: [
+                        { type: 'NO_FLAG', flag: 'read_secret_document' }
+                    ],
+                    success: {
+                        message: "Hmmm the battery seems too low. Wait until it's charged fully."
+                    }
                 }
-            },
+            ],
 
             // 6. OPEN - Already open shelving
             onOpen: {
@@ -651,31 +691,17 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                 }
             },
 
-            // 8. MOVE - Conditional: reveals hidden door if document was read
+            // 8. MOVE - Too heavy to move
             onMove: {
-                conditions: [{ type: 'FLAG', flag: 'read_secret_document', value: true }],
-                success: {
-                    message: "You remember the blueprint. Hidden room behind the bookshelf. You grip the side, pull hard. Solid oak groans against floor. Scraping. Dust rises.\n\nIt shifts. A few inches. Then more.\n\nBehind it: a door. Flush with the wall. No handle. Just a keypad. Someone hid this deliberately. The blueprint was right.",
-                    media: {
-                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762368505/Secret_Door_Revealed_o27pj3.png',
-                        description: 'Bookshelf moved aside revealing hidden door',
-                        hint: 'A secret door with a keypad'
-                    },
-                    effects: [
-                        { type: 'SET_ENTITY_STATE', entityId: 'obj_bookshelf', patch: { isMoved: true, isOpen: true } },
-                        { type: 'REVEAL_FROM_PARENT', entityId: 'obj_hidden_door', parentId: 'obj_bookshelf' },
-                        { type: 'SET_FLAG', flag: 'bookshelf_moved', value: true }
-                    ]
-                },
                 fail: {
-                    message: "Solid oak, heavy. No reason to move this. Try EXAMINING or READING the books."
+                    message: "Too heavy to move. Solid oak, bolted down maybe. You'd need something more destructive. Maybe check the drawer at the counter for tools."
                 }
             },
 
-            // 9. BREAK - Solid furniture
+            // 9. BREAK - Need tools
             onBreak: {
                 fail: {
-                    message: "Solid oak. You're not smashing this with bare hands. Besides, try EXAMINING the books first."
+                    message: "Solid oak. You're not smashing this with bare hands. You'd need a saw or something powerful. Check the counter drawer for tools."
                 }
             },
 
@@ -1057,7 +1083,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         children: {
             objects: ['obj_coffee_machine', 'obj_drawer'] as GameObjectId[]
         },
-        nearbyNpcs: ['npc_barista', 'npc_cafe_manager'] as NpcId[],
+        nearbyNpcs: ['npc_barista', 'npc_manager'] as NpcId[],
         media: {
             images: {
                 default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759604596/Cafe_Counter_placeholder.png', description: 'The cafe counter with coffee machine and staff.', hint: 'counter' }
@@ -1311,7 +1337,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                             hint: 'A key was hidden inside'
                         },
                         effects: [
-                            { type: 'SET_FLAG', flag: 'machine_is_broken' as Flag },
+                            { type: 'SET_FLAG', flag: 'machine_is_broken' as Flag, value: true },
                             { type: 'SET_ENTITY_STATE', entityId: 'obj_coffee_machine', patch: { isBroken: true, isOpen: true, currentStateId: 'broken' } },
                             { type: 'REVEAL_FROM_PARENT', entityId: 'item_safe_key', parentId: 'obj_coffee_machine' }
                         ]
@@ -1441,7 +1467,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         },
                         effects: [
                             { type: 'SET_ENTITY_STATE', entityId: 'obj_sd_card', patch: { currentStateId: 'opened' } },
-                            { type: 'SET_FLAG', flag: 'notebook_video_watched' as Flag }
+                            { type: 'SET_FLAG', flag: 'notebook_video_watched' as Flag, value: true }
                         ]
                     },
                     fail: {
@@ -1466,7 +1492,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         },
                         effects: [
                             { type: 'SET_ENTITY_STATE', entityId: 'obj_sd_card', patch: { currentStateId: 'opened' } },
-                            { type: 'SET_FLAG', flag: 'notebook_video_watched' as Flag }
+                            { type: 'SET_FLAG', flag: 'notebook_video_watched' as Flag, value: true }
                         ]
                     },
                     fail: {
@@ -1609,6 +1635,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         children: {
             objects: ['obj_tablet'] as GameObjectId[]
         },
+        nearbyNpcs: ['npc_victim_girl'] as NpcId[],
         media: {
             images: {
                 default: { url: 'https://images.unsplash.com/photo-1614359953614-dcf28bc61b80?w=600', description: 'A hidden door with keypad.', hint: 'secret door' },
@@ -2319,8 +2346,8 @@ const items: Record<ItemId, Item> = {
                         { type: 'SHOW_MESSAGE', speaker: 'narrator', content: 'You unfold the clipping. Brittle, yellowed, legible. Ink faded to sepia. Smell of decades—dust, wood, forgotten time.' },
                         { type: 'SHOW_MESSAGE', speaker: 'narrator', content: 'Newspaper article about Silas Bloom.', messageType: 'article', imageId: 'item_newspaper_article' },
                         { type: 'SHOW_MESSAGE', speaker: 'narrator', content: 'Your eyes catch a name: Agent Macklin. FBI. 1940s. Cold realization—your grandfather. The case that defined his career... or destroyed it. This isn\'t just evidence. It\'s family history.' },
-                        { type: 'SET_FLAG', flag: 'notebook_article_read' as Flag },
-                        { type: 'SET_FLAG', flag: 'notebook_interaction_complete' as Flag }
+                        { type: 'SET_FLAG', flag: 'notebook_article_read' as Flag, value: true },
+                        { type: 'SET_FLAG', flag: 'notebook_interaction_complete' as Flag, value: true }
                     ]
                 },
                 fail: {
@@ -2782,7 +2809,7 @@ const npcs: Record<NpcId, NPC> = {
         persona: "You are a tired, cynical barista in a downtown cafe. You've seen it all and are not impressed by much. Your primary focus is on making coffee and dealing with customers as efficiently as possible. You will not discuss the case or any past events further, deflecting any questions with short, dismissive, but not overly rude answers. You just want to do your job.",
         welcomeMessage: 'What can I get for you? Or are you just here to brood? Either is fine.',
         goodbyeMessage: "Alright, I've got Pumpkin spice lattes to craft. Good luck with... whatever it is you're doing.",
-        startConversationEffects: [{ type: 'SET_FLAG', flag: 'has_talked_to_barista' as Flag }],
+        startConversationEffects: [{ type: 'SET_FLAG', flag: 'has_talked_to_barista' as Flag, value: true }],
         limits: { maxInteractions: 20, interactionLimitResponse: "Seriously, I've got a line of customers. I can't keep chatting. The coffee machine calls." },
 
         // PROGRESSIVE REVEALS: Business card unlocked on 3rd interaction
@@ -2829,12 +2856,11 @@ const npcs: Record<NpcId, NPC> = {
               once: true,
               conditions: { requiredFlagsAll: ['topic_revealed_npc_barista_t_give_card' as Flag] },  // Only available after progressive reveal
               response: {
-                message: "You know, he left this here the other day. Said I could have it. Some business card. If you're that interested, you can take it. It's just collecting dust.",
+                message: "You know, he left this here the other day. Said I could have it. Some business card. If you're that interested, you can take it. It's just collecting dust. Now, if you'll excuse me, I've got work to do.",
                 effects: [
                     { type: 'ADD_ITEM', itemId: 'item_business_card' as ItemId },
-                    { type: 'SET_FLAG', flag: 'has_received_business_card' as Flag },
-                    { type: 'SHOW_MESSAGE', speaker: 'narrator', content: "The barista slides a business card across the counter. It's been added to your inventory.", messageType: 'image', imageId: 'item_business_card' as ItemId, imageEntityType: 'item' },
-                    { type: 'END_CONVERSATION' }
+                    { type: 'SET_FLAG', flag: 'has_received_business_card' as Flag, value: true },
+                    { type: 'SHOW_MESSAGE', speaker: 'narrator', content: "The barista slides a business card across the counter. It's been added to your inventory.", messageType: 'image', imageId: 'item_business_card' as ItemId, imageEntityType: 'item' }
                 ]
               }
             },
@@ -2899,6 +2925,16 @@ const npcs: Record<NpcId, NPC> = {
         welcomeMessage: 'Mmmmph! Mmph mmph! [She struggles against her bonds, trying desperately to speak through the tape]',
         goodbyeMessage: "Please... find him. The number... 2025. That's all I know.",
 
+        demoteRules: {
+            onFlagsAll: ['victim_revealed_digits' as Flag],
+            then: { setStage: 'demoted', setImportance: 'ambient' }
+        },
+        postCompletionProfile: {
+            welcomeMessage: "You're still here? Please... just catch him.",
+            goodbyeMessage: "Hurry... please.",
+            defaultResponse: "I don't know anything else. 555-444-2025. Please call it. Stop him before it's too late."
+        },
+
         // PROGRESSIVE REVEALS: Phone digits revealed on 2nd interaction
         progressiveReveals: [
             {
@@ -2907,7 +2943,7 @@ const npcs: Record<NpcId, NPC> = {
             }
         ],
 
-        startConversationEffects: [{ type: 'SET_FLAG', flag: 'has_talked_to_victim' as Flag }],
+        startConversationEffects: [{ type: 'SET_FLAG', flag: 'has_talked_to_victim' as Flag, value: true }],
         limits: {
             maxInteractions: 20,
             interactionLimitResponse: "I've told you everything I know. Please, just call 555-444-2025 on your phone. End this."
@@ -2930,7 +2966,7 @@ const npcs: Record<NpcId, NPC> = {
                 response: {
                     message: "[You carefully remove the duct tape from her mouth]\n\nOh god, thank you! Please—you need to listen. My name is Rose Carmichael. I was kidnapped three days ago. The man who took me... he's insane. He talks about justice, about Rose, about 1943. He left clues for you. He wants you to find me. This is all part of his twisted game.",
                     effects: [
-                        { type: 'SET_FLAG', flag: 'tape_removed' as Flag }
+                        { type: 'SET_FLAG', flag: 'tape_removed' as Flag, value: true }
                     ]
                 }
             },
@@ -2997,8 +3033,8 @@ const npcs: Record<NpcId, NPC> = {
                 response: {
                     message: "The man who took me... he said something about a phone number. He was laughing, said he left you a note but scratched out the last digits.\n\nHe told me to tell you if you found me: The missing numbers are 2025. That's the year this all started for him. The year Rose died. My namesake.\n\nPlease, call that number. He wants you to. 555-444-2025. This is all part of his game.",
                     effects: [
-                        { type: 'SET_FLAG', flag: 'victim_revealed_digits' as Flag },
-                        { type: 'SET_FLAG', flag: 'know_full_phone_number' as Flag }
+                        { type: 'SET_FLAG', flag: 'victim_revealed_digits' as Flag, value: true },
+                        { type: 'SET_FLAG', flag: 'know_full_phone_number' as Flag, value: true }
                     ]
                 }
             },
@@ -3045,10 +3081,10 @@ const locations: Record<LocationId, Location> = {
         locationId: 'loc_cafe_interior' as LocationId,
         name: 'The Cafe Interior',
         sceneDescription: 'You are inside The Daily Grind. It\'s a bustling downtown cafe, smelling of coffee and rain.',
-        sceneImage: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761156561/bustling_cafe_bluwgq.jpg', description: 'A view of the bustling cafe interior.', hint: 'bustling cafe' },
+        sceneImage: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762686189/Cafe_Blueprint_pv01xp.png', description: 'A view of the bustling cafe interior.', hint: 'bustling cafe' },
         coord: { x: 1, y: 1, z: 0 },
         objects: ['obj_brown_notebook', 'obj_chalkboard_menu', 'obj_magazine', 'obj_bookshelf', 'obj_painting', 'obj_counter'] as GameObjectId[],
-        npcs: ['npc_barista', 'npc_cafe_manager'] as NpcId[],
+        npcs: ['npc_barista', 'npc_manager', 'npc_victim_girl'] as NpcId[],
         entryPortals: ['portal_street_to_cafe' as PortalId],
         exitPortals: ['portal_cafe_to_street' as PortalId],
         zones: [
@@ -3200,7 +3236,8 @@ Your single most important task is to translate the player's natural language in
   - "open the safe with the key" and "use my key to open the safe" both become \`use "Brass Key" on "Wall Safe"\`.
   - "read sd card on phone", "read sd card with phone", "check sd card on my phone" all become \`read "SD Card" on "Phone"\`.
   - "move the painting" or "look behind the art" both become \`move "Wall painting"\`.
-  - "go to bookshelf", "move to the safe", "walk over to the barista" all become \`goto "Bookshelf"\`, \`goto "Wall Safe"\`, \`goto "Barista"\` (focus on object/NPC, not location travel).
+  - "go to bookshelf", "move to the safe", "walk over to the counter" all become \`goto "Bookshelf"\`, \`goto "Wall Safe"\`, \`goto "Counter"\` (focus on object, not location travel).
+  - "talk to barista", "speak with the manager", "chat with rose" all become \`talk to "Barista"\`, \`talk to "Cafe Manager"\`, \`talk to "Rose"\` (IMPORTANT: use "talk to" for NPCs, NOT "goto").
   - "add the pipe to my inventory", "pick up the pipe", "grab the pipe", and "get the pipe" all become \`take "Iron Pipe"\`.
   - "put the key in my pocket" becomes \`take "Brass Key"\`.
   - "check my stuff" and "what do I have" both become \`inventory\`.

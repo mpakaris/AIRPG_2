@@ -307,6 +307,33 @@ export async function processCommand(
 
             await logAndSave(userId, gameId, currentState, allMessagesForSession);
             return { newState: currentState, messages: allMessagesForSession };
+        } else if (lowerInput === '/map') {
+            // SHOW MAP: Display the current chapter's map
+            const currentChapter = game.chapters[currentState.currentChapterId];
+
+            // Chapter-specific maps
+            const chapterMaps: Record<string, string> = {
+                'ch1-the-cafe': 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762686189/Cafe_Blueprint_pv01xp.png',
+                // Add more chapters as needed
+            };
+
+            const mapUrl = chapterMaps[currentState.currentChapterId] || chapterMaps['ch1-the-cafe'];
+
+            const mapMessage = createMessage(
+                'narrator',
+                game.narratorName || 'Narrator',
+                `Here's the map for ${currentChapter?.title || 'the current area'}:`,
+                'image',
+                {
+                    url: mapUrl,
+                    description: `Map of ${currentChapter?.title || 'the area'}`,
+                    hint: 'location map'
+                }
+            );
+            allMessagesForSession.push(mapMessage);
+
+            await logAndSave(userId, gameId, currentState, allMessagesForSession);
+            return { newState: currentState, messages: allMessagesForSession };
         } else {
             // Let the AI interpret the command (natural language - could be anything!)
             const location = game.locations[currentState.currentLocationId];
@@ -414,10 +441,8 @@ export async function processCommand(
                     effects = await handleGoto(currentState, restOfCommand, game);
                     break;
                  case 'talk':
-                     // LEGACY: handleTalk uses old architecture (complex NPC state)
-                     const talkResult = await handleTalk(currentState, restOfCommand.replace('to ', ''), game);
-                     allMessagesForSession.push(...talkResult.messages);
-                     currentState = talkResult.newState;
+                     // NEW: handleTalk returns Effect[]
+                     effects = await handleTalk(currentState, restOfCommand.replace('to ', ''), game);
                      break;
                  case 'use':
                     const useOnMatch = restOfCommand.match(/^(.*?)\s+on\s+(.*)$/);
@@ -499,6 +524,34 @@ export async function processCommand(
                     }
                     break;
                 case 'close':
+                case 'goodbye':
+                case 'bye':
+                    // End conversation if active
+                    if (currentState.activeConversationWith) {
+                        const npc = game.npcs[currentState.activeConversationWith];
+                        effects = [
+                            {
+                                type: 'SHOW_MESSAGE',
+                                speaker: currentState.activeConversationWith,
+                                senderName: npc?.name || 'NPC',
+                                content: `"${npc?.goodbyeMessage || 'Goodbye.'}"`,
+                                messageType: 'text'
+                            },
+                            {
+                                type: 'SHOW_MESSAGE',
+                                speaker: 'system',
+                                content: `You ended the conversation with ${npc?.name || 'the NPC'}. Type your next command to continue.`
+                            },
+                            {type: 'END_CONVERSATION'}
+                        ];
+                    } else {
+                        effects = [{
+                            type: 'SHOW_MESSAGE',
+                            speaker: 'system',
+                            content: "You're not currently in a conversation."
+                        }];
+                    }
+                    break;
                 case 'exit':
                     // Check if there's a target object to close
                     if (restOfCommand && restOfCommand.trim()) {
@@ -508,8 +561,23 @@ export async function processCommand(
                         // Legacy: exit interaction
                         effects = [{type: 'END_INTERACTION'}];
                     } else if (currentState.activeConversationWith) {
-                        // Legacy: exit conversation
-                        effects = [{type: 'END_CONVERSATION'}];
+                        // End conversation (same as goodbye)
+                        const npc = game.npcs[currentState.activeConversationWith];
+                        effects = [
+                            {
+                                type: 'SHOW_MESSAGE',
+                                speaker: currentState.activeConversationWith,
+                                senderName: npc?.name || 'NPC',
+                                content: `"${npc?.goodbyeMessage || 'Goodbye.'}"`,
+                                messageType: 'text'
+                            },
+                            {
+                                type: 'SHOW_MESSAGE',
+                                speaker: 'system',
+                                content: `You ended the conversation with ${npc?.name || 'the NPC'}. Type your next command to continue.`
+                            },
+                            {type: 'END_CONVERSATION'}
+                        ];
                     } else if (currentState.currentFocusId) {
                         // Legacy: clear focus - return to room-level view
                         effects = [{type: 'CLEAR_FOCUS'}];

@@ -47,6 +47,47 @@ Defines the conditions under which an NPC's `stage` and `importance` change.
 ### `postCompletionProfile`
 The simplified persona and dialogue for an NPC after they have been `demoted`. This prevents players from repeatedly asking a non-essential character for clues.
 
+**Properties**:
+- `welcomeMessage`: Greeting shown when talking to demoted NPC
+- `goodbyeMessage`: Farewell shown when ending conversation
+- `defaultResponse`: Response to all player input (replaces topic system)
+
+**Example**:
+```typescript
+postCompletionProfile: {
+  welcomeMessage: "Back again? Hope you're buying something this time.",
+  goodbyeMessage: "See ya.",
+  defaultResponse: "Look, I told you what I know. I've got work to do."
+}
+```
+
+### `progressiveReveals`
+Unlocks new topics based on interaction count. Allows NPCs to reveal information gradually over multiple conversations.
+
+**Properties**:
+- `triggerOnInteraction`: Number (which conversation turn triggers this)
+- `topicId`: The topic to unlock
+- `conditions`: Optional additional conditions (flags, etc.)
+
+**Example**:
+```typescript
+progressiveReveals: [
+  {
+    triggerOnInteraction: 3,  // After 3rd conversation turn
+    topicId: 't_secret_info'
+  }
+]
+```
+
+**How It Works**:
+1. Player talks to NPC (interaction count = 1)
+2. Player talks again (interaction count = 2)
+3. Player talks 3rd time (interaction count = 3)
+4. Engine sets flag: `topic_revealed_npc_barista_t_secret_info = true`
+5. Topic with `conditions: { requiredFlagsAll: ['topic_revealed_npc_barista_t_secret_info'] }` becomes available
+
+**Note**: The engine automatically creates the reveal flag in format: `topic_revealed_{npcId}_{topicId}`
+
 ### `handlers`
 A collection of specific verb handlers that provide more targeted interactions than general conversation.
 

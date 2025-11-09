@@ -122,8 +122,22 @@ export function getInitialState(game: Game): PlayerState {
   // Initialize NPCs
   for (const npcId in game.npcs) {
     const npc = game.npcs[npcId as NpcId];
+
+    // Check if NPC is in nearbyNpcs of a locked/closed object (should be hidden initially)
+    let isHiddenBehindObject = false;
+    for (const objId in game.gameObjects) {
+      const obj = game.gameObjects[objId as GameObjectId];
+      if (obj.nearbyNpcs?.includes(npc.id)) {
+        // NPC is nearby this object - check if object is locked/closed
+        if (obj.state?.isLocked || (!obj.state?.isOpen && obj.capabilities?.openable)) {
+          isHiddenBehindObject = true;
+          break;
+        }
+      }
+    }
+
     world[npc.id] = {
-      isVisible: true,
+      isVisible: !isHiddenBehindObject,
       discovered: false,
       stage: npc.initialState?.stage || 'active',
       importance: npc.importance,
