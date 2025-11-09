@@ -304,7 +304,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             // SPECIAL: Password unlock handler
             onUnlock: {
                 success: {
-                    message: "Brass clasp clicks. Cover swings open, leather creaks. Inside: black SD card—modern, digital, anachronistic. Next to it: folded document marked CONFIDENTIAL. Past preserved twice—analog and digital. Both waiting.",
+                    message: "Brass clasp clicks. Cover swings open, leather creaks. Inside: black SD card—modern, digital, anachronistic.",
                     media: {
                         url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759242346/Notebook_unlocked_fpxqgl.jpg',
                         description: 'Unlocked notebook revealing secrets',
@@ -607,7 +607,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             // 1. EXAMINE - Visual inspection
             onExamine: {
                 success: {
-                    message: "The corner bookshelf leaned like it had watched too many years pass, a quiet witness to the people who drifted through this space. Its wood was scratched, nicked, and stubbornly dusty, edges softened by time and careless elbows. \n\nThe spines of worn paperbacks were pressed in haphazardly, some upright, some shoved sideways, each one a faint echo of someone who had lingered here—bored, curious, desperate, seeking distraction or solace.\n\nAmong the titles:\n📚 The Art of the Deal\n📚 A Brief History of Time\n📚 Justice for My Love\n\nThat word—justice—hung in the air, deliberate, pressing against the dust and scratches like it had weight. The shelf wasn’t just furniture. It had absorbed attention, fingers, sighs, and the restless patience of countless hands. You could almost feel the faint imprint of every reader, every idle moment, every flicker of hope or fleeting interest.\n\nIt smelled of old paper and neglect, of presence that had come and gone, leaving only a trace. The shelf held the room’s quiet history, not in words, but in the way it slumped, how it carried itself, how it seemed to remember everyone who had paused here. A monument, unassuming but certain, to all the people who had needed something—anything—to pass the night, or to make sense of it.",
+                    message: "The corner bookshelf leaned like it had watched too many years pass, a quiet witness to the people who drifted through this space. Its wood was scratched, nicked, and stubbornly dusty, edges softened by time and careless elbows. \n\nThe spines of worn paperbacks were pressed in haphazardly, some upright, some shoved sideways, each one a faint echo of someone who had lingered here—bored, curious, desperate, seeking distraction or solace.\n\nAmong the titles:\n📚 The Art of the Deal\n📚 A Brief History of the FBI\n📚 Justice for My Love\n\nThat word—justice—hung in the air, deliberate, pressing against the dust and scratches like it had weight. The shelf wasn’t just furniture. It had absorbed attention, fingers, sighs, and the restless patience of countless hands. You could almost feel the faint imprint of every reader, every idle moment, every flicker of hope or fleeting interest.\n\nIt smelled of old paper and neglect, of presence that had come and gone, leaving only a trace. The shelf held the room’s quiet history, not in words, but in the way it slumped, how it carried itself, how it seemed to remember everyone who had paused here. A monument, unassuming but certain, to all the people who had needed something—anything—to pass the night, or to make sense of it.",
                     media: {
                         url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759604596/Bookshelf_Cafe_kn4poz.png',
                         description: 'Bookshelf with used paperbacks',
@@ -708,7 +708,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             // 10. READ - Read the book titles
             onRead: {
                 success: {
-                    message: "You scan the spines. 'The Art of the Deal'. 'A Brief History of Time'. And... 'Justice for My Love'. Romance novel. But that word—justice—it's everywhere. Chalkboard, now this. Not coincidence.",
+                    message: "You scan the spines. 'The Art of the Deal'. 'A Brief History of the FBI'. And... 'Justice for My Love'. Romance novel. But that word—justice—it's everywhere. Chalkboard, now this. Not coincidence.",
                     media: {
                         url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759604596/Bookshelf_Cafe_kn4poz.png',
                         description: 'Book titles on cafe bookshelf',
@@ -723,7 +723,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             // 11. SEARCH - Search through books
             onSearch: {
                 success: {
-                    message: "You pull books out, check behind them, flip through pages. Mostly cafe reading—travel guides, thrillers, business books. But 'Justice for My Love' stands out. Someone left breadcrumbs."
+                    message: "You pull books out, check behind them, flip through pages. Mostly cafe reading—travel guides, thrillers, business books. But 'Justice for My Love' stands out. Someone left breadcrumbs. \n\nMaybe worth to read a few pages. It may be connected somehow."
                 }
             },
 
@@ -1442,7 +1442,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             // EXAMINE - Visual inspection with phone hint
             onExamine: {
                 success: {
-                    message: "Black SD card. Modern. Out of place in the old notebook. Standard size—fits most devices. Your FBI phone has a slot for external media like this.",
+                    message: "Black SD card. Modern. Out of place in the old notebook. Standard size—fits most devices. Your FBI phone can read this. Try: USE PHONE, then READ SD CARD.",
                     media: {
                         url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761812524/SD_Card_rokilu.png',
                         description: 'Black SD card',
@@ -1451,17 +1451,27 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                 }
             },
 
-            // USE - Requires phone as key
-            onUse: [
+            // READ - Requires phone device focus
+            onRead: [
                 {
-                    itemId: 'item_player_phone' as ItemId,
+                    // Already watched video
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_sd_card', key: 'currentStateId', equals: 'opened' }
+                    ],
+                    success: {
+                        message: "You've already watched the video. The footage is burned into your memory."
+                    }
+                },
+                {
+                    // First time reading - requires phone focus
                     conditions: [
                         { type: 'STATE', entityId: 'obj_sd_card', key: 'currentStateId', equals: 'closed' }
                     ],
                     success: {
-                        message: "Card slides into your phone. Screen flickers. Video loads—grainy, seventy years old. Music fills the cafe. Saxophone, smooth, melancholic. A tune that's been waiting.\n\nSilas Bloom. Musician. That song for Rose... they were in love. You hear it in every note.\n\nVideo ends. More questions than answers. Your mind races. Then you notice—the folded newspaper article, still in the notebook. Waiting.",
+                        message: "Card slides into your phone. Screen flickers. Video loads—grainy, seventy years old. Music fills the cafe. Saxophone, smooth, melancholic. A tune that's been waiting.\n\nSilas Bloom. Musician. That song for Rose... they were in love. You hear it in every note.\n\nVideo ends. More questions than answers. Your mind races.",
                         media: {
                             url: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759678377/CH_I_completion_jqtyme.mp4',
+                            type: 'video',
                             description: 'Video from SD card: Silas Bloom playing saxophone',
                             hint: 'The video reveals Silas and Rose'
                         },
@@ -1469,24 +1479,31 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                             { type: 'SET_ENTITY_STATE', entityId: 'obj_sd_card', patch: { currentStateId: 'opened' } },
                             { type: 'SET_FLAG', flag: 'notebook_video_watched' as Flag, value: true }
                         ]
-                    },
-                    fail: {
-                        message: "You've already watched the video. The footage is burned into your memory."
                     }
                 }
             ],
 
-            // READ - Also requires phone as key (same as USE)
-            onRead: [
+            // OPEN - Same as READ
+            onOpen: [
                 {
-                    itemId: 'item_player_phone' as ItemId,
+                    // Already watched video
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_sd_card', key: 'currentStateId', equals: 'opened' }
+                    ],
+                    success: {
+                        message: "You've already watched the video. The footage is burned into your memory."
+                    }
+                },
+                {
+                    // First time opening - requires phone focus
                     conditions: [
                         { type: 'STATE', entityId: 'obj_sd_card', key: 'currentStateId', equals: 'closed' }
                     ],
                     success: {
-                        message: "Card slides into your phone. Screen flickers. Video loads—grainy, seventy years old. Music fills the cafe. Saxophone, smooth, melancholic. A tune that's been waiting.\n\nSilas Bloom. Musician. That song for Rose... they were in love. You hear it in every note.\n\nVideo ends. More questions than answers. Your mind races. Then you notice—the folded newspaper article, still in the notebook. Waiting.",
+                        message: "Card slides into your phone. Screen flickers. Video loads—grainy, seventy years old. Music fills the cafe. Saxophone, smooth, melancholic. A tune that's been waiting.\n\nSilas Bloom. Musician. That song for Rose... they were in love. You hear it in every note.\n\nVideo ends. More questions than answers. Your mind races.",
                         media: {
                             url: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759678377/CH_I_completion_jqtyme.mp4',
+                            type: 'video',
                             description: 'Video from SD card: Silas Bloom playing saxophone',
                             hint: 'The video reveals Silas and Rose'
                         },
@@ -1494,15 +1511,12 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                             { type: 'SET_ENTITY_STATE', entityId: 'obj_sd_card', patch: { currentStateId: 'opened' } },
                             { type: 'SET_FLAG', flag: 'notebook_video_watched' as Flag, value: true }
                         ]
-                    },
-                    fail: {
-                        message: "You've already watched the video. The footage is burned into your memory."
                     }
                 }
             ],
 
             // Fallback
-            defaultFailMessage: "The SD card holds data. Try: EXAMINE it, or USE PHONE ON it."
+            defaultFailMessage: "The SD card holds data. You need your phone to read it. Try: USE PHONE, then READ SD CARD."
         },
         design: {
             authorNotes: "Media device containing the video clue about Silas Bloom. Requires phone to unlock/read.",
@@ -2387,7 +2401,7 @@ const items: Record<ItemId, Item> = {
         capabilities: { isTakable: true, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         media: {
             images: {
-                default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762714364/Old_Newspaper_Article_hlwmqu.png', description: 'An old newspaper article about Silas Bloom from the 1940s.', hint: 'old newspaper article' }
+                default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762715555/Old_Newspaper_Article_uzgkoz.png', description: 'An old newspaper article about Silas Bloom from the 1940s.', hint: 'old newspaper article' }
             }
         },
         handlers: {
@@ -2396,7 +2410,7 @@ const items: Record<ItemId, Item> = {
                 success: {
                     message: "Folded newspaper clipping. 1940s. Brittle, yellowed. Headline about Silas Bloom, local musician.",
                     media: {
-                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762714364/Old_Newspaper_Article_hlwmqu.png',
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762715555/Old_Newspaper_Article_uzgkoz.png',
                         description: 'Old newspaper article from the 1940s about Silas Bloom',
                         hint: 'Read it to learn more about the case'
                     }
@@ -2538,7 +2552,6 @@ const items: Record<ItemId, Item> = {
         },
         stateMap: {
             'read0': {
-                description: "It seems to be a ghost-written book about a real estate magnate. Not relevant to the case.",
                 media: {
                     images: {
                         default: {
@@ -2550,7 +2563,6 @@ const items: Record<ItemId, Item> = {
                 }
             },
             'read1': {
-                description: "Chapter 1: 'Think Big'. You decide you've thought big enough for one day.",
                 media: {
                     images: {
                         default: {
@@ -2562,7 +2574,6 @@ const items: Record<ItemId, Item> = {
                 }
             },
             'read2': {
-                description: "You skim another chapter. It's mostly just self-praise. This isn't helping the case.",
                 media: {
                     images: {
                         default: {
@@ -2615,7 +2626,6 @@ const items: Record<ItemId, Item> = {
         },
         stateMap: {
             'read0': {
-                description: "A history of the Federal Bureau of Investigation. Interesting, but not helping with the current case.",
                 media: {
                     images: {
                         default: {
@@ -2627,7 +2637,6 @@ const items: Record<ItemId, Item> = {
                 }
             },
             'read1': {
-                description: "You read about famous FBI cases from the past. Makes you wonder if your current case will end up in a book someday.",
                 media: {
                     images: {
                         default: {
@@ -2639,7 +2648,6 @@ const items: Record<ItemId, Item> = {
                 }
             },
             'read2': {
-                description: "The chapter on cold cases is sobering. You close the book. Time to focus on solving this one.",
                 media: {
                     images: {
                         default: {
@@ -2689,7 +2697,7 @@ const items: Record<ItemId, Item> = {
                     // First read
                     conditions: [{ type: 'STATE', entityId: 'item_book_justice', key: 'readCount', equals: 0 }],
                     success: {
-                        message: "Against your better judgment, you read a page.",
+                        message: "",
                         media: {
                             url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762712220/Book_Justice_1_hvjtcj.png',
                             description: 'First page of Justice for My Love',
@@ -2704,7 +2712,7 @@ const items: Record<ItemId, Item> = {
                     // Second read
                     conditions: [{ type: 'STATE', entityId: 'item_book_justice', key: 'readCount', equals: 1 }],
                     success: {
-                        message: "You flip to a random page. That's enough of that.",
+                        message: "",
                         media: {
                             url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762712220/Book_Justice_2_ej33rl.png',
                             description: 'Second page of Justice for My Love',

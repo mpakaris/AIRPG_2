@@ -153,7 +153,8 @@ export function buildEffectsFromOutcome(
   }
 
   // 2. Add main message with media support
-  if (outcome.message) {
+  // Show message if there's text OR media (image/video/audio/pdf)
+  if (outcome.message !== undefined || outcome.media?.url) {
     effects.push(outcomeToMessageEffect(outcome, fallbackEntityId, entityType, game, isFail));
   }
 

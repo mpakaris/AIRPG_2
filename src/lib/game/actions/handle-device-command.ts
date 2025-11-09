@@ -12,6 +12,8 @@
 import type { Game, PlayerState, Effect, GameObjectId, ItemId } from "@/lib/game/types";
 import { normalizeName } from "@/lib/utils";
 import { handleCall } from "./handle-call";
+import { handleRead } from "./handle-read";
+import { handleOpen } from "./handle-open";
 
 /**
  * Handle commands while in device focus mode
@@ -91,6 +93,24 @@ export async function handleDeviceCommand(
       return handleCall(state, restOfCommand, game);
     }
 
+    // READ - SD card or other readable items
+    if (verb === 'read') {
+      // Check if they're trying to read SD card
+      if (restOfCommand.includes('sd') || restOfCommand.includes('card')) {
+        return handleRead(state, 'sd card', game);
+      }
+      return handleRead(state, restOfCommand, game);
+    }
+
+    // OPEN - SD card or other openable items
+    if (verb === 'open') {
+      // Check if they're trying to open SD card
+      if (restOfCommand.includes('sd') || restOfCommand.includes('card')) {
+        return handleOpen(state, 'sd card', game);
+      }
+      return handleOpen(state, restOfCommand, game);
+    }
+
     // CONTACTS
     if (verb === 'contacts' || normalizedCommand === 'show contacts' || normalizedCommand === 'view contacts') {
       return [{
@@ -123,7 +143,7 @@ export async function handleDeviceCommand(
       return [{
         type: 'SHOW_MESSAGE',
         speaker: 'narrator',
-        content: `📱 Phone Commands:\n\n- CALL <number> - Dial a phone number\n- CONTACTS - View stored contacts\n- PUT PHONE AWAY - Exit phone mode\n- CLOSE PHONE - Exit phone mode`
+        content: `📱 Phone Commands:\n\n- CALL <number> - Dial a phone number\n- READ SD CARD - View SD card content\n- CONTACTS - View stored contacts\n- PUT PHONE AWAY - Exit phone mode\n- CLOSE PHONE - Exit phone mode`
       }];
     }
   }

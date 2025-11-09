@@ -98,13 +98,6 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
         const currentReadCount = entityState.readCount || 0;
         const stateMapKeys = Object.keys(entityToRead.stateMap);
 
-        console.log('[handleRead] Progressive reading:', {
-            entityId,
-            currentReadCount,
-            stateMapKeys,
-            entityState
-        });
-
         // Check if all content has been read
         if (currentReadCount >= stateMapKeys.length) {
             return [{
@@ -118,7 +111,7 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
         const currentStateKey = stateMapKeys[currentReadCount];
         const stateMapEntry = entityToRead.stateMap[currentStateKey];
 
-        if (!stateMapEntry || typeof stateMapEntry.description !== 'string') {
+        if (!stateMapEntry) {
             return [{
                 type: 'SHOW_MESSAGE',
                 speaker: 'narrator',
@@ -126,13 +119,22 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
             }];
         }
 
+        // Check for media (images) in stateMap entry
+        const hasMedia = stateMapEntry.media?.images?.default?.url;
+        const mediaUrl = stateMapEntry.media?.images?.default?.url;
+        const mediaDescription = stateMapEntry.media?.images?.default?.description;
+        const mediaHint = stateMapEntry.media?.images?.default?.hint;
+
         // Return effects to show content and increment read count
         return [
             {
                 type: 'SHOW_MESSAGE',
                 speaker: 'narrator',
-                content: stateMapEntry.description,
-                messageType: 'text'
+                content: stateMapEntry.description || '',
+                messageType: hasMedia ? 'image' : 'text',
+                imageUrl: hasMedia ? mediaUrl : undefined,
+                imageDescription: hasMedia ? mediaDescription : undefined,
+                imageHint: hasMedia ? mediaHint : undefined
             },
             {
                 type: 'INCREMENT_ITEM_READ_COUNT',
