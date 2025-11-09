@@ -599,7 +599,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
         inventory: { items: [], capacity: null },
         children: {
-            items: ['item_book_deal', 'item_book_time', 'item_book_justice'] as ItemId[],
+            items: ['item_book_deal', 'item_book_fbi', 'item_book_justice'] as ItemId[],
             objects: ['obj_hidden_door'] as GameObjectId[]
         },
         media: { images: { default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759604596/Bookshelf_Cafe_kn4poz.png', description: 'A bookshelf in a cafe.', hint: 'bookshelf reading corner' } } },
@@ -617,7 +617,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         { type: 'SET_FLAG', flag: 'has_seen_justice_book', value: true },
                         { type: 'SET_ENTITY_STATE', entityId: 'obj_bookshelf', patch: { isOpen: true } },
                         { type: 'REVEAL_FROM_PARENT', entityId: 'item_book_deal', parentId: 'obj_bookshelf' },
-                        { type: 'REVEAL_FROM_PARENT', entityId: 'item_book_time', parentId: 'obj_bookshelf' },
+                        { type: 'REVEAL_FROM_PARENT', entityId: 'item_book_fbi', parentId: 'obj_bookshelf' },
                         { type: 'REVEAL_FROM_PARENT', entityId: 'item_book_justice', parentId: 'obj_bookshelf' }
                     ]
                 }
@@ -891,7 +891,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         media: {
             images: {
                 default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761263220/safe_behind_Painting_dbo6qc.png', description: 'A closed wall safe.', hint: 'wall safe' },
-                unlocked: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761263220/safe_behind_painting_open_tpmf0m.png', description: 'An open wall safe containing a document.', hint: 'open safe' },
+                unlocked: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762714567/Safe_newspaper_qy2ssi.png', description: 'An open wall safe containing an old newspaper article.', hint: 'open safe with newspaper' },
                 unlocked_empty: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761293940/safe_behind_painting_open_empty_pn2js2.png', description: 'An open, empty wall safe.', hint: 'empty safe' }
             }
         },
@@ -921,9 +921,9 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                     success: {
                         message: "Safe's open. Inside: yellowed newspaper clipping. Decades old. Someone preserved this deliberately. Why hide a newspaper article in a safe?",
                         media: {
-                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761263220/safe_behind_painting_open_tpmf0m.png',
-                            description: 'Open safe with newspaper clipping',
-                            hint: 'An old article'
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762714567/Safe_newspaper_qy2ssi.png',
+                            description: 'Open safe with old newspaper article',
+                            hint: 'An old newspaper article'
                         }
                     }
                 },
@@ -956,8 +956,8 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                     success: {
                         message: "Key slides in—perfect fit. One turn. Heavy clunk. Door swings. Inside: yellowed newspaper clipping, preserved behind glass sleeve. Decades old. Protected like treasure. This is what they hid.",
                         media: {
-                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761263220/safe_behind_painting_open_tpmf0m.png',
-                            description: 'Safe unlocked revealing newspaper article',
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762714567/Safe_newspaper_qy2ssi.png',
+                            description: 'Safe unlocked revealing old newspaper article',
                             hint: 'Someone hid this for a reason'
                         },
                         effects: [
@@ -2385,15 +2385,20 @@ const items: Record<ItemId, Item> = {
         description: 'A folded newspaper article from the 1940s. The headline is about a local musician, Silas Bloom.',
         alternateDescription: 'The old article about Silas Bloom. The mention of your family name, Macklin, still feels strange.',
         capabilities: { isTakable: true, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+        media: {
+            images: {
+                default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762714364/Old_Newspaper_Article_hlwmqu.png', description: 'An old newspaper article about Silas Bloom from the 1940s.', hint: 'old newspaper article' }
+            }
+        },
         handlers: {
             // 1. EXAMINE - Visual inspection
             onExamine: {
                 success: {
                     message: "Folded newspaper clipping. 1940s. Brittle, yellowed. Headline about Silas Bloom, local musician.",
                     media: {
-                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759241463/Screenshot_2025-09-30_at_15.51.35_gyj3d5.png',
-                        description: 'Folded newspaper article from the 1940s',
-                        hint: 'Read it to learn more'
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762714364/Old_Newspaper_Article_hlwmqu.png',
+                        description: 'Old newspaper article from the 1940s about Silas Bloom',
+                        hint: 'Read it to learn more about the case'
                     }
                 }
             },
@@ -2532,19 +2537,52 @@ const items: Record<ItemId, Item> = {
             defaultFailMessage: "It's a book on the shelf. Try: EXAMINE or READ it."
         },
         stateMap: {
-            'read0': { description: "It seems to be a ghost-written book about a real estate magnate. Not relevant to the case." },
-            'read1': { description: "Chapter 1: 'Think Big'. You decide you've thought big enough for one day." },
-            'read2': { description: "You skim another chapter. It's mostly just self-praise. This isn't helping the case." }
+            'read0': {
+                description: "It seems to be a ghost-written book about a real estate magnate. Not relevant to the case.",
+                media: {
+                    images: {
+                        default: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762712221/Book_Deal_1_ui3swk.png',
+                            description: 'First page of The Art of the Deal',
+                            hint: 'Business book page 1'
+                        }
+                    }
+                }
+            },
+            'read1': {
+                description: "Chapter 1: 'Think Big'. You decide you've thought big enough for one day.",
+                media: {
+                    images: {
+                        default: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762712222/Book_Deal_2_q7t1to.png',
+                            description: 'Second page of The Art of the Deal',
+                            hint: 'Business book page 2'
+                        }
+                    }
+                }
+            },
+            'read2': {
+                description: "You skim another chapter. It's mostly just self-praise. This isn't helping the case.",
+                media: {
+                    images: {
+                        default: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762712221/Book_Deal_3_nhcvda.png',
+                            description: 'Third page of The Art of the Deal',
+                            hint: 'Business book page 3'
+                        }
+                    }
+                }
+            }
         },
         design: { tags: ['book', 'distraction'] },
         version: { schema: "1.0", content: "1.1" }
     },
-    'item_book_time': {
-        id: 'item_book_time' as ItemId,
-        name: 'A Brief History of Time',
-        alternateNames: ['brief history of time', 'history of time', 'time book', 'physics book', 'brief history'],
+    'item_book_fbi': {
+        id: 'item_book_fbi' as ItemId,
+        name: 'A Brief History of the FBI',
+        alternateNames: ['brief history of fbi', 'fbi history', 'fbi book', 'history book', 'brief history'],
         archetype: 'Book',
-        description: 'A book about physics by a famous scientist.',
+        description: 'A book about the history of the FBI.',
         capabilities: { isTakable: false, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         state: { readCount: 0, currentStateId: 'default' },
         media: {
@@ -2555,7 +2593,7 @@ const items: Record<ItemId, Item> = {
         },
         handlers: {
             // 1. EXAMINE
-            onExamine: { success: { message: 'Physics book. Famous scientist. Not relevant.' } },
+            onExamine: { success: { message: 'FBI history book. Could be interesting, but not relevant to the case right now.' } },
             // 2. TAKE
             onTake: { fail: { message: "Cafe property. Try READING it." } },
             // 4. USE
@@ -2576,9 +2614,42 @@ const items: Record<ItemId, Item> = {
             defaultFailMessage: "It's a book on the shelf. Try: EXAMINE or READ it."
         },
         stateMap: {
-            'read0': { description: "Complex theories about spacetime. Unlikely to help you solve a murder." },
-            'read1': { description: "You read about black holes and event horizons. Your own event horizon feels like it's about five minutes away if you don't get a lead soon." },
-            'read2': { description: "The book talks about the arrow of time. You wish you could fire an arrow back in time and ask Silas Bloom what happened." }
+            'read0': {
+                description: "A history of the Federal Bureau of Investigation. Interesting, but not helping with the current case.",
+                media: {
+                    images: {
+                        default: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762712220/Book_FBI_1_gxpv0e.png',
+                            description: 'First page of FBI history book',
+                            hint: 'FBI book page 1'
+                        }
+                    }
+                }
+            },
+            'read1': {
+                description: "You read about famous FBI cases from the past. Makes you wonder if your current case will end up in a book someday.",
+                media: {
+                    images: {
+                        default: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762712220/Book_FBI_2_x59juw.png',
+                            description: 'Second page of FBI history book',
+                            hint: 'FBI book page 2'
+                        }
+                    }
+                }
+            },
+            'read2': {
+                description: "The chapter on cold cases is sobering. You close the book. Time to focus on solving this one.",
+                media: {
+                    images: {
+                        default: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762712220/Book_FBI_3_vu1qey.png',
+                            description: 'Third page of FBI history book',
+                            hint: 'FBI book page 3'
+                        }
+                    }
+                }
+            }
         },
         design: { tags: ['book', 'distraction'] },
         version: { schema: "1.0", content: "1.1" }
@@ -2618,11 +2689,11 @@ const items: Record<ItemId, Item> = {
                     // First read
                     conditions: [{ type: 'STATE', entityId: 'item_book_justice', key: 'readCount', equals: 0 }],
                     success: {
-                        message: "Against your better judgment, you read a page. 'His voice was like smooth jazz on a rainy night, but his eyes held a storm. She knew then that he would get justice for her, or die trying.'",
+                        message: "Against your better judgment, you read a page.",
                         media: {
-                            url: 'https://the-openbook.com/wp-content/uploads/2023/02/cropped-the-open-book-nieuw.jpg?w=780&h=684',
-                            description: 'Open romance novel - page with dramatic text',
-                            hint: 'First page'
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762712220/Book_Justice_1_hvjtcj.png',
+                            description: 'First page of Justice for My Love',
+                            hint: 'Romance novel page 1'
                         },
                         effects: [
                             { type: 'INCREMENT_ITEM_READ_COUNT', itemId: 'item_book_justice' }
@@ -2633,11 +2704,11 @@ const items: Record<ItemId, Item> = {
                     // Second read
                     conditions: [{ type: 'STATE', entityId: 'item_book_justice', key: 'readCount', equals: 1 }],
                     success: {
-                        message: "You flip to a random page. '...and in that moment, she knew their love was a clue, a puzzle box only they could unlock.' You close the book. That's enough of that.",
+                        message: "You flip to a random page. That's enough of that.",
                         media: {
-                            url: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=600',
-                            description: 'Open book showing middle pages',
-                            hint: 'Random page'
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762712220/Book_Justice_2_ej33rl.png',
+                            description: 'Second page of Justice for My Love',
+                            hint: 'Romance novel page 2'
                         },
                         effects: [
                             { type: 'INCREMENT_ITEM_READ_COUNT', itemId: 'item_book_justice' }
@@ -2777,27 +2848,27 @@ const items: Record<ItemId, Item> = {
     },
     'item_secret_document': {
         id: 'item_secret_document' as ItemId,
-        name: 'Secret Document',
-        alternateNames: ['secret document', 'confidential file', 'file', 'document', 'confidential document', 'manila folder'],
+        name: 'Stolen Police File',
+        alternateNames: ['stolen police file', 'police file', 'file', 'document', 'stolen file', 'confidential file'],
         archetype: 'Document',
-        description: "A thick manila folder simply marked 'CONFIDENTIAL' in red ink. It feels heavy.",
-        alternateDescription: "The confidential file from the safe. It's filled with complex legal and financial jargon.",
+        description: "A thick police file marked 'CONFIDENTIAL - POLICE USE ONLY'. Official stamps and seals cover the folder.",
+        alternateDescription: "The stolen police file from the notebook. It contains classified investigation documents.",
         capabilities: { isTakable: true, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         media: {
             images: {
-                default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761263220/Confidential_File_qegnr4.png', description: 'A confidential document folder.', hint: 'closed document' },
-                opened: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761773132/Screenshot_2025-10-29_at_22.24.23_w9e7vd.png', description: 'An open document with text visible.', hint: 'open document' }
+                default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762429368/CH_I___Secret_Document_Notebook_kusyq8.pdf', description: 'A stolen police file with classified investigation documents.', hint: 'police file PDF' }
             }
         },
         handlers: {
             // 1. EXAMINE - Visual inspection
             onExamine: {
                 success: {
-                    message: "Manila folder, thick. CONFIDENTIAL stamped in red. Heavy. Feels like secrets.",
+                    message: "Police file. Thick. CONFIDENTIAL - POLICE USE ONLY stamped across it. Official seals. This was stolen from law enforcement.",
                     media: {
-                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761263220/Confidential_File_qegnr4.png',
-                        description: 'Confidential document folder',
-                        hint: 'Read it to uncover secrets'
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762429368/CH_I___Secret_Document_Notebook_kusyq8.pdf',
+                        type: 'pdf',
+                        description: 'Stolen police file with classified documents',
+                        hint: 'Read it to discover what the police know'
                     }
                 }
             },
@@ -2805,7 +2876,7 @@ const items: Record<ItemId, Item> = {
             // 2. TAKE - Pick it up
             onTake: {
                 success: {
-                    message: "File goes in your hands. Heavy. CONFIDENTIAL. This is what they hid.",
+                    message: "Police file goes in your hands. Heavy. CONFIDENTIAL - POLICE USE ONLY. Stolen evidence.",
                     effects: [
                         { type: 'ADD_ITEM', itemId: 'item_secret_document' },
                         { type: 'SET_ENTITY_STATE', entityId: 'item_secret_document', patch: { taken: true } }
@@ -2819,7 +2890,7 @@ const items: Record<ItemId, Item> = {
             // 3. DROP - Drop it
             onDrop: {
                 success: {
-                    message: "File drops. Confidential pages scatter. Can pick it up later."
+                    message: "Police file drops. Investigation documents scatter. Can pick it up later."
                 }
             },
 
@@ -2861,11 +2932,12 @@ const items: Record<ItemId, Item> = {
             // 10. READ - Read the document
             onRead: {
                 success: {
-                    message: "You open it. Dense. Blueprints of the cafe. Floor plans, structural diagrams. But wait—there's a hidden room marked behind the bookshelf. This wasn't on any public records. Someone drew this in red ink. Separate entrance. Why hide this?\n\nNext pages: Financial reports, shell corporations, offshore accounts. All linked to one holding company: Veridian Dynamics. This is big. Bigger than murder.",
+                    message: "You open the police file. Dense. Case reports, witness statements, crime scene photos. But wait—there's something about the cafe. Floor plans marked with investigator notes. A hidden room behind the bookshelf circled in red. Why was this being investigated?\n\nNext pages: Financial records, surveillance logs, shell corporations. All linked to one holding company: Veridian Dynamics. The police knew. They were building a case.",
                     media: {
-                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761773132/Screenshot_2025-10-29_at_22.24.23_w9e7vd.png',
-                        description: 'Open confidential document revealing cafe blueprints and financial conspiracy',
-                        hint: 'Hidden room behind bookshelf? Veridian Dynamics appears repeatedly'
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762429368/CH_I___Secret_Document_Notebook_kusyq8.pdf',
+                        type: 'pdf',
+                        description: 'Stolen police file revealing investigation into the cafe and Veridian Dynamics',
+                        hint: 'Hidden room behind bookshelf marked by police? Veridian Dynamics under investigation'
                     },
                     effects: [
                         { type: 'SET_FLAG', flag: 'read_secret_document' as Flag, value: true }
@@ -2879,7 +2951,7 @@ const items: Record<ItemId, Item> = {
             // 11. SEARCH - Search through pages
             onSearch: {
                 success: {
-                    message: "You flip through pages. Financial jargon, legal terms. Veridian Dynamics everywhere. Need time to fully analyze this."
+                    message: "You flip through pages. Case reports, witness statements, surveillance photos. Veridian Dynamics appears in multiple investigations. This file connects everything."
                 }
             },
 
@@ -2891,7 +2963,7 @@ const items: Record<ItemId, Item> = {
             },
 
             // Fallback
-            defaultFailMessage: "The file's marked CONFIDENTIAL. Try: EXAMINE it, READ it, or SEARCH through it."
+            defaultFailMessage: "It's a stolen police file marked CONFIDENTIAL - POLICE USE ONLY. Try: EXAMINE it, READ it, or SEARCH through it."
         },
         design: { tags: ['file', 'document'] },
         version: { schema: "1.0", content: "1.0" }

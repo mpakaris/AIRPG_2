@@ -117,21 +117,13 @@ export async function handleCall(state: PlayerState, commandRest: string, game: 
   // Normalize the phone number for comparison
   const normalizedNumber = normalizePhoneNumber(phoneNumber);
 
-  console.log('[handleCall] Player dialed:', phoneNumber);
-  console.log('[handleCall] Normalized:', normalizedNumber);
-
   // Handle array of conditional handlers
   if (Array.isArray(callHandlers)) {
-    console.log('[handleCall] Total handlers:', callHandlers.length);
-
     // Find matching handlers by phone number
     const matchingHandlers = callHandlers.filter(h => {
       const normalizedHandlerNumber = normalizePhoneNumber(h.phoneNumber || '');
-      console.log('[handleCall] Checking handler:', h.phoneNumber, '→', normalizedHandlerNumber);
       return normalizedHandlerNumber === normalizedNumber;
     });
-
-    console.log('[handleCall] Matching handlers found:', matchingHandlers.length);
 
     if (matchingHandlers.length > 0) {
       // Evaluate conditions for each matching handler

@@ -65,15 +65,17 @@ export function outcomeToMessageEffect(
   isFail?: boolean
 ): Effect {
   // Detect media type from URL extension or explicit type field
-  const getMediaType = (url?: string, explicitType?: string): 'image' | 'video' | 'audio' | 'text' => {
+  const getMediaType = (url?: string, explicitType?: string): 'image' | 'video' | 'audio' | 'pdf' | 'text' => {
     if (!url) return 'text';
 
     // Use explicit type if provided in outcome.media.type
+    if (explicitType === 'pdf') return 'pdf';
     if (explicitType === 'audio') return 'audio';
     if (explicitType === 'video') return 'video';
     if (explicitType === 'image') return 'image';
 
     // Otherwise detect from URL extension
+    if (url.match(/\.pdf$/i)) return 'pdf';
     if (url.match(/\.(mp4|webm|mov)$/i)) return 'video';
     if (url.match(/\.(mp3|wav|m4a|aac|ogg)$/i)) return 'audio';
     return 'image';

@@ -46,7 +46,7 @@ export type Message = {
   id: string;
   sender: 'narrator' | 'player' | 'system' | 'agent' | NpcId;
   senderName: string;
-  type: 'text' | 'image' | 'video' | 'article' | 'document' | 'audio';
+  type: 'text' | 'image' | 'video' | 'article' | 'document' | 'audio' | 'pdf';
   content: string;
   image?: ImageDetails;
   timestamp: number;
