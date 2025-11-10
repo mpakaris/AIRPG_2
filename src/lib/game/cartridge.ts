@@ -493,100 +493,58 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         },
         version: { schema: "1.0", content: "1.2" }
     },
-    'obj_magazine': {
-        id: 'obj_magazine' as GameObjectId,
-        name: 'Magazine',
-        archetype: 'Prop',
-        description: 'A discarded magazine lies on an empty table.',
-        capabilities: { openable: false, lockable: false, breakable: true, movable: true, powerable: false, container: false, readable: true, inputtable: false },
+    'obj_table': {
+        id: 'obj_table' as GameObjectId,
+        name: 'Table',
+        alternateNames: ['table', 'empty table', 'cafe table', 'small table'],
+        archetype: 'Furniture',
+        description: 'A small cafe table. Someone left a magazine on it.',
+        capabilities: { openable: false, lockable: false, breakable: false, movable: false, powerable: false, container: true, readable: false, inputtable: false },
         state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        media: { images: { default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759603706/Newspaper_p85m1h.png', description: 'A magazine on a table.', hint: 'magazine' } } },
+        inventory: { items: ['item_magazine'] as ItemId[], capacity: 5 },
+        children: { items: ['item_magazine'] as ItemId[] },
+        media: {
+            images: {
+                default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762762629/Magazine_vb6chv.png', description: 'A table with a magazine on it.', hint: 'table with magazine' },
+                empty: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762763369/Empty_Table_d6mywa.png', description: 'An empty table with a coffee ring.', hint: 'empty table' }
+            }
+        },
         handlers: {
-            // 1. EXAMINE - Visual inspection
-            onExamine: {
-                success: {
-                    message: "Entertainment mag, this week's issue. Cover story: the murders. Metropolis craziness, same old. Not your case. Just atmosphere.",
-                    media: {
-                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759603706/Newspaper_p85m1h.png',
-                        description: 'Local entertainment magazine',
-                        hint: 'Background noise, not evidence'
+            onExamine: [
+                {
+                    conditions: [{ type: 'HAS_ITEM', itemId: 'item_magazine' }],
+                    success: {
+                        message: "Small cafe table. Empty now. Just a sticky coffee ring where the magazine was.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762763369/Empty_Table_d6mywa.png',
+                            description: 'An empty table with a coffee ring',
+                            hint: 'Nothing on it anymore'
+                        }
+                    }
+                },
+                {
+                    conditions: [],
+                    success: {
+                        message: "Small cafe table. Someone left a magazine on it. Sticky coffee ring visible.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762762629/Magazine_vb6chv.png',
+                            description: 'Table with magazine',
+                            hint: 'Magazine on table'
+                        }
                     }
                 }
-            },
-
-            // 2. TAKE - Could take it, but not useful
+            ],
             onTake: {
-                fail: {
-                    message: "Old news. Not evidence. Leave it. Try READING it if you're curious."
-                }
+                fail: { message: "It's bolted to the floor. Cafe furniture. Try looking AT the table instead." }
             },
-
-            // 4. USE - No item usage
-            onUse: {
-                fail: {
-                    message: "It's for reading. Try EXAMINING or READING it."
-                }
-            },
-
-            // 6. OPEN - Already open/flat
-            onOpen: {
-                fail: {
-                    message: "It's flat on the table. Try READING it instead."
-                }
-            },
-
-            // 7. CLOSE - Can't close flat magazine
-            onClose: {
-                fail: {
-                    message: "Nothing to close. Try READING or MOVING it."
-                }
-            },
-
-            // 8. MOVE - Slide aside
             onMove: {
-                success: {
-                    message: "You slide it aside. Coffee ring underneath. Sticky. Not the clue you hoped for."
-                }
+                fail: { message: "Heavy, bolted down. Not moving it. Try examining what's ON it instead." }
             },
-
-            // 9. BREAK - Don't tear up cafe property
-            onBreak: {
-                fail: {
-                    message: "Tearing up cafe property? That's not detective work. Try READING it."
-                }
-            },
-
-            // 10. READ - Read the magazine
-            onRead: {
-                success: {
-                    message: "Murder coverage, local speculation, conspiracy theories. Metropolis loves its drama. Nothing connects to your case. Background noise."
-                }
-            },
-
-            // 11. SEARCH - Search through it
-            onSearch: {
-                success: {
-                    message: "You flip through pages. Ads, articles, event listings. Nothing relevant to the case. Just cafe reading."
-                }
-            },
-
-            // 12. TALK - Can't talk to magazine
-            onTalk: {
-                fail: {
-                    message: "Magazines don't chat. Try READING it or MOVING it."
-                }
-            },
-
-            // Fallback for undefined actions
-            defaultFailMessage: "The magazine's just atmosphere. Try: EXAMINE, READ, MOVE, or SEARCH it."
-        },
-        fallbackMessages: {
-            default: "The magazine is old news. Let's stick to the facts of our case.",
-            notMovable: "You shift the magazine, revealing a sticky coffee ring. Not the clue you were hoping for."
+            defaultFailMessage: "It's just a table. Try: EXAMINE it, or TAKE what's on it."
         },
         design: {
-            authorNotes: "Flavor item to build atmosphere.",
-            tags: ['magazine', 'paper']
+            authorNotes: "Simple container for magazine item. Shows empty table after magazine is taken.",
+            tags: ['furniture', 'table']
         },
         version: { schema: "1.0", content: "1.0" }
     },
@@ -2118,6 +2076,128 @@ const items: Record<ItemId, Item> = {
         },
         version: { schema: "1.0", content: "1.0" }
     },
+    'item_magazine': {
+        id: 'item_magazine' as ItemId,
+        name: 'Magazine',
+        alternateNames: ['magazine', 'entertainment magazine', 'weekly', 'mag'],
+        archetype: 'Document',
+        description: 'A discarded magazine lies on an empty table.',
+        capabilities: { isTakable: true, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+        state: { currentStateId: 'default', readCount: 0 },
+        media: {
+            images: {
+                default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762762629/Magazine_vb6chv.png', description: 'A magazine on a table.', hint: 'magazine' }
+            }
+        },
+        handlers: {
+            // 1. EXAMINE - Visual inspection
+            onExamine: {
+                success: {
+                    message: "Entertainment weekly. Glossy cover. Celebrity gossip, local events, restaurant reviews. Metropolis life. Not your case—just cafe atmosphere.",
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762762629/Magazine_vb6chv.png',
+                        description: 'Local entertainment magazine',
+                        hint: 'Background noise, not evidence'
+                    }
+                }
+            },
+
+            // 2. TAKE - Standard takeable
+            onTake: {
+                success: {
+                    message: "You pick up the magazine. Old news, but might pass the time later. It goes in your coat pocket.",
+                    effects: [
+                        { type: 'ADD_ITEM', itemId: 'item_magazine' },
+                        { type: 'SET_ENTITY_STATE', entityId: 'item_magazine', patch: { taken: true } }
+                    ]
+                },
+                fail: {
+                    message: "Already have it."
+                }
+            },
+
+            // 3. DROP
+            onDrop: {
+                success: {
+                    message: "You toss the magazine aside. Not like you were gonna read it anyway."
+                }
+            },
+
+            // 4. USE - No item usage
+            onUse: {
+                fail: {
+                    message: "It's for reading. Try EXAMINING or READING it."
+                }
+            },
+
+            // 6. OPEN - Open the magazine
+            onOpen: {
+                success: {
+                    message: "You flip it open. Articles on nightlife, food scene, weekend events. The usual. Nothing relevant to the case.",
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762762629/Magazine_onRead_ucw5lk.png',
+                        description: 'Open entertainment magazine showing articles and ads',
+                        hint: 'Just cafe reading material'
+                    }
+                }
+            },
+
+            // 7. CLOSE
+            onClose: {
+                success: {
+                    message: "You close it. Nothing of interest anyway."
+                }
+            },
+
+            // 8. MOVE
+            onMove: {
+                fail: {
+                    message: "It's in your pocket. Already moved."
+                }
+            },
+
+            // 9. BREAK
+            onBreak: {
+                fail: {
+                    message: "Why tear up a magazine? Just toss it if you don't want it."
+                }
+            },
+
+            // 10. READ - Read the magazine
+            onRead: {
+                success: {
+                    message: "You skim the pages. Event listings, restaurant ads, a think piece on urban renewal. Metropolis life documented, preserved in glossy print. Nothing connects to your case. Just background noise.",
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762762629/Magazine_onRead_ucw5lk.png',
+                        description: 'Reading the entertainment magazine',
+                        hint: 'Just cafe reading material'
+                    }
+                }
+            },
+
+            // 11. SEARCH
+            onSearch: {
+                success: {
+                    message: "You flip through pages. Ads, articles, event listings. Nothing relevant to the case. Just cafe reading."
+                }
+            },
+
+            // 12. TALK
+            onTalk: {
+                fail: {
+                    message: "Magazines don't chat. Try READING it."
+                }
+            },
+
+            // Fallback
+            defaultFailMessage: "The magazine's just atmosphere. Try: EXAMINE, READ, or DROP it."
+        },
+        design: {
+            authorNotes: "Flavor item to build atmosphere. Not relevant to the case.",
+            tags: ['magazine', 'paper']
+        },
+        version: { schema: "1.0", content: "1.0" }
+    },
     'item_recip_saw': {
         id: 'item_recip_saw' as ItemId,
         name: 'Reciprocating Saw',
@@ -3274,7 +3354,7 @@ const locations: Record<LocationId, Location> = {
         sceneDescription: 'You are inside The Daily Grind. It\'s a bustling downtown cafe, smelling of coffee and rain.',
         sceneImage: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762686189/Cafe_Blueprint_pv01xp.png', description: 'A view of the bustling cafe interior.', hint: 'bustling cafe' },
         coord: { x: 1, y: 1, z: 0 },
-        objects: ['obj_brown_notebook', 'obj_chalkboard_menu', 'obj_magazine', 'obj_bookshelf', 'obj_painting', 'obj_counter'] as GameObjectId[],
+        objects: ['obj_brown_notebook', 'obj_chalkboard_menu', 'obj_table', 'obj_bookshelf', 'obj_painting', 'obj_counter'] as GameObjectId[],
         npcs: ['npc_barista', 'npc_manager', 'npc_victim_girl'] as NpcId[],
         entryPortals: ['portal_street_to_cafe' as PortalId],
         exitPortals: ['portal_cafe_to_street' as PortalId],
@@ -3289,7 +3369,7 @@ const locations: Record<LocationId, Location> = {
             },
             {
                 title: 'On a nearby table',
-                objectIds: ['obj_brown_notebook', 'obj_magazine']
+                objectIds: ['obj_brown_notebook', 'obj_table']
             },
             {
                 title: 'In the corner',
