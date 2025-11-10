@@ -24,3 +24,6 @@ Summary of commands:
   - npm run db:seed - Update everything + reset player state
 
   Go ahead and run npm run db:seed:game to push your changes!
+
+Testing:
+npm test -- --run

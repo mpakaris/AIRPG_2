@@ -7,6 +7,7 @@
 
 import type { Game, PlayerState, GameObject, Item, GameObjectId, ItemId } from "@/lib/game/types";
 import { normalizeName } from "@/lib/utils";
+import { VisibilityResolver, GameStateManager } from "@/lib/game/engine";
 
 export type MatchResult = {
     matches: boolean;
@@ -210,8 +211,6 @@ export function findBestMatch(
     // Get entities in current focus (if any)
     let entitiesInFocus = { items: [] as string[], objects: [] as string[] };
     if (state.currentFocusId) {
-        const { GameStateManager } = require("@/lib/game/engine");
-
         // IMPORTANT: Include the focused entity itself!
         // Players should be able to interact with what they're focused on
         if (game.items[state.currentFocusId as ItemId]) {
@@ -300,7 +299,6 @@ export function findBestMatch(
     } else {
         // Normal mode: search all visible entities
         if (options.searchVisibleItems || options.searchObjects) {
-            const { VisibilityResolver } = require("@/lib/game/engine");
             const visible = VisibilityResolver.getVisibleEntities(state, game);
             visibleEntities.items = visible.items;
             visibleEntities.objects = visible.objects;

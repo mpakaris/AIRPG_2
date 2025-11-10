@@ -2,7 +2,7 @@
 'use server';
 
 import type { Game, PlayerState, Effect, GameObjectId, ItemId } from "@/lib/game/types";
-import { Validator, HandlerResolver, VisibilityResolver, FocusResolver } from "@/lib/game/engine";
+import { Validator, HandlerResolver, VisibilityResolver, FocusResolver, GameStateManager } from "@/lib/game/engine";
 import { normalizeName } from "@/lib/utils";
 import { handleRead } from "@/lib/game/actions/handle-read";
 import { buildEffectsFromOutcome, resolveConditionalHandler, evaluateHandlerOutcome } from "@/lib/game/utils/outcome-helpers";
@@ -85,7 +85,6 @@ export async function handleOpen(state: PlayerState, targetName: string, game: G
         const effects: Effect[] = [];
 
         // Check if object is locked (use runtime state from GameStateManager)
-        const { GameStateManager } = require('@/lib/game/engine');
         const runtimeState = GameStateManager.getEntityState(state, targetObjectId);
         const isLocked = runtimeState.isLocked === true;
 
