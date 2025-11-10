@@ -46,7 +46,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         { type: 'FLAG', flag: 'notebook_video_watched', value: true }
                     ],
                     success: {
-                        message: "Notebook's open. Brass clasp unfastened. Inside: yellowed pages, faded ink, illegible entries. The SD card and secret document—both gone. You took what was hidden here. Just empty pages remain."
+                        message: "Notebook's open. Brass clasp unfastened. Inside: yellowed pages, faded ink, illegible entries. The SD card and police file—both gone. You took what was hidden here. Just empty pages remain."
                     }
                 },
                 {
@@ -55,27 +55,27 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         { type: 'HAS_ITEM', itemId: 'item_secret_document' }
                     ],
                     success: {
-                        message: "Notebook's open. Brass clasp released. Inside: the black SD card still rests against yellowed pages—modern, out of place. The secret document is gone. You took it."
+                        message: "Notebook's open. Brass clasp released. Inside: the black SD card still rests against yellowed pages—modern, out of place. The police file is gone. You took it."
                     }
                 },
                 {
-                    // Unlocked + only video watched (document not taken)
+                    // Unlocked + video watched (document not taken)
                     conditions: [
                         { type: 'FLAG', flag: 'notebook_video_watched', value: true }
                     ],
                     success: {
-                        message: "Notebook's open. Brass clasp unfastened. Inside: the folded document marked CONFIDENTIAL still waits in faded red ink. The SD card is there too—you've already watched the video. The footage is burned into your memory."
+                        message: "Notebook's open. Brass clasp unfastened. Inside: the stolen police file marked CONFIDENTIAL waits in faded red ink. The SD card is there too—you've already watched the video. The footage is burned into your memory."
                     }
                 },
                 {
-                    // Default: Unlocked + nothing taken/watched
+                    // Default: Unlocked + video NOT watched yet (only show SD card)
                     conditions: [],
                     success: {
-                        message: "Notebook's open. Brass clasp released. Inside: black SD card—modern, out of place against yellowed pages. Next to it, a folded document marked CONFIDENTIAL in faded red ink. Hidden deliberately.",
+                        message: "Notebook's open. Brass clasp released. Inside: black SD card—modern, out of place against yellowed pages. Your phone can read this.",
                         media: {
                             url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759242346/Notebook_unlocked_fpxqgl.jpg',
-                            description: 'Unlocked notebook revealing hidden contents',
-                            hint: 'SD card and secret document'
+                            description: 'Unlocked notebook with SD card',
+                            hint: 'Use your phone to read the SD card'
                         }
                     }
                 }
@@ -105,47 +105,47 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         { type: 'FLAG', flag: 'notebook_video_watched', value: true }
                     ],
                     success: {
-                        message: "Notebook's already open. Brass clasp unfastened. Inside: yellowed pages, faded ink. The SD card and secret document—both gone. You took what was hidden here.",
+                        message: "Notebook's already open. Brass clasp unfastened. Inside: yellowed pages, faded ink. The SD card and police file—both gone. You took what was hidden here.",
                         effects: [
                             { type: 'SET_ENTITY_STATE', entityId: 'obj_brown_notebook', patch: { isOpen: true, currentStateId: 'unlocked' } }
                         ]
                     }
                 },
                 {
-                    // Unlocked + only document taken
+                    // Unlocked + only document taken (video not watched yet)
                     conditions: [
                         { type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: false },
                         { type: 'HAS_ITEM', itemId: 'item_secret_document' }
                     ],
                     success: {
-                        message: "Notebook's open. Brass clasp unfastened. In the crease: the black SD card still rests there—modern, cold, out of place. The secret document is gone.",
+                        message: "Notebook's open. Brass clasp unfastened. In the crease: the black SD card still rests there—modern, cold, out of place. The police file is gone.",
                         effects: [
                             { type: 'SET_ENTITY_STATE', entityId: 'obj_brown_notebook', patch: { isOpen: true, currentStateId: 'unlocked' } }
                         ]
                     }
                 },
                 {
-                    // Unlocked + only video watched
+                    // Unlocked + video watched but file not taken
                     conditions: [
                         { type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: false },
                         { type: 'FLAG', flag: 'notebook_video_watched', value: true }
                     ],
                     success: {
-                        message: "Notebook's open. Brass clasp unfastened. In the crease: document marked CONFIDENTIAL, folded tight. The SD card is there too—you've watched the video already.",
+                        message: "Notebook's open. Brass clasp unfastened. In the crease: the stolen police file marked CONFIDENTIAL. The SD card is there too—you've watched the video already.",
                         effects: [
                             { type: 'SET_ENTITY_STATE', entityId: 'obj_brown_notebook', patch: { isOpen: true, currentStateId: 'unlocked' } }
                         ]
                     }
                 },
                 {
-                    // Unlocked + nothing taken
+                    // Unlocked + video NOT watched yet (only show SD card)
                     conditions: [{ type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: false }],
                     success: {
-                        message: "Notebook's open. Brass clasp unfastened. In the crease: black SD card—modern, cold, out of place. Next to it: document marked CONFIDENTIAL, folded tight. Different eras. Hidden together. Someone archived the past on modern media.",
+                        message: "Notebook's open. Brass clasp unfastened. In the crease: black SD card—modern, cold, out of place against yellowed pages. Your phone can read this.",
                         media: {
                             url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759242346/Notebook_unlocked_fpxqgl.jpg',
-                            description: 'Open notebook with SD card and secret document',
-                            hint: 'Take the contents'
+                            description: 'Open notebook with SD card',
+                            hint: 'Use your phone to read the SD card'
                         },
                         effects: [
                             { type: 'SET_ENTITY_STATE', entityId: 'obj_brown_notebook', patch: { isOpen: true, currentStateId: 'unlocked' } }
@@ -197,7 +197,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         { type: 'FLAG', flag: 'notebook_video_watched', value: true }
                     ],
                     success: {
-                        message: "Pages yellowed, ink faded. Most entries illegible. The hidden items—SD card, secret document—both gone. You took them already.",
+                        message: "Pages yellowed, ink faded. Most entries illegible. The hidden items—SD card, police file—both gone. You took them already.",
                         effects: []
                     }
                 },
@@ -209,30 +209,30 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         { type: 'HAS_ITEM', itemId: 'item_secret_document' }
                     ],
                     success: {
-                        message: "Pages yellowed, ink faded. Most entries illegible. The SD card is still here—you can use your phone to read it. The secret document is gone.",
+                        message: "Pages yellowed, ink faded. Most entries illegible. The SD card is still here—you can use your phone to read it. The police file is gone.",
                         effects: []
                     }
                 },
                 {
-                    // Unlocked + only video watched
+                    // Unlocked + video watched (file not taken)
                     conditions: [
                         { type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: false },
                         { type: 'STATE', entityId: 'obj_brown_notebook', key: 'isOpen', equals: true },
                         { type: 'FLAG', flag: 'notebook_video_watched', value: true }
                     ],
                     success: {
-                        message: "Pages yellowed, ink faded. Most entries illegible. The secret document is still here—TAKE it. You've already watched the SD card video.",
+                        message: "Pages yellowed, ink faded. Most entries illegible. The stolen police file is still here—TAKE it. You've already watched the SD card video.",
                         effects: []
                     }
                 },
                 {
-                    // Unlocked + nothing taken
+                    // Unlocked + video NOT watched yet (only show SD card)
                     conditions: [
                         { type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: false },
                         { type: 'STATE', entityId: 'obj_brown_notebook', key: 'isOpen', equals: true }
                     ],
                     success: {
-                        message: "Pages yellowed, ink faded. Most entries illegible. But the hidden items—SD card, secret document—those are what matter. TAKE them.",
+                        message: "Pages yellowed, ink faded. Most entries illegible. The SD card—that's what matters. Use your phone to read it.",
                         effects: []
                     }
                 },
@@ -255,7 +255,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         { type: 'FLAG', flag: 'notebook_video_watched', value: true }
                     ],
                     success: {
-                        message: "You search the pages. Empty. The SD card and secret document—both gone. You took them already."
+                        message: "You search the pages. Empty. The SD card and police file—both gone. You took them already."
                     }
                 },
                 {
@@ -265,24 +265,24 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         { type: 'HAS_ITEM', itemId: 'item_secret_document' }
                     ],
                     success: {
-                        message: "You search the pages. The SD card is still here—use your phone to read it. The secret document is gone."
+                        message: "You search the pages. The SD card is still here—use your phone to read it. The police file is gone."
                     }
                 },
                 {
-                    // Unlocked + only video watched
+                    // Unlocked + video watched (file not taken)
                     conditions: [
                         { type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: false },
                         { type: 'FLAG', flag: 'notebook_video_watched', value: true }
                     ],
                     success: {
-                        message: "You search the pages. The secret document is still hidden in the center spread—TAKE it. You've already watched the SD card video."
+                        message: "You search the pages. The stolen police file is still hidden in the center spread—TAKE it. You've already watched the SD card video."
                     }
                 },
                 {
-                    // Unlocked + nothing taken
+                    // Unlocked + video NOT watched yet (only show SD card)
                     conditions: [{ type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: false }],
                     success: {
-                        message: "You search the pages. SD card, secret document—hidden in the center spread. TAKE them."
+                        message: "You search the pages. The SD card—modern, black—hidden in the center spread. Use your phone to read it."
                     }
                 },
                 {
@@ -304,17 +304,17 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             // SPECIAL: Password unlock handler
             onUnlock: {
                 success: {
-                    message: "Brass clasp clicks. Cover swings open, leather creaks. Inside: black SD card—modern, digital, anachronistic.",
+                    message: "Brass clasp clicks. Cover swings open, leather creaks. Inside: black SD card—modern, digital, anachronistic. It rests against yellowed pages, out of place.",
                     media: {
                         url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759242346/Notebook_unlocked_fpxqgl.jpg',
-                        description: 'Unlocked notebook revealing secrets',
-                        hint: 'The password worked'
+                        description: 'Unlocked notebook revealing SD card',
+                        hint: 'The password worked - SD card revealed'
                     },
                     effects: [
                         { type: 'SET_FLAG', flag: 'has_unlocked_notebook' as Flag, value: true },
                         { type: 'SET_ENTITY_STATE', entityId: 'obj_brown_notebook', patch: { isLocked: false, isOpen: true, currentStateId: 'unlocked' } },
-                        { type: 'REVEAL_FROM_PARENT', entityId: 'obj_sd_card', parentId: 'obj_brown_notebook' },
-                        { type: 'REVEAL_FROM_PARENT', entityId: 'item_secret_document', parentId: 'obj_brown_notebook' }
+                        { type: 'REVEAL_FROM_PARENT', entityId: 'obj_sd_card', parentId: 'obj_brown_notebook' }
+                        // Police file will be revealed after SD card video is watched
                     ]
                 },
                 fail: {
@@ -1426,7 +1426,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         { type: 'STATE', entityId: 'obj_sd_card', key: 'currentStateId', equals: 'closed' }
                     ],
                     success: {
-                        message: "Card slides into your phone. Screen flickers. Video loads—grainy, seventy years old. Music fills the cafe. Saxophone, smooth, melancholic. A tune that's been waiting.\n\nSilas Bloom. Musician. That song for Rose... they were in love. You hear it in every note.\n\nVideo ends. More questions than answers. Your mind races.",
+                        message: "Card slides into your phone. Screen flickers. Video loads—grainy, seventy years old. Music fills the cafe. Saxophone, smooth, melancholic. A tune that's been waiting.\n\nSilas Bloom. Musician. That song for Rose... they were in love. You hear it in every note.\n\nVideo ends. More questions than answers. Your mind races.\n\nWait—you notice something else tucked deeper in the notebook. A folded document. CONFIDENTIAL - POLICE USE ONLY. Faded red ink. What's this doing here? It looks... stolen.",
                         media: {
                             url: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759678377/CH_I_completion_jqtyme.mp4',
                             type: 'video',
@@ -1435,7 +1435,8 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         },
                         effects: [
                             { type: 'SET_ENTITY_STATE', entityId: 'obj_sd_card', patch: { currentStateId: 'opened' } },
-                            { type: 'SET_FLAG', flag: 'notebook_video_watched' as Flag, value: true }
+                            { type: 'SET_FLAG', flag: 'notebook_video_watched' as Flag, value: true },
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_secret_document', parentId: 'obj_brown_notebook' }
                         ]
                     }
                 }
@@ -1458,7 +1459,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         { type: 'STATE', entityId: 'obj_sd_card', key: 'currentStateId', equals: 'closed' }
                     ],
                     success: {
-                        message: "Card slides into your phone. Screen flickers. Video loads—grainy, seventy years old. Music fills the cafe. Saxophone, smooth, melancholic. A tune that's been waiting.\n\nSilas Bloom. Musician. That song for Rose... they were in love. You hear it in every note.\n\nVideo ends. More questions than answers. Your mind races.",
+                        message: "Card slides into your phone. Screen flickers. Video loads—grainy, seventy years old. Music fills the cafe. Saxophone, smooth, melancholic. A tune that's been waiting.\n\nSilas Bloom. Musician. That song for Rose... they were in love. You hear it in every note.\n\nVideo ends. More questions than answers. Your mind races.\n\nWait—you notice something else tucked deeper in the notebook. A folded document. CONFIDENTIAL - POLICE USE ONLY. Faded red ink. What's this doing here? It looks... stolen.",
                         media: {
                             url: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759678377/CH_I_completion_jqtyme.mp4',
                             type: 'video',
@@ -1467,7 +1468,8 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         },
                         effects: [
                             { type: 'SET_ENTITY_STATE', entityId: 'obj_sd_card', patch: { currentStateId: 'opened' } },
-                            { type: 'SET_FLAG', flag: 'notebook_video_watched' as Flag, value: true }
+                            { type: 'SET_FLAG', flag: 'notebook_video_watched' as Flag, value: true },
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_secret_document', parentId: 'obj_brown_notebook' }
                         ]
                     }
                 }

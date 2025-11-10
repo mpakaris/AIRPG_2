@@ -303,7 +303,8 @@ export class GameStateManager {
               state,
               showEvenIfExamined: true,
               entityType: effect.imageEntityType  // Pass explicit entity type to prevent ambiguity
-            } : undefined
+            } : undefined,
+            effect.usage  // NEW: Pass token usage from effect
           );
 
           // CARTRIDGE-DRIVEN: If imageUrl is provided directly (e.g., location scene images),

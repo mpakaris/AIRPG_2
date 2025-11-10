@@ -58,8 +58,8 @@ export async function handleHelp(state: PlayerState, game: Game): Promise<Effect
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'narrator',
-            content: aiResponse.agentResponse
-            // Note: Usage tracking would need to be handled separately
+            content: aiResponse.agentResponse,
+            usage: usage  // Track AI token usage
         }];
 
     } catch (error) {

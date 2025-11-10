@@ -70,7 +70,7 @@ export type Effect =
   | { type: 'DESTROY_ITEM'; itemId: ItemId } // From world
   | { type: 'SET_FLAG'; flag: Flag; value?: boolean } // Added value parameter for explicit true/false
   | { type: 'REVEAL_OBJECT'; objectId: GameObjectId }
-  | { type: 'SHOW_MESSAGE'; speaker: Message['sender']; senderName?: string; content: string; messageType?: Message['type']; imageId?: ItemId | NpcId | GameObjectId; imageEntityType?: 'item' | 'object' | 'npc'; imageUrl?: string; imageDescription?: string; imageHint?: string }
+  | { type: 'SHOW_MESSAGE'; speaker: Message['sender']; senderName?: string; content: string; messageType?: Message['type']; imageId?: ItemId | NpcId | GameObjectId; imageEntityType?: 'item' | 'object' | 'npc'; imageUrl?: string; imageDescription?: string; imageHint?: string; usage?: TokenUsage }
   | { type: 'START_CONVERSATION'; npcId: NpcId }
   | { type: 'END_CONVERSATION' }
   | { type: 'START_INTERACTION'; objectId: string }
