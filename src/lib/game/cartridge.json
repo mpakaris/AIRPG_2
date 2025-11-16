@@ -556,9 +556,16 @@
             }
           },
           {
-            "conditions": [],
-            "fail": {
-              "message": "Brass clasp won't budge. Needs a PASSWORD—phrase, not key. Someone made sure this stayed hidden.\n\nUse: /password <your guess>\n\nStuck? https://airpg-minigames.vercel.app/games/the-notebook"
+            "conditions": [
+              {
+                "type": "STATE",
+                "entityId": "obj_brown_notebook",
+                "key": "isLocked",
+                "equals": true
+              }
+            ],
+            "success": {
+              "message": "The brass clasp refuses to budge. Cold metal, unyielding. This isn't a lock for keys—it's waiting for something else. A phrase. A password. Someone sealed this notebook with words, not metal.\n\nYou run your fingers over the worn leather, feeling the weight of secrets pressed into every crease. Whatever's inside, someone went to great lengths to hide it. The kind of lengths that make your pulse quicken.\n\nYou need the right phrase to unlock this. If you know it, whisper it to the notebook:\n\n**/password <phrase>** (example: /password Bloodhaven rules)\n\nStuck? There's a puzzle that might help you find the answer:\nhttps://airpg-minigames.vercel.app/games/the-notebook\n\nThe notebook waits. Silent. Patient. Guarding its truth."
             }
           }
         ],
