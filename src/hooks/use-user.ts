@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { findOrCreateUser } from '@/app/actions';
+import { extractUIMessages } from '@/lib/utils/extract-ui-messages';
 import type { PlayerState, Message, GameId } from '@/lib/game/types';
 import { initializeFirebase } from '@/firebase';
 import { doc, getDoc } from 'firebase/firestore';
@@ -26,9 +27,13 @@ async function fetchUserData(userId: string): Promise<UserState | null> {
         const [stateSnap, logSnap] = await Promise.all([getDoc(stateRef), getDoc(logRef)]);
 
         if (stateSnap.exists() && logSnap.exists()) {
+            // Extract UI messages from consolidated log entries
+            const rawMessages = logSnap.data()?.messages || [];
+            const uiMessages = extractUIMessages(rawMessages);
+
             return {
                 playerState: stateSnap.data() as PlayerState,
-                messages: logSnap.data()?.messages || []
+                messages: uiMessages
             };
         }
         return null; // Data not found, implies a new user or inconsistent state

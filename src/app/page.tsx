@@ -6,6 +6,7 @@ import { toSerializableGame } from '@/lib/game/types';
 import { initializeFirebase } from '@/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { getGameData, createInitialMessages } from '@/app/actions';
+import { extractUIMessages } from '@/lib/utils/extract-ui-messages';
 
 const GAME_ID = 'blood-on-brass' as GameId;
 
@@ -37,7 +38,9 @@ async function getInitialData(userId: string | null, game: Game): Promise<{ play
 
     let messages: Message[] = [];
     if (logSnap.exists() && logSnap.data()?.messages?.length > 0) {
-        messages = logSnap.data()?.messages || [];
+        // Extract UI messages from consolidated log entries
+        const rawMessages = logSnap.data()?.messages || [];
+        messages = extractUIMessages(rawMessages);
     } else {
         messages = await createInitialMessages(playerState, game);
     }

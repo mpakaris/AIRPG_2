@@ -12,6 +12,7 @@ import { doc, setDoc, getDoc, collection, getDocs, query, where, deleteDoc } fro
 import { getInitialState } from '@/lib/game-state';
 import { dispatchMessage } from '@/lib/whinself-service';
 import { createMessage } from '@/lib/utils';
+import { extractUIMessages } from '@/lib/utils/extract-ui-messages';
 import { getLiveGameObject } from '@/lib/game/utils/helpers';
 import { handleConversation } from '@/lib/game/actions/handle-conversation';
 import { handleExamine } from '@/lib/game/actions/handle-examine';
@@ -272,22 +273,46 @@ export async function processCommand(
 
         const systemName = "System";
 
+        // Variables for unified command logging (declare here for function-wide scope)
+        let commandStartTime: number | undefined;
+        let stateBefore: PlayerState = currentState;
+        let preprocessedInput = safePlayerInput;
+        let uiMessagesThisTurn: Message[] = []; // Track UI messages for this turn only
+
         let playerMessage: Message | null = null;
         if (safePlayerInput) {
             playerMessage = createMessage('player', 'You', safePlayerInput);
-            allMessagesForSession.push(playerMessage);
+            // Will be added to appropriate array based on command type:
+            // - Special commands (device, password, map): add to allMessagesForSession
+            // - Regular commands: add to uiMessagesThisTurn (for consolidated logging)
         }
-        
+
         // NEW ARCHITECTURE: Handlers now return Effect[] instead of CommandResult
         let effects: Effect[] = [];
+        let preprocessingMs = 0;
+        let aiInterpretationMs = 0;
+        let executionMs = 0;
+        let stateUpdateMs = 0;
+        let safetyNetResult: any;
+        let verb = 'unknown';
+        let restOfCommand = '';
+        let executionSuccess = true;
+        let executionErrorMessage: string | undefined;
+        let executionErrorType: 'invalid_target' | 'invalid_action' | 'ai_unclear' | 'system_error' | undefined;
 
         // --- Core Command Logic ---
         if (currentState.activeConversationWith) {
+            // SPECIAL COMMAND: Conversation (old format)
+            if (playerMessage) allMessagesForSession.push(playerMessage);
+
             // handleConversation still uses old architecture (legacy)
             const legacyResult = await handleConversation(currentState, safePlayerInput, game);
             allMessagesForSession.push(...legacyResult.messages);
             currentState = legacyResult.newState;
         } else if (currentState.activeDeviceFocus) {
+            // SPECIAL COMMAND: Device focus (old format)
+            if (playerMessage) allMessagesForSession.push(playerMessage);
+
             // DEVICE FOCUS MODE: Route commands to device-specific handler
             effects = await handleDeviceCommand(currentState, safePlayerInput, game);
             if (effects.length > 0) {
@@ -297,10 +322,13 @@ export async function processCommand(
             }
 
             await logAndSave(userId, gameId, currentState, allMessagesForSession);
-            return { newState: currentState, messages: allMessagesForSession };
+            return { newState: currentState, messages: extractUIMessages(allMessagesForSession) };
         } else if (lowerInput === 'restart') {
             return await resetGame(userId);
         } else if (lowerInput.startsWith('/password ')) {
+            // SPECIAL COMMAND: Password (old format)
+            if (playerMessage) allMessagesForSession.push(playerMessage);
+
             // EXPLICIT PASSWORD COMMAND: /password <phrase>
             // This removes ambiguity - player explicitly indicates they're entering a password
             const passwordPhrase = safePlayerInput.substring(10).trim(); // Remove "/password " prefix
@@ -319,8 +347,11 @@ export async function processCommand(
             }
 
             await logAndSave(userId, gameId, currentState, allMessagesForSession);
-            return { newState: currentState, messages: allMessagesForSession };
+            return { newState: currentState, messages: extractUIMessages(allMessagesForSession) };
         } else if (lowerInput === '/map') {
+            // SPECIAL COMMAND: Map (old format)
+            if (playerMessage) allMessagesForSession.push(playerMessage);
+
             // SHOW MAP: Display the current chapter's map
             const currentChapter = game.chapters[currentState.currentChapterId];
 
@@ -346,9 +377,49 @@ export async function processCommand(
             allMessagesForSession.push(mapMessage);
 
             await logAndSave(userId, gameId, currentState, allMessagesForSession);
-            return { newState: currentState, messages: allMessagesForSession };
+            return { newState: currentState, messages: extractUIMessages(allMessagesForSession) };
         } else {
-            // Let the AI interpret the command (natural language - could be anything!)
+            // UNIFIED COMMAND LOGGING: Track everything for debugging and analytics
+            commandStartTime = Date.now();
+            stateBefore = JSON.parse(JSON.stringify(currentState)); // Deep copy for snapshot
+
+            // SAFETY NET: Preprocess input, detect patterns, use 2-tier AI interpretation
+            const { preprocessInput, isHelpRequest, isEmptyOrGibberish, getGibberishMessage } = await import('@/lib/game/utils/input-preprocessing');
+
+            // 1. PREPROCESS INPUT
+            const preprocessingStartTime = Date.now();
+            preprocessedInput = preprocessInput(safePlayerInput);
+            preprocessingMs = Date.now() - preprocessingStartTime;
+
+            // 2. QUICK PATTERN CHECKS (no AI needed)
+            if (isHelpRequest(preprocessedInput)) {
+                // SPECIAL CASE: Help (old format)
+                if (playerMessage) allMessagesForSession.push(playerMessage);
+
+                effects = await handleHelp(currentState, game);
+                if (effects.length > 0) {
+                    const result = await processEffects(currentState, effects, game);
+                    currentState = result.newState;
+                    allMessagesForSession.push(...result.messages);
+                }
+                await logAndSave(userId, gameId, currentState, allMessagesForSession);
+                return { newState: currentState, messages: extractUIMessages(allMessagesForSession) };
+            }
+
+            if (isEmptyOrGibberish(preprocessedInput)) {
+                // SPECIAL CASE: Gibberish (old format)
+                if (playerMessage) allMessagesForSession.push(playerMessage);
+
+                const gibberishMsg = createMessage('narrator', game.narratorName || 'Narrator', getGibberishMessage(preprocessedInput));
+                allMessagesForSession.push(gibberishMsg);
+                await logAndSave(userId, gameId, currentState, allMessagesForSession);
+                return { newState: currentState, messages: extractUIMessages(allMessagesForSession) };
+            }
+
+            // REGULAR COMMAND: Use consolidated logging
+            if (playerMessage) uiMessagesThisTurn.push(playerMessage);
+
+            // 3. PREPARE AI INTERPRETATION INPUT
             const location = game.locations[currentState.currentLocationId];
 
             // IMPORTANT: Use VisibilityResolver to get ALL visible entities
@@ -383,32 +454,58 @@ export async function processCommand(
                 }
             }
 
-            const { output: aiResponse, usage } = await guidePlayerWithNarrator({
-                promptContext: game.promptContext || '',
-                gameState: JSON.stringify({
-                    ...currentState,
-                    world: undefined, // Too large for AI context
-                    stories: undefined, // Not needed for AI
-                    counters: undefined, // Analytics only
-                }, null, 2),
-                playerCommand: safePlayerInput,
-                availableCommands: AVAILABLE_COMMANDS.join(', '),
-                visibleObjectNames: visibleEntityNames,
-                visibleNpcNames: visibleNpcNames,
-            });
+            // 4. AI INTERPRETATION WITH SAFETY NET
+            const aiInterpretationStartTime = Date.now();
+            const { interpretCommandWithSafetyNet, CONFIDENCE_THRESHOLDS } = await import('@/ai/flows/interpret-with-safety-net');
 
-            if (aiResponse.agentResponse) {
-                let systemMessage = createMessage('system', systemName, `${aiResponse.agentResponse}`, 'text', undefined, usage);
+            safetyNetResult = await interpretCommandWithSafetyNet(
+                {
+                    promptContext: game.promptContext || '',
+                    gameState: JSON.stringify({
+                        ...currentState,
+                        world: undefined, // Too large for AI context
+                        stories: undefined, // Not needed for AI
+                        counters: undefined, // Analytics only
+                    }, null, 2),
+                    playerCommand: preprocessedInput,
+                    availableCommands: AVAILABLE_COMMANDS.join(', '),
+                    visibleObjectNames: visibleEntityNames,
+                    visibleNpcNames: visibleNpcNames,
+                },
+                gameId,
+                userId
+            );
+            aiInterpretationMs = Date.now() - aiInterpretationStartTime;
+
+            // 5. HANDLE LOW CONFIDENCE / UNCLEAR COMMANDS
+            if (safetyNetResult.confidence < 0.5 || safetyNetResult.commandToExecute === 'invalid') {
+                const unclearMsg = createMessage(
+                    'narrator',
+                    game.narratorName || 'Narrator',
+                    safetyNetResult.reasoning ||
+                    `I'm not sure what you mean by "${safePlayerInput}". Try commands like: look, examine, take, use, or type /help for more options.`
+                );
+                allMessagesForSession.push(unclearMsg);
+                await logAndSave(userId, gameId, currentState, allMessagesForSession);
+                return { newState: currentState, messages: allMessagesForSession };
+            }
+
+            // 7. ADD AI RESPONSE MESSAGE (if provided)
+            if (safetyNetResult.responseToPlayer) {
+                let systemMessage = createMessage('system', systemName, safetyNetResult.responseToPlayer);
                 allMessagesForSession.push(systemMessage);
             }
 
-            const commandToExecute = aiResponse.commandToExecute.toLowerCase();
+            const commandToExecute = safetyNetResult.commandToExecute.toLowerCase();
 
             const verbMatch = commandToExecute.match(/^(\w+)\s*/);
-            const verb = verbMatch ? verbMatch[1] : commandToExecute;
-            const restOfCommand = commandToExecute.substring((verbMatch ? verbMatch[0].length : verb.length)).trim();
+            verb = verbMatch ? verbMatch[1] : commandToExecute;
+            restOfCommand = commandToExecute.substring((verbMatch ? verbMatch[0].length : verb.length)).trim();
 
             console.log('[processCommand] Verb:', verb, 'RestOfCommand:', restOfCommand);
+
+            // Track command execution timing
+            const executionStartTime = Date.now();
 
             // NEW: Route to handlers that return Effect[]
             switch (verb) {
@@ -610,13 +707,17 @@ export async function processCommand(
             }
 
             // NEW: Apply effects through processEffects (which includes image resolution)
+            const stateUpdateStartTime = Date.now();
             if (effects.length > 0) {
                 console.log('[processCommand] Processing', effects.length, 'effects from verb:', verb);
                 console.log('[processCommand] Effects:', effects.map(e => e.type));
                 const result = await processEffects(currentState, effects, game);
                 currentState = result.newState;  // FIX: Use newState, not state!
-                allMessagesForSession.push(...result.messages);
+                // DON'T add to allMessagesForSession - collect for consolidated entry
+                uiMessagesThisTurn.push(...result.messages);
             }
+            executionMs = Date.now() - executionStartTime;
+            stateUpdateMs = Date.now() - stateUpdateStartTime;
         }
 
         let finalState = currentState;
@@ -643,18 +744,130 @@ export async function processCommand(
             messages: allMessagesForSession,
         };
 
-        await logAndSave(userId, gameId, finalResult.newState, finalResult.messages);
-        
-        if (process.env.NEXT_PUBLIC_NODE_ENV === 'development' && playerMessage) {
-            const newMessagesFromServer = finalResult.messages.filter(
-                m => m.timestamp >= playerMessage!.timestamp && m.sender !== 'player'
-            );
-            for (const message of newMessagesFromServer) {
-                await dispatchMessage(userId, message);
+        // CONSOLIDATED LOGGING: One entry per player turn with everything
+        if (typeof commandStartTime !== 'undefined') {
+            try {
+                const totalMs = Date.now() - commandStartTime;
+
+                // Calculate total cost
+                const totalTokensInput = safetyNetResult ? 450 : 0;
+                const totalTokensOutput = safetyNetResult ? 120 : 0;
+                const totalCost = safetyNetResult ? (safetyNetResult.aiCalls === 2 ? 0.00015 : 0.0001) : 0;
+
+                // Create ONE consolidated entry
+                const consolidatedEntry: EnhancedCommandLog = {
+                    type: 'command',
+                    commandId: `${userId}_${Date.now()}`,
+                    timestamp: new Date(),
+
+                    // 1. PLAYER INPUT
+                    input: {
+                        raw: safePlayerInput,
+                        preprocessed: preprocessedInput || safePlayerInput,
+                        wasHelpRequest: false,
+                        wasGibberish: false,
+                        preprocessingMs: preprocessingMs || 0,
+                    },
+
+                    // 2. AI INTERPRETATION (Analytics)
+                    aiInterpretation: typeof safetyNetResult !== 'undefined' ? {
+                        primaryAI: {
+                            model: 'gemini-2.5-flash',
+                            confidence: safetyNetResult.primaryConfidence || safetyNetResult.confidence,
+                            commandToExecute: safetyNetResult.commandToExecute,
+                            reasoning: safetyNetResult.reasoning,
+                            latencyMs: aiInterpretationMs || 0,
+                            costUSD: 0.0001,
+                        },
+                        safetyAI: safetyNetResult.aiCalls === 2 ? {
+                            model: 'gpt-5-nano',
+                            confidence: safetyNetResult.safetyConfidence || 0,
+                            commandToExecute: safetyNetResult.commandToExecute,
+                            latencyMs: 0,
+                            costUSD: 0.00005,
+                            wasTriggered: true,
+                            helpedImprove: safetyNetResult.source !== 'primary',
+                        } : undefined,
+                        finalDecision: {
+                            source: safetyNetResult.source,
+                            confidence: safetyNetResult.confidence,
+                            commandToExecute: safetyNetResult.commandToExecute,
+                            disagreement: false,
+                        },
+                        totalAICalls: safetyNetResult.aiCalls,
+                        totalCostUSD: totalCost,
+                    } : undefined,
+
+                    // 3. EXECUTION SUMMARY (details in uiMessages)
+                    execution: {
+                        handler: verb || 'unknown',
+                        targetEntity: restOfCommand || undefined,
+                        effectTypes: (effects || []).map(e => e.type),  // Just types, not full objects
+                        effectsApplied: effects?.length || 0,
+                        success: executionSuccess,
+                        errorMessage: executionErrorMessage,
+                        executionMs: executionMs || 0,
+                    },
+
+                    // 4. UI MESSAGES (what player saw - includes media URLs)
+                    uiMessages: uiMessagesThisTurn,
+
+                    // 5. STATE SNAPSHOTS (before/after)
+                    stateSnapshot: {
+                        before: stateBefore,
+                        after: finalResult.newState,
+                    },
+
+                    // 6. TOKEN USAGE
+                    tokens: safetyNetResult ? {
+                        input: totalTokensInput,
+                        output: totalTokensOutput,
+                        total: totalTokensInput + totalTokensOutput,
+                    } : undefined,
+
+                    // 7. PERFORMANCE
+                    performance: {
+                        preprocessingMs: preprocessingMs || 0,
+                        aiInterpretationMs: aiInterpretationMs || 0,
+                        executionMs: executionMs || 0,
+                        totalMs,
+                    },
+
+                    // 8. CONTEXT
+                    context: {
+                        chapterId: finalResult.newState.currentChapterId,
+                        locationId: finalResult.newState.currentLocationId,
+                        turnNumber: (finalResult.newState.counters?.turns || 0) + 1,
+                    },
+
+                    // 9. QUALITY METRICS
+                    wasSuccessful: executionSuccess && (typeof safetyNetResult === 'undefined' || safetyNetResult?.commandToExecute !== 'invalid'),
+                    wasUnclear: typeof safetyNetResult !== 'undefined' ? safetyNetResult.confidence < 0.6 : false,
+                };
+
+                // Save consolidated entry to Firebase
+                const consolidatedMessages = [...allMessagesForSession, consolidatedEntry as any];
+                await logAndSave(userId, gameId, finalResult.newState, consolidatedMessages);
+
+                // Extract all UI messages for client display
+                const allUIMessages = extractUIMessages(consolidatedMessages);
+                return {
+                    newState: finalResult.newState,
+                    messages: allUIMessages  // Return full UI message history
+                };
+            } catch (error) {
+                console.error('[Consolidated Logging] Failed to create consolidated log:', error);
+                // Fall back to regular logging
+                await logAndSave(userId, gameId, finalResult.newState, allMessagesForSession);
+                const allUIMessages = extractUIMessages(allMessagesForSession);
+                return { newState: finalResult.newState, messages: allUIMessages };
             }
+        } else {
+            // No tracking data (conversation or special commands)
+            await logAndSave(userId, gameId, finalResult.newState, allMessagesForSession);
+            const allUIMessages = extractUIMessages(allMessagesForSession);
+            return { newState: finalResult.newState, messages: allUIMessages };
         }
-        
-        return finalResult;
 
     } catch (error) {
         console.error('Error processing command:', error);
@@ -676,12 +889,12 @@ export async function processCommand(
         }
 
         await logAndSave(userId, gameId, stateToSave, messagesWithError);
-        
+
         if (process.env.NEXT_PUBLIC_NODE_ENV === 'development') {
             await dispatchMessage(userId, errorResponseMessage);
         }
-        
-        return { newState: stateToSave, messages: messagesWithError };
+
+        return { newState: stateToSave, messages: extractUIMessages(messagesWithError) };
     }
 }
 
@@ -729,6 +942,101 @@ export async function resetGame(userId: string): Promise<CommandResult & { shoul
     await logAndSave(userId, gameId, freshState, initialMessages);
 
     return { newState: freshState, messages: initialMessages };
+}
+
+/**
+ * Enhanced log entry structure for comprehensive command tracking
+ */
+export interface EnhancedCommandLog {
+  type: 'command';
+  commandId: string;
+  timestamp: Date;
+
+  // Input stage
+  input: {
+    raw: string;
+    preprocessed: string;
+    wasHelpRequest: boolean;
+    wasGibberish: boolean;
+    preprocessingMs: number;
+  };
+
+  // AI interpretation (if used)
+  aiInterpretation?: {
+    primaryAI: {
+      model: string;
+      confidence: number;
+      commandToExecute: string;
+      reasoning?: string;
+      latencyMs: number;
+      tokens?: { input: number; output: number; };
+      costUSD: number;
+    };
+    safetyAI?: {
+      model: string;
+      confidence: number;
+      commandToExecute: string;
+      latencyMs: number;
+      tokens?: { input: number; output: number; };
+      costUSD: number;
+      wasTriggered: boolean;
+      helpedImprove: boolean;
+    };
+    finalDecision: {
+      source: 'primary' | 'safety' | 'consensus' | 'unclear';
+      confidence: number;
+      commandToExecute: string;
+      disagreement: boolean;
+    };
+    totalAICalls: number;
+    totalCostUSD: number;
+  };
+
+  // Command execution (summary only - full details in uiMessages)
+  execution: {
+    handler: string;
+    targetEntity?: string;
+    effectTypes: string[];  // Just the types, not full effects
+    effectsApplied: number;
+    success: boolean;
+    errorMessage?: string;
+    executionMs: number;
+  };
+
+  // UI messages shown to player during this command
+  uiMessages: Message[];
+
+  // State snapshots for bug reproduction
+  stateSnapshot: {
+    before: PlayerState;
+    after: PlayerState;
+  };
+
+  // Token usage
+  tokens?: {
+    input: number;
+    output: number;
+    total: number;
+  };
+
+  // Performance metrics
+  performance: {
+    preprocessingMs: number;
+    aiInterpretationMs: number;
+    executionMs: number;
+    totalMs: number;
+  };
+
+  // Context
+  context: {
+    chapterId: string;
+    locationId: string;
+    turnNumber: number;
+  };
+
+  // Quality metrics
+  wasSuccessful: boolean;
+  wasUnclear: boolean;
 }
 
 export async function logAndSave(
