@@ -84,14 +84,14 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             // 2. TAKE - Evidence, stays on table
             onTake: {
                 fail: {
-                    message: "Evidence. Stays here. Try EXAMINING, OPENING, or entering the PASSWORD."
+                    message: "Evidence doesn't walk out the door. It stays on the table. If you want what's inside, try EXAMINING it, OPENING it, or cracking the PASSWORD."
                 }
             },
 
             // 4. USE - For reading
             onUse: {
                 fail: {
-                    message: "It's for reading. Try OPENING it or unlocking with the PASSWORD."
+                    message: "It's not a hammer. It's a notebook—meant for reading. Try OPENING it or unlocking it with the PASSWORD if you're feeling clever."
                 }
             },
 
@@ -535,10 +535,10 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                 }
             ],
             onTake: {
-                fail: { message: "It's bolted to the floor. Cafe furniture. Try looking AT the table instead." }
+                fail: { message: "It's bolted to the floor—cafe furniture tends to stay put. You're not hauling a table out of here. Try looking AT it instead." }
             },
             onMove: {
-                fail: { message: "Heavy, bolted down. Not moving it. Try examining what's ON it instead." }
+                fail: { message: "Solid oak, bolted to the floor. You'd need a crowbar and bad intentions. Try examining what's ON it instead of wrestling furniture." }
             },
             defaultFailMessage: "It's just a table. Try: EXAMINE it, or TAKE what's on it."
         },
@@ -2612,24 +2612,24 @@ const items: Record<ItemId, Item> = {
         },
         handlers: {
             // 1. EXAMINE
-            onExamine: { success: { message: 'Business book. Gaudy cover. Not relevant.' } },
+            onExamine: { success: { message: 'Business book with a gaudy cover promising wealth and success. Motivational garbage. Not relevant to the case.' } },
             // 2. TAKE
-            onTake: { fail: { message: "Cafe property. Try READING it." } },
+            onTake: { fail: { message: "Cafe property. It stays on the shelf. If you're curious, try READING it instead of pocketing it." } },
             // 4. USE
-            onUse: { fail: { message: "It's a book. Try READING it." } },
+            onUse: { fail: { message: "It's a book, not a weapon. Use your eyes and READ it if you're interested." } },
             // 6. OPEN
-            onOpen: { success: { message: "Same as READING. Try READ book." } },
+            onOpen: { success: { message: "Opening a book is just reading with extra steps. Try READ book." } },
             // 7. CLOSE
-            onClose: { success: { message: "You close it." } },
+            onClose: { success: { message: "You snap it shut. The wisdom inside remains safely trapped between covers." } },
             // 8. MOVE
-            onMove: { fail: { message: "It's on the shelf. Try READING it." } },
+            onMove: { fail: { message: "It's decorating the shelf. If you want it, READ it. Don't rearrange the furniture." } },
             // 9. BREAK
-            onBreak: { fail: { message: "Cafe property. Try READING it instead." } },
+            onBreak: { fail: { message: "Destroying cafe property won't solve your case. Try READING it instead, like a civilized detective." } },
             // 10. READ - Uses stateMap for progressive content
             // 11. SEARCH
-            onSearch: { fail: { message: "It's a book. Try READING it." } },
+            onSearch: { fail: { message: "It's a book, not a puzzle box. Try READING it if you want answers." } },
             // 12. TALK
-            onTalk: { fail: { message: "Books don't talk. Try READING it." } },
+            onTalk: { fail: { message: "Books don't talk back. That's what makes them better than most people. Try READING it." } },
             defaultFailMessage: "It's a book on the shelf. Try: EXAMINE or READ it."
         },
         stateMap: {
@@ -2686,24 +2686,24 @@ const items: Record<ItemId, Item> = {
         },
         handlers: {
             // 1. EXAMINE
-            onExamine: { success: { message: 'FBI history book. Could be interesting, but not relevant to the case right now.' } },
+            onExamine: { success: { message: 'FBI history book. Thick, dry, full of bureaucratic legends. Could be interesting if you had a week to kill. Not relevant to the case right now.' } },
             // 2. TAKE
-            onTake: { fail: { message: "Cafe property. Try READING it." } },
+            onTake: { fail: { message: "Cafe property. It belongs on the shelf, not in your pocket. Try READING it if you're curious." } },
             // 4. USE
-            onUse: { fail: { message: "It's a book. Try READING it." } },
+            onUse: { fail: { message: "It's a book, not a tool. Books are for reading, not using. Try READ book." } },
             // 6. OPEN
-            onOpen: { success: { message: "Same as READING. Try READ book." } },
+            onOpen: { success: { message: "Opening a book is just reading with extra steps. Try READ book." } },
             // 7. CLOSE
-            onClose: { success: { message: "You close it." } },
+            onClose: { success: { message: "You shut it. Pages full of federal history go dark again." } },
             // 8. MOVE
-            onMove: { fail: { message: "It's on the shelf. Try READING it." } },
+            onMove: { fail: { message: "It's shelved. Leave it there. If you want content, READ it. If you want exercise, hit the gym." } },
             // 9. BREAK
-            onBreak: { fail: { message: "Cafe property. Try READING it instead." } },
+            onBreak: { fail: { message: "Destroying cafe property won't advance your investigation. Try READING it like a rational person." } },
             // 10. READ - Uses stateMap for progressive content
             // 11. SEARCH
-            onSearch: { fail: { message: "It's a book. Try READING it." } },
+            onSearch: { fail: { message: "It's a book, not a treasure chest. Try READING it if you want what's inside." } },
             // 12. TALK
-            onTalk: { fail: { message: "Books don't talk. Try READING it." } },
+            onTalk: { fail: { message: "Books don't respond. That's their charm. Try READING it instead of having a conversation with paper." } },
             defaultFailMessage: "It's a book on the shelf. Try: EXAMINE or READ it."
         },
         stateMap: {
@@ -2760,19 +2760,19 @@ const items: Record<ItemId, Item> = {
         },
         handlers: {
             // 1. EXAMINE
-            onExamine: { success: { message: 'Romance novel. Cheesy cover. Title: "Justice for My Love". That word again.' } },
+            onExamine: { success: { message: 'Romance novel with a painfully cheesy cover. Title: "Justice for My Love". That word again—justice. Coincidence, or breadcrumb? Probably just coincidence.' } },
             // 2. TAKE
-            onTake: { fail: { message: "Cafe property. Try READING it." } },
+            onTake: { fail: { message: "Cafe property. Stays on the shelf. If you're desperate for melodrama, try READING it." } },
             // 4. USE
-            onUse: { fail: { message: "It's a book. Try READING it." } },
+            onUse: { fail: { message: "It's a romance novel, not a Swiss Army knife. Try READING it if you want entertainment." } },
             // 6. OPEN
-            onOpen: { success: { message: "Same as READING. Try READ book." } },
+            onOpen: { success: { message: "Opening a book is just reading with extra steps. Try READ book." } },
             // 7. CLOSE
-            onClose: { success: { message: "You close it." } },
+            onClose: { success: { message: "You close it. The tale of star-crossed lovers goes dark. You're safe from their drama for now." } },
             // 8. MOVE
-            onMove: { fail: { message: "It's on the shelf. Try READING it." } },
+            onMove: { fail: { message: "It's on the shelf where it belongs. If you want what's inside, READ it. Don't redecorate." } },
             // 9. BREAK
-            onBreak: { fail: { message: "Cafe property. Try READING it instead." } },
+            onBreak: { fail: { message: "Destroying cafe property solves nothing. If you hate romance novels that much, just don't READ them." } },
             // 10. READ - Progressive content with note drop on 3rd read
             onRead: [
                 {
@@ -2836,9 +2836,9 @@ const items: Record<ItemId, Item> = {
                 }
             ],
             // 11. SEARCH
-            onSearch: { fail: { message: "It's a book. Try READING it." } },
+            onSearch: { fail: { message: "It's a book, not a puzzle. Try READING it if you want content." } },
             // 12. TALK
-            onTalk: { fail: { message: "Books don't talk. Try READING it." } },
+            onTalk: { fail: { message: "Books don't talk back. Small mercies. Try READING it instead." } },
             defaultFailMessage: "Romance novel. 'Justice' in the title. Try: EXAMINE or READ it."
         },
         design: { tags: ['book', 'clue'] },
@@ -3591,75 +3591,75 @@ Your reasoning must be a brief, step-by-step explanation of how you mapped the p
 
   // System Messages - Noir detective atmosphere (Narrator + System voice)
   systemMessages: {
-    // Command validation - System voice (technical)
+    // Command validation - Sarcastic detective voice
     needsTarget: {
-      examine: "You need to specify what to examine.",
-      read: "You need to specify what to read.",
-      take: "You need to specify what to take.",
-      goto: "You need to specify where to go.",
+      examine: "Examine what, exactly? The air? Pick something specific.",
+      read: "Read what? The room's vibes? Name the object.",
+      take: "Take what? My patience? Specify the item.",
+      goto: "Go where? Narnia? Tell me the actual location.",
     },
 
-    // Visibility errors - Narrator voice (atmospheric)
+    // Visibility errors - Noir narrator voice
     notVisible: (itemName: string) =>
-      `There's no ${itemName} here. Either it's somewhere else, or hidden from view.`,
+      `There's no ${itemName} here. Either it's tucked away somewhere else, or you're chasing ghosts.`,
 
-    // Inventory - Narrator describing state
-    inventoryEmpty: "Your pockets are empty. Nothing collected yet.",
+    // Inventory - Detective checking pockets
+    inventoryEmpty: "Your pockets are lighter than your conscience. Nothing collected yet.",
     inventoryList: (itemNames: string) =>
       `You're carrying:\n${itemNames}`,
     alreadyHaveItem: (itemName: string) =>
-      `The ${itemName} is already in your possession.`,
+      `The ${itemName}'s already weighing down your pocket. One copy is enough.`,
 
-    // Navigation - Narrator blocking/guiding
-    cannotGoThere: "That path isn't available right now.",
+    // Navigation - Noir blocking/guiding
+    cannotGoThere: "That path's closed off. Either locked, blocked, or just not your problem yet.",
     chapterIncomplete: (goal: string, locationName: string) =>
-      `There's unfinished business here. You need to ${goal.toLowerCase()} before leaving ${locationName}.`,
+      `You're not done here. ${goal} before you walk away from ${locationName}. Loose ends get people killed.`,
     chapterTransition: (chapterTitle: string) =>
       `━━━ ${chapterTitle} ━━━`,
     locationTransition: (locationName: string) =>
       `You arrive at ${locationName}.`,
-    noNextChapter: "The case file ends here. No further chapters available.",
+    noNextChapter: "That's where the file ends. No more chapters. Case closed, or just beginning—who knows.",
 
-    // Reading - Narrator describing attempts
+    // Reading - Detective examining text
     notReadable: (itemName: string) =>
-      `There's nothing to read on the ${itemName}.`,
+      `The ${itemName} has nothing worth reading. Not every surface is a message.`,
     alreadyReadAll: (itemName: string) =>
-      `You've already read everything in the ${itemName}. Nothing new remains.`,
-    textIllegible: "The text is too faded to decipher. Whatever was written here is lost to time.",
+      `You've already squeezed every word from the ${itemName}. There's nothing new. Move on.`,
+    textIllegible: "The text's faded beyond recognition. Time swallowed whatever secrets this held. Gone for good.",
 
-    // Using items - Narrator describing failures
+    // Using items - Detective trying tools
     dontHaveItem: (itemName: string) =>
-      `You don't have a "${itemName}".`,
+      `You don't have a "${itemName}". Can't use what you don't carry.`,
     cantUseItem: (itemName: string) =>
-      `The ${itemName} has no obvious use here.`,
+      `The ${itemName} doesn't do anything useful here. Wrong place, wrong time.`,
     cantUseOnTarget: (itemName: string, targetName: string) =>
-      `The ${itemName} doesn't work on the ${targetName}. Wrong tool for the job.`,
+      `The ${itemName} doesn't work on the ${targetName}. Brilliant deduction: not everything fits everywhere.`,
     noVisibleTarget: (targetName: string) =>
-      `There's no ${targetName} visible here. Could be hidden, or in another location.`,
-    useDidntWork: "That approach doesn't work. The pieces don't fit.",
+      `There's no ${targetName} in sight. Could be hidden, could be elsewhere. Or maybe you're imagining things.`,
+    useDidntWork: "That approach failed. Sometimes the pieces just don't fit, no matter how hard you force them.",
 
-    // Moving objects - Narrator atmospheric
+    // Moving objects - Detective shifting furniture
     cantMoveObject: (objectName: string) =>
-      `There's no "${objectName}" here to move.`,
+      `There's no "${objectName}" here to shove around.`,
     movedNothingFound: (objectName: string) =>
-      `You shift the ${objectName}, checking underneath and behind. Nothing. Just empty space and dust.`,
+      `You shift the ${objectName}, checking every angle. Nothing underneath. Nothing behind. Just dust and disappointment.`,
 
-    // Opening - Narrator
+    // Opening - Detective trying containers
     cantOpen: (targetName: string) =>
-      `There's no "${targetName}" here to open.`,
+      `There's no "${targetName}" here to crack open.`,
 
-    // Password/Focus system - System voice (technical feedback)
-    needsFocus: "You need to focus on a specific object first. Try examining or interacting with it.",
-    focusSystemError: "Focus system error. This shouldn't happen.",
+    // Password/Focus system - Sarcastic system feedback
+    needsFocus: "You need to pick a target first. Examine something, interact with it. Focus beats flailing.",
+    focusSystemError: "Focus system glitched. That's not supposed to happen. Reality just hiccupped.",
     noPasswordInput: (objectName: string) =>
-      `The ${objectName} doesn't accept password input.`,
+      `The ${objectName} doesn't take passwords. It's not that kind of lock.`,
     alreadyUnlocked: (objectName: string) =>
-      `The ${objectName} is already unlocked.`,
-    wrongPassword: "Wrong passphrase. The lock remains sealed.",
+      `The ${objectName}'s already unlocked. You beat it once. No need to prove it twice.`,
+    wrongPassword: "Wrong passphrase. The lock stays shut. Try again, or give up.",
 
-    // Generic errors - System voice
-    cantDoThat: "That action isn't available.",
-    somethingWentWrong: "An unexpected error occurred.",
+    // Generic errors - Dry detective wit
+    cantDoThat: "Can't do that. Not available, not possible, not happening.",
+    somethingWentWrong: "Something broke. The universe burped. An error occurred. Your guess is as good as mine.",
   },
 
 
