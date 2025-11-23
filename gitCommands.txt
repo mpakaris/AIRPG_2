@@ -27,3 +27,6 @@ Summary of commands:
 
 Testing:
 npm test -- --run
+
+Test whether Local LLM is responding: 
+npm run test:llm

@@ -477,6 +477,29 @@ export async function processCommand(
             );
             aiInterpretationMs = Date.now() - aiInterpretationStartTime;
 
+            // ========================================================================
+            // AI INTERPRETATION SUMMARY
+            // ========================================================================
+            console.log('\n🤖 ═══════════════════════════════════════════════════════════');
+            console.log('   AI COMMAND INTERPRETATION');
+            console.log('═══════════════════════════════════════════════════════════');
+            console.log(`📥 Player Input: "${safePlayerInput}"`);
+            console.log(`🎯 Command Output: "${safetyNetResult.commandToExecute}"`);
+            console.log(`📊 Confidence: ${(safetyNetResult.confidence * 100).toFixed(1)}%`);
+            console.log(`🔄 AI Calls: ${safetyNetResult.aiCalls} (${safetyNetResult.source})`);
+            console.log(`🌐 LLM Backend: ☁️  API (Gemini Flash Lite)`);
+            console.log(`⏱️  Latency: ${aiInterpretationMs}ms`);
+            if (safetyNetResult.primaryConfidence !== undefined) {
+                console.log(`   ├─ Primary AI: ${(safetyNetResult.primaryConfidence * 100).toFixed(1)}% (Gemini)`);
+            }
+            if (safetyNetResult.safetyConfidence !== undefined) {
+                console.log(`   └─ Safety AI: ${(safetyNetResult.safetyConfidence * 100).toFixed(1)}% (GPT-5 Nano)`);
+            }
+            if (safetyNetResult.reasoning) {
+                console.log(`💭 Reasoning: ${safetyNetResult.reasoning}`);
+            }
+            console.log('═══════════════════════════════════════════════════════════\n');
+
             // 5. HANDLE LOW CONFIDENCE / UNCLEAR COMMANDS
             if (safetyNetResult.confidence < 0.5 || safetyNetResult.commandToExecute === 'invalid') {
                 const unclearMsg = createMessage(
@@ -502,7 +525,7 @@ export async function processCommand(
             verb = verbMatch ? verbMatch[1] : commandToExecute;
             restOfCommand = commandToExecute.substring((verbMatch ? verbMatch[0].length : verb.length)).trim();
 
-            console.log('[processCommand] Verb:', verb, 'RestOfCommand:', restOfCommand);
+            console.log(`🎮 Executing → Verb: "${verb}" | Target: "${restOfCommand || '(none)'}"\n`);
 
             // Track command execution timing
             const executionStartTime = Date.now();
@@ -575,7 +598,6 @@ export async function processCommand(
                     // Support "open X with Y" pattern
                     const openWithMatch = restOfCommand.match(/^(.*?)\s+(?:with|using)\s+(.*)$/);
                     if (openWithMatch) {
-                        console.log('[processCommand] OPEN pattern matched - target:', openWithMatch[1], 'item:', openWithMatch[2]);
                         // Redirect to use handler for "open X with Y"
                         const openTarget = openWithMatch[1].trim().replace(/"/g, '');
                         const openItem = openWithMatch[2].trim().replace(/"/g, '');
@@ -589,13 +611,11 @@ export async function processCommand(
                     // Support "read X with Y" pattern
                     const readWithMatch = restOfCommand.match(/^(.*?)\s+(?:with|on|using)\s+(.*)$/);
                     if (readWithMatch) {
-                        console.log('[processCommand] READ pattern matched - target:', readWithMatch[1], 'item:', readWithMatch[2]);
                         // For reading, the syntax is "read TARGET with TOOL"
                         // The target needs the tool, so we check target's onRead handlers
                         // This is different from general USE where we "use ITEM on TARGET"
                         const readTarget = readWithMatch[1].trim().replace(/"/g, '');
                         const readTool = readWithMatch[2].trim().replace(/"/g, '');
-                        console.log('[processCommand] Calling handleUse with tool:', readTool, 'on target:', readTarget);
                         effects = await handleUse(currentState, readTool, readTarget, game);
                     } else {
                         effects = await handleRead(currentState, restOfCommand.replace(/"/g, ''), game);
@@ -709,12 +729,12 @@ export async function processCommand(
             // NEW: Apply effects through processEffects (which includes image resolution)
             const stateUpdateStartTime = Date.now();
             if (effects.length > 0) {
-                console.log('[processCommand] Processing', effects.length, 'effects from verb:', verb);
-                console.log('[processCommand] Effects:', effects.map(e => e.type));
+                console.log(`⚙️  Processing ${effects.length} effect(s): ${effects.map(e => e.type).join(', ')}`);
                 const result = await processEffects(currentState, effects, game);
                 currentState = result.newState;  // FIX: Use newState, not state!
                 // DON'T add to allMessagesForSession - collect for consolidated entry
                 uiMessagesThisTurn.push(...result.messages);
+                console.log(`✅ Effects applied in ${Date.now() - stateUpdateStartTime}ms\n`);
             }
             executionMs = Date.now() - executionStartTime;
             stateUpdateMs = Date.now() - stateUpdateStartTime;

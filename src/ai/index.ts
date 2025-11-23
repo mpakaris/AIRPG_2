@@ -5,6 +5,17 @@
 
 export * from './flows/guide-player-with-narrator';
 export * from './flows/select-npc-response';
-export * from './flows/interpret-player-commands';
 export * from './flows/generate-story-from-logs';
 export * from './flows/generate-npc-chatter';
+
+// Export hybrid command interpreter (supports both local and API LLM)
+export {
+  interpretPlayerCommandHybrid as interpretPlayerCommand,
+  getLLMStatus,
+} from './flows/interpret-player-commands-hybrid';
+
+// Re-export types from the original interpret-player-commands
+export type {
+  InterpretPlayerCommandInput,
+  InterpretPlayerCommandOutput
+} from './flows/interpret-player-commands';

@@ -61,41 +61,10 @@ export class VisibilityResolver {
       const entityState = GameStateManager.getEntityState(state, objectId);
       const hasBeenRevealed = entityState.isVisible === true;
 
-      if (objectId === 'obj_painting' || objectId === 'obj_sd_card' || objectId === 'obj_hidden_door') {
-        console.log(`[VisibilityResolver] ${objectId} DEBUG:`, {
-          isInLocation,
-          hasBeenRevealed,
-          entityState,
-          currentLocationObjects: currentLocation.objects
-        });
-      }
-
       // Object is potentially visible if in location OR revealed
       if (isInLocation || hasBeenRevealed) {
         // Check if accessible (parent chain grants access)
         const isAccessible = GameStateManager.isAccessible(state, game, objectId);
-
-        if (objectId === 'obj_hidden_door') {
-          const parent = GameStateManager.getParent(state, objectId);
-          const parentState = parent ? GameStateManager.getEntityState(state, parent) : null;
-          const parentGrantsAccess = parent ? GameStateManager.parentGrantsAccess(state, game, parent) : null;
-
-          console.log(`[VisibilityResolver] obj_hidden_door ACCESSIBILITY:`, {
-            isAccessible,
-            parent,
-            parentState,
-            parentGrantsAccess,
-            ancestors: GameStateManager.getAncestors(state, objectId),
-            accessibilityChain: GameStateManager.getAccessibilityChain(state, game, objectId)
-          });
-        }
-
-        if (objectId === 'obj_brown_notebook') {
-          console.log('[VisibilityResolver] NOTEBOOK accessibility:', {
-            isAccessible,
-            entityState: GameStateManager.getEntityState(state, objectId)
-          });
-        }
 
         if (isAccessible) {
           // Only add if not already in the array (prevent duplicates)
@@ -105,10 +74,6 @@ export class VisibilityResolver {
 
           // Recursively get accessible children
           const children = VisibilityResolver.getAccessibleChildren(objectId, state, game);
-
-          if (objectId === 'obj_brown_notebook') {
-            console.log('[VisibilityResolver] NOTEBOOK children:', children);
-          }
 
           // Only add children that aren't already in the arrays (prevent duplicates)
           for (const childObj of children.objects) {
