@@ -212,8 +212,8 @@ Return ONLY valid JSON in this exact format:
 ✅ CORRECT: {"responseToPlayer": "", "commandToExecute": "examine counter", "confidence": 0.8, "reasoning": "Mapped 'check the cashier' to examine counter"}
 ❌ WRONG: {"responseToPlayer": "Player asked to check cashier...", "commandToExecute": "examine counter", "confidence": 0.6, "reasoning": "..."}`;
 
-  const model = 'gpt-5-nano-2025-08-07';
-  const supportsTemperature = !model.includes('gpt-5-nano'); // gpt-5-nano doesn't support custom temperature
+  const model = process.env.OPENAI_API_MODEL || 'gpt-5-nano-2025-08-07';
+  const supportsTemperature = !model.toLowerCase().includes('gpt-5-nano'); // gpt-5-nano doesn't support custom temperature
 
   const response = await openai.chat.completions.create({
     model: model,

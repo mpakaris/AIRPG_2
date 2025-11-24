@@ -3,13 +3,17 @@
 /**
  * @fileOverview Narrative Expansion System (Hybrid C Architecture)
  *
- * Expands keywords into full narrative responses using local LLM (Ollama).
+ * Expands keywords into full narrative responses using OpenAI (GPT-5 Nano or configurable model).
  *
  * Benefits:
- * - Zero cost: Unlimited generations with local LLM
+ * - Fast: ~200-500ms response time (vs 20s+ with local LLM)
  * - Always fresh: Same keyword produces different responses each time
- * - Graceful degradation: Falls back to simple messages if Ollama unavailable
+ * - Low cost: GPT-5 Nano is very cheap
  * - Maintainable: Only keywords need to be maintained, not full text
+ *
+ * Model Configuration:
+ * - Uses OPENAI_API_MODEL env variable
+ * - Defaults to gpt-5-nano-2025-08-07 if not set
  *
  * Usage:
  *   const message = await expandNarration({
@@ -19,7 +23,7 @@
  *   });
  */
 
-import { callLocalLLM, checkLocalLLMHealth } from '@/ai/local-llm-client';
+import OpenAI from 'openai';
 import { z } from 'zod';
 
 // ============================================================================
@@ -302,16 +306,13 @@ export async function expandNarration(options: ExpandNarrationOptions): Promise<
     return cached;
   }
 
-  // Check if Ollama is available
-  const isHealthy = await checkLocalLLMHealth();
-  if (!isHealthy) {
-    console.warn(`⚠️  Ollama unavailable for narration, using fallback: ${keyword}`);
-    const fallbackMessage = fallback || generateSimpleFallback(keyword, context);
-    return fallbackMessage;
-  }
-
   try {
     const startTime = Date.now();
+
+    // Initialize OpenAI client
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
 
     // Build system prompt with tone
     const systemPrompt = tone ||
@@ -324,22 +325,32 @@ IMPORTANT: You MUST respond with valid JSON in this exact format:
 
     const userPrompt = buildNarrationPrompt(keyword, context);
 
+    const model = process.env.OPENAI_API_MODEL || 'gpt-5-nano-2025-08-07';
+
     console.log('\n🎭 ===== NARRATIVE EXPANSION =====');
     console.log(`📝 Keyword: "${keyword}"`);
     console.log(`🎯 Context:`, context);
     console.log(`📤 System Prompt:\n   ${systemPrompt.split('\n').join('\n   ')}`);
     console.log(`📤 User Prompt: "${userPrompt}"`);
-    console.log(`⏱️  Calling Ollama...`);
+    console.log(`⏱️  Calling OpenAI (${model})...`);
+    const supportsTemperature = !model.toLowerCase().includes('gpt-5-nano'); // gpt-5-nano doesn't support custom temperature
 
-    const result = await callLocalLLM(
-      systemPrompt,
-      userPrompt,
-      NarrationResponseSchema,
-      { timeout: 20000 } // 20s timeout for Ollama (allows model loading on cold start)
-    );
+    const response = await openai.chat.completions.create({
+      model: model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ],
+      ...(supportsTemperature ? { temperature: 0.7 } : {}), // Keep some creativity for varied responses (if model supports it)
+      response_format: { type: 'json_object' },
+    });
+
+    const content = response.choices[0]?.message?.content || '{"response": ""}';
+    const parsed = JSON.parse(content);
+    const result = { response: parsed.response || '' };
 
     const duration = Date.now() - startTime;
-    console.log(`📥 Ollama Response: "${result.response}"`);
+    console.log(`📥 OpenAI Response: "${result.response}"`);
     console.log(`✅ Expansion complete in ${duration}ms`);
     console.log(`================================\n`);
 
