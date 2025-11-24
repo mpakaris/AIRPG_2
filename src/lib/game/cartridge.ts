@@ -6,9 +6,9 @@ import type { CellId, Chapter, ChapterId, Flag, Game, GameId, GameObject, GameOb
 const gameObjects: Record<GameObjectId, GameObject> = {
     'obj_brown_notebook': {
         id: 'obj_brown_notebook' as GameObjectId,
-        name: 'Brown Notebook',
+        name: 'Metal Box',
         archetype: 'Container',
-        description: 'A very worn, leather-bound notebook rests on a table.',
+        description: 'A rusty metal box, about the size of a shoebox, sits on the table. Its surface is weathered and worn.',
         capabilities: { openable: true, lockable: true, breakable: false, movable: false, powerable: false, container: true, readable: true, inputtable: true },
         state: { isOpen: false, isLocked: true, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
         inventory: { items: ['item_secret_document'] as ItemId[], capacity: 2, allowTags: [], denyTags: [] },
@@ -18,8 +18,8 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         },
         media: {
             images: {
-                default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759242347/Notebook_locked_ngfes0.png', description: 'A locked notebook.', hint: 'locked notebook' },
-                unlocked: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759242346/Notebook_unlocked_fpxqgl.jpg', description: 'An unlocked notebook.', hint: 'unlocked notebook' }
+                default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1763991426/brown_box_5_qqomdb.png', description: 'A locked rusty metal box.', hint: 'locked metal box' },
+                unlocked: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1763991426/brown_box_2_areabd.png', description: 'An unlocked metal box.', hint: 'unlocked metal box' }
             },
             sounds: { onUnlock: 'click.mp3' }
         },
@@ -31,10 +31,10 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                     // Most specific: Locked
                     conditions: [{ type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: true }],
                     success: {
-                        message: "The leather is worn soft under your fingers, decades pressed into its surface. It smells of old paper, dust, and something darker—leather tanned with secrets. The brass clasp gleams cold, locked tight, guarding what's inside.\n\nYour fingers trace it, metal biting faintly. No keyhole, no obvious way in—just a mechanism waiting for something it has been expecting. A thrill runs through you. You don't know what's inside, and yet its weight presses against your chest, heavy with possibility.\n\nUsually, you feel like the chess player, setting the moves. Now, strangely, you feel like the pawn in someone else's game—small, exposed, uneasy, and yet drawn irresistibly.\n\nThe notebook radiates threat, subtle and insistent. Every crease and dent seems deliberate, alive with intentions. A flicker of fear curls with excitement, making every nerve tingle.\n\nHolding it, you feel the pulse of history brushing against your own, the quiet danger of secrets someone spent decades guarding. Alone, trembling slightly, you realize this moment—this touch, this weight—is a turning point. You don't know what's inside, and that is precisely what makes it irresistible.",
+                        message: "The metal is cold under your fingers, rust flaking at your touch. Decades of oxidation have eaten into its surface, leaving it rough and weathered. The latch gleams dully, locked tight, guarding what's inside.\n\nYour fingers trace the corroded edges, metal biting faintly. No keyhole, no obvious way in—just a mechanism waiting for something it has been expecting. A thrill runs through you. You don't know what's inside, and yet its weight presses against your chest, heavy with possibility.\n\nUsually, you feel like the chess player, setting the moves. Now, strangely, you feel like the pawn in someone else's game—small, exposed, uneasy, and yet drawn irresistibly.\n\nThe metal box radiates threat, subtle and insistent. Every scratch and dent seems deliberate, alive with intentions. A flicker of fear curls with excitement, making every nerve tingle.\n\nHolding it, you feel the pulse of history brushing against your own, the quiet danger of secrets someone spent decades guarding. Alone, trembling slightly, you realize this moment—this touch, this weight—is a turning point. You don't know what's inside, and that is precisely what makes it irresistible.",
                         media: {
-                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759242347/Notebook_locked_ngfes0.png',
-                            description: 'Locked leather notebook with brass clasp',
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1763991426/brown_box_5_qqomdb.png',
+                            description: 'Locked rusty metal box with latch',
                             hint: 'Needs a password phrase...'
                         }
                     }
@@ -46,7 +46,12 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         { type: 'FLAG', flag: 'notebook_video_watched', value: true }
                     ],
                     success: {
-                        message: "Notebook's open. Brass clasp unfastened. Inside: yellowed pages, faded ink, illegible entries. The SD card and police file—both gone. You took what was hidden here. Just empty pages remain."
+                        message: "The box is open. Latch unfastened. Inside: rust stains, dust, empty space. The SD card and police file—both gone. You took what was hidden here. Just an empty metal container remains.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1763991426/brown_box_1_l6lpyd.png',
+                            description: 'Empty metal box with items removed',
+                            hint: 'The contents have been taken'
+                        }
                     }
                 },
                 {
@@ -55,7 +60,12 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         { type: 'HAS_ITEM', itemId: 'item_secret_document' }
                     ],
                     success: {
-                        message: "Notebook's open. Brass clasp released. Inside: the black SD card still rests against yellowed pages—modern, out of place. The police file is gone. You took it."
+                        message: "The box is open. Latch released. Inside: the black SD card still rests in the corner—modern, out of place in the old rusty container. The police file is gone. You took it.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1763991426/brown_box_2_areabd.png',
+                            description: 'Open metal box with SD card',
+                            hint: 'SD card remains inside'
+                        }
                     }
                 },
                 {
@@ -64,17 +74,22 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         { type: 'FLAG', flag: 'notebook_video_watched', value: true }
                     ],
                     success: {
-                        message: "Notebook's open. Brass clasp unfastened. Inside: the stolen police file marked CONFIDENTIAL waits in faded red ink. The SD card is there too—you've already watched the video. The footage is burned into your memory."
+                        message: "The box is open. Latch unfastened. Inside: the stolen police file marked CONFIDENTIAL waits in faded red ink. The SD card is there too—you've already watched the video. The footage is burned into your memory.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1763991426/brown_box_2_areabd.png',
+                            description: 'Open metal box with contents',
+                            hint: 'Contains SD card and confidential file'
+                        }
                     }
                 },
                 {
                     // Default: Unlocked + video NOT watched yet (only show SD card)
                     conditions: [],
                     success: {
-                        message: "Notebook's open. Brass clasp released. Inside: black SD card—modern, out of place against yellowed pages. Your phone can read this.",
+                        message: "The box is open. Latch released. Inside: black SD card—modern, out of place in the old rusty container. Your phone can read this.",
                         media: {
-                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759242346/Notebook_unlocked_fpxqgl.jpg',
-                            description: 'Unlocked notebook with SD card',
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1763991426/brown_box_2_areabd.png',
+                            description: 'Open metal box with SD card',
                             hint: 'Use your phone to read the SD card'
                         }
                     }
@@ -91,7 +106,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             // 4. USE - For reading
             onUse: {
                 fail: {
-                    message: "It's not a hammer. It's a notebook—meant for reading. Try OPENING it or unlocking it with the PASSWORD if you're feeling clever."
+                    message: "It's not a tool. It's a container—meant to be opened. Try OPENING it or unlocking it with the PASSWORD if you're feeling clever."
                 }
             },
 
@@ -105,7 +120,12 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         { type: 'FLAG', flag: 'notebook_video_watched', value: true }
                     ],
                     success: {
-                        message: "Notebook's already open. Brass clasp unfastened. Inside: yellowed pages, faded ink. The SD card and police file—both gone. You took what was hidden here.",
+                        message: "The box is already open. Latch unfastened. Inside: rust stains, dust. The SD card and police file—both gone. You took what was hidden here.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1763991426/brown_box_1_l6lpyd.png',
+                            description: 'Empty opened metal box',
+                            hint: 'Contents have been removed'
+                        },
                         effects: [
                             { type: 'SET_ENTITY_STATE', entityId: 'obj_brown_notebook', patch: { isOpen: true, currentStateId: 'unlocked' } }
                         ]
@@ -118,7 +138,12 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         { type: 'HAS_ITEM', itemId: 'item_secret_document' }
                     ],
                     success: {
-                        message: "Notebook's open. Brass clasp unfastened. In the crease: the black SD card still rests there—modern, cold, out of place. The police file is gone.",
+                        message: "The box is open. Latch unfastened. Inside: the black SD card still rests in the corner—modern, cold, out of place. The police file is gone.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1763991426/brown_box_2_areabd.png',
+                            description: 'Open metal box with SD card',
+                            hint: 'SD card remains'
+                        },
                         effects: [
                             { type: 'SET_ENTITY_STATE', entityId: 'obj_brown_notebook', patch: { isOpen: true, currentStateId: 'unlocked' } }
                         ]
@@ -131,7 +156,12 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         { type: 'FLAG', flag: 'notebook_video_watched', value: true }
                     ],
                     success: {
-                        message: "Notebook's open. Brass clasp unfastened. In the crease: the stolen police file marked CONFIDENTIAL. The SD card is there too—you've watched the video already.",
+                        message: "The box is open. Latch unfastened. Inside: the stolen police file marked CONFIDENTIAL. The SD card is there too—you've watched the video already.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1763991426/brown_box_2_areabd.png',
+                            description: 'Open metal box with contents',
+                            hint: 'Contains file and SD card'
+                        },
                         effects: [
                             { type: 'SET_ENTITY_STATE', entityId: 'obj_brown_notebook', patch: { isOpen: true, currentStateId: 'unlocked' } }
                         ]
@@ -141,10 +171,10 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                     // Unlocked + video NOT watched yet (only show SD card)
                     conditions: [{ type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: false }],
                     success: {
-                        message: "Notebook's open. Brass clasp unfastened. In the crease: black SD card—modern, cold, out of place against yellowed pages. Your phone can read this.",
+                        message: "The box is open. Latch unfastened. Inside: black SD card—modern, cold, out of place in the old rusty container. Your phone can read this.",
                         media: {
-                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759242346/Notebook_unlocked_fpxqgl.jpg',
-                            description: 'Open notebook with SD card',
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1763991426/brown_box_2_areabd.png',
+                            description: 'Open metal box with SD card',
                             hint: 'Use your phone to read the SD card'
                         },
                         effects: [
@@ -156,16 +186,16 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                     // Locked - Cannot open without password
                     conditions: [{ type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: true }],
                     success: {
-                        message: "The brass clasp refuses to budge. Cold metal, unyielding. This isn't a lock for keys—it's waiting for something else. A phrase. A password. Someone sealed this notebook with words, not metal.\n\nYou run your fingers over the worn leather, feeling the weight of secrets pressed into every crease. Whatever's inside, someone went to great lengths to hide it. The kind of lengths that make your pulse quicken.\n\nYou need the right phrase to unlock this. If you know it, whisper it to the notebook:\n\n**/password <phrase>** (example: /password Bloodhaven rules)\n\nStuck? There's a puzzle that might help you find the answer:\nhttps://airpg-minigames.vercel.app/games/the-notebook\n\nThe notebook waits. Silent. Patient. Guarding its truth."
+                        message: "The latch refuses to budge. Cold metal, unyielding. This isn't a lock for keys—it's waiting for something else. A phrase. A password. Someone sealed this box with words, not metal.\n\nYou run your fingers over the rusty surface, feeling the weight of secrets pressed into every dent. Whatever's inside, someone went to great lengths to hide it. The kind of lengths that make your pulse quicken.\n\nYou need the right phrase to unlock this. If you know it, whisper it to the box:\n\n**/password <phrase>** (example: /password Bloodhaven rules)\n\nStuck? There's a puzzle that might help you find the answer:\nhttps://airpg-minigames.vercel.app/games/the-notebook\n\nThe box waits. Silent. Patient. Guarding its truth."
                     }
                 }
             ],
 
-            // 7. CLOSE - Close open notebook
+            // 7. CLOSE - Close open box
             onClose: {
                 conditions: [{ type: 'STATE', entityId: 'obj_brown_notebook', key: 'isOpen', equals: true }],
                 success: {
-                    message: "You close the cover. Brass clasp clicks shut. But why close it now?"
+                    message: "You close the lid. Latch clicks shut. But why close it now?"
                 },
                 fail: {
                     message: "Already closed and locked."
@@ -197,7 +227,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         { type: 'FLAG', flag: 'notebook_video_watched', value: true }
                     ],
                     success: {
-                        message: "Pages yellowed, ink faded. Most entries illegible. The hidden items—SD card, police file—both gone. You took them already.",
+                        message: "Rust stains, dust, empty space. The hidden items—SD card, police file—both gone. You took them already.",
                         effects: []
                     }
                 },
@@ -209,7 +239,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         { type: 'HAS_ITEM', itemId: 'item_secret_document' }
                     ],
                     success: {
-                        message: "Pages yellowed, ink faded. Most entries illegible. The SD card is still here—you can use your phone to read it. The police file is gone.",
+                        message: "Inside the metal box: rust, dust, and the SD card. You can use your phone to read it. The police file is gone.",
                         effects: []
                     }
                 },
@@ -221,7 +251,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         { type: 'FLAG', flag: 'notebook_video_watched', value: true }
                     ],
                     success: {
-                        message: "Pages yellowed, ink faded. Most entries illegible. The stolen police file is still here—TAKE it. You've already watched the SD card video.",
+                        message: "Inside the metal box: rust stains and the stolen police file marked CONFIDENTIAL—TAKE it. You've already watched the SD card video.",
                         effects: []
                     }
                 },
@@ -232,7 +262,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         { type: 'STATE', entityId: 'obj_brown_notebook', key: 'isOpen', equals: true }
                     ],
                     success: {
-                        message: "Pages yellowed, ink faded. Most entries illegible. The SD card—that's what matters. Use your phone to read it.",
+                        message: "Inside the metal box: rust, dust, and the SD card—that's what matters. Use your phone to read it.",
                         effects: []
                     }
                 },
@@ -240,7 +270,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                     // Locked
                     conditions: [],
                     fail: {
-                        message: "Locked. Can't read it. Needs PASSWORD. Stuck? https://airpg-minigames.vercel.app/games/the-notebook"
+                        message: "Locked. Can't see inside. Needs PASSWORD. Stuck? https://airpg-minigames.vercel.app/games/the-notebook"
                     }
                 }
             ],
@@ -255,7 +285,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         { type: 'FLAG', flag: 'notebook_video_watched', value: true }
                     ],
                     success: {
-                        message: "You search the pages. Empty. The SD card and police file—both gone. You took them already."
+                        message: "You search the box. Empty. The SD card and police file—both gone. You took them already."
                     }
                 },
                 {
@@ -265,7 +295,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         { type: 'HAS_ITEM', itemId: 'item_secret_document' }
                     ],
                     success: {
-                        message: "You search the pages. The SD card is still here—use your phone to read it. The police file is gone."
+                        message: "You search the box. The SD card is still here—use your phone to read it. The police file is gone."
                     }
                 },
                 {
@@ -275,14 +305,14 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         { type: 'FLAG', flag: 'notebook_video_watched', value: true }
                     ],
                     success: {
-                        message: "You search the pages. The stolen police file is still hidden in the center spread—TAKE it. You've already watched the SD card video."
+                        message: "You search the box. The stolen police file is still hidden inside—TAKE it. You've already watched the SD card video."
                     }
                 },
                 {
                     // Unlocked + video NOT watched yet (only show SD card)
                     conditions: [{ type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: false }],
                     success: {
-                        message: "You search the pages. The SD card—modern, black—hidden in the center spread. Use your phone to read it."
+                        message: "You search the box. The SD card—modern, black—hidden inside. Use your phone to read it."
                     }
                 },
                 {
@@ -294,20 +324,20 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                 }
             ],
 
-            // 12. TALK - Can't talk to notebook
+            // 12. TALK - Can't talk to box
             onTalk: {
                 fail: {
-                    message: "Notebooks don't talk. Try OPENING it or the PASSWORD."
+                    message: "Metal boxes don't talk. Try OPENING it or the PASSWORD."
                 }
             },
 
             // SPECIAL: Password unlock handler
             onUnlock: {
                 success: {
-                    message: "Brass clasp clicks. Cover swings open, leather creaks. Inside: black SD card—modern, digital, anachronistic. It rests against yellowed pages, out of place.",
+                    message: "Latch clicks. Lid swings open, hinges creak. Inside: black SD card—modern, digital, anachronistic. It rests in the corner of the rusty box, out of place.",
                     media: {
-                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759242346/Notebook_unlocked_fpxqgl.jpg',
-                        description: 'Unlocked notebook revealing SD card',
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1763991426/brown_box_3_bmabdx.png',
+                        description: 'Unlocked metal box revealing SD card',
                         hint: 'The password worked - SD card revealed'
                     },
                     effects: [
@@ -318,22 +348,27 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                     ]
                 },
                 fail: {
-                    message: "Wrong password. Lock stays shut. Think: what connects the clues?\n\nUse: /password <your guess>"
+                    message: "Wrong password. Lock stays shut. Think: what connects the clues?\n\nUse: /password <your guess>",
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1763991426/brown_box_4_iz32m2.png',
+                        description: 'Metal box rejecting wrong password',
+                        hint: 'Try a different password'
+                    }
                 }
             },
 
             // Fallback for undefined actions
-            defaultFailMessage: "That won't work on the notebook. Try: EXAMINE, OPEN, READ, or use /password <phrase> to unlock it."
+            defaultFailMessage: "That won't work on the metal box. Try: EXAMINE, OPEN, READ, or use /password <phrase> to unlock it."
         },
         fallbackMessages: {
             default: "That's not going to work. It's a key piece of evidence.",
             notOpenable: "You can't open that.",
             locked: "It's locked.",
-            noEffect: "Using that on the notebook has no effect."
+            noEffect: "Using that on the metal box has no effect."
         },
-        design: { 
-            authorNotes: "Central puzzle item for Chapter 1.",
-            tags: ['notebook', 'book']
+        design: {
+            authorNotes: "Central puzzle item for Chapter 1. Metal box contains SD card and confidential file.",
+            tags: ['box', 'metal box', 'container']
         },
         version: { schema: "1.0", content: "1.0" }
     },
@@ -699,8 +734,8 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             default: "It's just a bookshelf. Let's not get sidetracked.",
             notMovable: "It's too heavy to move by yourself."
         },
-        design: { 
-            authorNotes: "Contains the other 'justice' clue for the notebook.",
+        design: {
+            authorNotes: "Contains the other 'justice' clue for the metal box.",
             tags: ['books', 'shelf']
         },
         version: { schema: "1.0", content: "1.0" }
@@ -1386,8 +1421,8 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         name: 'SD Card',
         alternateNames: ['sd card', 'card', 'memory card', 'sd', 'media card', 'black card'],
         archetype: 'Device',
-        description: 'A small, modern SD card, looking strangely out of place in the old notebook. It probably fits in your phone.',
-        transitionNarration: 'You lean in closer to examine the SD card tucked inside the notebook.',
+        description: 'A small, modern SD card, looking strangely out of place in the old rusty metal box. It probably fits in your phone.',
+        transitionNarration: 'You lean in closer to examine the SD card inside the metal box.',
         capabilities: { openable: false, lockable: false, breakable: false, movable: false, powerable: false, container: false, readable: true, inputtable: false },
         state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'closed' },
         media: {
@@ -1400,7 +1435,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             // EXAMINE - Visual inspection with phone hint
             onExamine: {
                 success: {
-                    message: "Black SD card. Modern. Out of place in the old notebook. Standard size—fits most devices. Your FBI phone can read this. Try: USE PHONE, then READ SD CARD.",
+                    message: "Black SD card. Modern. Out of place in the old metal box. Standard size—fits most devices. Your FBI phone can read this. Try: USE PHONE, then READ SD CARD.",
                     media: {
                         url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761812524/SD_Card_rokilu.png',
                         description: 'Black SD card',
@@ -1426,7 +1461,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         { type: 'STATE', entityId: 'obj_sd_card', key: 'currentStateId', equals: 'closed' }
                     ],
                     success: {
-                        message: "Card slides into your phone. Screen flickers. Video loads—grainy, seventy years old. Music fills the cafe. Saxophone, smooth, melancholic. A tune that's been waiting.\n\nSilas Bloom. Musician. That song for Rose... they were in love. You hear it in every note.\n\nVideo ends. More questions than answers. Your mind races.\n\nWait—you notice something else tucked deeper in the notebook. A folded document. CONFIDENTIAL - POLICE USE ONLY. Faded red ink. What's this doing here? It looks... stolen.",
+                        message: "Card slides into your phone. Screen flickers. Video loads—grainy, seventy years old. Music fills the cafe. Saxophone, smooth, melancholic. A tune that's been waiting.\n\nSilas Bloom. Musician. That song for Rose... they were in love. You hear it in every note.\n\nVideo ends. More questions than answers. Your mind races.\n\nWait—you notice something else tucked deeper in the metal box. A folded document. CONFIDENTIAL - POLICE USE ONLY. Faded red ink. What's this doing here? It looks... stolen.",
                         media: {
                             url: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759678377/CH_I_completion_jqtyme.mp4',
                             type: 'video',
@@ -1459,7 +1494,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         { type: 'STATE', entityId: 'obj_sd_card', key: 'currentStateId', equals: 'closed' }
                     ],
                     success: {
-                        message: "Card slides into your phone. Screen flickers. Video loads—grainy, seventy years old. Music fills the cafe. Saxophone, smooth, melancholic. A tune that's been waiting.\n\nSilas Bloom. Musician. That song for Rose... they were in love. You hear it in every note.\n\nVideo ends. More questions than answers. Your mind races.\n\nWait—you notice something else tucked deeper in the notebook. A folded document. CONFIDENTIAL - POLICE USE ONLY. Faded red ink. What's this doing here? It looks... stolen.",
+                        message: "Card slides into your phone. Screen flickers. Video loads—grainy, seventy years old. Music fills the cafe. Saxophone, smooth, melancholic. A tune that's been waiting.\n\nSilas Bloom. Musician. That song for Rose... they were in love. You hear it in every note.\n\nVideo ends. More questions than answers. Your mind races.\n\nWait—you notice something else tucked deeper in the metal box. A folded document. CONFIDENTIAL - POLICE USE ONLY. Faded red ink. What's this doing here? It looks... stolen.",
                         media: {
                             url: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759678377/CH_I_completion_jqtyme.mp4',
                             type: 'video',
@@ -2942,7 +2977,7 @@ const items: Record<ItemId, Item> = {
         alternateNames: ['stolen police file', 'police file', 'file', 'document', 'stolen file', 'confidential file'],
         archetype: 'Document',
         description: "A thick police file marked 'CONFIDENTIAL - POLICE USE ONLY'. Official stamps and seals cover the folder.",
-        alternateDescription: "The stolen police file from the notebook. It contains classified investigation documents.",
+        alternateDescription: "The stolen police file from the metal box. It contains classified investigation documents.",
         capabilities: { isTakable: true, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         media: {
             images: {
@@ -3107,9 +3142,9 @@ const npcs: Record<NpcId, NPC> = {
             { topicId: 't_coffee', label: 'Ask about coffee', keywords: ["coffee", "drink", "menu", "order", "buy", "latte", "cappuccino", "espresso", "beverage"], response: { message: 'The coffee is hot and the pastries are day-old. The menu is on the board. Let me know if you can decipher my handwriting.' } },
             { topicId: 't_prices', label: 'Ask about prices', keywords: ["price", "cost", "how much", "expensive", "cheap"], response: { message: 'More than it should be, less than I want to charge. The prices are on the board.' } },
             { topicId: 't_reco', label: 'Ask for recommendation', keywords: ["recommend", "good", "special", "best", "favorite", "suggest"], response: { message: 'The espresso will wake you up. The scones... well, they exist.' } },
-            { topicId: 't_man', label: 'Ask about the man in black', keywords: ["man", "regular", "customer", "guy", "who left", "who was sitting here", "the man", "person"], response: { message: "The guy in the black coat? Yeah, he's a regular. Comes in, stares at his notebook, doesn't say much. Pays in cash. My favorite kind of customer." } },
+            { topicId: 't_man', label: 'Ask about the man in black', keywords: ["man", "regular", "customer", "guy", "who left", "who was sitting here", "the man", "person"], response: { message: "The guy in the black coat? Yeah, he's a regular. Comes in, stares at that old metal box of his, doesn't say much. Pays in cash. My favorite kind of customer." } },
             { topicId: 't_musician', label: 'Ask about his job', keywords: ["musician", "saxophone", "job", "background", "what does he do", "occupation", "work"], response: { message: "I hear he's a musician. Plays the saxophone out on the corner most days. Keeps to himself, you know?" } },
-            { topicId: 't_notebook', label: 'Ask about the notebook', keywords: ["notebook", "book", "his", "what was he doing", "writing", "journal"], response: { message: "Always scribbling in that old notebook of his. Looked like he was writing the next great American novel, or maybe just his grocery list. Who knows."} },
+            { topicId: 't_box', label: 'Ask about the metal box', keywords: ["box", "metal box", "rusty box", "his", "what was he doing", "container"], response: { message: "That rusty old box? He's been carrying it around for weeks. Never opens it while he's here. Just sits there, staring at it like it's got all the answers."} },
             { topicId: 't_cafe', label: 'Ask about the cafe', keywords: ["cafe", "place", "here", "daily grind", "establishment"], response: { message: "It's a job. I make coffee, people drink it. The manager tries to make it feel 'cozy'. I just clean up after people." } },
             { topicId: 't_day', label: 'Ask about his day', keywords: ["day", "shift", "busy", "slow", "customers"], response: { message: "Same as always. Pour coffee, wipe counters, listen to people's problems. The usual." } },
             { topicId: 't_weather', label: 'Comment on weather', keywords: ["rain", "weather", "cold", "wet"], response: { message: "Rain brings customers. They want something warm. Good for business, I guess." } },
@@ -3276,7 +3311,7 @@ const npcs: Record<NpcId, NPC> = {
                 keywords: ["clues", "hints", "puzzles", "left", "evidence"],
                 conditions: { requiredFlagsAll: ['tape_removed' as Flag] },
                 response: {
-                    message: "He hid things in the cafe. A notebook, books, safes. He wants you to piece it together. He's testing you, like he's the puppetmaster."
+                    message: "He hid things in the cafe. A metal box, books, safes. He wants you to piece it together. He's testing you, like he's the puppetmaster."
                 }
             },
             {
@@ -3354,7 +3389,7 @@ const locations: Record<LocationId, Location> = {
         locationId: 'loc_cafe_interior' as LocationId,
         name: 'The Cafe Interior',
         sceneDescription: 'You are inside The Daily Grind. It\'s a bustling downtown cafe, smelling of coffee and rain.',
-        sceneImage: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762686189/Cafe_Blueprint_pv01xp.png', description: 'A view of the bustling cafe interior.', hint: 'bustling cafe' },
+        sceneImage: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1763992995/Cafe_Blueprint_exbuth.jpg', description: 'A view of the bustling cafe interior.', hint: 'bustling cafe' },
         coord: { x: 1, y: 1, z: 0 },
         objects: ['obj_brown_notebook', 'obj_chalkboard_menu', 'obj_table', 'obj_bookshelf', 'obj_painting', 'obj_counter'] as GameObjectId[],
         npcs: ['npc_barista', 'npc_manager', 'npc_victim_girl'] as NpcId[],
@@ -3457,7 +3492,7 @@ const chapters: Record<ChapterId, Chapter> = {
     'ch1-the-cafe': {
         id: 'ch1-the-cafe' as ChapterId,
         title: 'A Blast from the Past',
-        goal: "Find out what's inside the notebook and the safe.",
+        goal: "Find out what's inside the metal box and the safe.",
         introductionVideo: 'https://res.cloudinary.com/dg912bwcc/video/upload/f_mp4/v1759670681/CH_I_Intro_ccy0og.mp4',
         completionVideo: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759678377/CH_I_completion_jqtyme.mp4',
         postChapterMessage: "Looks like we've got everything from this place. I'm thinking our next stop should be the jazz club mentioned in the article.",
@@ -3469,17 +3504,17 @@ const chapters: Record<ChapterId, Chapter> = {
         objectives: [
             { flag: 'has_talked_to_barista' as Flag, label: 'Talk to the Barista' },
             { flag: 'has_received_business_card' as Flag, label: 'Get the Business Card' },
-            { flag: 'has_unlocked_notebook' as Flag, label: 'Unlock the Notebook' },
-            { flag: 'notebook_interaction_complete' as Flag, label: 'View the Notebook Contents' },
+            { flag: 'has_unlocked_notebook' as Flag, label: 'Unlock the Metal Box' },
+            { flag: 'notebook_interaction_complete' as Flag, label: 'View the Metal Box Contents' },
             { flag: 'machine_is_broken' as Flag, label: 'Find the hidden key' },
             { flag: 'safe_is_unlocked' as Flag, label: 'Unlock the wall safe' },
             { flag: 'has_read_secret_document' as Flag, label: 'Read the secret document' },
         ],
         hints: [
-            { flag: 'has_talked_to_barista' as Flag, text: "We haven't spoken to the barista yet. He might have seen who left the notebook." },
+            { flag: 'has_talked_to_barista' as Flag, text: "We haven't spoken to the barista yet. He might have seen who left the metal box." },
             { flag: 'has_received_business_card' as Flag, text: "The barista mentioned the man in black was a regular. Maybe he knows more about him, or has something he left behind." },
-            { flag: 'has_unlocked_notebook' as Flag, text: "The notebook is locked with a phrase. We should examine everything in the cafe for clues. Maybe something on the menu or bookshelf?" },
-            { flag: 'notebook_interaction_complete' as Flag, text: "We've unlocked the notebook, but we haven't checked what's inside yet. Let's open it and see what we find." },
+            { flag: 'has_unlocked_notebook' as Flag, text: "The metal box is locked with a phrase. We should examine everything in the cafe for clues. Maybe something on the menu or bookshelf?" },
+            { flag: 'notebook_interaction_complete' as Flag, text: "We've unlocked the metal box, but we haven't checked what's inside yet. Let's open it and see what we find." },
             { flag: 'machine_is_broken' as Flag, text: "That coffee machine looks expensive, but a part of it seems loose. Maybe we can force it open with a tool?" },
             { flag: 'safe_is_unlocked' as Flag, text: "There's a safe behind the painting. We found a key in the coffee machine. Let's try using the key on the safe." },
             { flag: 'has_read_secret_document' as Flag, text: "The safe is open and we have the document. We need to read it to see what's inside." },
@@ -3497,7 +3532,7 @@ const chapters: Record<ChapterId, Chapter> = {
 export const game: Game = {
   id: 'blood-on-brass' as GameId,
   title: 'The Midnight Lounge Jazz Club Case',
-  description: "You are Burt Macklin, FBI. A mysterious stranger hands you a worn notebook from the 1940s—the secret case file of a forgotten murder. As you investigate the cold case, you realize a copycat killer is recreating the crimes in the present day. You must solve the past to stop a killer in the present.",
+  description: "You are Burt Macklin, FBI. A mysterious stranger hands you a rusty metal box from the 1940s—containing the secret case file of a forgotten murder. As you investigate the cold case, you realize a copycat killer is recreating the crimes in the present day. You must solve the past to stop a killer in the present.",
   setting: "Modern-day USA, 2025",
   gameType: 'Limited Open World',
   narratorName: 'Narrator',
@@ -3505,7 +3540,7 @@ export const game: Game = {
 
 **// 1. Your Primary Task: Command Interpretation**
 Your single most important task is to translate the player's natural language input into a single, valid game command from the 'Available Game Commands' list. Use the exact entity names provided in the 'Visible Names' lists.
-  - "look at the book" and "examine notebook" both become \`examine "Brown Notebook"\`.
+  - "look at the box" and "examine metal box" both become \`examine "Metal Box"\`.
   - "open the safe with the key" and "use my key to open the safe" both become \`use "Brass Key" on "Wall Safe"\`.
   - "read sd card on phone", "read sd card with phone", "check sd card on my phone" all become \`read "SD Card" on "Phone"\`.
   - "move the painting" or "look behind the art" both become \`move "Wall painting"\`.
@@ -3550,7 +3585,7 @@ Your reasoning must be a brief, step-by-step explanation of how you mapped the p
 - Adopt a classic crime noir tone: gritty, descriptive, with a focus on atmosphere and internal thought. The main character is FBI agent Burt Macklin.
 - Aim for a rich, descriptive style. Don't just state what happened; paint a picture. Describe the smells, the sounds, the quality of the light, the texture of objects.
 - Expand on the events in the log. Weave them into a cohesive story. Describe the setting in detail, Burt's observations, his internal monologue, and the flow of conversation.
-- Smooth out the "game-like" elements. Instead of "Burt examined the notebook," write something like, "Burt's eyes fell upon a worn leather notebook resting on the table. It seemed to pulse with forgotten secrets, its leather cover softened by decades of handling."
+- Smooth out the "game-like" elements. Instead of "Burt examined the metal box," write something like, "Burt's eyes fell upon a rusty metal box resting on the table. It seemed to pulse with forgotten secrets, its corroded surface weathered by decades."
 - Your job is to pick the important moments and dialogue that drive the plot forward and flesh them out. Omit repetitive actions or dead ends, but expand on the crucial scenes.
 - Target a length of approximately 1000-1500 words to create a substantial and immersive chapter.
 - Format the output as a single block of prose. Do not use markdown, titles, or headings within the story itself.

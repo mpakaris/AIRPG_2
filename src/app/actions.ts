@@ -43,6 +43,46 @@ import { GameStateManager } from '@/lib/game/engine';
 const GAME_ID = 'blood-on-brass' as GameId;
 
 
+// --- Helper Functions ---
+
+/**
+ * Normalizes Firestore Timestamps to plain numbers
+ * Firestore returns Timestamp objects with toJSON methods that React can't serialize
+ * This function recursively converts them to millisecond timestamps
+ */
+function normalizeTimestamps(obj: any): any {
+    if (obj === null || obj === undefined) {
+        return obj;
+    }
+
+    // Check if this is a Firestore Timestamp object
+    if (obj?.seconds !== undefined && obj?.nanoseconds !== undefined) {
+        // Convert to milliseconds
+        return obj.seconds * 1000 + Math.floor(obj.nanoseconds / 1000000);
+    }
+
+    // Handle Date objects
+    if (obj instanceof Date) {
+        return obj.getTime();
+    }
+
+    // Handle arrays
+    if (Array.isArray(obj)) {
+        return obj.map(item => normalizeTimestamps(item));
+    }
+
+    // Handle plain objects
+    if (typeof obj === 'object' && obj.constructor === Object) {
+        const normalized: any = {};
+        for (const key in obj) {
+            normalized[key] = normalizeTimestamps(obj[key]);
+        }
+        return normalized;
+    }
+
+    return obj;
+}
+
 // --- Data Loading ---
 
 export async function getGameData(gameId: GameId): Promise<Game | null> {
@@ -263,7 +303,8 @@ export async function processCommand(
         }
 
         if (logSnap.exists() && logSnap.data()?.messages?.length > 0) {
-            allMessagesForSession = logSnap.data()?.messages || [];
+            const rawMessages = logSnap.data()?.messages || [];
+            allMessagesForSession = normalizeTimestamps(rawMessages);
         } else {
             allMessagesForSession = await createInitialMessages(currentState, game);
         }
@@ -399,7 +440,8 @@ export async function processCommand(
         }
 
         if (logSnap.exists() && logSnap.data()?.messages?.length > 0) {
-            allMessagesForSession = logSnap.data()?.messages || [];
+            const rawMessages = logSnap.data()?.messages || [];
+            allMessagesForSession = normalizeTimestamps(rawMessages);
         } else {
             allMessagesForSession = await createInitialMessages(currentState, game);
         }
@@ -458,29 +500,6 @@ export async function processCommand(
             return { newState: currentState, messages: extractUIMessages(allMessagesForSession) };
         } else if (lowerInput === 'restart') {
             return await resetGame(userId);
-        } else if (lowerInput.startsWith('/password ')) {
-            // SPECIAL COMMAND: Password (old format)
-            if (playerMessage) allMessagesForSession.push(playerMessage);
-
-            // EXPLICIT PASSWORD COMMAND: /password <phrase>
-            // This removes ambiguity - player explicitly indicates they're entering a password
-            const passwordPhrase = safePlayerInput.substring(10).trim(); // Remove "/password " prefix
-
-            if (!currentState.currentFocusId || currentState.focusType !== 'object') {
-                const needsFocusMessage = createMessage('system', systemName, game.systemMessages.needsFocus);
-                allMessagesForSession.push(needsFocusMessage);
-            } else {
-                // Route directly to password handler
-                effects = await handlePassword(currentState, passwordPhrase, game);
-                if (effects.length > 0) {
-                    const result = await processEffects(currentState, effects, game);
-                    currentState = result.newState;
-                    allMessagesForSession.push(...result.messages);
-                }
-            }
-
-            await logAndSave(userId, gameId, currentState, allMessagesForSession);
-            return { newState: currentState, messages: extractUIMessages(allMessagesForSession) };
         } else if (lowerInput === '/map') {
             // SPECIAL COMMAND: Map (old format)
             if (playerMessage) allMessagesForSession.push(playerMessage);
@@ -523,6 +542,16 @@ export async function processCommand(
             const preprocessingStartTime = Date.now();
             preprocessedInput = preprocessInput(safePlayerInput);
             preprocessingMs = Date.now() - preprocessingStartTime;
+
+            // 1.5. HANDLE /password COMMAND
+            // Convert /password <phrase> to password <phrase>
+            // This allows /password to use consolidated logging and bypass AI interpretation
+            let skipAIInterpretation = false;
+            if (lowerInput.startsWith('/password ')) {
+                const phrase = safePlayerInput.substring(10).trim(); // Remove "/password " prefix
+                preprocessedInput = `password ${phrase}`;
+                skipAIInterpretation = true; // Skip AI, go directly to password handler
+            }
 
             // 2. QUICK PATTERN CHECKS (no AI needed)
             if (isHelpRequest(preprocessedInput)) {
@@ -589,26 +618,41 @@ export async function processCommand(
 
             // 4. AI INTERPRETATION WITH SAFETY NET
             const aiInterpretationStartTime = Date.now();
-            const { interpretCommandWithSafetyNet, CONFIDENCE_THRESHOLDS } = await import('@/ai/flows/interpret-with-safety-net');
 
-            safetyNetResult = await interpretCommandWithSafetyNet(
-                {
-                    promptContext: game.promptContext || '',
-                    gameState: JSON.stringify({
-                        ...currentState,
-                        world: undefined, // Too large for AI context
-                        stories: undefined, // Not needed for AI
-                        counters: undefined, // Analytics only
-                    }, null, 2),
-                    playerCommand: preprocessedInput,
-                    availableCommands: AVAILABLE_COMMANDS.join(', '),
-                    visibleObjectNames: visibleEntityNames,
-                    visibleNpcNames: visibleNpcNames,
-                },
-                gameId,
-                userId
-            );
-            aiInterpretationMs = Date.now() - aiInterpretationStartTime;
+            // Skip AI interpretation for explicit /password commands
+            if (skipAIInterpretation) {
+                // Bypass AI, use preprocessed command directly
+                safetyNetResult = {
+                    commandToExecute: preprocessedInput,
+                    confidence: 1.0,
+                    primaryConfidence: 1.0,
+                    source: 'bypass' as const,
+                    aiCalls: 0,
+                    reasoning: 'Explicit /password command, bypassing AI interpretation'
+                };
+                aiInterpretationMs = 0;
+            } else {
+                const { interpretCommandWithSafetyNet, CONFIDENCE_THRESHOLDS } = await import('@/ai/flows/interpret-with-safety-net');
+
+                safetyNetResult = await interpretCommandWithSafetyNet(
+                    {
+                        promptContext: game.promptContext || '',
+                        gameState: JSON.stringify({
+                            ...currentState,
+                            world: undefined, // Too large for AI context
+                            stories: undefined, // Not needed for AI
+                            counters: undefined, // Analytics only
+                        }, null, 2),
+                        playerCommand: preprocessedInput,
+                        availableCommands: AVAILABLE_COMMANDS.join(', '),
+                        visibleObjectNames: visibleEntityNames,
+                        visibleNpcNames: visibleNpcNames,
+                    },
+                    gameId,
+                    userId
+                );
+                aiInterpretationMs = Date.now() - aiInterpretationStartTime;
+            }
 
             // ========================================================================
             // AI INTERPRETATION SUMMARY
@@ -1429,7 +1473,8 @@ export async function generateStoryForChapter(userId: string, gameId: GameId, ch
     }
 
     let playerState = stateSnap.data() as PlayerState;
-    const allMessages = logSnap.data()?.messages as Message[];
+    const rawMessages = logSnap.data()?.messages || [];
+    const allMessages = normalizeTimestamps(rawMessages) as Message[];
     const chapter = game.chapters[chapterId];
 
     if (!chapter) {

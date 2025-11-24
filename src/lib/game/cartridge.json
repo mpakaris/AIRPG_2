@@ -1,13 +1,13 @@
 {
   "id": "blood-on-brass",
   "title": "The Midnight Lounge Jazz Club Case",
-  "description": "You are Burt Macklin, FBI. A mysterious stranger hands you a worn notebook from the 1940s—the secret case file of a forgotten murder. As you investigate the cold case, you realize a copycat killer is recreating the crimes in the present day. You must solve the past to stop a killer in the present.",
+  "description": "You are Burt Macklin, FBI. A mysterious stranger hands you a rusty metal box from the 1940s—containing the secret case file of a forgotten murder. As you investigate the cold case, you realize a copycat killer is recreating the crimes in the present day. You must solve the past to stop a killer in the present.",
   "setting": "Modern-day USA, 2025",
   "gameType": "Limited Open World",
   "narratorName": "Narrator",
-  "promptContext": "You are the System, responsible for interpreting player commands and translating them into valid game actions. Your role is purely technical—you analyze input and route it to the correct handler.\n\n**// 1. Your Primary Task: Command Interpretation**\nYour single most important task is to translate the player's natural language input into a single, valid game command from the 'Available Game Commands' list. Use the exact entity names provided in the 'Visible Names' lists.\n  - \"look at the book\" and \"examine notebook\" both become `examine \"Brown Notebook\"`.\n  - \"open the safe with the key\" and \"use my key to open the safe\" both become `use \"Brass Key\" on \"Wall Safe\"`.\n  - \"read sd card on phone\", \"read sd card with phone\", \"check sd card on my phone\" all become `read \"SD Card\" on \"Phone\"`.\n  - \"move the painting\" or \"look behind the art\" both become `move \"Wall painting\"`.\n  - \"go to bookshelf\", \"move to the safe\", \"walk over to the counter\" all become `goto \"Bookshelf\"`, `goto \"Wall Safe\"`, `goto \"Counter\"` (focus on object, not location travel).\n  - \"talk to barista\", \"speak with the manager\", \"chat with rose\" all become `talk to \"Barista\"`, `talk to \"Cafe Manager\"`, `talk to \"Rose\"` (IMPORTANT: use \"talk to\" for NPCs, NOT \"goto\").\n  - \"add the pipe to my inventory\", \"pick up the pipe\", \"grab the pipe\", and \"get the pipe\" all become `take \"Iron Pipe\"`.\n  - \"put the key in my pocket\" becomes `take \"Brass Key\"`.\n  - \"check my stuff\" and \"what do I have\" both become `inventory`.\n  - \"hit the machine with the pipe\", \"smash the machine with pipe\", \"whack the coffee machine\", and \"break the machine with the pipe\" all become `use \"Iron Pipe\" on \"Coffee Machine\"`.\n  - \"check the card\" and \"examine sd card\" both become `examine \"SD Card\"` (even if inside container).\n  - \"read book The Art of the Deal\", \"check book Justice for My Love\" become `read \"The Art of the Deal\"`, `examine \"Justice for My Love\"` (strip generic words like \"book\" from entity names).\n\n**// 2. Your Response Protocol**\n- **Minimize System Messages:** For valid, actionable commands (take, use, examine, open, read, move), your `agentResponse` should be null or a minimal confirmation. The Narrator handles ALL descriptive output.\n  - **CORRECT:** `{\"agentResponse\": null, \"commandToExecute\": \"examine \\\"Painting on the wall\\\"\"}`\n  - **ALSO ACCEPTABLE:** `{\"agentResponse\": \"Examining the painting.\", \"commandToExecute\": \"examine \\\"Painting on the wall\\\"\"}`\n  - **INCORRECT:** `{\"agentResponse\": \"You walk over to examine the abstract painting. It's quite intriguing.\", \"commandToExecute\": \"examine \\\"Painting on the wall\\\"\"}`\n\n**// 3. Handling Invalid Input - READ THIS VERY CAREFULLY**\n- **Illogical/Destructive Actions:** ONLY mark as invalid for truly nonsensical actions (e.g., \"eat the key\", \"destroy reality\"). Use `commandToExecute: \"invalid\"`.\n- **CRITICAL - You MUST NOT Block Valid Commands:**\n  - Your ONLY job is translating natural language → game commands\n  - If the player mentions an object name from the Visible Names lists, you MUST translate it to a command\n  - DO NOT block commands because objects are \"inside containers\" - the game engine handles this\n  - DO NOT block commands because you think they \"won't work\" - let the engine decide\n  - DO NOT give helpful suggestions like \"try examining X instead\" - just translate what they asked for\n  - Examples:\n    - Player: \"check SD card\" → `examine \"SD Card\"` ✓ (even if it's inside something)\n    - Player: \"take the key\" → `take \"Brass Key\"` ✓ (even if not visible yet)\n    - Player: \"read newspaper\" → `read \"Newspaper Article\"` ✓ (always translate, engine handles accessibility)\n- **Conversational Input:**  For conversational input (e.g., \"what now?\", \"help\"), use `commandToExecute: \"invalid\"` or `\"help\"`.\n\n**// 4. Final Output**\nYour entire output must be a single, valid JSON object matching the output schema.\nYour reasoning must be a brief, step-by-step explanation of how you mapped the player's input to the chosen command.\n",
+  "promptContext": "You are the System, responsible for interpreting player commands and translating them into valid game actions. Your role is purely technical—you analyze input and route it to the correct handler.\n\n**// 1. Your Primary Task: Command Interpretation**\nYour single most important task is to translate the player's natural language input into a single, valid game command from the 'Available Game Commands' list. Use the exact entity names provided in the 'Visible Names' lists.\n  - \"look at the box\" and \"examine metal box\" both become `examine \"Metal Box\"`.\n  - \"open the safe with the key\" and \"use my key to open the safe\" both become `use \"Brass Key\" on \"Wall Safe\"`.\n  - \"read sd card on phone\", \"read sd card with phone\", \"check sd card on my phone\" all become `read \"SD Card\" on \"Phone\"`.\n  - \"move the painting\" or \"look behind the art\" both become `move \"Wall painting\"`.\n  - \"go to bookshelf\", \"move to the safe\", \"walk over to the counter\" all become `goto \"Bookshelf\"`, `goto \"Wall Safe\"`, `goto \"Counter\"` (focus on object, not location travel).\n  - \"talk to barista\", \"speak with the manager\", \"chat with rose\" all become `talk to \"Barista\"`, `talk to \"Cafe Manager\"`, `talk to \"Rose\"` (IMPORTANT: use \"talk to\" for NPCs, NOT \"goto\").\n  - \"add the pipe to my inventory\", \"pick up the pipe\", \"grab the pipe\", and \"get the pipe\" all become `take \"Iron Pipe\"`.\n  - \"put the key in my pocket\" becomes `take \"Brass Key\"`.\n  - \"check my stuff\" and \"what do I have\" both become `inventory`.\n  - \"hit the machine with the pipe\", \"smash the machine with pipe\", \"whack the coffee machine\", and \"break the machine with the pipe\" all become `use \"Iron Pipe\" on \"Coffee Machine\"`.\n  - \"check the card\" and \"examine sd card\" both become `examine \"SD Card\"` (even if inside container).\n  - \"read book The Art of the Deal\", \"check book Justice for My Love\" become `read \"The Art of the Deal\"`, `examine \"Justice for My Love\"` (strip generic words like \"book\" from entity names).\n\n**// 2. Your Response Protocol**\n- **Minimize System Messages:** For valid, actionable commands (take, use, examine, open, read, move), your `agentResponse` should be null or a minimal confirmation. The Narrator handles ALL descriptive output.\n  - **CORRECT:** `{\"agentResponse\": null, \"commandToExecute\": \"examine \\\"Painting on the wall\\\"\"}`\n  - **ALSO ACCEPTABLE:** `{\"agentResponse\": \"Examining the painting.\", \"commandToExecute\": \"examine \\\"Painting on the wall\\\"\"}`\n  - **INCORRECT:** `{\"agentResponse\": \"You walk over to examine the abstract painting. It's quite intriguing.\", \"commandToExecute\": \"examine \\\"Painting on the wall\\\"\"}`\n\n**// 3. Handling Invalid Input - READ THIS VERY CAREFULLY**\n- **Illogical/Destructive Actions:** ONLY mark as invalid for truly nonsensical actions (e.g., \"eat the key\", \"destroy reality\"). Use `commandToExecute: \"invalid\"`.\n- **CRITICAL - You MUST NOT Block Valid Commands:**\n  - Your ONLY job is translating natural language → game commands\n  - If the player mentions an object name from the Visible Names lists, you MUST translate it to a command\n  - DO NOT block commands because objects are \"inside containers\" - the game engine handles this\n  - DO NOT block commands because you think they \"won't work\" - let the engine decide\n  - DO NOT give helpful suggestions like \"try examining X instead\" - just translate what they asked for\n  - Examples:\n    - Player: \"check SD card\" → `examine \"SD Card\"` ✓ (even if it's inside something)\n    - Player: \"take the key\" → `take \"Brass Key\"` ✓ (even if not visible yet)\n    - Player: \"read newspaper\" → `read \"Newspaper Article\"` ✓ (always translate, engine handles accessibility)\n- **Conversational Input:**  For conversational input (e.g., \"what now?\", \"help\"), use `commandToExecute: \"invalid\"` or `\"help\"`.\n\n**// 4. Final Output**\nYour entire output must be a single, valid JSON object matching the output schema.\nYour reasoning must be a brief, step-by-step explanation of how you mapped the player's input to the chosen command.\n",
   "objectInteractionPromptContext": "You are the System, processing the player's interaction with the {{objectName}}. Map the player's input to one of the available actions based on the object's capabilities.",
-  "storyStyleGuide": "You are a master storyteller and a brilliant editor. Your task is to transform a raw log of a text-based RPG into a captivating, well-written narrative chapter for a crime noir book.\n\n**Style Guide:**\n- Write in the third person, past tense.\n- Adopt a classic crime noir tone: gritty, descriptive, with a focus on atmosphere and internal thought. The main character is FBI agent Burt Macklin.\n- Aim for a rich, descriptive style. Don't just state what happened; paint a picture. Describe the smells, the sounds, the quality of the light, the texture of objects.\n- Expand on the events in the log. Weave them into a cohesive story. Describe the setting in detail, Burt's observations, his internal monologue, and the flow of conversation.\n- Smooth out the \"game-like\" elements. Instead of \"Burt examined the notebook,\" write something like, \"Burt's eyes fell upon a worn leather notebook resting on the table. It seemed to pulse with forgotten secrets, its leather cover softened by decades of handling.\"\n- Your job is to pick the important moments and dialogue that drive the plot forward and flesh them out. Omit repetitive actions or dead ends, but expand on the crucial scenes.\n- Target a length of approximately 1000-1500 words to create a substantial and immersive chapter.\n- Format the output as a single block of prose. Do not use markdown, titles, or headings within the story itself.\n",
+  "storyStyleGuide": "You are a master storyteller and a brilliant editor. Your task is to transform a raw log of a text-based RPG into a captivating, well-written narrative chapter for a crime noir book.\n\n**Style Guide:**\n- Write in the third person, past tense.\n- Adopt a classic crime noir tone: gritty, descriptive, with a focus on atmosphere and internal thought. The main character is FBI agent Burt Macklin.\n- Aim for a rich, descriptive style. Don't just state what happened; paint a picture. Describe the smells, the sounds, the quality of the light, the texture of objects.\n- Expand on the events in the log. Weave them into a cohesive story. Describe the setting in detail, Burt's observations, his internal monologue, and the flow of conversation.\n- Smooth out the \"game-like\" elements. Instead of \"Burt examined the metal box,\" write something like, \"Burt's eyes fell upon a rusty metal box resting on the table. It seemed to pulse with forgotten secrets, its corroded surface weathered by decades.\"\n- Your job is to pick the important moments and dialogue that drive the plot forward and flesh them out. Omit repetitive actions or dead ends, but expand on the crucial scenes.\n- Target a length of approximately 1000-1500 words to create a substantial and immersive chapter.\n- Format the output as a single block of prose. Do not use markdown, titles, or headings within the story itself.\n",
   "systemMedia": {
     "take": {
       "success": {
@@ -41,21 +41,21 @@
   },
   "systemMessages": {
     "needsTarget": {
-      "examine": "You need to specify what to examine.",
-      "read": "You need to specify what to read.",
-      "take": "You need to specify what to take.",
-      "goto": "You need to specify where to go."
+      "examine": "Examine what, exactly? The air? Pick something specific.",
+      "read": "Read what? The room's vibes? Name the object.",
+      "take": "Take what? My patience? Specify the item.",
+      "goto": "Go where? Narnia? Tell me the actual location."
     },
-    "inventoryEmpty": "Your pockets are empty. Nothing collected yet.",
-    "cannotGoThere": "That path isn't available right now.",
-    "noNextChapter": "The case file ends here. No further chapters available.",
-    "textIllegible": "The text is too faded to decipher. Whatever was written here is lost to time.",
-    "useDidntWork": "That approach doesn't work. The pieces don't fit.",
-    "needsFocus": "You need to focus on a specific object first. Try examining or interacting with it.",
-    "focusSystemError": "Focus system error. This shouldn't happen.",
-    "wrongPassword": "Wrong passphrase. The lock remains sealed.",
-    "cantDoThat": "That action isn't available.",
-    "somethingWentWrong": "An unexpected error occurred."
+    "inventoryEmpty": "Your pockets are lighter than your conscience. Nothing collected yet.",
+    "cannotGoThere": "That path's closed off. Either locked, blocked, or just not your problem yet.",
+    "noNextChapter": "That's where the file ends. No more chapters. Case closed, or just beginning—who knows.",
+    "textIllegible": "The text's faded beyond recognition. Time swallowed whatever secrets this held. Gone for good.",
+    "useDidntWork": "That approach failed. Sometimes the pieces just don't fit, no matter how hard you force them.",
+    "needsFocus": "You need to pick a target first. Examine something, interact with it. Focus beats flailing.",
+    "focusSystemError": "Focus system glitched. That's not supposed to happen. Reality just hiccupped.",
+    "wrongPassword": "Wrong passphrase. The lock stays shut. Try again, or give up.",
+    "cantDoThat": "Can't do that. Not available, not possible, not happening.",
+    "somethingWentWrong": "Something broke. The universe burped. An error occurred. Your guess is as good as mine."
   },
   "world": {
     "worldId": "world_metropolis",
@@ -158,7 +158,7 @@
       "name": "The Cafe Interior",
       "sceneDescription": "You are inside The Daily Grind. It's a bustling downtown cafe, smelling of coffee and rain.",
       "sceneImage": {
-        "url": "https://res.cloudinary.com/dg912bwcc/image/upload/v1762686189/Cafe_Blueprint_pv01xp.png",
+        "url": "https://res.cloudinary.com/dg912bwcc/image/upload/v1763992995/Cafe_Blueprint_exbuth.jpg",
         "description": "A view of the bustling cafe interior.",
         "hint": "bustling cafe"
       },
@@ -298,9 +298,9 @@
   "gameObjects": {
     "obj_brown_notebook": {
       "id": "obj_brown_notebook",
-      "name": "Brown Notebook",
+      "name": "Metal Box",
       "archetype": "Container",
-      "description": "A very worn, leather-bound notebook rests on a table.",
+      "description": "A rusty metal box, about the size of a shoebox, sits on the table. Its surface is weathered and worn.",
       "capabilities": {
         "openable": true,
         "lockable": true,
@@ -337,14 +337,14 @@
       "media": {
         "images": {
           "default": {
-            "url": "https://res.cloudinary.com/dg912bwcc/image/upload/v1759242347/Notebook_locked_ngfes0.png",
-            "description": "A locked notebook.",
-            "hint": "locked notebook"
+            "url": "https://res.cloudinary.com/dg912bwcc/image/upload/v1763991426/brown_box_5_qqomdb.png",
+            "description": "A locked rusty metal box.",
+            "hint": "locked metal box"
           },
           "unlocked": {
-            "url": "https://res.cloudinary.com/dg912bwcc/image/upload/v1759242346/Notebook_unlocked_fpxqgl.jpg",
-            "description": "An unlocked notebook.",
-            "hint": "unlocked notebook"
+            "url": "https://res.cloudinary.com/dg912bwcc/image/upload/v1763991426/brown_box_2_areabd.png",
+            "description": "An unlocked metal box.",
+            "hint": "unlocked metal box"
           }
         },
         "sounds": {
@@ -370,10 +370,10 @@
               }
             ],
             "success": {
-              "message": "The leather is worn soft under your fingers, decades pressed into its surface. It smells of old paper, dust, and something darker—leather tanned with secrets. The brass clasp gleams cold, locked tight, guarding what's inside.\n\nYour fingers trace it, metal biting faintly. No keyhole, no obvious way in—just a mechanism waiting for something it has been expecting. A thrill runs through you. You don't know what's inside, and yet its weight presses against your chest, heavy with possibility.\n\nUsually, you feel like the chess player, setting the moves. Now, strangely, you feel like the pawn in someone else's game—small, exposed, uneasy, and yet drawn irresistibly.\n\nThe notebook radiates threat, subtle and insistent. Every crease and dent seems deliberate, alive with intentions. A flicker of fear curls with excitement, making every nerve tingle.\n\nHolding it, you feel the pulse of history brushing against your own, the quiet danger of secrets someone spent decades guarding. Alone, trembling slightly, you realize this moment—this touch, this weight—is a turning point. You don't know what's inside, and that is precisely what makes it irresistible.",
+              "message": "The metal is cold under your fingers, rust flaking at your touch. Decades of oxidation have eaten into its surface, leaving it rough and weathered. The latch gleams dully, locked tight, guarding what's inside.\n\nYour fingers trace the corroded edges, metal biting faintly. No keyhole, no obvious way in—just a mechanism waiting for something it has been expecting. A thrill runs through you. You don't know what's inside, and yet its weight presses against your chest, heavy with possibility.\n\nUsually, you feel like the chess player, setting the moves. Now, strangely, you feel like the pawn in someone else's game—small, exposed, uneasy, and yet drawn irresistibly.\n\nThe metal box radiates threat, subtle and insistent. Every scratch and dent seems deliberate, alive with intentions. A flicker of fear curls with excitement, making every nerve tingle.\n\nHolding it, you feel the pulse of history brushing against your own, the quiet danger of secrets someone spent decades guarding. Alone, trembling slightly, you realize this moment—this touch, this weight—is a turning point. You don't know what's inside, and that is precisely what makes it irresistible.",
               "media": {
-                "url": "https://res.cloudinary.com/dg912bwcc/image/upload/v1759242347/Notebook_locked_ngfes0.png",
-                "description": "Locked leather notebook with brass clasp",
+                "url": "https://res.cloudinary.com/dg912bwcc/image/upload/v1763991426/brown_box_5_qqomdb.png",
+                "description": "Locked rusty metal box with latch",
                 "hint": "Needs a password phrase..."
               }
             }
@@ -391,7 +391,12 @@
               }
             ],
             "success": {
-              "message": "Notebook's open. Brass clasp unfastened. Inside: yellowed pages, faded ink, illegible entries. The SD card and police file—both gone. You took what was hidden here. Just empty pages remain."
+              "message": "The box is open. Latch unfastened. Inside: rust stains, dust, empty space. The SD card and police file—both gone. You took what was hidden here. Just an empty metal container remains.",
+              "media": {
+                "url": "https://res.cloudinary.com/dg912bwcc/image/upload/v1763991426/brown_box_1_l6lpyd.png",
+                "description": "Empty metal box with items removed",
+                "hint": "The contents have been taken"
+              }
             }
           },
           {
@@ -402,7 +407,12 @@
               }
             ],
             "success": {
-              "message": "Notebook's open. Brass clasp released. Inside: the black SD card still rests against yellowed pages—modern, out of place. The police file is gone. You took it."
+              "message": "The box is open. Latch released. Inside: the black SD card still rests in the corner—modern, out of place in the old rusty container. The police file is gone. You took it.",
+              "media": {
+                "url": "https://res.cloudinary.com/dg912bwcc/image/upload/v1763991426/brown_box_2_areabd.png",
+                "description": "Open metal box with SD card",
+                "hint": "SD card remains inside"
+              }
             }
           },
           {
@@ -414,16 +424,21 @@
               }
             ],
             "success": {
-              "message": "Notebook's open. Brass clasp unfastened. Inside: the stolen police file marked CONFIDENTIAL waits in faded red ink. The SD card is there too—you've already watched the video. The footage is burned into your memory."
+              "message": "The box is open. Latch unfastened. Inside: the stolen police file marked CONFIDENTIAL waits in faded red ink. The SD card is there too—you've already watched the video. The footage is burned into your memory.",
+              "media": {
+                "url": "https://res.cloudinary.com/dg912bwcc/image/upload/v1763991426/brown_box_2_areabd.png",
+                "description": "Open metal box with contents",
+                "hint": "Contains SD card and confidential file"
+              }
             }
           },
           {
             "conditions": [],
             "success": {
-              "message": "Notebook's open. Brass clasp released. Inside: black SD card—modern, out of place against yellowed pages. Your phone can read this.",
+              "message": "The box is open. Latch released. Inside: black SD card—modern, out of place in the old rusty container. Your phone can read this.",
               "media": {
-                "url": "https://res.cloudinary.com/dg912bwcc/image/upload/v1759242346/Notebook_unlocked_fpxqgl.jpg",
-                "description": "Unlocked notebook with SD card",
+                "url": "https://res.cloudinary.com/dg912bwcc/image/upload/v1763991426/brown_box_2_areabd.png",
+                "description": "Open metal box with SD card",
                 "hint": "Use your phone to read the SD card"
               }
             }
@@ -431,12 +446,12 @@
         ],
         "onTake": {
           "fail": {
-            "message": "Evidence. Stays here. Try EXAMINING, OPENING, or entering the PASSWORD."
+            "message": "Evidence doesn't walk out the door. It stays on the table. If you want what's inside, try EXAMINING it, OPENING it, or cracking the PASSWORD."
           }
         },
         "onUse": {
           "fail": {
-            "message": "It's for reading. Try OPENING it or unlocking with the PASSWORD."
+            "message": "It's not a tool. It's a container—meant to be opened. Try OPENING it or unlocking it with the PASSWORD if you're feeling clever."
           }
         },
         "onOpen": [
@@ -459,7 +474,12 @@
               }
             ],
             "success": {
-              "message": "Notebook's already open. Brass clasp unfastened. Inside: yellowed pages, faded ink. The SD card and police file—both gone. You took what was hidden here.",
+              "message": "The box is already open. Latch unfastened. Inside: rust stains, dust. The SD card and police file—both gone. You took what was hidden here.",
+              "media": {
+                "url": "https://res.cloudinary.com/dg912bwcc/image/upload/v1763991426/brown_box_1_l6lpyd.png",
+                "description": "Empty opened metal box",
+                "hint": "Contents have been removed"
+              },
               "effects": [
                 {
                   "type": "SET_ENTITY_STATE",
@@ -486,7 +506,12 @@
               }
             ],
             "success": {
-              "message": "Notebook's open. Brass clasp unfastened. In the crease: the black SD card still rests there—modern, cold, out of place. The police file is gone.",
+              "message": "The box is open. Latch unfastened. Inside: the black SD card still rests in the corner—modern, cold, out of place. The police file is gone.",
+              "media": {
+                "url": "https://res.cloudinary.com/dg912bwcc/image/upload/v1763991426/brown_box_2_areabd.png",
+                "description": "Open metal box with SD card",
+                "hint": "SD card remains"
+              },
               "effects": [
                 {
                   "type": "SET_ENTITY_STATE",
@@ -514,7 +539,12 @@
               }
             ],
             "success": {
-              "message": "Notebook's open. Brass clasp unfastened. In the crease: the stolen police file marked CONFIDENTIAL. The SD card is there too—you've watched the video already.",
+              "message": "The box is open. Latch unfastened. Inside: the stolen police file marked CONFIDENTIAL. The SD card is there too—you've watched the video already.",
+              "media": {
+                "url": "https://res.cloudinary.com/dg912bwcc/image/upload/v1763991426/brown_box_2_areabd.png",
+                "description": "Open metal box with contents",
+                "hint": "Contains file and SD card"
+              },
               "effects": [
                 {
                   "type": "SET_ENTITY_STATE",
@@ -537,10 +567,10 @@
               }
             ],
             "success": {
-              "message": "Notebook's open. Brass clasp unfastened. In the crease: black SD card—modern, cold, out of place against yellowed pages. Your phone can read this.",
+              "message": "The box is open. Latch unfastened. Inside: black SD card—modern, cold, out of place in the old rusty container. Your phone can read this.",
               "media": {
-                "url": "https://res.cloudinary.com/dg912bwcc/image/upload/v1759242346/Notebook_unlocked_fpxqgl.jpg",
-                "description": "Open notebook with SD card",
+                "url": "https://res.cloudinary.com/dg912bwcc/image/upload/v1763991426/brown_box_2_areabd.png",
+                "description": "Open metal box with SD card",
                 "hint": "Use your phone to read the SD card"
               },
               "effects": [
@@ -565,7 +595,7 @@
               }
             ],
             "success": {
-              "message": "The brass clasp refuses to budge. Cold metal, unyielding. This isn't a lock for keys—it's waiting for something else. A phrase. A password. Someone sealed this notebook with words, not metal.\n\nYou run your fingers over the worn leather, feeling the weight of secrets pressed into every crease. Whatever's inside, someone went to great lengths to hide it. The kind of lengths that make your pulse quicken.\n\nYou need the right phrase to unlock this. If you know it, whisper it to the notebook:\n\n**/password <phrase>** (example: /password Bloodhaven rules)\n\nStuck? There's a puzzle that might help you find the answer:\nhttps://airpg-minigames.vercel.app/games/the-notebook\n\nThe notebook waits. Silent. Patient. Guarding its truth."
+              "message": "The latch refuses to budge. Cold metal, unyielding. This isn't a lock for keys—it's waiting for something else. A phrase. A password. Someone sealed this box with words, not metal.\n\nYou run your fingers over the rusty surface, feeling the weight of secrets pressed into every dent. Whatever's inside, someone went to great lengths to hide it. The kind of lengths that make your pulse quicken.\n\nYou need the right phrase to unlock this. If you know it, whisper it to the box:\n\n**/password <phrase>** (example: /password Bloodhaven rules)\n\nStuck? There's a puzzle that might help you find the answer:\nhttps://airpg-minigames.vercel.app/games/the-notebook\n\nThe box waits. Silent. Patient. Guarding its truth."
             }
           }
         ],
@@ -579,7 +609,7 @@
             }
           ],
           "success": {
-            "message": "You close the cover. Brass clasp clicks shut. But why close it now?"
+            "message": "You close the lid. Latch clicks shut. But why close it now?"
           },
           "fail": {
             "message": "Already closed and locked."
@@ -621,7 +651,7 @@
               }
             ],
             "success": {
-              "message": "Pages yellowed, ink faded. Most entries illegible. The hidden items—SD card, police file—both gone. You took them already.",
+              "message": "Rust stains, dust, empty space. The hidden items—SD card, police file—both gone. You took them already.",
               "effects": []
             }
           },
@@ -645,7 +675,7 @@
               }
             ],
             "success": {
-              "message": "Pages yellowed, ink faded. Most entries illegible. The SD card is still here—you can use your phone to read it. The police file is gone.",
+              "message": "Inside the metal box: rust, dust, and the SD card. You can use your phone to read it. The police file is gone.",
               "effects": []
             }
           },
@@ -670,7 +700,7 @@
               }
             ],
             "success": {
-              "message": "Pages yellowed, ink faded. Most entries illegible. The stolen police file is still here—TAKE it. You've already watched the SD card video.",
+              "message": "Inside the metal box: rust stains and the stolen police file marked CONFIDENTIAL—TAKE it. You've already watched the SD card video.",
               "effects": []
             }
           },
@@ -690,14 +720,14 @@
               }
             ],
             "success": {
-              "message": "Pages yellowed, ink faded. Most entries illegible. The SD card—that's what matters. Use your phone to read it.",
+              "message": "Inside the metal box: rust, dust, and the SD card—that's what matters. Use your phone to read it.",
               "effects": []
             }
           },
           {
             "conditions": [],
             "fail": {
-              "message": "Locked. Can't read it. Needs PASSWORD. Stuck? https://airpg-minigames.vercel.app/games/the-notebook"
+              "message": "Locked. Can't see inside. Needs PASSWORD. Stuck? https://airpg-minigames.vercel.app/games/the-notebook"
             }
           }
         ],
@@ -721,7 +751,7 @@
               }
             ],
             "success": {
-              "message": "You search the pages. Empty. The SD card and police file—both gone. You took them already."
+              "message": "You search the box. Empty. The SD card and police file—both gone. You took them already."
             }
           },
           {
@@ -738,7 +768,7 @@
               }
             ],
             "success": {
-              "message": "You search the pages. The SD card is still here—use your phone to read it. The police file is gone."
+              "message": "You search the box. The SD card is still here—use your phone to read it. The police file is gone."
             }
           },
           {
@@ -756,7 +786,7 @@
               }
             ],
             "success": {
-              "message": "You search the pages. The stolen police file is still hidden in the center spread—TAKE it. You've already watched the SD card video."
+              "message": "You search the box. The stolen police file is still hidden inside—TAKE it. You've already watched the SD card video."
             }
           },
           {
@@ -769,7 +799,7 @@
               }
             ],
             "success": {
-              "message": "You search the pages. The SD card—modern, black—hidden in the center spread. Use your phone to read it."
+              "message": "You search the box. The SD card—modern, black—hidden inside. Use your phone to read it."
             }
           },
           {
@@ -781,15 +811,15 @@
         ],
         "onTalk": {
           "fail": {
-            "message": "Notebooks don't talk. Try OPENING it or the PASSWORD."
+            "message": "Metal boxes don't talk. Try OPENING it or the PASSWORD."
           }
         },
         "onUnlock": {
           "success": {
-            "message": "Brass clasp clicks. Cover swings open, leather creaks. Inside: black SD card—modern, digital, anachronistic. It rests against yellowed pages, out of place.",
+            "message": "Latch clicks. Lid swings open, hinges creak. Inside: black SD card—modern, digital, anachronistic. It rests in the corner of the rusty box, out of place.",
             "media": {
-              "url": "https://res.cloudinary.com/dg912bwcc/image/upload/v1759242346/Notebook_unlocked_fpxqgl.jpg",
-              "description": "Unlocked notebook revealing SD card",
+              "url": "https://res.cloudinary.com/dg912bwcc/image/upload/v1763991426/brown_box_3_bmabdx.png",
+              "description": "Unlocked metal box revealing SD card",
               "hint": "The password worked - SD card revealed"
             },
             "effects": [
@@ -815,22 +845,28 @@
             ]
           },
           "fail": {
-            "message": "Wrong password. Lock stays shut. Think: what connects the clues?\n\nUse: /password <your guess>"
+            "message": "Wrong password. Lock stays shut. Think: what connects the clues?\n\nUse: /password <your guess>",
+            "media": {
+              "url": "https://res.cloudinary.com/dg912bwcc/image/upload/v1763991426/brown_box_4_iz32m2.png",
+              "description": "Metal box rejecting wrong password",
+              "hint": "Try a different password"
+            }
           }
         },
-        "defaultFailMessage": "That won't work on the notebook. Try: EXAMINE, OPEN, READ, or use /password <phrase> to unlock it."
+        "defaultFailMessage": "That won't work on the metal box. Try: EXAMINE, OPEN, READ, or use /password <phrase> to unlock it."
       },
       "fallbackMessages": {
         "default": "That's not going to work. It's a key piece of evidence.",
         "notOpenable": "You can't open that.",
         "locked": "It's locked.",
-        "noEffect": "Using that on the notebook has no effect."
+        "noEffect": "Using that on the metal box has no effect."
       },
       "design": {
-        "authorNotes": "Central puzzle item for Chapter 1.",
+        "authorNotes": "Central puzzle item for Chapter 1. Metal box contains SD card and confidential file.",
         "tags": [
-          "notebook",
-          "book"
+          "box",
+          "metal box",
+          "container"
         ]
       },
       "version": {
@@ -1123,12 +1159,12 @@
         ],
         "onTake": {
           "fail": {
-            "message": "It's bolted to the floor. Cafe furniture. Try looking AT the table instead."
+            "message": "It's bolted to the floor—cafe furniture tends to stay put. You're not hauling a table out of here. Try looking AT it instead."
           }
         },
         "onMove": {
           "fail": {
-            "message": "Heavy, bolted down. Not moving it. Try examining what's ON it instead."
+            "message": "Solid oak, bolted to the floor. You'd need a crowbar and bad intentions. Try examining what's ON it instead of wrestling furniture."
           }
         },
         "defaultFailMessage": "It's just a table. Try: EXAMINE it, or TAKE what's on it."
@@ -1358,7 +1394,7 @@
         "notMovable": "It's too heavy to move by yourself."
       },
       "design": {
-        "authorNotes": "Contains the other 'justice' clue for the notebook.",
+        "authorNotes": "Contains the other 'justice' clue for the metal box.",
         "tags": [
           "books",
           "shelf"
@@ -2420,8 +2456,8 @@
         "black card"
       ],
       "archetype": "Device",
-      "description": "A small, modern SD card, looking strangely out of place in the old notebook. It probably fits in your phone.",
-      "transitionNarration": "You lean in closer to examine the SD card tucked inside the notebook.",
+      "description": "A small, modern SD card, looking strangely out of place in the old rusty metal box. It probably fits in your phone.",
+      "transitionNarration": "You lean in closer to examine the SD card inside the metal box.",
       "capabilities": {
         "openable": false,
         "lockable": false,
@@ -2456,7 +2492,7 @@
       "handlers": {
         "onExamine": {
           "success": {
-            "message": "Black SD card. Modern. Out of place in the old notebook. Standard size—fits most devices. Your FBI phone can read this. Try: USE PHONE, then READ SD CARD.",
+            "message": "Black SD card. Modern. Out of place in the old metal box. Standard size—fits most devices. Your FBI phone can read this. Try: USE PHONE, then READ SD CARD.",
             "media": {
               "url": "https://res.cloudinary.com/dg912bwcc/image/upload/v1761812524/SD_Card_rokilu.png",
               "description": "Black SD card",
@@ -2488,7 +2524,7 @@
               }
             ],
             "success": {
-              "message": "Card slides into your phone. Screen flickers. Video loads—grainy, seventy years old. Music fills the cafe. Saxophone, smooth, melancholic. A tune that's been waiting.\n\nSilas Bloom. Musician. That song for Rose... they were in love. You hear it in every note.\n\nVideo ends. More questions than answers. Your mind races.\n\nWait—you notice something else tucked deeper in the notebook. A folded document. CONFIDENTIAL - POLICE USE ONLY. Faded red ink. What's this doing here? It looks... stolen.",
+              "message": "Card slides into your phone. Screen flickers. Video loads—grainy, seventy years old. Music fills the cafe. Saxophone, smooth, melancholic. A tune that's been waiting.\n\nSilas Bloom. Musician. That song for Rose... they were in love. You hear it in every note.\n\nVideo ends. More questions than answers. Your mind races.\n\nWait—you notice something else tucked deeper in the metal box. A folded document. CONFIDENTIAL - POLICE USE ONLY. Faded red ink. What's this doing here? It looks... stolen.",
               "media": {
                 "url": "https://res.cloudinary.com/dg912bwcc/video/upload/v1759678377/CH_I_completion_jqtyme.mp4",
                 "type": "video",
@@ -2541,7 +2577,7 @@
               }
             ],
             "success": {
-              "message": "Card slides into your phone. Screen flickers. Video loads—grainy, seventy years old. Music fills the cafe. Saxophone, smooth, melancholic. A tune that's been waiting.\n\nSilas Bloom. Musician. That song for Rose... they were in love. You hear it in every note.\n\nVideo ends. More questions than answers. Your mind races.\n\nWait—you notice something else tucked deeper in the notebook. A folded document. CONFIDENTIAL - POLICE USE ONLY. Faded red ink. What's this doing here? It looks... stolen.",
+              "message": "Card slides into your phone. Screen flickers. Video loads—grainy, seventy years old. Music fills the cafe. Saxophone, smooth, melancholic. A tune that's been waiting.\n\nSilas Bloom. Musician. That song for Rose... they were in love. You hear it in every note.\n\nVideo ends. More questions than answers. Your mind races.\n\nWait—you notice something else tucked deeper in the metal box. A folded document. CONFIDENTIAL - POLICE USE ONLY. Faded red ink. What's this doing here? It looks... stolen.",
               "media": {
                 "url": "https://res.cloudinary.com/dg912bwcc/video/upload/v1759678377/CH_I_completion_jqtyme.mp4",
                 "type": "video",
@@ -4018,47 +4054,47 @@
       "handlers": {
         "onExamine": {
           "success": {
-            "message": "Business book. Gaudy cover. Not relevant."
+            "message": "Business book with a gaudy cover promising wealth and success. Motivational garbage. Not relevant to the case."
           }
         },
         "onTake": {
           "fail": {
-            "message": "Cafe property. Try READING it."
+            "message": "Cafe property. It stays on the shelf. If you're curious, try READING it instead of pocketing it."
           }
         },
         "onUse": {
           "fail": {
-            "message": "It's a book. Try READING it."
+            "message": "It's a book, not a weapon. Use your eyes and READ it if you're interested."
           }
         },
         "onOpen": {
           "success": {
-            "message": "Same as READING. Try READ book."
+            "message": "Opening a book is just reading with extra steps. Try READ book."
           }
         },
         "onClose": {
           "success": {
-            "message": "You close it."
+            "message": "You snap it shut. The wisdom inside remains safely trapped between covers."
           }
         },
         "onMove": {
           "fail": {
-            "message": "It's on the shelf. Try READING it."
+            "message": "It's decorating the shelf. If you want it, READ it. Don't rearrange the furniture."
           }
         },
         "onBreak": {
           "fail": {
-            "message": "Cafe property. Try READING it instead."
+            "message": "Destroying cafe property won't solve your case. Try READING it instead, like a civilized detective."
           }
         },
         "onSearch": {
           "fail": {
-            "message": "It's a book. Try READING it."
+            "message": "It's a book, not a puzzle box. Try READING it if you want answers."
           }
         },
         "onTalk": {
           "fail": {
-            "message": "Books don't talk. Try READING it."
+            "message": "Books don't talk back. That's what makes them better than most people. Try READING it."
           }
         },
         "defaultFailMessage": "It's a book on the shelf. Try: EXAMINE or READ it."
@@ -4152,47 +4188,47 @@
       "handlers": {
         "onExamine": {
           "success": {
-            "message": "FBI history book. Could be interesting, but not relevant to the case right now."
+            "message": "FBI history book. Thick, dry, full of bureaucratic legends. Could be interesting if you had a week to kill. Not relevant to the case right now."
           }
         },
         "onTake": {
           "fail": {
-            "message": "Cafe property. Try READING it."
+            "message": "Cafe property. It belongs on the shelf, not in your pocket. Try READING it if you're curious."
           }
         },
         "onUse": {
           "fail": {
-            "message": "It's a book. Try READING it."
+            "message": "It's a book, not a tool. Books are for reading, not using. Try READ book."
           }
         },
         "onOpen": {
           "success": {
-            "message": "Same as READING. Try READ book."
+            "message": "Opening a book is just reading with extra steps. Try READ book."
           }
         },
         "onClose": {
           "success": {
-            "message": "You close it."
+            "message": "You shut it. Pages full of federal history go dark again."
           }
         },
         "onMove": {
           "fail": {
-            "message": "It's on the shelf. Try READING it."
+            "message": "It's shelved. Leave it there. If you want content, READ it. If you want exercise, hit the gym."
           }
         },
         "onBreak": {
           "fail": {
-            "message": "Cafe property. Try READING it instead."
+            "message": "Destroying cafe property won't advance your investigation. Try READING it like a rational person."
           }
         },
         "onSearch": {
           "fail": {
-            "message": "It's a book. Try READING it."
+            "message": "It's a book, not a treasure chest. Try READING it if you want what's inside."
           }
         },
         "onTalk": {
           "fail": {
-            "message": "Books don't talk. Try READING it."
+            "message": "Books don't respond. That's their charm. Try READING it instead of having a conversation with paper."
           }
         },
         "defaultFailMessage": "It's a book on the shelf. Try: EXAMINE or READ it."
@@ -4286,37 +4322,37 @@
       "handlers": {
         "onExamine": {
           "success": {
-            "message": "Romance novel. Cheesy cover. Title: \"Justice for My Love\". That word again."
+            "message": "Romance novel with a painfully cheesy cover. Title: \"Justice for My Love\". That word again—justice. Coincidence, or breadcrumb? Probably just coincidence."
           }
         },
         "onTake": {
           "fail": {
-            "message": "Cafe property. Try READING it."
+            "message": "Cafe property. Stays on the shelf. If you're desperate for melodrama, try READING it."
           }
         },
         "onUse": {
           "fail": {
-            "message": "It's a book. Try READING it."
+            "message": "It's a romance novel, not a Swiss Army knife. Try READING it if you want entertainment."
           }
         },
         "onOpen": {
           "success": {
-            "message": "Same as READING. Try READ book."
+            "message": "Opening a book is just reading with extra steps. Try READ book."
           }
         },
         "onClose": {
           "success": {
-            "message": "You close it."
+            "message": "You close it. The tale of star-crossed lovers goes dark. You're safe from their drama for now."
           }
         },
         "onMove": {
           "fail": {
-            "message": "It's on the shelf. Try READING it."
+            "message": "It's on the shelf where it belongs. If you want what's inside, READ it. Don't redecorate."
           }
         },
         "onBreak": {
           "fail": {
-            "message": "Cafe property. Try READING it instead."
+            "message": "Destroying cafe property solves nothing. If you hate romance novels that much, just don't READ them."
           }
         },
         "onRead": [
@@ -4424,12 +4460,12 @@
         ],
         "onSearch": {
           "fail": {
-            "message": "It's a book. Try READING it."
+            "message": "It's a book, not a puzzle. Try READING it if you want content."
           }
         },
         "onTalk": {
           "fail": {
-            "message": "Books don't talk. Try READING it."
+            "message": "Books don't talk back. Small mercies. Try READING it instead."
           }
         },
         "defaultFailMessage": "Romance novel. 'Justice' in the title. Try: EXAMINE or READ it."
@@ -4579,7 +4615,7 @@
       ],
       "archetype": "Document",
       "description": "A thick police file marked 'CONFIDENTIAL - POLICE USE ONLY'. Official stamps and seals cover the folder.",
-      "alternateDescription": "The stolen police file from the notebook. It contains classified investigation documents.",
+      "alternateDescription": "The stolen police file from the metal box. It contains classified investigation documents.",
       "capabilities": {
         "isTakable": true,
         "isReadable": true,
@@ -4842,7 +4878,7 @@
             "person"
           ],
           "response": {
-            "message": "The guy in the black coat? Yeah, he's a regular. Comes in, stares at his notebook, doesn't say much. Pays in cash. My favorite kind of customer."
+            "message": "The guy in the black coat? Yeah, he's a regular. Comes in, stares at that old metal box of his, doesn't say much. Pays in cash. My favorite kind of customer."
           }
         },
         {
@@ -4862,18 +4898,18 @@
           }
         },
         {
-          "topicId": "t_notebook",
-          "label": "Ask about the notebook",
+          "topicId": "t_box",
+          "label": "Ask about the metal box",
           "keywords": [
-            "notebook",
-            "book",
+            "box",
+            "metal box",
+            "rusty box",
             "his",
             "what was he doing",
-            "writing",
-            "journal"
+            "container"
           ],
           "response": {
-            "message": "Always scribbling in that old notebook of his. Looked like he was writing the next great American novel, or maybe just his grocery list. Who knows."
+            "message": "That rusty old box? He's been carrying it around for weeks. Never opens it while he's here. Just sits there, staring at it like it's got all the answers."
           }
         },
         {
@@ -5301,7 +5337,7 @@
             ]
           },
           "response": {
-            "message": "He hid things in the cafe. A notebook, books, safes. He wants you to piece it together. He's testing you, like he's the puppetmaster."
+            "message": "He hid things in the cafe. A metal box, books, safes. He wants you to piece it together. He's testing you, like he's the puppetmaster."
           }
         },
         {
@@ -5432,7 +5468,7 @@
     "ch1-the-cafe": {
       "id": "ch1-the-cafe",
       "title": "A Blast from the Past",
-      "goal": "Find out what's inside the notebook and the safe.",
+      "goal": "Find out what's inside the metal box and the safe.",
       "introductionVideo": "https://res.cloudinary.com/dg912bwcc/video/upload/f_mp4/v1759670681/CH_I_Intro_ccy0og.mp4",
       "completionVideo": "https://res.cloudinary.com/dg912bwcc/video/upload/v1759678377/CH_I_completion_jqtyme.mp4",
       "postChapterMessage": "Looks like we've got everything from this place. I'm thinking our next stop should be the jazz club mentioned in the article.",
@@ -5452,11 +5488,11 @@
         },
         {
           "flag": "has_unlocked_notebook",
-          "label": "Unlock the Notebook"
+          "label": "Unlock the Metal Box"
         },
         {
           "flag": "notebook_interaction_complete",
-          "label": "View the Notebook Contents"
+          "label": "View the Metal Box Contents"
         },
         {
           "flag": "machine_is_broken",
@@ -5474,7 +5510,7 @@
       "hints": [
         {
           "flag": "has_talked_to_barista",
-          "text": "We haven't spoken to the barista yet. He might have seen who left the notebook."
+          "text": "We haven't spoken to the barista yet. He might have seen who left the metal box."
         },
         {
           "flag": "has_received_business_card",
@@ -5482,11 +5518,11 @@
         },
         {
           "flag": "has_unlocked_notebook",
-          "text": "The notebook is locked with a phrase. We should examine everything in the cafe for clues. Maybe something on the menu or bookshelf?"
+          "text": "The metal box is locked with a phrase. We should examine everything in the cafe for clues. Maybe something on the menu or bookshelf?"
         },
         {
           "flag": "notebook_interaction_complete",
-          "text": "We've unlocked the notebook, but we haven't checked what's inside yet. Let's open it and see what we find."
+          "text": "We've unlocked the metal box, but we haven't checked what's inside yet. Let's open it and see what we find."
         },
         {
           "flag": "machine_is_broken",
