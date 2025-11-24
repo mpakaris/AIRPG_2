@@ -55,6 +55,11 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_LLM_MODE: process.env.NEXT_PUBLIC_LLM_MODE,
     LOCAL_LLM_BASE_URL: process.env.LOCAL_LLM_BASE_URL,
     LOCAL_LLM_MODEL_NAME: process.env.LOCAL_LLM_MODEL_NAME,
+    // AI Pricing configuration
+    PRIMARY_AI_INPUT_COST: process.env.PRIMARY_AI_INPUT_COST,
+    PRIMARY_AI_OUTPUT_COST: process.env.PRIMARY_AI_OUTPUT_COST,
+    SAFETY_AI_INPUT_COST: process.env.SAFETY_AI_INPUT_COST,
+    SAFETY_AI_OUTPUT_COST: process.env.SAFETY_AI_OUTPUT_COST,
   }
 };
 

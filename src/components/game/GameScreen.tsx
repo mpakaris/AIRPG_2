@@ -112,11 +112,21 @@ const splitMessagesForDisplay = (
   const result: Array<Message & { isImageOnly?: boolean }> = [];
 
   messages.forEach((message) => {
+    // Safety check: skip messages without content or image
+    if (!message.content && !message.image) {
+      console.warn('Skipping message without content or image:', message);
+      return;
+    }
+
+    // Ensure content is a string (default to empty string if undefined)
+    const messageContent = message.content || '';
+
     // If message has both content and image, split into two messages
-    if (message.content.trim() && message.image) {
+    if (messageContent.trim() && message.image) {
       // Text message first
       result.push({
         ...message,
+        content: messageContent,
         id: `${message.id}-text`,
         image: undefined,
       });
@@ -131,7 +141,8 @@ const splitMessagesForDisplay = (
       // Message has only content or only image - keep as is
       result.push({
         ...message,
-        isImageOnly: !message.content.trim() && !!message.image,
+        content: messageContent,
+        isImageOnly: !messageContent.trim() && !!message.image,
       });
     }
   });
@@ -170,6 +181,7 @@ const MessageLog: FC<Pick<GameScreenProps, "messages">> = ({ messages }) => {
           const isPlayer = message.sender === "player";
           const isAgent = message.sender === "agent";
           const isImageOnly = message.isImageOnly;
+          const isSecurityFilter = message.senderName === "🛡️ Security Filter";
 
           return (
             <div
@@ -187,14 +199,16 @@ const MessageLog: FC<Pick<GameScreenProps, "messages">> = ({ messages }) => {
                   isPlayer
                     ? "rounded-br-none bg-primary text-primary-foreground"
                     : "rounded-bl-none bg-muted",
-                  isAgent && "bg-blue-500/10 border border-blue-500/20"
+                  isAgent && "bg-blue-500/10 border border-blue-500/20",
+                  isSecurityFilter && "bg-red-500/10 border-2 border-red-500/50"
                 )}
               >
                 {!isPlayer && !isImageOnly && (
                   <div
                     className={cn(
                       "text-xs font-bold text-primary mb-1",
-                      isAgent && "text-blue-500"
+                      isAgent && "text-blue-500",
+                      isSecurityFilter && "text-red-600 dark:text-red-400"
                     )}
                   >
                     {message.senderName}

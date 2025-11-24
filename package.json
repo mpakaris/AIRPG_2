@@ -17,6 +17,9 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
+    "test:security": "vitest run src/lib/security/__tests__",
+    "test:security:watch": "vitest src/lib/security/__tests__",
+    "test:handlers": "vitest run src/lib/game/__tests__",
     "test:llm": "tsx scripts/test-local-llm.ts"
   },
   "dependencies": {

@@ -227,8 +227,113 @@ export async function processCommand(
   userId: string,
   playerInput: string
 ): Promise<CommandResult> {
-    const safePlayerInput = playerInput || '';
+    const rawPlayerInput = playerInput || '';
+
+    // 🐕 PROMPT WATCH-DOG: Validate and sanitize input
+    const { validatePlayerInput, formatValidationError } = await import('@/lib/security/prompt-watch-dog');
+    const validation = validatePlayerInput(rawPlayerInput);
+
+    // If validation failed, log error and return with all existing messages
+    if (!validation.isValid) {
+        const errorMsg = formatValidationError(validation);
+        console.log(`❌ [Prompt Watch-Dog] Blocked invalid input (${validation.violations[0]?.type})`);
+        console.log(`   Original: "${rawPlayerInput.substring(0, 50)}${rawPlayerInput.length > 50 ? '...' : ''}"`);
+        console.log(`   Reason: ${errorMsg}\n`);
+
+        const game = await getGameData(GAME_ID);
+        if (!game) {
+            throw new Error("Critical: Game data could not be loaded.");
+        }
+
+        const gameId = game.id;
+        const { firestore } = initializeFirebase();
+        const stateRef = doc(firestore, 'player_states', `${userId}_${gameId}`);
+        const logRef = doc(firestore, 'logs', `${userId}_${gameId}`);
+
+        // Get current state and existing messages
+        const [stateSnap, logSnap] = await Promise.all([getDoc(stateRef), getDoc(logRef)]);
+
+        let currentState: PlayerState;
+        let allMessagesForSession: Message[] = [];
+
+        if (stateSnap.exists()) {
+            currentState = stateSnap.data() as PlayerState;
+        } else {
+            currentState = getInitialState(game);
+        }
+
+        if (logSnap.exists() && logSnap.data()?.messages?.length > 0) {
+            allMessagesForSession = logSnap.data()?.messages || [];
+        } else {
+            allMessagesForSession = await createInitialMessages(currentState, game);
+        }
+
+        // Create a single consolidated validation error message for UI display
+        const errorDisplayMessage = createMessage(
+            'system',
+            '🛡️ Security Filter',
+            `⚠️ Input Blocked\n\nYour input was blocked by the security filter:\n"${rawPlayerInput}"\n\n${errorMsg}`
+        );
+
+        // Create consolidated validation error log entry (similar to EnhancedCommandLog)
+        const validationErrorLog: any = {
+            type: 'validation_error',
+            errorId: `error_${Date.now()}`,
+            timestamp: Date.now(),
+
+            // Original unfiltered input (what the player prompted)
+            originalInput: rawPlayerInput,
+
+            // What the system replied to the player
+            systemResponse: errorMsg,
+
+            // Validation details (what the watchdog filtered and why)
+            violations: validation.violations.map(v => ({
+                type: v.type,
+                severity: v.severity,
+                message: v.message,
+            })),
+
+            // Metadata (additional filtering information)
+            metadata: {
+                originalLength: validation.metadata.originalLength,
+                sanitizedLength: validation.metadata.sanitizedLength,
+                strippedChars: validation.metadata.strippedChars,
+            },
+
+            // Context (where this happened in the game)
+            context: {
+                chapterId: currentState.currentChapterId,
+                locationId: currentState.currentLocationId,
+                userId: userId,
+                gameId: gameId,
+            },
+
+            // UI Messages (consolidated single error message for display)
+            uiMessages: [errorDisplayMessage]
+        };
+
+        // Add to messages array (single consolidated entry)
+        const updatedMessages = [...allMessagesForSession, validationErrorLog];
+
+        // Save to database
+        await logAndSave(userId, gameId, currentState, updatedMessages);
+
+        // Return ALL messages (for UI display)
+        const allUIMessages = extractUIMessages(updatedMessages);
+        return { newState: currentState, messages: allUIMessages };
+    }
+
+    // Use sanitized input for processing
+    const safePlayerInput = validation.sanitizedInput;
     const lowerInput = safePlayerInput.toLowerCase().trim();
+
+    // Log if any characters were stripped during sanitization
+    if (validation.metadata.strippedChars > 0) {
+        console.log(`🐕 [Prompt Watch-Dog] Sanitized input: removed ${validation.metadata.strippedChars} chars`);
+        console.log(`   Original: "${rawPlayerInput.substring(0, 50)}${rawPlayerInput.length > 50 ? '...' : ''}"`);
+        console.log(`   Sanitized: "${safePlayerInput}"\n`);
+    }
 
     const game = await getGameData(GAME_ID);
   
@@ -769,10 +874,31 @@ export async function processCommand(
             try {
                 const totalMs = Date.now() - commandStartTime;
 
-                // Calculate total cost
-                const totalTokensInput = safetyNetResult ? 450 : 0;
-                const totalTokensOutput = safetyNetResult ? 120 : 0;
-                const totalCost = safetyNetResult ? (safetyNetResult.aiCalls === 2 ? 0.00015 : 0.0001) : 0;
+                // Calculate total cost using environment-configured pricing
+                const PRIMARY_AI_PRICING = {
+                    input: (parseFloat(process.env.PRIMARY_AI_INPUT_COST || '0.10')) / 1_000_000,
+                    output: (parseFloat(process.env.PRIMARY_AI_OUTPUT_COST || '0.40')) / 1_000_000,
+                };
+
+                const SAFETY_AI_PRICING = {
+                    input: (parseFloat(process.env.SAFETY_AI_INPUT_COST || '0.05')) / 1_000_000,
+                    output: (parseFloat(process.env.SAFETY_AI_OUTPUT_COST || '0.40')) / 1_000_000,
+                };
+
+                const totalTokensInput = safetyNetResult ? 1420 : 0;  // Realistic estimate for primary AI
+                const totalTokensOutput = safetyNetResult ? 75 : 0;   // Realistic estimate for primary AI
+
+                // Calculate primary AI cost
+                const primaryAICost = safetyNetResult
+                    ? (totalTokensInput * PRIMARY_AI_PRICING.input) + (totalTokensOutput * PRIMARY_AI_PRICING.output)
+                    : 0;
+
+                // Calculate safety AI cost (only if triggered - estimated 50% of primary tokens)
+                const safetyAICost = (safetyNetResult && safetyNetResult.aiCalls === 2)
+                    ? ((totalTokensInput * 0.5) * SAFETY_AI_PRICING.input) + ((totalTokensOutput * 0.5) * SAFETY_AI_PRICING.output)
+                    : 0;
+
+                const totalCost = primaryAICost + safetyAICost;
 
                 // Create ONE consolidated entry
                 const consolidatedEntry: EnhancedCommandLog = {
@@ -792,19 +918,19 @@ export async function processCommand(
                     // 2. AI INTERPRETATION (Analytics)
                     aiInterpretation: typeof safetyNetResult !== 'undefined' ? {
                         primaryAI: {
-                            model: 'gemini-2.5-flash',
+                            model: 'gemini-2.5-flash-lite',
                             confidence: safetyNetResult.primaryConfidence || safetyNetResult.confidence,
                             commandToExecute: safetyNetResult.commandToExecute,
                             reasoning: safetyNetResult.reasoning,
                             latencyMs: aiInterpretationMs || 0,
-                            costUSD: 0.0001,
+                            costUSD: primaryAICost, // Actual calculated cost for primary AI
                         },
                         safetyAI: safetyNetResult.aiCalls === 2 ? {
                             model: 'gpt-5-nano',
                             confidence: safetyNetResult.safetyConfidence || 0,
                             commandToExecute: safetyNetResult.commandToExecute,
                             latencyMs: 0,
-                            costUSD: 0.00005,
+                            costUSD: safetyAICost, // Actual calculated cost for safety AI
                             wasTriggered: true,
                             helpedImprove: safetyNetResult.source !== 'primary',
                         } : undefined,
@@ -857,7 +983,8 @@ export async function processCommand(
                     context: {
                         chapterId: finalResult.newState.currentChapterId,
                         locationId: finalResult.newState.currentLocationId,
-                        turnNumber: (finalResult.newState.counters?.turns || 0) + 1,
+                        // Count existing command logs to get accurate turn number
+                        turnNumber: allMessagesForSession.filter((msg: any) => msg.type === 'command').length + 1,
                     },
 
                     // 9. QUALITY METRICS
