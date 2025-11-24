@@ -11,7 +11,7 @@ export function extractUIMessages(logMessages: any[]): Message[] {
   const uiMessages: Message[] = [];
 
   // Log entry types that use consolidated format with uiMessages arrays
-  const CONSOLIDATED_TYPES = ['command', 'validation_error', 'ai_error', 'db_error'];
+  const CONSOLIDATED_TYPES = ['command', 'validation_error', 'command_invalid', 'ai_error', 'db_error'];
 
   for (const entry of logMessages) {
     if (CONSOLIDATED_TYPES.includes(entry.type)) {

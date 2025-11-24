@@ -19,3 +19,26 @@ export type {
   InterpretPlayerCommandInput,
   InterpretPlayerCommandOutput
 } from './flows/interpret-player-commands';
+
+// Export Hybrid C narrative expansion (zero-cost local LLM for varied responses)
+export {
+  expandNarration,
+  clearNarrationCache,
+  getNarrationCacheStats
+} from './expand-narration';
+
+export type {
+  ExpandNarrationOptions
+} from './expand-narration';
+
+// Export NPC dialogue expansion
+export {
+  expandNPCDialogue,
+  clearNPCDialogueCache,
+  getNPCDialogueCacheStats
+} from './expand-npc-dialogue';
+
+export type {
+  ExpandNPCDialogueOptions,
+  NPCDialogueResult
+} from './expand-npc-dialogue';

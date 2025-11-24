@@ -2,42 +2,40 @@
 'use server';
 
 import {
-  guidePlayerWithNarrator,
-  generateStoryFromLogs
+    generateStoryFromLogs
 } from '@/ai';
-import { AVAILABLE_COMMANDS } from '@/lib/game/commands';
-import type { Game, SerializableGame, Item, Location, Message, PlayerState, GameObject, NpcId, NPC, GameObjectId, GameObjectState, ItemId, Flag, Effect, Chapter, ChapterId, ImageDetails, GameId, User, TokenUsage, Story, Portal, CommandResult, CellId } from '@/lib/game/types';
 import { initializeFirebase } from '@/firebase';
-import { doc, setDoc, getDoc, collection, getDocs, query, where, deleteDoc } from 'firebase/firestore';
 import { getInitialState } from '@/lib/game-state';
-import { dispatchMessage } from '@/lib/whinself-service';
-import { createMessage } from '@/lib/utils';
-import { extractUIMessages } from '@/lib/utils/extract-ui-messages';
-import { getLiveGameObject } from '@/lib/game/utils/helpers';
+import { handleBreak } from '@/lib/game/actions/handle-break';
+import { handleCall } from '@/lib/game/actions/handle-call';
+import { handleClose } from '@/lib/game/actions/handle-close';
+import { handleCombine } from '@/lib/game/actions/handle-combine';
 import { handleConversation } from '@/lib/game/actions/handle-conversation';
+import { handleDeviceCommand } from '@/lib/game/actions/handle-device-command';
+import { handleDrop } from '@/lib/game/actions/handle-drop';
 import { handleExamine } from '@/lib/game/actions/handle-examine';
 import { handleGo } from '@/lib/game/actions/handle-go';
 import { handleGoto } from '@/lib/game/actions/handle-goto';
+import { handleHelp } from '@/lib/game/actions/handle-help';
 import { handleInventory } from '@/lib/game/actions/handle-inventory';
 import { handleLook } from '@/lib/game/actions/handle-look';
 import { handleMove } from '@/lib/game/actions/handle-move';
 import { handleOpen } from '@/lib/game/actions/handle-open';
+import { handlePassword } from '@/lib/game/actions/handle-password';
 import { handleRead } from '@/lib/game/actions/handle-read';
+import { handleSearch } from '@/lib/game/actions/handle-search';
 import { handleTake } from '@/lib/game/actions/handle-take';
 import { handleTalk } from '@/lib/game/actions/handle-talk';
 import { handleUse } from '@/lib/game/actions/handle-use';
-import { handlePassword } from '@/lib/game/actions/handle-password';
-import { handleDrop } from '@/lib/game/actions/handle-drop';
-import { handleSearch } from '@/lib/game/actions/handle-search';
-import { handleBreak } from '@/lib/game/actions/handle-break';
-import { handleCombine } from '@/lib/game/actions/handle-combine';
-import { handleClose } from '@/lib/game/actions/handle-close';
-import { handleCall } from '@/lib/game/actions/handle-call';
-import { handleDeviceCommand } from '@/lib/game/actions/handle-device-command';
-import { game as gameCartridge } from '@/lib/game/cartridge';
-import { handleHelp } from '@/lib/game/actions/handle-help';
 import { processEffects } from '@/lib/game/actions/process-effects';
+import { game as gameCartridge } from '@/lib/game/cartridge';
+import { AVAILABLE_COMMANDS } from '@/lib/game/commands';
 import { GameStateManager } from '@/lib/game/engine';
+import type { Chapter, ChapterId, CommandResult, Effect, Flag, Game, GameId, GameObject, GameObjectId, Item, ItemId, Location, Message, NPC, NpcId, PlayerState, Portal, Story, User } from '@/lib/game/types';
+import { createMessage } from '@/lib/utils';
+import { extractUIMessages } from '@/lib/utils/extract-ui-messages';
+import { dispatchMessage } from '@/lib/whinself-service';
+import { collection, deleteDoc, doc, getDoc, getDocs, setDoc } from 'firebase/firestore';
 
 
 const GAME_ID = 'blood-on-brass' as GameId;
@@ -485,51 +483,183 @@ export async function processCommand(
             allMessagesForSession.push(...legacyResult.messages);
             currentState = legacyResult.newState;
         } else if (currentState.activeDeviceFocus) {
-            // SPECIAL COMMAND: Device focus (old format)
-            if (playerMessage) allMessagesForSession.push(playerMessage);
+            // DEVICE FOCUS MODE: Use consolidated logging
+            if (playerMessage) uiMessagesThisTurn.push(playerMessage);
+
+            // Start execution timer
+            const executionStartTime = Date.now();
 
             // DEVICE FOCUS MODE: Route commands to device-specific handler
             effects = await handleDeviceCommand(currentState, safePlayerInput, game);
             if (effects.length > 0) {
                 const result = await processEffects(currentState, effects, game);
                 currentState = result.newState;
-                allMessagesForSession.push(...result.messages);
+                uiMessagesThisTurn.push(...result.messages);
             }
 
-            await logAndSave(userId, gameId, currentState, allMessagesForSession);
-            return { newState: currentState, messages: extractUIMessages(allMessagesForSession) };
+            executionMs = Date.now() - executionStartTime;
+
+            // Create consolidated log entry for device commands
+            const consolidatedEntry = {
+                type: 'command',
+                timestamp: Date.now(),
+
+                // 1. RAW PLAYER INPUT
+                input: {
+                    raw: safePlayerInput,
+                },
+
+                // 2. AI INTERPRETATION (device commands don't use AI interpretation)
+                interpretation: null,
+
+                // 3. EXECUTION DETAILS
+                execution: {
+                    verb: 'device',
+                    target: currentState.activeDeviceFocus || 'unknown',
+                    effects: effects.map(e => e.type),
+                    success: true,
+                    errorMessage: null,
+                    executionMs: executionMs || 0,
+                },
+
+                // 4. UI MESSAGES
+                uiMessages: uiMessagesThisTurn,
+
+                // 5. STATE SNAPSHOTS
+                stateSnapshot: {
+                    before: stateBefore,
+                    after: currentState,
+                },
+
+                // 6. TOKEN USAGE (N/A for device commands)
+                tokens: undefined,
+
+                // 7. PERFORMANCE
+                performance: {
+                    preprocessingMs: 0,
+                    aiInterpretationMs: 0,
+                    executionMs: executionMs || 0,
+                    totalMs: executionMs || 0,
+                },
+
+                // 8. CONTEXT
+                context: {
+                    chapterId: currentState.currentChapterId,
+                    locationId: currentState.currentLocationId,
+                    turnNumber: allMessagesForSession.filter((msg: any) => msg.type === 'command').length + 1,
+                },
+
+                // 9. QUALITY METRICS
+                wasSuccessful: true,
+                wasUnclear: false,
+            };
+
+            // Save consolidated entry to Firebase
+            const consolidatedMessages = [...allMessagesForSession, consolidatedEntry as any];
+            await logAndSave(userId, gameId, currentState, consolidatedMessages);
+
+            // Extract all UI messages for client display
+            const allUIMessages = extractUIMessages(consolidatedMessages);
+            return { newState: currentState, messages: allUIMessages };
         } else if (lowerInput === 'restart') {
             return await resetGame(userId);
         } else if (lowerInput === '/map') {
-            // SPECIAL COMMAND: Map (old format)
-            if (playerMessage) allMessagesForSession.push(playerMessage);
+            // SPECIAL COMMAND: Map - Use consolidated logging
+            if (playerMessage) uiMessagesThisTurn.push(playerMessage);
+
+            // Start execution timer
+            const executionStartTime = Date.now();
 
             // SHOW MAP: Display the current chapter's map
             const currentChapter = game.chapters[currentState.currentChapterId];
 
             // Chapter-specific maps
             const chapterMaps: Record<string, string> = {
-                'ch1-the-cafe': 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762686189/Cafe_Blueprint_pv01xp.png',
+                'ch1-the-cafe': 'https://res.cloudinary.com/dg912bwcc/image/upload/v1763992995/Cafe_Blueprint_exbuth.jpg',
                 // Add more chapters as needed
             };
 
             const mapUrl = chapterMaps[currentState.currentChapterId] || chapterMaps['ch1-the-cafe'];
 
-            const mapMessage = createMessage(
-                'narrator',
-                game.narratorName || 'Narrator',
-                `Here's the map for ${currentChapter?.title || 'the current area'}:`,
-                'image',
-                {
+            const mapMessage: Message = {
+                id: `msg_${Date.now()}`,
+                sender: 'narrator',
+                senderName: game.narratorName || 'Narrator',
+                type: 'image',
+                content: `This is the map for the current chapter:`,
+                image: {
                     url: mapUrl,
                     description: `Map of ${currentChapter?.title || 'the area'}`,
                     hint: 'location map'
-                }
-            );
-            allMessagesForSession.push(mapMessage);
+                },
+                timestamp: Date.now()
+            };
+            uiMessagesThisTurn.push(mapMessage);
 
-            await logAndSave(userId, gameId, currentState, allMessagesForSession);
-            return { newState: currentState, messages: extractUIMessages(allMessagesForSession) };
+            executionMs = Date.now() - executionStartTime;
+
+            // Create consolidated log entry for map command
+            const consolidatedEntry = {
+                type: 'command',
+                timestamp: Date.now(),
+
+                // 1. RAW PLAYER INPUT
+                input: {
+                    raw: safePlayerInput,
+                },
+
+                // 2. AI INTERPRETATION (map command doesn't use AI interpretation)
+                interpretation: null,
+
+                // 3. EXECUTION DETAILS
+                execution: {
+                    verb: 'map',
+                    target: currentState.currentChapterId,
+                    effects: ['SHOW_MESSAGE'],
+                    success: true,
+                    errorMessage: null,
+                    executionMs: executionMs || 0,
+                },
+
+                // 4. UI MESSAGES
+                uiMessages: uiMessagesThisTurn,
+
+                // 5. STATE SNAPSHOTS
+                stateSnapshot: {
+                    before: stateBefore,
+                    after: currentState,
+                },
+
+                // 6. TOKEN USAGE (N/A for map command)
+                tokens: undefined,
+
+                // 7. PERFORMANCE
+                performance: {
+                    preprocessingMs: 0,
+                    aiInterpretationMs: 0,
+                    executionMs: executionMs || 0,
+                    totalMs: executionMs || 0,
+                },
+
+                // 8. CONTEXT
+                context: {
+                    chapterId: currentState.currentChapterId,
+                    locationId: currentState.currentLocationId,
+                    turnNumber: allMessagesForSession.filter((msg: any) => msg.type === 'command').length + 1,
+                },
+
+                // 9. QUALITY METRICS
+                wasSuccessful: true,
+                wasUnclear: false,
+            };
+
+            // Save consolidated entry to Firebase
+            const consolidatedMessages = [...allMessagesForSession, consolidatedEntry as any];
+            await logAndSave(userId, gameId, currentState, consolidatedMessages);
+
+            // Extract all UI messages for client display
+            const allUIMessages = extractUIMessages(consolidatedMessages);
+            return { newState: currentState, messages: allUIMessages };
         } else {
             // UNIFIED COMMAND LOGGING: Track everything for debugging and analytics
             commandStartTime = Date.now();
@@ -677,23 +807,98 @@ export async function processCommand(
             }
             console.log('═══════════════════════════════════════════════════════════\n');
 
-            // 5. HANDLE LOW CONFIDENCE / UNCLEAR COMMANDS
-            if (safetyNetResult.confidence < 0.5 || safetyNetResult.commandToExecute === 'invalid') {
-                const unclearMsg = createMessage(
-                    'narrator',
-                    game.narratorName || 'Narrator',
-                    safetyNetResult.reasoning ||
-                    `I'm not sure what you mean by "${safePlayerInput}". Try commands like: look, examine, take, use, or type /help for more options.`
-                );
-                allMessagesForSession.push(unclearMsg);
-                await logAndSave(userId, gameId, currentState, allMessagesForSession);
-                return { newState: currentState, messages: allMessagesForSession };
+            // 5. LOG AI RESPONSE TO PLAYER (ONLY if incorrectly filled)
+            // The AI should leave responseToPlayer EMPTY for normal command interpretation
+            // The reasoning field is EXPECTED and used for debugging - only responseToPlayer is an error
+            if (safetyNetResult.responseToPlayer && safetyNetResult.responseToPlayer.trim() !== '') {
+                // Log to console only - DO NOT add to message log (would create empty entries in admin dashboard)
+                console.error('\n🚨 ═══════════════════════════════════════════════════════════');
+                console.error('   AI REASONING ERROR DETECTED');
+                console.error('═══════════════════════════════════════════════════════════');
+                console.error('❌ AI filled responseToPlayer field when it should have been empty.');
+                console.error('   This field should ONLY be used for truly invalid commands.\n');
+                console.error(`📥 Player Input: "${safePlayerInput}"`);
+                console.error(`💬 Response to Player: "${safetyNetResult.responseToPlayer}"`);
+                console.error(`🎯 Command: "${safetyNetResult.commandToExecute}"`);
+                console.error(`📊 Confidence: ${(safetyNetResult.confidence * 100).toFixed(1)}%`);
+                console.error(`💭 Reasoning: ${safetyNetResult.reasoning || '(none)'}`);
+                console.error(`🔧 Fix: Update AI prompt to keep responseToPlayer empty for normal commands`);
+                console.error('═══════════════════════════════════════════════════════════\n');
+
+                // NOTE: We do NOT add this to allMessagesForSession because:
+                // 1. It would create empty "Sender: ()" entries in admin dashboard
+                // 2. Console logging is sufficient for debugging
+                // 3. The actual command still executes correctly
             }
 
-            // 7. ADD AI RESPONSE MESSAGE (if provided)
-            if (safetyNetResult.responseToPlayer) {
-                let systemMessage = createMessage('system', systemName, safetyNetResult.responseToPlayer);
-                allMessagesForSession.push(systemMessage);
+            // 6. HANDLE TRULY INVALID COMMANDS (with contextual feedback)
+            if (safetyNetResult.commandToExecute === 'invalid') {
+                // Check if the player is trying to access gated/blocked content
+                const { checkForGatedContent } = await import('@/lib/game/utils/gated-content-detector');
+                const gatedCheck = checkForGatedContent(safePlayerInput, currentState, game);
+
+                let responseMessage: string;
+                let errorType: 'gated_content' | 'invalid_command' = 'invalid_command';
+
+                if (gatedCheck.isGated) {
+                    // Player is trying to access content that exists but is blocked
+                    responseMessage = gatedCheck.contextualMessage;
+                    errorType = 'gated_content';
+                } else {
+                    // Truly invalid command
+                    responseMessage = `I'm not sure what you mean by "${safePlayerInput}". Try commands like: look, examine, take, use, or type /help for more options.`;
+                }
+
+                // Create structured invalid command log entry (similar to validation_error)
+                const invalidCommandLog: any = {
+                    type: 'command_invalid',
+                    errorId: `invalid_${Date.now()}`,
+                    timestamp: Date.now(),
+
+                    // Player input
+                    playerInput: safePlayerInput,
+                    rawInput: rawPlayerInput || safePlayerInput,
+
+                    // System response
+                    systemResponse: responseMessage,
+
+                    // Classification
+                    invalidationType: errorType,
+
+                    // Context
+                    context: {
+                        userId,
+                        gameId,
+                        chapterId: currentState.currentChapterId,
+                        locationId: currentState.currentLocationId,
+                        focusId: currentState.currentFocusId,
+                        focusType: currentState.focusType,
+                    },
+
+                    // AI interpretation details (for debugging)
+                    aiInterpretation: {
+                        confidence: safetyNetResult.confidence,
+                        reasoning: safetyNetResult.reasoning,
+                        source: safetyNetResult.source,
+                    },
+
+                    // UI messages (what player sees)
+                    uiMessages: [
+                        createMessage('narrator', game.narratorName || 'Narrator', responseMessage)
+                    ]
+                };
+
+                allMessagesForSession.push(invalidCommandLog);
+                await logAndSave(userId, gameId, currentState, allMessagesForSession);
+                return { newState: currentState, messages: extractUIMessages(allMessagesForSession) };
+            }
+
+            // 7. LOW CONFIDENCE BUT VALID COMMAND - Let it execute anyway
+            // Even if confidence is low (0.35-0.49), if the command is valid, let the game engine handle it
+            // The engine will provide appropriate feedback if the action fails
+            if (safetyNetResult.confidence < 0.5 && safetyNetResult.commandToExecute !== 'invalid') {
+                console.log(`⚠️ Low confidence (${(safetyNetResult.confidence * 100).toFixed(1)}%) but executing command anyway: ${safetyNetResult.commandToExecute}`);
+                // Continue to command execution below
             }
 
             const commandToExecute = safetyNetResult.commandToExecute.toLowerCase();
@@ -817,7 +1022,7 @@ export async function processCommand(
                 case 'smash':
                 case 'destroy':
                     // NEW: handleBreak returns Effect[]
-                    effects = await handleBreak(currentState, restOfCommand.replace(/"/g, ''), game);
+                    effects = await handleBreak(currentState, restOfCommand.replace(/"/g, ''), game, safePlayerInput);
                     break;
                 case 'combine':
                 case 'merge':

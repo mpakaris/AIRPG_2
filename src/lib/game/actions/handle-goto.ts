@@ -11,6 +11,7 @@
 import type { Game, PlayerState, Effect, GameObjectId, NpcId, LocationId, ItemId } from "@/lib/game/types";
 import { VisibilityResolver, FocusResolver } from "@/lib/game/engine";
 import { normalizeName } from "@/lib/utils";
+import { MessageExpander } from "@/lib/game/utils/message-expansion";
 
 /**
  * Helper to find which location contains a specific object or item
@@ -42,10 +43,11 @@ function findParentInGame(entityId: GameObjectId | ItemId, game: Game): GameObje
 
 export async function handleGoto(state: PlayerState, targetName: string, game: Game): Promise<Effect[]> {
     if (!targetName) {
+        const message = await MessageExpander.static(game.systemMessages.needsTarget.goto);
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'system',
-            content: game.systemMessages.needsTarget.goto
+            content: message
         }];
     }
 
@@ -106,10 +108,11 @@ export async function handleGoto(state: PlayerState, targetName: string, game: G
     }
 
     if (!match) {
+        const message = await MessageExpander.notVisible(game.systemMessages.notVisible, targetName);
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'system',
-            content: game.systemMessages.notVisible(targetName)
+            content: message
         }];
     }
 
@@ -131,10 +134,11 @@ export async function handleGoto(state: PlayerState, targetName: string, game: G
         // NPCs and items can't be "gone to"
         // NPCs should be interacted with via TALK command
         // Items should be examined or taken
+        const message = await MessageExpander.static(game.systemMessages.cantDoThat);
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'system',
-            content: game.systemMessages.cantDoThat
+            content: message
         }];
     }
 

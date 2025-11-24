@@ -13,6 +13,7 @@ import { Validator, HandlerResolver, VisibilityResolver, FocusResolver } from "@
 import { normalizeName } from "@/lib/utils";
 import { buildEffectsFromOutcome } from "@/lib/game/utils/outcome-helpers";
 import { findBestMatch } from "@/lib/game/utils/name-matching";
+import { MessageExpander } from "@/lib/game/utils/message-expansion";
 
 export async function handleMove(state: PlayerState, targetName: string, game: Game): Promise<Effect[]> {
     const normalizedTargetName = normalizeName(targetName);
@@ -26,20 +27,22 @@ export async function handleMove(state: PlayerState, targetName: string, game: G
     });
 
     if (!bestMatch || bestMatch.category !== 'object') {
+        const message = await MessageExpander.cantMoveObject(game.systemMessages.cantMoveObject, targetName);
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'system',
-            content: game.systemMessages.cantMoveObject(targetName)
+            content: message
         }];
     }
 
     const targetObjectId = bestMatch.id as GameObjectId;
     const targetObject = game.gameObjects[targetObjectId];
     if (!targetObject) {
+        const message = await MessageExpander.cantMoveObject(game.systemMessages.cantMoveObject, targetName);
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'system',
-            content: game.systemMessages.cantMoveObject(targetName)
+            content: message
         }];
     }
 
@@ -88,10 +91,11 @@ export async function handleMove(state: PlayerState, targetName: string, game: G
     }
 
     if (!handler) {
+        const message = await MessageExpander.static(game.systemMessages.movedNothingFound(targetObject.name));
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'narrator',
-            content: game.systemMessages.movedNothingFound(targetObject.name)
+            content: message
         }];
     }
 
@@ -108,10 +112,11 @@ export async function handleMove(state: PlayerState, targetName: string, game: G
                 content: handler.fallback
             }];
         }
+        const message = await MessageExpander.static(game.systemMessages.movedNothingFound(targetObject.name));
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'narrator',
-            content: game.systemMessages.movedNothingFound(targetObject.name)
+            content: message
         }];
     }
 

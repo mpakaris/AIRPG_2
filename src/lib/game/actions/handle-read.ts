@@ -14,14 +14,16 @@ import { HandlerResolver, GameStateManager, VisibilityResolver, Validator, Focus
 import { normalizeName } from "@/lib/utils";
 import { buildEffectsFromOutcome, resolveConditionalHandler, evaluateHandlerOutcome } from "@/lib/game/utils/outcome-helpers";
 import { findBestMatch } from "@/lib/game/utils/name-matching";
+import { MessageExpander } from "@/lib/game/utils/message-expansion";
 import { getSmartNotFoundMessage } from "@/lib/game/utils/smart-messages";
 
 export async function handleRead(state: PlayerState, itemName: string, game: Game): Promise<Effect[]> {
     if (!itemName) {
+        const message = await MessageExpander.static(game.systemMessages.needsTarget.read);
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'system',
-            content: game.systemMessages.needsTarget.read
+            content: message
         }];
     }
 
@@ -42,10 +44,11 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
     const normalizedItemName = normalizeName(itemName);
 
     if (!normalizedItemName) {
+        const message = await MessageExpander.static(game.systemMessages.needsTarget.read);
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'system',
-            content: game.systemMessages.needsTarget.read
+            content: message
         }];
     }
 
@@ -85,10 +88,11 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
         : (entityToRead as any).capabilities?.readable;
 
     if (!isReadable) {
+        const message = await MessageExpander.notReadable(game.systemMessages.notReadable, entityToRead.name);
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'narrator',
-            content: game.systemMessages.notReadable(entityToRead.name)
+            content: message
         }];
     }
 
@@ -100,10 +104,13 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
 
         // Check if all content has been read
         if (currentReadCount >= stateMapKeys.length) {
+            const message = entityId
+                ? await MessageExpander.static(game.systemMessages.alreadyReadAll(entityToRead.name))
+                : "Nothing more to read.";
             return [{
                 type: 'SHOW_MESSAGE',
                 speaker: 'narrator',
-                content: entityId ? game.systemMessages.alreadyReadAll(entityToRead.name) : "Nothing more to read."
+                content: message
             }];
         }
 
@@ -112,10 +119,11 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
         const stateMapEntry = entityToRead.stateMap[currentStateKey];
 
         if (!stateMapEntry) {
+            const message = await MessageExpander.static(game.systemMessages.textIllegible);
             return [{
                 type: 'SHOW_MESSAGE',
                 speaker: 'narrator',
-                content: game.systemMessages.textIllegible
+                content: message
             }];
         }
 
@@ -202,10 +210,11 @@ async function handleReadItemWithTarget(state: PlayerState, targetName: string, 
     });
 
     if (!toolMatch) {
+        const message = await MessageExpander.notVisible(game.systemMessages.notVisible, toolName);
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'system',
-            content: game.systemMessages.notVisible(toolName)
+            content: message
         }];
     }
 

@@ -11,6 +11,7 @@ import type { Game, Location, PlayerState, ChapterId, Flag, Effect, GameObjectId
 import { GameStateManager } from "@/lib/game/engine";
 import { findBestMatch } from "@/lib/game/utils/name-matching";
 import { normalizeName } from "@/lib/utils";
+import { MessageExpander } from "@/lib/game/utils/message-expansion";
 
 const chapterCompletionFlag = (chapterId: ChapterId) => `chapter_${chapterId}_complete` as Flag;
 
@@ -99,13 +100,15 @@ export async function handleGo(state: PlayerState, targetName: string, game: Gam
                     createLocationMessage(newLocation)
                 ];
             } else {
-                return [{ type: 'SHOW_MESSAGE', speaker: 'system', content: game.systemMessages.noNextChapter }];
+                const message = await MessageExpander.static(game.systemMessages.noNextChapter);
+                return [{ type: 'SHOW_MESSAGE', speaker: 'system', content: message }];
             }
         } else {
+            const message = await MessageExpander.static(game.systemMessages.chapterIncomplete(chapter.goal, currentLocation.name));
             return [{
                 type: 'SHOW_MESSAGE',
                 speaker: 'narrator',
-                content: game.systemMessages.chapterIncomplete(chapter.goal, currentLocation.name)
+                content: message
             }];
         }
     }
@@ -172,5 +175,6 @@ export async function handleGo(state: PlayerState, targetName: string, game: Gam
         }
     }
 
-    return [{ type: 'SHOW_MESSAGE', speaker: 'system', content: game.systemMessages.cannotGoThere }];
+    const message = await MessageExpander.static(game.systemMessages.cannotGoThere);
+    return [{ type: 'SHOW_MESSAGE', speaker: 'system', content: message }];
 }

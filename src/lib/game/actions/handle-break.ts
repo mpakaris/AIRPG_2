@@ -14,8 +14,9 @@ import { Validator, HandlerResolver, VisibilityResolver, FocusResolver } from "@
 import { normalizeName } from "@/lib/utils";
 import { buildEffectsFromOutcome, evaluateHandlerOutcome } from "@/lib/game/utils/outcome-helpers";
 import { findBestMatch } from "@/lib/game/utils/name-matching";
+import { expandNarration } from "@/ai/expand-narration";
 
-export async function handleBreak(state: PlayerState, targetName: string, game: Game): Promise<Effect[]> {
+export async function handleBreak(state: PlayerState, targetName: string, game: Game, originalInput?: string): Promise<Effect[]> {
   const normalizedTargetName = normalizeName(targetName);
 
   if (!normalizedTargetName) {
@@ -102,10 +103,18 @@ export async function handleBreak(state: PlayerState, targetName: string, game: 
         content: handler.fallback
       }];
     }
+    const message = await expandNarration({
+      keyword: 'cant_break_object',
+      context: {
+        objectName: targetObject.name,
+        ...(originalInput ? { playerAction: originalInput } : {})
+      },
+      fallback: `You can't break the ${targetObject.name}.`
+    });
     return [{
       type: 'SHOW_MESSAGE',
       speaker: 'narrator',
-      content: `You can't break the ${targetObject.name}.`
+      content: message
     }];
   }
 

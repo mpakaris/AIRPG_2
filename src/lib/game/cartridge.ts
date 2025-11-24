@@ -19,7 +19,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         media: {
             images: {
                 default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1763991426/brown_box_5_qqomdb.png', description: 'A locked rusty metal box.', hint: 'locked metal box' },
-                unlocked: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1763991426/brown_box_2_areabd.png', description: 'An unlocked metal box.', hint: 'unlocked metal box' }
+                unlocked: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1763991426/brown_box_3_bmabdx.png', description: 'An unlocked metal box.', hint: 'unlocked metal box' }
             },
             sounds: { onUnlock: 'click.mp3' }
         },
@@ -36,6 +36,21 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                             url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1763991426/brown_box_5_qqomdb.png',
                             description: 'Locked rusty metal box with latch',
                             hint: 'Needs a password phrase...'
+                        }
+                    }
+                },
+                {
+                    // Unlocked but NOT yet opened (after password, before opening)
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: false },
+                        { type: 'STATE', entityId: 'obj_brown_notebook', key: 'isOpen', equals: false }
+                    ],
+                    success: {
+                        message: "The box sits there, latch released, green light still glowing softly. Unlocked. But you haven't opened it yet. The lid is still closed, keeping whatever's inside hidden for just a moment longer.\n\nYou can OPEN it whenever you're ready.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1763991426/brown_box_3_bmabdx.png',
+                            description: 'Unlocked but closed metal box',
+                            hint: 'Ready to open'
                         }
                     }
                 },
@@ -168,10 +183,10 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                     }
                 },
                 {
-                    // Unlocked + video NOT watched yet (only show SD card)
+                    // Unlocked + video NOT watched yet (only show SD card) - FIRST TIME OPENING
                     conditions: [{ type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: false }],
                     success: {
-                        message: "The box is open. Latch unfastened. Inside: black SD card—modern, cold, out of place in the old rusty container. Your phone can read this.",
+                        message: "You lift the lid. Hinges creak—rusty, protesting decades of being sealed shut. The smell hits first: metal, decay, old paper.\n\nInside: a black SD card. Modern. Digital. Completely out of place in this relic. It sits in the corner like it's been waiting for you specifically. Your phone can read it.\n\nNo fingers. No teeth. No photographs. Just data. Sometimes that's worse.",
                         media: {
                             url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1763991426/brown_box_2_areabd.png',
                             description: 'Open metal box with SD card',
@@ -186,7 +201,12 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                     // Locked - Cannot open without password
                     conditions: [{ type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: true }],
                     success: {
-                        message: "The latch refuses to budge. Cold metal, unyielding. This isn't a lock for keys—it's waiting for something else. A phrase. A password. Someone sealed this box with words, not metal.\n\nYou run your fingers over the rusty surface, feeling the weight of secrets pressed into every dent. Whatever's inside, someone went to great lengths to hide it. The kind of lengths that make your pulse quicken.\n\nYou need the right phrase to unlock this. If you know it, whisper it to the box:\n\n**/password <phrase>** (example: /password Bloodhaven rules)\n\nStuck? There's a puzzle that might help you find the answer:\nhttps://airpg-minigames.vercel.app/games/the-notebook\n\nThe box waits. Silent. Patient. Guarding its truth."
+                        message: "The latch refuses to budge. Cold metal, unyielding. This isn't a lock for keys—it's waiting for something else. A phrase. A password. Someone sealed this box with words, not metal.\n\nYou run your fingers over the rusty surface, feeling the weight of secrets pressed into every dent. Whatever's inside, someone went to great lengths to hide it. The kind of lengths that make your pulse quicken.\n\nYou need the right phrase to unlock this. If you know it, whisper it to the box:\n\n**/password <phrase>** (example: /password Bloodhaven rules)\n\nStuck? There's a puzzle that might help you find the answer:\nhttps://airpg-minigames.vercel.app/games/the-notebook\n\nThe box waits. Silent. Patient. Guarding its truth.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1764004289/brown_box_6_ofjp6t.jpg',
+                            description: 'Attempting to open the locked metal box',
+                            hint: 'Needs password to unlock first'
+                        }
                     }
                 }
             ],
@@ -334,15 +354,15 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             // SPECIAL: Password unlock handler
             onUnlock: {
                 success: {
-                    message: "Latch clicks. Lid swings open, hinges creak. Inside: black SD card—modern, digital, anachronistic. It rests in the corner of the rusty box, out of place.",
+                    message: "Click.\n\nThe latch releases. A soft green light blinks on—once, twice—then stays lit. ACCESS GRANTED.\n\nYour pulse quickens. Hands steady, but your mind races. This is it. The moment between locked and open. The box sits there, unlocked but still closed, guarding whatever secrets someone died to hide.\n\nYou've heard the stories. The ones whispered at the precinct. Packages sent to detectives—fingers, teeth, photographs of loved ones. Sometimes the worst thing you can do in this job is open the wrong box.\n\nBut curiosity's a disease in this line of work. And you're infected.\n\nThe box is unlocked now. You can OPEN it whenever you're ready. If you're ready.",
                     media: {
                         url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1763991426/brown_box_3_bmabdx.png',
-                        description: 'Unlocked metal box revealing SD card',
-                        hint: 'The password worked - SD card revealed'
+                        description: 'Unlocked metal box with green light',
+                        hint: 'The password worked - box is unlocked but still closed'
                     },
                     effects: [
                         { type: 'SET_FLAG', flag: 'has_unlocked_notebook' as Flag, value: true },
-                        { type: 'SET_ENTITY_STATE', entityId: 'obj_brown_notebook', patch: { isLocked: false, isOpen: true, currentStateId: 'unlocked' } },
+                        { type: 'SET_ENTITY_STATE', entityId: 'obj_brown_notebook', patch: { isLocked: false, isOpen: false, currentStateId: 'unlocked' } },
                         { type: 'REVEAL_FROM_PARENT', entityId: 'obj_sd_card', parentId: 'obj_brown_notebook' }
                         // Police file will be revealed after SD card video is watched
                     ]
@@ -1083,20 +1103,40 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             }
         },
         handlers: {
-            onExamine: {
-                success: {
-                    message: "Long wooden counter. Worn wood, coffee stains. Coffee machine sits on top, humming. Below—drawers. The kind that might hide things. Tools, receipts, whatever staff doesn't want customers seeing. Worth checking.",
-                    media: {
-                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759684408/counter_area_r6qq8z.png',
-                        description: 'The cafe counter with coffee machine and drawers underneath',
-                        hint: 'Those drawers look interesting...'
-                    },
-                    effects: [
-                        { type: 'REVEAL_FROM_PARENT', entityId: 'obj_drawer', parentId: 'obj_counter' },
-                        { type: 'REVEAL_FROM_PARENT', entityId: 'obj_coffee_machine', parentId: 'obj_counter' }
-                    ]
+            onExamine: [
+                {
+                    // After reading file about hidden room - drawer becomes relevant for tools
+                    conditions: [{ type: 'FLAG', flag: 'read_secret_document', value: true }],
+                    success: {
+                        message: "Long wooden counter. Worn wood, coffee stains. Coffee machine sits on top, humming. Below—drawers. The kind that might hide things.\n\nWait. The police file mentioned a hidden room behind the bookshelf. You'll need tools to get through. A reciprocating saw would cut through wood. Maybe the staff keeps one down there...",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759684408/counter_area_r6qq8z.png',
+                            description: 'The cafe counter with coffee machine and drawers underneath',
+                            hint: 'That drawer might have tools...'
+                        },
+                        effects: [
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'obj_drawer', parentId: 'obj_counter' },
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'obj_coffee_machine', parentId: 'obj_counter' }
+                        ]
+                    }
+                },
+                {
+                    // Before reading file - drawer is visible but access is controlled
+                    conditions: [],
+                    success: {
+                        message: "Long wooden counter. Worn wood, coffee stains. Coffee machine sits on top, humming. Below—a drawer. Staff work behind it. The barista keeps an eye on things.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759684408/counter_area_r6qq8z.png',
+                            description: 'The cafe counter with coffee machine and drawer',
+                            hint: 'Staff work area with drawer below'
+                        },
+                        effects: [
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'obj_coffee_machine', parentId: 'obj_counter' },
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'obj_drawer', parentId: 'obj_counter' }
+                        ]
+                    }
                 }
-            },
+            ],
             onTake: {
                 fail: {
                     message: "It's built into the floor. Not going anywhere."
@@ -1129,6 +1169,18 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         },
         handlers: {
             onExamine: [
+                {
+                    // Block access until confidential file has been read (most specific condition)
+                    conditions: [{ type: 'NO_FLAG', flag: 'read_secret_document' }],
+                    success: {
+                        message: "You glance at the drawer from a distance. The manager's right there behind the counter, arms crossed, surveying the cafe like a hawk. His eyes flick toward you for a second—yeah, not happening. Not with him watching. Maybe come back when things get... busier.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762429217/counter_drawer_examine_ryb0us.png',
+                            description: 'A drawer under the counter',
+                            hint: 'Manager is watching closely'
+                        }
+                    }
+                },
                 {
                     conditions: [{ type: 'STATE', entityId: 'obj_drawer', key: 'isOpen', equals: false }],
                     success: {
@@ -1168,6 +1220,18 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             ],
             onOpen: [
                 {
+                    // Block access until confidential file has been read (most specific condition)
+                    conditions: [{ type: 'NO_FLAG', flag: 'read_secret_document' }],
+                    success: {
+                        message: "You take a step toward the counter. The manager's eyes lock onto you immediately. 'Sorry, staff only behind the counter.' His tone is polite but firm. One hand rests on the counter edge—territorial. He's not moving. Not now. Wait for a distraction.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762429217/counter_drawer_examine_ryb0us.png',
+                            description: 'Drawer under the counter, manager blocking access',
+                            hint: 'Manager is blocking access'
+                        }
+                    }
+                },
+                {
                     conditions: [
                         { type: 'STATE', entityId: 'obj_drawer', key: 'isOpen', equals: false },
                         { type: 'HAS_ITEM', itemId: 'item_recip_saw' }
@@ -1187,7 +1251,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                 {
                     conditions: [{ type: 'STATE', entityId: 'obj_drawer', key: 'isOpen', equals: false }],
                     success: {
-                        message: "You pull the handle. Drawer slides open smooth. Inside: reciprocating saw—professional grade. Fresh blade. Receipts underneath, tape, random tools. The saw's the prize. Could cut through metal, pipe, whatever.",
+                        message: "Perfect timing. A woman storms up to the manager—late forties, designer sunglasses perched on her head despite being indoors. 'Excuse me, I ordered a SOY latte, not ALMOND. Do you even LISTEN to your customers?!' The manager's jaw tightens. He turns away from you.\n\nYou don't waste the moment. Hands behind your back, casual whistle under your breath—just another customer stretching their legs. You sidle up to the counter. One smooth pull on the handle. Drawer slides open silent.\n\nInside: reciprocating saw—professional grade. Fresh blade. Receipts underneath, tape, random tools. The saw's the prize. Could cut through metal, pipe, whatever.\n\nBehind you, the manager's still apologizing to the woman. 'Ma'am, I understand your frustration...' You've got maybe ten seconds.",
                         media: {
                             url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762429158/counter_drawer_power_tool_tvt3o5.png',
                             description: 'Open drawer revealing a reciprocating saw',
@@ -1237,6 +1301,56 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                     message: "Drawer's already closed. Safety and all..."
                 }
             },
+            onSearch: [
+                {
+                    // Block access until confidential file has been read (most specific condition)
+                    conditions: [{ type: 'NO_FLAG', flag: 'read_secret_document' }],
+                    success: {
+                        message: "You peer at the drawer from across the room. The manager's posted up behind the counter like a bouncer. He catches your eye—one eyebrow raised. You look away, casual. Too risky. Not with him standing guard. Wait for the right moment.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762429217/counter_drawer_examine_ryb0us.png',
+                            description: 'A drawer under the counter',
+                            hint: 'Manager is watching closely'
+                        }
+                    }
+                },
+                {
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_drawer', key: 'isOpen', equals: true },
+                        { type: 'HAS_ITEM', itemId: 'item_recip_saw' }
+                    ],
+                    success: {
+                        message: "Drawer's open. Empty now. The saw's in your pocket. Just receipts and tape left.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762466481/counter_drawer_empty_ud8wzi.png',
+                            description: 'Empty drawer',
+                            hint: 'Nothing useful left'
+                        }
+                    }
+                },
+                {
+                    conditions: [{ type: 'STATE', entityId: 'obj_drawer', key: 'isOpen', equals: true }],
+                    success: {
+                        message: "Drawer's open. Inside: a reciprocating saw, some receipts, tape. Tools of the trade.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762429158/counter_drawer_power_tool_tvt3o5.png',
+                            description: 'Open drawer with reciprocating saw visible',
+                            hint: 'Power saw and tools'
+                        }
+                    }
+                },
+                {
+                    conditions: [{ type: 'STATE', entityId: 'obj_drawer', key: 'isOpen', equals: false }],
+                    success: {
+                        message: "Built into the counter. No lock—just a handle. Staff storage. You'd need to OPEN it first to see what's inside.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762429217/counter_drawer_examine_ryb0us.png',
+                            description: 'A closed drawer under the counter',
+                            hint: 'Try opening it'
+                        }
+                    }
+                }
+            ],
             defaultFailMessage: "A drawer under the counter. Try: EXAMINE, OPEN, or SEARCH it."
         },
         design: {
@@ -1461,7 +1575,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         { type: 'STATE', entityId: 'obj_sd_card', key: 'currentStateId', equals: 'closed' }
                     ],
                     success: {
-                        message: "Card slides into your phone. Screen flickers. Video loads—grainy, seventy years old. Music fills the cafe. Saxophone, smooth, melancholic. A tune that's been waiting.\n\nSilas Bloom. Musician. That song for Rose... they were in love. You hear it in every note.\n\nVideo ends. More questions than answers. Your mind races.\n\nWait—you notice something else tucked deeper in the metal box. A folded document. CONFIDENTIAL - POLICE USE ONLY. Faded red ink. What's this doing here? It looks... stolen.",
+                        message: "Card slides into your phone. Screen flickers. Video loads—grainy, seventy years old. Music fills the cafe. Saxophone, smooth, melancholic. A tune that's been waiting.\n\nSilas Bloom. Musician. That song for Rose... they were in love. You hear it in every note.",
                         media: {
                             url: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759678377/CH_I_completion_jqtyme.mp4',
                             type: 'video',
@@ -1471,7 +1585,9 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         effects: [
                             { type: 'SET_ENTITY_STATE', entityId: 'obj_sd_card', patch: { currentStateId: 'opened' } },
                             { type: 'SET_FLAG', flag: 'notebook_video_watched' as Flag, value: true },
-                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_secret_document', parentId: 'obj_brown_notebook' }
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_secret_document', parentId: 'obj_brown_notebook' },
+                            { type: 'SHOW_MESSAGE', speaker: 'narrator', content: "Video ends. More questions than answers. Your mind races.\n\nYou slip the phone back into your jacket pocket. Don't need it anymore—what you need is in the box.\n\nWait—you notice something else tucked deeper in the metal box. A folded document. CONFIDENTIAL - POLICE USE ONLY. Faded red ink. What's this doing here? It looks... stolen." },
+                            { type: 'CLEAR_DEVICE_FOCUS' }
                         ]
                     }
                 }
@@ -1494,7 +1610,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         { type: 'STATE', entityId: 'obj_sd_card', key: 'currentStateId', equals: 'closed' }
                     ],
                     success: {
-                        message: "Card slides into your phone. Screen flickers. Video loads—grainy, seventy years old. Music fills the cafe. Saxophone, smooth, melancholic. A tune that's been waiting.\n\nSilas Bloom. Musician. That song for Rose... they were in love. You hear it in every note.\n\nVideo ends. More questions than answers. Your mind races.\n\nWait—you notice something else tucked deeper in the metal box. A folded document. CONFIDENTIAL - POLICE USE ONLY. Faded red ink. What's this doing here? It looks... stolen.",
+                        message: "Card slides into your phone. Screen flickers. Video loads—grainy, seventy years old. Music fills the cafe. Saxophone, smooth, melancholic. A tune that's been waiting.\n\nSilas Bloom. Musician. That song for Rose... they were in love. You hear it in every note.",
                         media: {
                             url: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759678377/CH_I_completion_jqtyme.mp4',
                             type: 'video',
@@ -1504,7 +1620,9 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         effects: [
                             { type: 'SET_ENTITY_STATE', entityId: 'obj_sd_card', patch: { currentStateId: 'opened' } },
                             { type: 'SET_FLAG', flag: 'notebook_video_watched' as Flag, value: true },
-                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_secret_document', parentId: 'obj_brown_notebook' }
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_secret_document', parentId: 'obj_brown_notebook' },
+                            { type: 'SHOW_MESSAGE', speaker: 'narrator', content: "Video ends. More questions than answers. Your mind races.\n\nYou slip the phone back into your jacket pocket. Don't need it anymore—what you need is in the box.\n\nWait—you notice something else tucked deeper in the metal box. A folded document. CONFIDENTIAL - POLICE USE ONLY. Faded red ink. What's this doing here? It looks... stolen." },
+                            { type: 'CLEAR_DEVICE_FOCUS' }
                         ]
                     }
                 }
@@ -2407,10 +2525,10 @@ const items: Record<ItemId, Item> = {
         alternateDescription: "The musician's business card. That name, 'ROSE', and the number '1943' seem significant.",
         capabilities: { isTakable: true, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         handlers: {
-            // 1. EXAMINE - Visual inspection
+            // 1. EXAMINE - Visual inspection (physical condition)
             onExamine: {
                 success: {
-                    message: "Business card. Simple. 'S A X O - The World's Best Sax Player'. Phone number. Handwritten: '1943' and 'ROSE'. Clues.",
+                    message: "Standard business card. White cardstock, slightly worn at the edges. Professional print job—clean typography, bold lettering. But there's something handwritten in the corner. Blue ink, hasty scrawl. Someone added notes after it was printed.",
                     media: {
                         url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759241477/Screenshot_2025-09-30_at_15.46.02_fuk4tb.png',
                         description: 'Business card for saxophone player',
@@ -2471,10 +2589,15 @@ const items: Record<ItemId, Item> = {
                 }
             },
 
-            // 10. READ - Read the card
+            // 10. READ - Read the card (quoted content)
             onRead: {
                 success: {
-                    message: "'S A X O - The World's Best Sax Player'. Phone number. Handwritten: '1943' and 'ROSE'. ROSE. That name connects."
+                    message: "Printed text reads:\n\n\"S A X O\nThe World's Best Sax Player\"\n\nPhone number listed below. But in the corner, handwritten in blue ink:\n\n\"1943\"\n\"ROSE\"\n\nRose. That name keeps appearing. And 1943—a year? A code? This means something.",
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759241477/Screenshot_2025-09-30_at_15.46.02_fuk4tb.png',
+                        description: 'Business card for saxophone player',
+                        hint: 'ROSE and 1943 written by hand'
+                    }
                 }
             },
 
@@ -2646,14 +2769,32 @@ const items: Record<ItemId, Item> = {
             }
         },
         handlers: {
-            // 1. EXAMINE
-            onExamine: { success: { message: 'Business book with a gaudy cover promising wealth and success. Motivational garbage. Not relevant to the case.' } },
+            // 1. EXAMINE - Physical appearance (title and condition)
+            onExamine: {
+                success: {
+                    message: '"The Art of the Deal" screams from the spine in bold gold lettering. Hardcover, glossy dust jacket—red and black, corporate aggressive. The kind of book designed to intimidate from across a boardroom table. Corner-office swagger bound in cloth. Pages crisp, barely cracked. Display piece, not reading material. All style, no substance.',
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1764021116/Screenshot_2025-11-24_at_22.46.38_gki3mx.png',
+                        description: 'The Art of the Deal - business book with bold red and black cover',
+                        hint: 'The Art of the Deal'
+                    }
+                }
+            },
             // 2. TAKE
             onTake: { fail: { message: "Cafe property. It stays on the shelf. If you're curious, try READING it instead of pocketing it." } },
             // 4. USE
             onUse: { fail: { message: "It's a book, not a weapon. Use your eyes and READ it if you're interested." } },
-            // 6. OPEN
-            onOpen: { success: { message: "Opening a book is just reading with extra steps. Try READ book." } },
+            // 6. OPEN - Open the book (same as reading first page)
+            onOpen: {
+                success: {
+                    message: "You crack open the book. Pages smell like old paper and broken dreams. Chapter 1: 'Think Big.' Motivational drivel about making deals and winning. You skim a few paragraphs. Nothing useful for the case. Just ego and platitudes.",
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762712221/Book_Deal_1_ui3swk.png',
+                        description: 'First page of The Art of the Deal',
+                        hint: 'Business book page 1'
+                    }
+                }
+            },
             // 7. CLOSE
             onClose: { success: { message: "You snap it shut. The wisdom inside remains safely trapped between covers." } },
             // 8. MOVE
@@ -2720,14 +2861,32 @@ const items: Record<ItemId, Item> = {
             }
         },
         handlers: {
-            // 1. EXAMINE
-            onExamine: { success: { message: 'FBI history book. Thick, dry, full of bureaucratic legends. Could be interesting if you had a week to kill. Not relevant to the case right now.' } },
+            // 1. EXAMINE - Physical appearance (title and condition)
+            onExamine: {
+                success: {
+                    message: '"A Brief History of the FBI" stamped on the spine. Navy blue hardcover, government-issue boring. Pages yellowed, spine cracked from institutional use. The kind of book they hand you at Quantico with a PowerPoint and zero enthusiasm. "Brief" is generous—it\'s 400 pages of bureaucratic self-congratulation. Coffee stains on the cover. Someone tried to stay awake reading this. They failed.',
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1764021116/Screenshot_2025-11-24_at_22.49.32_lt7exr.png',
+                        description: 'A Brief History of the FBI - thick navy blue government textbook',
+                        hint: 'FBI History'
+                    }
+                }
+            },
             // 2. TAKE
             onTake: { fail: { message: "Cafe property. It belongs on the shelf, not in your pocket. Try READING it if you're curious." } },
             // 4. USE
             onUse: { fail: { message: "It's a book, not a tool. Books are for reading, not using. Try READ book." } },
-            // 6. OPEN
-            onOpen: { success: { message: "Opening a book is just reading with extra steps. Try READ book." } },
+            // 6. OPEN - Open the book (same as reading first page)
+            onOpen: {
+                success: {
+                    message: "You flip open the cover. Foreword by some former Director you've never heard of. Chapter 1: 'The Bureau's Founding, 1908.' Dense paragraphs about bureaucracy and jurisdiction. You skim a few lines. Nothing about your case. Just institutional history.",
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762712220/Book_FBI_1_gxpv0e.png',
+                        description: 'First page of FBI history book',
+                        hint: 'FBI book page 1'
+                    }
+                }
+            },
             // 7. CLOSE
             onClose: { success: { message: "You shut it. Pages full of federal history go dark again." } },
             // 8. MOVE
@@ -2794,14 +2953,32 @@ const items: Record<ItemId, Item> = {
             }
         },
         handlers: {
-            // 1. EXAMINE
-            onExamine: { success: { message: 'Romance novel with a painfully cheesy cover. Title: "Justice for My Love". That word again—justice. Coincidence, or breadcrumb? Probably just coincidence.' } },
+            // 1. EXAMINE - Physical appearance (title and condition)
+            onExamine: {
+                success: {
+                    message: '"Justice for My Love" whispers from the cover in elegant script. Paperback, soft to the touch. Spine creased from countless readings, pages worn at the edges like love letters read too many times. The cover shows two silhouettes reaching for each other across an impossible distance—aching, desperate, eternal. Dog-eared corners mark favorite passages. Someone cherished this. Someone believed in it. That word "justice"—it pulls at you. Not just romance. Something deeper. A promise. A plea.',
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1764021117/Screenshot_2025-11-24_at_22.51.19_putza6.png',
+                        description: 'Justice for My Love - worn romance novel with emotional cover',
+                        hint: 'Justice book'
+                    }
+                }
+            },
             // 2. TAKE
             onTake: { fail: { message: "Cafe property. Stays on the shelf. If you're desperate for melodrama, try READING it." } },
             // 4. USE
             onUse: { fail: { message: "It's a romance novel, not a Swiss Army knife. Try READING it if you want entertainment." } },
-            // 6. OPEN
-            onOpen: { success: { message: "Opening a book is just reading with extra steps. Try READ book." } },
+            // 6. OPEN - Open the book (same as reading first page)
+            onOpen: {
+                success: {
+                    message: "You flip it open. Chapter 1: 'A Chance Encounter.' Melodramatic prose about lovers meeting. You skim a paragraph. Standard romance fare—longing glances, forbidden love, dramatic declarations. Nothing special. But maybe there's something hidden inside...",
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762712220/Book_Justice_1_hvjtcj.png',
+                        description: 'First page of Justice for My Love',
+                        hint: 'Romance novel page 1'
+                    }
+                }
+            },
             // 7. CLOSE
             onClose: { success: { message: "You close it. The tale of star-crossed lovers goes dark. You're safe from their drama for now." } },
             // 8. MOVE
@@ -2985,14 +3162,13 @@ const items: Record<ItemId, Item> = {
             }
         },
         handlers: {
-            // 1. EXAMINE - Visual inspection
+            // 1. EXAMINE - Visual inspection (physical description only)
             onExamine: {
                 success: {
-                    message: "Police file. Thick. CONFIDENTIAL - POLICE USE ONLY stamped across it. Official seals. This was stolen from law enforcement.",
+                    message: "Thick folder. Brown manila. CONFIDENTIAL - POLICE USE ONLY stamped in faded red ink across the cover. Official seals—FBI, local PD, evidence tags. Someone put this together with care. Meticulous. Every page categorized, every photo labeled. This wasn't thrown together by some beat cop. This was built by someone with an eye for detail. Someone who knew exactly what they were looking for.\n\nStolen from law enforcement. The question is: by who? And why?",
                     media: {
-                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762429368/CH_I___Secret_Document_Notebook_kusyq8.pdf',
-                        type: 'pdf',
-                        description: 'Stolen police file with classified documents',
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1764008173/brown_box_confidential_file_rwe7xu.jpg',
+                        description: 'Stolen police file - closed folder with CONFIDENTIAL stamp',
                         hint: 'Read it to discover what the police know'
                     }
                 }
@@ -3026,10 +3202,19 @@ const items: Record<ItemId, Item> = {
                 }
             },
 
-            // 6. OPEN - Open the folder
+            // 6. OPEN - Open the folder (same as read)
             onOpen: {
                 success: {
-                    message: "You open it. Same as READING. Try READ document."
+                    message: "You open the police file. Dense. Case reports, witness statements, crime scene photos. But wait—there's something about the cafe. Floor plans marked with investigator notes. A hidden room behind the bookshelf circled in red. Why was this being investigated?\n\nNext pages: Financial records, surveillance logs, shell corporations. All linked to one holding company: Veridian Dynamics. The police knew. They were building a case.",
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762429368/CH_I___Secret_Document_Notebook_kusyq8.pdf',
+                        type: 'pdf',
+                        description: 'Stolen police file revealing investigation into the cafe and Veridian Dynamics',
+                        hint: 'Hidden room behind bookshelf marked by police? Veridian Dynamics under investigation'
+                    },
+                    effects: [
+                        { type: 'SET_FLAG', flag: 'read_secret_document' as Flag, value: true }
+                    ]
                 }
             },
 
@@ -3054,10 +3239,10 @@ const items: Record<ItemId, Item> = {
                 }
             },
 
-            // 10. READ - Read the document
+            // 10. READ - Read the document (same as opening for physical documents)
             onRead: {
                 success: {
-                    message: "You open the police file. Dense. Case reports, witness statements, crime scene photos. But wait—there's something about the cafe. Floor plans marked with investigator notes. A hidden room behind the bookshelf circled in red. Why was this being investigated?\n\nNext pages: Financial records, surveillance logs, shell corporations. All linked to one holding company: Veridian Dynamics. The police knew. They were building a case.",
+                    message: "You flip through the pages. Dense. Case reports, witness statements, crime scene photos. But wait—there's something about the cafe. Floor plans marked with investigator notes. A hidden room behind the bookshelf circled in red. Why was this being investigated?\n\nNext pages: Financial records, surveillance logs, shell corporations. All linked to one holding company: Veridian Dynamics. The police knew. They were building a case.",
                     media: {
                         url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762429368/CH_I___Secret_Document_Notebook_kusyq8.pdf',
                         type: 'pdf',
@@ -3551,13 +3736,18 @@ Your single most important task is to translate the player's natural language in
   - "check my stuff" and "what do I have" both become \`inventory\`.
   - "hit the machine with the pipe", "smash the machine with pipe", "whack the coffee machine", and "break the machine with the pipe" all become \`use "Iron Pipe" on "Coffee Machine"\`.
   - "check the card" and "examine sd card" both become \`examine "SD Card"\` (even if inside container).
-  - "read book The Art of the Deal", "check book Justice for My Love" become \`read "The Art of the Deal"\`, \`examine "Justice for My Love"\` (strip generic words like "book" from entity names).
+  - BOOKS: "check book X" or "examine book X" becomes \`examine "X"\` (physical description only). "read book X" or "open book X" becomes \`read "X"\` or \`open "X"\` (shows content). Always strip generic words like "book" from entity names.
+    - "check book The Art of the Deal" → \`examine "The Art of the Deal"\` (shows physical cover)
+    - "read book The Art of the Deal" → \`read "The Art of the Deal"\` (shows content pages)
+    - "examine Justice for My Love" → \`examine "Justice for My Love"\` (shows physical cover)
+    - "open A Brief History of the FBI" → \`open "A Brief History of the FBI"\` (shows content pages)
 
 **// 2. Your Response Protocol**
-- **Minimize System Messages:** For valid, actionable commands (take, use, examine, open, read, move), your \`agentResponse\` should be null or a minimal confirmation. The Narrator handles ALL descriptive output.
+- **NO System Messages for Valid Commands:** For ALL valid, actionable commands (take, use, examine, open, read, move, break, etc.), your \`agentResponse\` MUST ALWAYS be null. The Narrator handles ALL descriptive output.
   - **CORRECT:** \`{"agentResponse": null, "commandToExecute": "examine \\"Painting on the wall\\""}\`
-  - **ALSO ACCEPTABLE:** \`{"agentResponse": "Examining the painting.", "commandToExecute": "examine \\"Painting on the wall\\""}\`
-  - **INCORRECT:** \`{"agentResponse": "You walk over to examine the abstract painting. It's quite intriguing.", "commandToExecute": "examine \\"Painting on the wall\\""}\`
+  - **CORRECT:** \`{"agentResponse": null, "commandToExecute": "break \\"Metal Box\\""}\`
+  - **INCORRECT:** \`{"agentResponse": "Examining the painting.", "commandToExecute": "examine \\"Painting on the wall\\""}\`
+  - **INCORRECT:** \`{"agentResponse": "Breaking the Metal Box.", "commandToExecute": "break \\"Metal Box\\""}\`
 
 **// 3. Handling Invalid Input - READ THIS VERY CAREFULLY**
 - **Illogical/Destructive Actions:** ONLY mark as invalid for truly nonsensical actions (e.g., "eat the key", "destroy reality"). Use \`commandToExecute: "invalid"\`.
@@ -3624,77 +3814,66 @@ Your reasoning must be a brief, step-by-step explanation of how you mapped the p
     ]
   },
 
-  // System Messages - Noir detective atmosphere (Narrator + System voice)
+  // System Messages - Hybrid C Architecture (Keywords for LLM Expansion)
+  // When NEXT_PUBLIC_NARRATION_MODE=local, these keywords are expanded by Ollama
+  // When NEXT_PUBLIC_NARRATION_MODE=static, static fallbacks are used
+  // See: src/ai/expand-narration.ts
   systemMessages: {
-    // Command validation - Sarcastic detective voice
+    // Command validation - Keywords for missing targets
     needsTarget: {
-      examine: "Examine what, exactly? The air? Pick something specific.",
-      read: "Read what? The room's vibes? Name the object.",
-      take: "Take what? My patience? Specify the item.",
-      goto: "Go where? Narnia? Tell me the actual location.",
+      examine: "need_target_examine",
+      read: "need_target_read",
+      take: "need_target_take",
+      goto: "need_target_goto",
     },
 
-    // Visibility errors - Noir narrator voice
-    notVisible: (itemName: string) =>
-      `There's no ${itemName} here. Either it's tucked away somewhere else, or you're chasing ghosts.`,
+    // Visibility errors - Item not visible/found
+    notVisible: (itemName: string) => "item_not_visible",
 
     // Inventory - Detective checking pockets
-    inventoryEmpty: "Your pockets are lighter than your conscience. Nothing collected yet.",
+    inventoryEmpty: "inventory_empty",
     inventoryList: (itemNames: string) =>
-      `You're carrying:\n${itemNames}`,
-    alreadyHaveItem: (itemName: string) =>
-      `The ${itemName}'s already weighing down your pocket. One copy is enough.`,
+      `You're carrying:\n${itemNames}`, // Keep static (structured list)
+    alreadyHaveItem: (itemName: string) => "already_have_item",
 
-    // Navigation - Noir blocking/guiding
-    cannotGoThere: "That path's closed off. Either locked, blocked, or just not your problem yet.",
-    chapterIncomplete: (goal: string, locationName: string) =>
-      `You're not done here. ${goal} before you walk away from ${locationName}. Loose ends get people killed.`,
+    // Navigation - Blocking/guiding
+    cannotGoThere: "cannot_go_there",
+    chapterIncomplete: (goal: string, locationName: string) => "chapter_incomplete",
     chapterTransition: (chapterTitle: string) =>
-      `━━━ ${chapterTitle} ━━━`,
+      `━━━ ${chapterTitle} ━━━`, // Keep static (structured divider)
     locationTransition: (locationName: string) =>
-      `You arrive at ${locationName}.`,
-    noNextChapter: "That's where the file ends. No more chapters. Case closed, or just beginning—who knows.",
+      `You arrive at ${locationName}.`, // Keep static (simple announcement)
+    noNextChapter: "no_next_chapter",
 
-    // Reading - Detective examining text
-    notReadable: (itemName: string) =>
-      `The ${itemName} has nothing worth reading. Not every surface is a message.`,
-    alreadyReadAll: (itemName: string) =>
-      `You've already squeezed every word from the ${itemName}. There's nothing new. Move on.`,
-    textIllegible: "The text's faded beyond recognition. Time swallowed whatever secrets this held. Gone for good.",
+    // Reading - Examining text
+    notReadable: (itemName: string) => "not_readable",
+    alreadyReadAll: (itemName: string) => "already_read_all",
+    textIllegible: "text_illegible",
 
-    // Using items - Detective trying tools
-    dontHaveItem: (itemName: string) =>
-      `You don't have a "${itemName}". Can't use what you don't carry.`,
-    cantUseItem: (itemName: string) =>
-      `The ${itemName} doesn't do anything useful here. Wrong place, wrong time.`,
-    cantUseOnTarget: (itemName: string, targetName: string) =>
-      `The ${itemName} doesn't work on the ${targetName}. Brilliant deduction: not everything fits everywhere.`,
-    noVisibleTarget: (targetName: string) =>
-      `There's no ${targetName} in sight. Could be hidden, could be elsewhere. Or maybe you're imagining things.`,
-    useDidntWork: "That approach failed. Sometimes the pieces just don't fit, no matter how hard you force them.",
+    // Using items - Trying tools
+    dontHaveItem: (itemName: string) => "dont_have_item",
+    cantUseItem: (itemName: string) => "cant_use_item",
+    cantUseOnTarget: (itemName: string, targetName: string) => "cant_use_item_on_target",
+    noVisibleTarget: (targetName: string) => "item_not_visible",
+    useDidntWork: "use_didnt_work",
 
-    // Moving objects - Detective shifting furniture
-    cantMoveObject: (objectName: string) =>
-      `There's no "${objectName}" here to shove around.`,
-    movedNothingFound: (objectName: string) =>
-      `You shift the ${objectName}, checking every angle. Nothing underneath. Nothing behind. Just dust and disappointment.`,
+    // Moving objects - Shifting furniture
+    cantMoveObject: (objectName: string) => "cant_move_object",
+    movedNothingFound: (objectName: string) => "moved_nothing_found",
 
-    // Opening - Detective trying containers
-    cantOpen: (targetName: string) =>
-      `There's no "${targetName}" here to crack open.`,
+    // Opening - Trying containers
+    cantOpen: (targetName: string) => "cant_open_object",
 
-    // Password/Focus system - Sarcastic system feedback
-    needsFocus: "You need to pick a target first. Examine something, interact with it. Focus beats flailing.",
-    focusSystemError: "Focus system glitched. That's not supposed to happen. Reality just hiccupped.",
-    noPasswordInput: (objectName: string) =>
-      `The ${objectName} doesn't take passwords. It's not that kind of lock.`,
-    alreadyUnlocked: (objectName: string) =>
-      `The ${objectName}'s already unlocked. You beat it once. No need to prove it twice.`,
-    wrongPassword: "Wrong passphrase. The lock stays shut. Try again, or give up.",
+    // Password/Focus system - System feedback
+    needsFocus: "needs_focus",
+    focusSystemError: "focus_system_error",
+    noPasswordInput: (objectName: string) => "no_password_input",
+    alreadyUnlocked: (objectName: string) => "already_unlocked",
+    wrongPassword: "wrong_password",
 
-    // Generic errors - Dry detective wit
-    cantDoThat: "Can't do that. Not available, not possible, not happening.",
-    somethingWentWrong: "Something broke. The universe burped. An error occurred. Your guess is as good as mine.",
+    // Generic errors
+    cantDoThat: "generic_failure",
+    somethingWentWrong: "generic_failure",
   },
 
 

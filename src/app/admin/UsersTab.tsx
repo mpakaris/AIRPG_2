@@ -223,6 +223,7 @@ const PlayerDetails = ({ user, game }: { user: User, game: Game | undefined }) =
                                     // Check log type
                                     const isCommandLog = log.type === 'command';
                                     const isValidationError = log.type === 'validation_error';
+                                    const isInvalidCommand = log.type === 'command_invalid';
                                     const isAIError = log.type === 'ai_error';
                                     const isDBError = log.type === 'db_error';
 
@@ -316,6 +317,105 @@ const PlayerDetails = ({ user, game }: { user: User, game: Game | undefined }) =
                                         );
                                     }
 
+                                    // Invalid Command Log
+                                    if (isInvalidCommand) {
+                                        const isGated = log.invalidationType === 'gated_content';
+                                        return (
+                                            <AccordionItem key={log.errorId || index} value={`invalid-${index}`}>
+                                                <AccordionTrigger className="text-xs py-2">
+                                                    <div className="flex items-center gap-2 w-full">
+                                                        <span className={`font-mono px-2 py-0.5 rounded font-bold ${
+                                                            isGated
+                                                                ? 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300'
+                                                                : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
+                                                        }`}>
+                                                            {isGated ? 'Gated' : 'Invalid'}
+                                                        </span>
+                                                        <span className="flex-1 text-left truncate text-muted-foreground">
+                                                            "{log.playerInput?.substring(0, 60) || 'No input'}{log.playerInput?.length > 60 ? '...' : ''}"
+                                                        </span>
+                                                        <span className="text-muted-foreground">⚠</span>
+                                                    </div>
+                                                </AccordionTrigger>
+                                                <AccordionContent>
+                                                    <div className="space-y-3 text-xs">
+                                                        {/* Player Input Section */}
+                                                        <div className="border-l-2 border-purple-500 pl-3">
+                                                            <p className="font-bold text-purple-600 dark:text-purple-400">📥 Player Input</p>
+                                                            <p className="mt-1"><strong>Command:</strong> {log.playerInput}</p>
+                                                            {log.rawInput && log.rawInput !== log.playerInput && (
+                                                                <p><strong>Raw Input:</strong> {log.rawInput}</p>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Classification Section */}
+                                                        <div className={`border-l-2 pl-3 ${isGated ? 'border-purple-500' : 'border-gray-500'}`}>
+                                                            <p className={`font-bold ${isGated ? 'text-purple-600 dark:text-purple-400' : 'text-gray-600 dark:text-gray-400'}`}>
+                                                                🏷️ Classification
+                                                            </p>
+                                                            <div className="mt-1 bg-muted/50 p-2 rounded">
+                                                                <p><strong>Type:</strong> {isGated ? 'Gated Content' : 'Invalid Command'}</p>
+                                                                {isGated && (
+                                                                    <p className="mt-1 text-purple-700 dark:text-purple-300">
+                                                                        ℹ️ Player tried to access content that exists but is not yet revealed/accessible
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        {/* System Response Section */}
+                                                        {log.systemResponse && (
+                                                            <div className="border-l-2 border-green-500 pl-3">
+                                                                <p className="font-bold text-green-600 dark:text-green-400">💬 System Response</p>
+                                                                <p className="mt-1 bg-green-50 dark:bg-green-900/20 p-2 rounded whitespace-pre-wrap">
+                                                                    {log.systemResponse}
+                                                                </p>
+                                                            </div>
+                                                        )}
+
+                                                        {/* AI Interpretation Section */}
+                                                        {log.aiInterpretation && (
+                                                            <div className="border-l-2 border-blue-500 pl-3">
+                                                                <p className="font-bold text-blue-600 dark:text-blue-400">🤖 AI Analysis</p>
+                                                                <div className="mt-1 space-y-1">
+                                                                    <p><strong>Confidence:</strong> {((log.aiInterpretation.confidence || 0) * 100).toFixed(1)}%</p>
+                                                                    <p><strong>Source:</strong> {log.aiInterpretation.source}</p>
+                                                                    {log.aiInterpretation.reasoning && (
+                                                                        <>
+                                                                            <p className="mt-2"><strong>Reasoning:</strong></p>
+                                                                            <p className="mt-1 text-xs bg-muted/50 p-2 rounded">{log.aiInterpretation.reasoning}</p>
+                                                                        </>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Context Section */}
+                                                        {log.context && (
+                                                            <div className="border-l-2 border-gray-500 pl-3">
+                                                                <p className="font-bold">📍 Context</p>
+                                                                <div className="mt-1 space-y-1">
+                                                                    <p><strong>Chapter:</strong> {log.context.chapterId}</p>
+                                                                    <p><strong>Location:</strong> {log.context.locationId}</p>
+                                                                    {log.context.focusId && (
+                                                                        <p><strong>Focus:</strong> {log.context.focusId} ({log.context.focusType})</p>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Metadata Section */}
+                                                        <div className="border-l-2 border-gray-500 pl-3">
+                                                            <p className="font-bold">📊 Metadata</p>
+                                                            <p><strong>Error ID:</strong> {log.errorId}</p>
+                                                            <p><strong>Timestamp:</strong> {new Date(log.timestamp).toLocaleString()}</p>
+                                                        </div>
+                                                    </div>
+                                                </AccordionContent>
+                                            </AccordionItem>
+                                        );
+                                    }
+
                                     // AI Error Log
                                     if (isAIError) {
                                         return (
@@ -375,10 +475,27 @@ const PlayerDetails = ({ user, game }: { user: User, game: Game | undefined }) =
                                                         {log.aiContext && (
                                                             <div className="border-l-2 border-purple-500 pl-3">
                                                                 <p className="font-bold text-purple-600 dark:text-purple-400">🤖 AI Context</p>
-                                                                <p><strong>Had AI Interpretation:</strong> {log.aiContext.hadAIInterpretation ? 'Yes' : 'No'}</p>
-                                                                <p><strong>Had Safety Net:</strong> {log.aiContext.hadSafetyNet ? 'Yes' : 'No'}</p>
+                                                                {log.aiContext.hadAIInterpretation !== undefined && (
+                                                                    <p><strong>Had AI Interpretation:</strong> {log.aiContext.hadAIInterpretation ? 'Yes' : 'No'}</p>
+                                                                )}
+                                                                {log.aiContext.hadSafetyNet !== undefined && (
+                                                                    <p><strong>Had Safety Net:</strong> {log.aiContext.hadSafetyNet ? 'Yes' : 'No'}</p>
+                                                                )}
                                                                 {log.aiContext.commandStartTime && (
                                                                     <p><strong>Command Start:</strong> {new Date(log.aiContext.commandStartTime).toLocaleTimeString()}</p>
+                                                                )}
+                                                                {/* AI Reasoning Error fields */}
+                                                                {log.aiContext.commandToExecute && (
+                                                                    <p className="mt-2"><strong>Command To Execute:</strong> <span className="font-mono text-xs bg-purple-50 dark:bg-purple-900/20 px-1 rounded">{log.aiContext.commandToExecute}</span></p>
+                                                                )}
+                                                                {log.aiContext.confidence !== undefined && (
+                                                                    <p><strong>Confidence:</strong> {log.aiContext.confidence}</p>
+                                                                )}
+                                                                {log.aiContext.reasoning && (
+                                                                    <>
+                                                                        <p className="mt-2"><strong>AI Reasoning:</strong></p>
+                                                                        <p className="mt-1 text-xs bg-purple-50 dark:bg-purple-900/20 p-2 rounded whitespace-pre-wrap">{log.aiContext.reasoning}</p>
+                                                                    </>
                                                                 )}
                                                             </div>
                                                         )}

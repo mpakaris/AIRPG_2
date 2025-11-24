@@ -12,6 +12,7 @@ import type { Game, PlayerState, Effect, GameObjectId } from "@/lib/game/types";
 import { FocusResolver, Validator } from "@/lib/game/engine";
 import { normalizeName } from "@/lib/utils";
 import { logEntityDebug } from "@/lib/game/utils/debug-helpers";
+import { MessageExpander } from "@/lib/game/utils/message-expansion";
 
 export async function handlePassword(
     state: PlayerState,
@@ -23,10 +24,11 @@ export async function handlePassword(
     // CRITICAL: Password input REQUIRES focus on an inputtable object
     // This solves the "justice" ambiguity issue
     if (!state.currentFocusId || state.focusType !== 'object') {
+        const message = await MessageExpander.static(game.systemMessages.needsFocus);
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'system',
-            content: game.systemMessages.needsFocus
+            content: message
         }];
     }
 
@@ -35,10 +37,11 @@ export async function handlePassword(
     const focusedObject = game.gameObjects[focusedObjectId];
 
     if (!focusedObject) {
+        const message = await MessageExpander.static(game.systemMessages.focusSystemError);
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'system',
-            content: game.systemMessages.focusSystemError
+            content: message
         }];
     }
 
@@ -47,10 +50,11 @@ export async function handlePassword(
 
     // Verify the focused object accepts password input
     if (!focusedObject.input || focusedObject.input.type !== 'phrase') {
+        const message = await MessageExpander.static(game.systemMessages.noPasswordInput(focusedObject.name));
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'narrator',
-            content: game.systemMessages.noPasswordInput(focusedObject.name)
+            content: message
         }];
     }
 
@@ -58,10 +62,11 @@ export async function handlePassword(
     const validation = Validator.validate('unlock', focusedObjectId, state, game);
     if (!validation.valid) {
         // Already unlocked (validation.valid is false when object is not locked)
+        const message = await MessageExpander.static(game.systemMessages.alreadyUnlocked(focusedObject.name));
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'narrator',
-            content: game.systemMessages.alreadyUnlocked(focusedObject.name)
+            content: message
         }];
     }
 
@@ -78,10 +83,11 @@ export async function handlePassword(
     phrase = normalizeName(phrase);
 
     if (!phrase) {
+        const message = await MessageExpander.static(game.systemMessages.wrongPassword);
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'narrator',
-            content: game.systemMessages.wrongPassword
+            content: message
         }];
     }
 

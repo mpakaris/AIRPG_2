@@ -123,11 +123,13 @@ async function interpretWithPrimaryAI(
   // Calculate confidence based on reasoning quality and command validity
   const confidence = calculateConfidence(output);
 
+  // CRITICAL: Never expose agentResponse or reasoning to player
+  // These fields are for internal use only (debugging/logging)
   return {
-    responseToPlayer: output.agentResponse || '',
+    responseToPlayer: '', // Always empty - we don't want AI explanations shown to player
     commandToExecute: output.commandToExecute,
     confidence,
-    reasoning: output.reasoning,
+    reasoning: output.reasoning, // Kept for logging/debugging, but not shown to player
   };
 }
 
@@ -190,19 +192,25 @@ async function interpretWithSafetyAI(
 
 Return ONLY valid JSON in this exact format:
 {
-  "responseToPlayer": "brief acknowledgment or empty string",
+  "responseToPlayer": "",
   "commandToExecute": "command target" or "invalid" if unclear,
   "confidence": 0.0-1.0,
   "reasoning": "brief explanation"
 }
 
-**Rules:**
-- Map to valid game commands only: examine, take, use, open, read, move, go, talk, etc.
+**CRITICAL RULES:**
+- **responseToPlayer MUST be empty string "" for ALL normal command interpretation**
+- ONLY fill responseToPlayer if command is truly invalid/unclear (commandToExecute: "invalid")
+- Map to valid game commands: examine, take, use, open, read, move, go, talk, etc.
 - "check X" = "examine X" (NOT open)
 - "grab/pick up X" = "take X"
 - "use X on Y" preserves both objects
 - Be conservative with confidence - if unsure, score 0.3-0.5
-- If input is gibberish/conversational, return "invalid" with low confidence`;
+- DO NOT put reasoning or explanations in responseToPlayer - use the reasoning field instead
+
+**Examples:**
+✅ CORRECT: {"responseToPlayer": "", "commandToExecute": "examine counter", "confidence": 0.8, "reasoning": "Mapped 'check the cashier' to examine counter"}
+❌ WRONG: {"responseToPlayer": "Player asked to check cashier...", "commandToExecute": "examine counter", "confidence": 0.6, "reasoning": "..."}`;
 
   const model = 'gpt-5-nano-2025-08-07';
   const supportsTemperature = !model.includes('gpt-5-nano'); // gpt-5-nano doesn't support custom temperature

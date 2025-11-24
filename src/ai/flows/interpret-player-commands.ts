@@ -23,7 +23,7 @@ export type InterpretPlayerCommandInput = z.infer<typeof InterpretPlayerCommandI
 
 // Define the output schema for the interpretPlayerCommand function
 const InterpretPlayerCommandOutputSchema = z.object({
-  responseToPlayer: z.string().describe('A drafted response to the player.'),
+  responseToPlayer: z.string().describe('ONLY use this to inform the player about errors, invalid commands, or when clarification is needed. For normal command interpretation, leave this EMPTY. Do NOT use this field for internal reasoning or command matching explanations.'),
   commandToExecute: z.string().describe('The command to execute based on the player input.'),
 });
 export type InterpretPlayerCommandOutput = z.infer<typeof InterpretPlayerCommandOutputSchema>;
@@ -59,8 +59,19 @@ const interpretPlayerCommandPrompt = ai.definePrompt({
   - {{this}}
   {{/each}}
 
-  Based on the player's command, draft a response to the player and determine which command to execute.
+  Based on the player's command, determine which command to execute.
   Ensure the command starts with a valid verb from the list of available commands (examine, take, go, goto, moveto, shift, use, talk, look, inventory, password, read, open, break, search, drop, close, move, combine).
+
+  **CRITICAL: responseToPlayer field**
+  - Leave responseToPlayer EMPTY ("") for normal command interpretation
+  - ONLY fill responseToPlayer when:
+    1. The command is invalid or off-topic (commandToExecute: "invalid")
+    2. You need to clarify something with the player
+  - DO NOT use responseToPlayer for internal reasoning like "Player asked to check X..."
+  - DO NOT explain command matching or substitutions
+  - Examples:
+    - "check the drawer" → responseToPlayer: "", commandToExecute: "examine drawer" ✅
+    - "hello how are you" → responseToPlayer: "Let's stay focused on the investigation. What do you want to do?", commandToExecute: "invalid" ✅
 
   **IMPORTANT: MULTI-OBJECT COMMANDS ARE VALID**
   - Commands like "read X with Y", "use X on Y", "open X with Y" are VALID and COMMON in this game
@@ -104,6 +115,24 @@ const interpretPlayerCommandPrompt = ai.definePrompt({
     - "open door with key" → "open door with key"
     - "check article with magnifying glass" → "examine article with magnifying glass"
   - Do NOT strip out the tool/item reference - the game engine needs both objects to process the command correctly
+
+  **IMPORTANT BODY PARTS & PHYSICAL ACTIONS:**
+  - Body parts (foot, hand, fist, leg, elbow, knee, etc.) are NOT items to find - they're always available
+  - Physical actions with body parts should map to appropriate game commands:
+    - "kick [object]" → "break [object]"
+    - "hit [object] with foot/fist/hand" → "break [object]"
+    - "punch [object]" → "break [object]"
+    - "slam [object]" → "break [object]"
+    - "push [object]" → "move [object]" or "use [object]"
+    - "pull [object]" → "move [object]" or "use [object]"
+    - "touch [object]" → "examine [object]"
+  - Examples:
+    - "kick the box" → "break box" ✅
+    - "hit box with my foot" → "break box" ✅
+    - "punch the door" → "break door" ✅
+    - "slam my fist on the table" → "break table" ✅
+    - "push the bookshelf" → "move bookshelf" ✅
+  - NEVER respond with "You don't see foot/hand/fist here" - these are body parts, not game objects
 
   Output should be formatted as valid JSON.
   `, safetySettings: [{

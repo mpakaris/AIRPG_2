@@ -14,15 +14,17 @@ import { normalizeName } from "@/lib/utils";
 import { buildEffectsFromOutcome } from "@/lib/game/utils/outcome-helpers";
 import { findBestMatch } from "@/lib/game/utils/name-matching";
 import { getSmartNotFoundMessage } from "@/lib/game/utils/smart-messages";
+import { MessageExpander } from "@/lib/game/utils/message-expansion";
 
 export async function handleTake(state: PlayerState, targetName: string, game: Game): Promise<Effect[]> {
   const normalizedTarget = normalizeName(targetName);
 
   if (!normalizedTarget) {
+    const message = await MessageExpander.static(game.systemMessages.needsTarget.take);
     return [{
       type: 'SHOW_MESSAGE',
       speaker: 'system',
-      content: game.systemMessages.needsTarget.take
+      content: message
     }];
   }
 
@@ -37,10 +39,11 @@ export async function handleTake(state: PlayerState, targetName: string, game: G
   // 1. Check if already in inventory
   if (bestMatch?.category === 'inventory') {
     const item = game.items[bestMatch.id as ItemId];
+    const message = await MessageExpander.static(game.systemMessages.alreadyHaveItem(item.name));
     return [{
       type: 'SHOW_MESSAGE',
       speaker: 'system',
-      content: game.systemMessages.alreadyHaveItem(item.name),
+      content: message,
       messageType: 'image',
       imageUrl: game.systemMedia?.take?.failure?.url,
       imageDescription: game.systemMedia?.take?.failure?.description,
@@ -69,10 +72,11 @@ export async function handleTake(state: PlayerState, targetName: string, game: G
   const itemId = bestMatch.id as ItemId;
   const item = game.items[itemId];
   if (!item) {
+    const message = await MessageExpander.notVisible(game.systemMessages.notVisible, targetName);
     return [{
       type: 'SHOW_MESSAGE',
       speaker: 'system',
-      content: game.systemMessages.notVisible(targetName),
+      content: message,
       messageType: 'image',
       imageUrl: game.systemMedia?.take?.failure?.url,
       imageDescription: game.systemMedia?.take?.failure?.description,

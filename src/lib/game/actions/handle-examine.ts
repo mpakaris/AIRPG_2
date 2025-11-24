@@ -13,6 +13,7 @@ import { normalizeName } from "@/lib/utils";
 import { handleRead } from "./handle-read";
 import { buildEffectsFromOutcome } from "@/lib/game/utils/outcome-helpers";
 import { findBestMatch } from "@/lib/game/utils/name-matching";
+import { MessageExpander } from "@/lib/game/utils/message-expansion";
 import { logEntityDebug } from "@/lib/game/utils/debug-helpers";
 import { getSmartNotFoundMessage } from "@/lib/game/utils/smart-messages";
 
@@ -22,10 +23,11 @@ export async function handleExamine(state: PlayerState, targetName: string, game
     const normalizedTarget = normalizeName(targetName);
 
     if (!normalizedTarget) {
+        const message = await MessageExpander.static(game.systemMessages.needsTarget.examine);
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'system',
-            content: game.systemMessages.needsTarget.examine
+            content: message
         }];
     }
 
@@ -59,16 +61,18 @@ export async function handleExamine(state: PlayerState, targetName: string, game
         const itemId = bestMatch.id as ItemId;
         const item = game.items[itemId];
         if (!item) {
+            const message = await MessageExpander.notVisible(game.systemMessages.notVisible, targetName);
             return [{
                 type: 'SHOW_MESSAGE',
                 speaker: 'system',
-                content: game.systemMessages.notVisible(targetName)
+                content: message
             }];
         }
 
-        // SMART REDIRECT: For books and documents, examining means reading
+        // SMART REDIRECT: For books and documents, only redirect if no onExamine handler exists
         if (item.archetype === 'Book' || item.archetype === 'Document' || item.archetype === 'Media') {
-            if (item.capabilities?.isReadable) {
+            const hasExamineHandler = HandlerResolver.getEffectiveHandler(item, 'examine', state, game);
+            if (item.capabilities?.isReadable && !hasExamineHandler) {
                 return await handleRead(state, targetName, game);
             }
         }
@@ -144,9 +148,10 @@ export async function handleExamine(state: PlayerState, targetName: string, game
         const visibleItemId = bestMatch.id as ItemId;
         const item = game.items[visibleItemId];
 
-        // SMART REDIRECT: For books and documents, examining means reading
+        // SMART REDIRECT: For books and documents, only redirect if no onExamine handler exists
         if (item?.archetype === 'Book' || item?.archetype === 'Document' || item?.archetype === 'Media') {
-            if (item.capabilities?.isReadable) {
+            const hasExamineHandler = HandlerResolver.getEffectiveHandler(item, 'examine', state, game);
+            if (item.capabilities?.isReadable && !hasExamineHandler) {
                 return await handleRead(state, targetName, game);
             }
         }
@@ -216,10 +221,11 @@ export async function handleExamine(state: PlayerState, targetName: string, game
         const targetObjectId = bestMatch.id as GameObjectId;
         const targetObject = game.gameObjects[targetObjectId];
         if (!targetObject) {
+            const message = await MessageExpander.notVisible(game.systemMessages.notVisible, targetName);
             return [{
                 type: 'SHOW_MESSAGE',
                 speaker: 'system',
-                content: game.systemMessages.notVisible(targetName)
+                content: message
             }];
         }
 
@@ -298,10 +304,26 @@ export async function handleExamine(state: PlayerState, targetName: string, game
         return effects;
     }
 
+    // GATED CONTENT CHECK: Before returning "not found", check if the player is trying to access
+    // content that exists but isn't revealed yet (gated content)
+    const { checkForGatedContent } = await import('@/lib/game/utils/gated-content-detector');
+    const gatedCheck = checkForGatedContent(normalizedTarget, state, game);
+
+    if (gatedCheck.isGated) {
+        // Player is trying to examine something that exists but is blocked
+        return [{
+            type: 'SHOW_MESSAGE',
+            speaker: 'narrator',
+            content: gatedCheck.contextualMessage
+        }];
+    }
+
+    // Not gated - truly not visible or doesn't exist
+    const message = await MessageExpander.notVisible(game.systemMessages.notVisible, targetName);
     return [{
         type: 'SHOW_MESSAGE',
         speaker: 'system',
-        content: game.systemMessages.notVisible(targetName)
+        content: message
     }];
 }
 

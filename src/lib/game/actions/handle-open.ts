@@ -8,6 +8,7 @@ import { handleRead } from "@/lib/game/actions/handle-read";
 import { buildEffectsFromOutcome, resolveConditionalHandler, evaluateHandlerOutcome } from "@/lib/game/utils/outcome-helpers";
 import { findBestMatch } from "@/lib/game/utils/name-matching";
 import { logEntityDebug } from "@/lib/game/utils/debug-helpers";
+import { MessageExpander } from "@/lib/game/utils/message-expansion";
 
 export async function handleOpen(state: PlayerState, targetName: string, game: Game): Promise<Effect[]> {
     const normalizedTargetName = normalizeName(targetName);
@@ -25,10 +26,11 @@ export async function handleOpen(state: PlayerState, targetName: string, game: G
         const targetObjectId = bestMatch.id as GameObjectId;
         const targetObject = game.gameObjects[targetObjectId];
         if (!targetObject) {
+            const message = await MessageExpander.cantOpen(game.systemMessages.cantOpen, targetName);
             return [{
                 type: 'SHOW_MESSAGE',
                 speaker: 'system',
-                content: game.systemMessages.cantOpen(targetName)
+                content: message
             }];
         }
 

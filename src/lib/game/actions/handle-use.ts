@@ -14,6 +14,7 @@ import { normalizeName } from "@/lib/utils";
 import { buildEffectsFromOutcome } from "@/lib/game/utils/outcome-helpers";
 import { findBestMatch } from "@/lib/game/utils/name-matching";
 import { getSmartNotFoundMessage } from "@/lib/game/utils/smart-messages";
+import { MessageExpander } from "@/lib/game/utils/message-expansion";
 
 export async function handleUse(state: PlayerState, itemName: string, targetName: string, game: Game): Promise<Effect[]> {
   const normalizedItemName = normalizeName(itemName);
@@ -42,10 +43,11 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
   const itemId = itemMatch.id as ItemId;
   const itemToUse = game.items[itemId];
   if (!itemToUse) {
+    const message = await MessageExpander.dontHaveItem(game.systemMessages.dontHaveItem, itemName);
     return [{
       type: 'SHOW_MESSAGE',
       speaker: 'system',
-      content: game.systemMessages.dontHaveItem(itemName)
+      content: message
     }];
   }
 
@@ -65,10 +67,11 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
       const targetObjectId = targetMatch.id as GameObjectId;
       const targetObject = game.gameObjects[targetObjectId];
       if (!targetObject) {
+        const message = await MessageExpander.cantUseItem(game.systemMessages.cantUseItem, itemToUse.name);
         return [{
           type: 'SHOW_MESSAGE',
           speaker: 'narrator',
-          content: game.systemMessages.cantUseItem(itemToUse.name)
+          content: message
         }];
       }
 
@@ -130,19 +133,25 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
           }
 
           // If we get here, we found matching handlers but none had outcomes
+          const message = await MessageExpander.static(game.systemMessages.useDidntWork);
           return [{
             type: 'SHOW_MESSAGE',
             speaker: 'narrator',
-            content: game.systemMessages.useDidntWork
+            content: message
           }];
         }
       }
 
       // No matching handler
+      const message = await MessageExpander.cantUseItemOnTarget(
+        game.systemMessages.cantUseOnTarget,
+        itemToUse.name,
+        targetObject.name
+      );
       return [{
         type: 'SHOW_MESSAGE',
         speaker: 'narrator',
-        content: game.systemMessages.cantUseOnTarget(itemToUse.name, targetObject.name)
+        content: message
       }];
     }
 
@@ -152,10 +161,11 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
     );
 
     if (objectExistsInGame) {
+      const message = await MessageExpander.notVisible(game.systemMessages.noVisibleTarget, normalizedTargetName);
       return [{
         type: 'SHOW_MESSAGE',
         speaker: 'narrator',
-        content: game.systemMessages.noVisibleTarget(normalizedTargetName)
+        content: message
       }];
     }
 
@@ -169,17 +179,23 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
 
     if (targetItemMatch) {
       // Item-on-item combination (not implemented yet)
+      const message = await MessageExpander.cantUseItemOnTarget(
+        game.systemMessages.cantUseOnTarget,
+        itemName,
+        targetName
+      );
       return [{
         type: 'SHOW_MESSAGE',
         speaker: 'narrator',
-        content: game.systemMessages.cantUseOnTarget(itemName, targetName)
+        content: message
       }];
     }
 
+    const message = await MessageExpander.notVisible(game.systemMessages.notVisible, targetName);
     return [{
       type: 'SHOW_MESSAGE',
       speaker: 'narrator',
-      content: game.systemMessages.notVisible(targetName)
+      content: message
     }];
   }
 
@@ -192,10 +208,11 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
     const isFail = !conditionsMet;
 
     if (!outcome) {
+      const message = await MessageExpander.cantUseItem(game.systemMessages.cantUseItem, itemToUse.name);
       return [{
         type: 'SHOW_MESSAGE',
         speaker: 'narrator',
-        content: game.systemMessages.cantUseItem(itemToUse.name)
+        content: message
       }];
     }
 
