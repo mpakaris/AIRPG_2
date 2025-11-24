@@ -182,6 +182,8 @@ const MessageLog: FC<Pick<GameScreenProps, "messages">> = ({ messages }) => {
           const isAgent = message.sender === "agent";
           const isImageOnly = message.isImageOnly;
           const isSecurityFilter = message.senderName === "🛡️ Security Filter";
+          const isSystemError = message.senderName === "⚠️ System Error";
+          const isDatabaseError = message.senderName === "⚠️ Database Error";
 
           return (
             <div
@@ -200,7 +202,9 @@ const MessageLog: FC<Pick<GameScreenProps, "messages">> = ({ messages }) => {
                     ? "rounded-br-none bg-primary text-primary-foreground"
                     : "rounded-bl-none bg-muted",
                   isAgent && "bg-blue-500/10 border border-blue-500/20",
-                  isSecurityFilter && "bg-red-500/10 border-2 border-red-500/50"
+                  isSecurityFilter && "bg-red-500/10 border-2 border-red-500/50",
+                  isSystemError && "bg-orange-500/10 border-2 border-orange-500/50",
+                  isDatabaseError && "bg-yellow-500/10 border-2 border-yellow-500/50"
                 )}
               >
                 {!isPlayer && !isImageOnly && (
@@ -208,7 +212,9 @@ const MessageLog: FC<Pick<GameScreenProps, "messages">> = ({ messages }) => {
                     className={cn(
                       "text-xs font-bold text-primary mb-1",
                       isAgent && "text-blue-500",
-                      isSecurityFilter && "text-red-600 dark:text-red-400"
+                      isSecurityFilter && "text-red-600 dark:text-red-400",
+                      isSystemError && "text-orange-600 dark:text-orange-400",
+                      isDatabaseError && "text-yellow-600 dark:text-yellow-400"
                     )}
                   >
                     {message.senderName}

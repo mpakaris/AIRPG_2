@@ -66,10 +66,13 @@ export async function callLocalLLM<T>(
   // Check if using Ollama (port 11434) - it doesn't fully support response_format
   const isOllama = finalConfig.baseUrl.includes('11434');
 
+  // Some models don't support custom temperature (e.g., gpt-5-nano)
+  const supportsTemperature = !finalConfig.model.includes('gpt-5-nano');
+
   const requestBody: ChatCompletionRequest = {
     model: finalConfig.model,
     messages,
-    temperature: 0.3, // Low temperature for consistent command interpretation
+    ...(supportsTemperature ? { temperature: 0.3 } : {}), // Only set if model supports it
     max_tokens: 500, // Short responses for command parsing
     ...(isOllama ? {} : { response_format: { type: 'json_object' } }), // Only for non-Ollama
   };

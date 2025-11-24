@@ -3,7 +3,7 @@ import type { Message } from '@/lib/game/types';
 /**
  * Helper function to extract UI messages from consolidated log entries
  * Handles both old format (regular messages) and new format (consolidated entries)
- * Extracts uiMessages from consolidated entries (command, validation_error)
+ * Extracts uiMessages from consolidated entries (command, validation_error, ai_error, db_error)
  */
 export function extractUIMessages(logMessages: any[]): Message[] {
   if (!logMessages || logMessages.length === 0) return [];
@@ -11,7 +11,7 @@ export function extractUIMessages(logMessages: any[]): Message[] {
   const uiMessages: Message[] = [];
 
   // Log entry types that use consolidated format with uiMessages arrays
-  const CONSOLIDATED_TYPES = ['command', 'validation_error'];
+  const CONSOLIDATED_TYPES = ['command', 'validation_error', 'ai_error', 'db_error'];
 
   for (const entry of logMessages) {
     if (CONSOLIDATED_TYPES.includes(entry.type)) {

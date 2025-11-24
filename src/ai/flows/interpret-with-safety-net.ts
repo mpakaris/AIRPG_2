@@ -204,13 +204,16 @@ Return ONLY valid JSON in this exact format:
 - Be conservative with confidence - if unsure, score 0.3-0.5
 - If input is gibberish/conversational, return "invalid" with low confidence`;
 
+  const model = 'gpt-5-nano-2025-08-07';
+  const supportsTemperature = !model.includes('gpt-5-nano'); // gpt-5-nano doesn't support custom temperature
+
   const response = await openai.chat.completions.create({
-    model: 'gpt-5-nano-2025-08-07',
+    model: model,
     messages: [
       { role: 'system', content: 'You are a precise game command interpreter. Always return valid JSON.' },
       { role: 'user', content: prompt }
     ],
-    temperature: 0.3,
+    ...(supportsTemperature ? { temperature: 0.3 } : {}), // Only set temperature if model supports it
     response_format: { type: 'json_object' },
   });
 

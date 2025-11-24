@@ -357,19 +357,47 @@ export async function processCommand(
     const logRef = doc(firestore, 'logs', `${userId}_${gameId}`);
 
     try {
-        const [stateSnap, logSnap] = await Promise.all([getDoc(stateRef), getDoc(logRef)]);
+        // Try to load state and logs from database
+        let stateSnap, logSnap;
+        try {
+            [stateSnap, logSnap] = await Promise.all([getDoc(stateRef), getDoc(logRef)]);
+        } catch (dbReadError) {
+            console.error('[Database Error] Failed to read game data:', dbReadError);
+
+            // Create database error log
+            const dbErrorLog = createDatabaseErrorLog(
+                'READ_STATE',
+                dbReadError instanceof Error ? dbReadError : new Error('Unknown database read error'),
+                userId,
+                gameId,
+                safePlayerInput
+            );
+
+            // Use initial state as fallback
+            currentState = getInitialState(game);
+            allMessagesForSession = await createInitialMessages(currentState, game);
+
+            // Add db_error to messages
+            allMessagesForSession.push(dbErrorLog);
+
+            // Return with error message
+            return {
+                newState: currentState,
+                messages: extractUIMessages(allMessagesForSession)
+            };
+        }
 
         if (stateSnap.exists()) {
             currentState = stateSnap.data() as PlayerState;
         } else {
             currentState = getInitialState(game);
         }
-    
+
         if (!game.locations[currentState.currentLocationId]) {
             console.warn(`Invalid location ID '${currentState.currentLocationId}' found in processCommand. Resetting to initial state.`);
             currentState = getInitialState(game);
         }
-        
+
         if (logSnap.exists() && logSnap.data()?.messages?.length > 0) {
             allMessagesForSession = logSnap.data()?.messages || [];
         } else {
@@ -994,10 +1022,32 @@ export async function processCommand(
 
                 // Save consolidated entry to Firebase
                 const consolidatedMessages = [...allMessagesForSession, consolidatedEntry as any];
-                await logAndSave(userId, gameId, finalResult.newState, consolidatedMessages);
+                const saveResult = await logAndSave(userId, gameId, finalResult.newState, consolidatedMessages);
+
+                // If database save failed, create a db_error entry and add to messages
+                let finalMessages = consolidatedMessages;
+                if (!saveResult.success && saveResult.error) {
+                    console.error('[Database Error] Failed to save game data:', saveResult.error);
+                    const dbErrorLog = createDatabaseErrorLog(
+                        'WRITE_STATE',
+                        saveResult.error,
+                        userId,
+                        gameId,
+                        safePlayerInput
+                    );
+                    finalMessages = [...consolidatedMessages, dbErrorLog];
+
+                    // Try to save with the error included (best effort - may also fail)
+                    try {
+                        await logAndSave(userId, gameId, finalResult.newState, finalMessages);
+                    } catch (secondaryError) {
+                        console.error('[Database Error] Failed to save db_error log:', secondaryError);
+                        // At least return the error to the user
+                    }
+                }
 
                 // Extract all UI messages for client display
-                const allUIMessages = extractUIMessages(consolidatedMessages);
+                const allUIMessages = extractUIMessages(finalMessages);
                 return {
                     newState: finalResult.newState,
                     messages: allUIMessages  // Return full UI message history
@@ -1019,13 +1069,75 @@ export async function processCommand(
     } catch (error) {
         console.error('Error processing command:', error);
         const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-        const errorResponseMessage = createMessage('system', 'System', `Sorry, an error occurred: ${errorMessage}`);
-        
-        const messagesWithError = [...allMessagesForSession, errorResponseMessage];
-        
+        const errorStack = error instanceof Error ? error.stack : undefined;
+
+        // Determine error type/source
+        let errorSource: 'AI_INTERPRETATION' | 'AI_NARRATION' | 'HANDLER_EXECUTION' | 'STATE_UPDATE' | 'DATABASE' | 'UNKNOWN' = 'UNKNOWN';
+        if (errorMessage.includes('temperature') || errorMessage.includes('model') || errorMessage.includes('API')) {
+            errorSource = 'AI_INTERPRETATION';
+        } else if (errorMessage.includes('gemini') || errorMessage.includes('openai') || errorMessage.includes('genkit')) {
+            errorSource = 'AI_NARRATION';
+        } else if (errorMessage.includes('handler') || errorMessage.includes('command')) {
+            errorSource = 'HANDLER_EXECUTION';
+        } else if (errorMessage.includes('state') || errorMessage.includes('update')) {
+            errorSource = 'STATE_UPDATE';
+        } else if (errorMessage.includes('firestore') || errorMessage.includes('database')) {
+            errorSource = 'DATABASE';
+        }
+
+        // Create user-facing error message
+        const errorResponseMessage = createMessage(
+            'system',
+            '⚠️ System Error',
+            `Sorry, something went wrong while processing your command.\n\nError: ${errorMessage}\n\nPlease try a different command or contact support if this persists.`
+        );
+
+        // Create consolidated AI error log entry (similar to validation_error)
+        const aiErrorLog: any = {
+            type: 'ai_error',
+            errorId: `ai_error_${Date.now()}`,
+            timestamp: Date.now(),
+
+            // What the player prompted
+            playerInput: safePlayerInput || rawPlayerInput || '',
+            rawInput: rawPlayerInput || '',
+
+            // Error details
+            error: {
+                message: errorMessage,
+                stack: errorStack,
+                source: errorSource,
+                name: error instanceof Error ? error.name : 'Error',
+            },
+
+            // What the system replied to the player
+            systemResponse: `Sorry, something went wrong while processing your command.\n\nError: ${errorMessage}`,
+
+            // Context
+            context: {
+                userId: userId,
+                gameId: gameId,
+                chapterId: currentState?.currentChapterId,
+                locationId: currentState?.currentLocationId,
+                focusId: currentState?.currentFocusId,
+                focusType: currentState?.focusType,
+                activeConversation: currentState?.activeConversationWith,
+            },
+
+            // AI tracking (if available from scope)
+            aiContext: typeof commandStartTime !== 'undefined' ? {
+                commandStartTime,
+                hadAIInterpretation: typeof aiInterpretationMs !== 'undefined' && aiInterpretationMs > 0,
+                hadSafetyNet: typeof safetyNetResult !== 'undefined',
+            } : undefined,
+
+            // UI Messages (single consolidated error message)
+            uiMessages: [errorResponseMessage]
+        };
+
         const stateRef = doc(firestore, 'player_states', `${userId}_${gameId}`);
         const stateSnap = await getDoc(stateRef);
-        
+
         let stateToSave: PlayerState;
         if (stateSnap.exists()) {
             stateToSave = stateSnap.data() as PlayerState;
@@ -1035,6 +1147,8 @@ export async function processCommand(
             stateToSave = getInitialState(game);
         }
 
+        // Add consolidated error entry to messages
+        const messagesWithError = [...allMessagesForSession, aiErrorLog];
         await logAndSave(userId, gameId, stateToSave, messagesWithError);
 
         if (process.env.NEXT_PUBLIC_NODE_ENV === 'development') {
@@ -1186,16 +1300,76 @@ export interface EnhancedCommandLog {
   wasUnclear: boolean;
 }
 
+/**
+ * Helper function to create database error log entry
+ */
+function createDatabaseErrorLog(
+  operation: 'READ_STATE' | 'READ_LOGS' | 'WRITE_STATE' | 'WRITE_LOGS' | 'INIT_FIRESTORE' | 'DELETE_DATA',
+  error: Error,
+  userId: string,
+  gameId: string,
+  playerInput?: string
+): any {
+  const errorMessage = error instanceof Error ? error.message : 'An unknown database error occurred';
+  const errorStack = error instanceof Error ? error.stack : undefined;
+
+  const errorDisplayMessage = createMessage(
+    'system',
+    '⚠️ Database Error',
+    `Sorry, we couldn't ${operation === 'READ_STATE' || operation === 'READ_LOGS' ? 'load' : 'save'} your game data.\n\nError: ${errorMessage}\n\nYour progress may not be saved. Please try again or contact support.`
+  );
+
+  return {
+    type: 'db_error',
+    errorId: `db_error_${Date.now()}`,
+    timestamp: Date.now(),
+
+    // What the player prompted (if available)
+    playerInput: playerInput || '',
+
+    // Database operation that failed
+    operation: operation,
+    operationDescription: {
+      'READ_STATE': 'Loading player state from database',
+      'READ_LOGS': 'Loading message logs from database',
+      'WRITE_STATE': 'Saving player state to database',
+      'WRITE_LOGS': 'Saving message logs to database',
+      'INIT_FIRESTORE': 'Initializing database connection',
+      'DELETE_DATA': 'Deleting user data from database',
+    }[operation],
+
+    // Error details
+    error: {
+      message: errorMessage,
+      stack: errorStack,
+      name: error instanceof Error ? error.name : 'Error',
+    },
+
+    // What the system replied to the player
+    systemResponse: `Sorry, we couldn't ${operation.includes('READ') ? 'load' : 'save'} your game data.\n\nError: ${errorMessage}`,
+
+    // Context
+    context: {
+      userId: userId,
+      gameId: gameId,
+    },
+
+    // UI Messages (single consolidated error message)
+    uiMessages: [errorDisplayMessage]
+  };
+}
+
 export async function logAndSave(
   userId: string,
   gameId: GameId,
   state: PlayerState,
   messages: Message[]
-): Promise<void> {
+): Promise<{ success: boolean; error?: Error }> {
   const { firestore } = initializeFirebase();
   if (!firestore) {
+    const error = new Error('Firestore is not initialized');
     console.error('Firestore is not initialized.');
-    return;
+    return { success: false, error };
   }
 
   const stateRef = doc(firestore, 'player_states', `${userId}_${gameId}`);
@@ -1208,8 +1382,11 @@ export async function logAndSave(
 
     await setDoc(logRef, { messages: messages }, { merge: false });
 
+    return { success: true };
   } catch (error) {
     console.error('Failed to save game state or logs:', error);
+    const dbError = error instanceof Error ? error : new Error('Unknown database error');
+    return { success: false, error: dbError };
   }
 }
 

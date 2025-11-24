@@ -223,6 +223,8 @@ const PlayerDetails = ({ user, game }: { user: User, game: Game | undefined }) =
                                     // Check log type
                                     const isCommandLog = log.type === 'command';
                                     const isValidationError = log.type === 'validation_error';
+                                    const isAIError = log.type === 'ai_error';
+                                    const isDBError = log.type === 'db_error';
 
                                     // Validation Error Log
                                     if (isValidationError) {
@@ -308,6 +310,184 @@ const PlayerDetails = ({ user, game }: { user: User, game: Game | undefined }) =
                                                                 </div>
                                                             </div>
                                                         )}
+                                                    </div>
+                                                </AccordionContent>
+                                            </AccordionItem>
+                                        );
+                                    }
+
+                                    // AI Error Log
+                                    if (isAIError) {
+                                        return (
+                                            <AccordionItem key={log.errorId || index} value={`ai-error-${index}`}>
+                                                <AccordionTrigger className="text-xs py-2">
+                                                    <div className="flex items-center gap-2 w-full">
+                                                        <span className="font-mono bg-orange-100 dark:bg-orange-900 px-2 py-0.5 rounded text-orange-700 dark:text-orange-300 font-bold">
+                                                            AI Error
+                                                        </span>
+                                                        <span className="flex-1 text-left truncate text-orange-600 dark:text-orange-400">
+                                                            "{log.playerInput?.substring(0, 60) || 'No input'}{log.playerInput?.length > 60 ? '...' : ''}"
+                                                        </span>
+                                                        <span className="text-orange-600 dark:text-orange-400">⚠</span>
+                                                    </div>
+                                                </AccordionTrigger>
+                                                <AccordionContent>
+                                                    <div className="space-y-3 text-xs">
+                                                        {/* Player Input Section */}
+                                                        <div className="border-l-2 border-orange-500 pl-3">
+                                                            <p className="font-bold text-orange-600 dark:text-orange-400">📥 Player Input</p>
+                                                            <p className="mt-1"><strong>Sanitized:</strong> {log.playerInput}</p>
+                                                            {log.rawInput && log.rawInput !== log.playerInput && (
+                                                                <p className="mt-1"><strong>Original:</strong> {log.rawInput}</p>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Error Details Section */}
+                                                        <div className="border-l-2 border-red-500 pl-3">
+                                                            <p className="font-bold text-red-600 dark:text-red-400">❌ Error Details</p>
+                                                            <div className="mt-1 bg-red-50 dark:bg-red-900/20 p-2 rounded">
+                                                                <p><strong>Source:</strong> <span className="font-mono text-xs">{log.error?.source || 'UNKNOWN'}</span></p>
+                                                                <p><strong>Type:</strong> {log.error?.name || 'Error'}</p>
+                                                                <p className="mt-2"><strong>Message:</strong></p>
+                                                                <p className="mt-1 text-muted-foreground whitespace-pre-wrap">{log.error?.message}</p>
+                                                                {log.error?.stack && (
+                                                                    <>
+                                                                        <p className="mt-2"><strong>Stack Trace:</strong></p>
+                                                                        <pre className="mt-1 text-xs bg-muted p-2 rounded overflow-x-auto max-h-32">
+                                                                            {log.error.stack}
+                                                                        </pre>
+                                                                    </>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        {/* System Response Section */}
+                                                        {log.systemResponse && (
+                                                            <div className="border-l-2 border-green-500 pl-3">
+                                                                <p className="font-bold text-green-600 dark:text-green-400">💬 System Response (to Player)</p>
+                                                                <p className="mt-1 bg-green-50 dark:bg-green-900/20 p-2 rounded whitespace-pre-wrap">
+                                                                    {log.systemResponse}
+                                                                </p>
+                                                            </div>
+                                                        )}
+
+                                                        {/* AI Context Section (if available) */}
+                                                        {log.aiContext && (
+                                                            <div className="border-l-2 border-purple-500 pl-3">
+                                                                <p className="font-bold text-purple-600 dark:text-purple-400">🤖 AI Context</p>
+                                                                <p><strong>Had AI Interpretation:</strong> {log.aiContext.hadAIInterpretation ? 'Yes' : 'No'}</p>
+                                                                <p><strong>Had Safety Net:</strong> {log.aiContext.hadSafetyNet ? 'Yes' : 'No'}</p>
+                                                                {log.aiContext.commandStartTime && (
+                                                                    <p><strong>Command Start:</strong> {new Date(log.aiContext.commandStartTime).toLocaleTimeString()}</p>
+                                                                )}
+                                                            </div>
+                                                        )}
+
+                                                        {/* Context Section */}
+                                                        {log.context && (
+                                                            <div className="border-l-2 border-blue-500 pl-3">
+                                                                <p className="font-bold text-blue-600 dark:text-blue-400">📍 Context</p>
+                                                                <div className="mt-1 space-y-1">
+                                                                    <p><strong>User ID:</strong> {log.context.userId}</p>
+                                                                    <p><strong>Game ID:</strong> {log.context.gameId}</p>
+                                                                    <p><strong>Chapter:</strong> {log.context.chapterId}</p>
+                                                                    <p><strong>Location:</strong> {log.context.locationId}</p>
+                                                                    {log.context.focusId && (
+                                                                        <p><strong>Focus:</strong> {log.context.focusId} ({log.context.focusType})</p>
+                                                                    )}
+                                                                    {log.context.activeConversation && (
+                                                                        <p><strong>In Conversation With:</strong> {log.context.activeConversation}</p>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Metadata Section */}
+                                                        <div className="border-l-2 border-gray-500 pl-3">
+                                                            <p className="font-bold">📊 Metadata</p>
+                                                            <p><strong>Error ID:</strong> {log.errorId}</p>
+                                                            <p><strong>Timestamp:</strong> {new Date(log.timestamp).toLocaleString()}</p>
+                                                        </div>
+                                                    </div>
+                                                </AccordionContent>
+                                            </AccordionItem>
+                                        );
+                                    }
+
+                                    // Database Error Log
+                                    if (isDBError) {
+                                        return (
+                                            <AccordionItem key={log.errorId || index} value={`db-error-${index}`}>
+                                                <AccordionTrigger className="text-xs py-2">
+                                                    <div className="flex items-center gap-2 w-full">
+                                                        <span className="font-mono bg-yellow-100 dark:bg-yellow-900 px-2 py-0.5 rounded text-yellow-700 dark:text-yellow-300 font-bold">
+                                                            DB Error
+                                                        </span>
+                                                        <span className="flex-1 text-left truncate text-yellow-600 dark:text-yellow-400">
+                                                            {log.operationDescription || log.operation}
+                                                        </span>
+                                                        <span className="text-yellow-600 dark:text-yellow-400">⚠</span>
+                                                    </div>
+                                                </AccordionTrigger>
+                                                <AccordionContent>
+                                                    <div className="space-y-3 text-xs">
+                                                        {/* Operation Details Section */}
+                                                        <div className="border-l-2 border-yellow-500 pl-3">
+                                                            <p className="font-bold text-yellow-600 dark:text-yellow-400">💾 Database Operation</p>
+                                                            <div className="mt-1 bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded">
+                                                                <p><strong>Operation:</strong> <span className="font-mono text-xs">{log.operation}</span></p>
+                                                                <p><strong>Description:</strong> {log.operationDescription}</p>
+                                                                {log.playerInput && (
+                                                                    <p className="mt-2"><strong>Player Input:</strong> {log.playerInput}</p>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Error Details Section */}
+                                                        <div className="border-l-2 border-red-500 pl-3">
+                                                            <p className="font-bold text-red-600 dark:text-red-400">❌ Error Details</p>
+                                                            <div className="mt-1 bg-red-50 dark:bg-red-900/20 p-2 rounded">
+                                                                <p><strong>Type:</strong> {log.error?.name || 'Error'}</p>
+                                                                <p className="mt-2"><strong>Message:</strong></p>
+                                                                <p className="mt-1 text-muted-foreground whitespace-pre-wrap">{log.error?.message}</p>
+                                                                {log.error?.stack && (
+                                                                    <>
+                                                                        <p className="mt-2"><strong>Stack Trace:</strong></p>
+                                                                        <pre className="mt-1 text-xs bg-muted p-2 rounded overflow-x-auto max-h-32">
+                                                                            {log.error.stack}
+                                                                        </pre>
+                                                                    </>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        {/* System Response Section */}
+                                                        {log.systemResponse && (
+                                                            <div className="border-l-2 border-green-500 pl-3">
+                                                                <p className="font-bold text-green-600 dark:text-green-400">💬 System Response (to Player)</p>
+                                                                <p className="mt-1 bg-green-50 dark:bg-green-900/20 p-2 rounded whitespace-pre-wrap">
+                                                                    {log.systemResponse}
+                                                                </p>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Context Section */}
+                                                        {log.context && (
+                                                            <div className="border-l-2 border-blue-500 pl-3">
+                                                                <p className="font-bold text-blue-600 dark:text-blue-400">📍 Context</p>
+                                                                <div className="mt-1 space-y-1">
+                                                                    <p><strong>User ID:</strong> {log.context.userId}</p>
+                                                                    <p><strong>Game ID:</strong> {log.context.gameId}</p>
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Metadata Section */}
+                                                        <div className="border-l-2 border-gray-500 pl-3">
+                                                            <p className="font-bold">📊 Metadata</p>
+                                                            <p><strong>Error ID:</strong> {log.errorId}</p>
+                                                            <p><strong>Timestamp:</strong> {new Date(log.timestamp).toLocaleString()}</p>
+                                                        </div>
                                                     </div>
                                                 </AccordionContent>
                                             </AccordionItem>

@@ -263,7 +263,71 @@ function detectExcessiveNewlines(input: string): ValidationViolation | null {
 }
 
 /**
- * Phase 2.4: Input Normalization
+ * Phase 2.4a: Decode Encoding Bypasses
+ * Decode various encoding schemes that could be used to bypass validation
+ * This must run BEFORE pattern matching to catch encoded injection attempts
+ */
+function decodeEncodingBypasses(input: string): string {
+    let decoded = input;
+
+    // 1. Unicode escape sequences (\u003c → <, \u003e → >)
+    // This catches attempts like: \u003cscript\u003e
+    decoded = decoded.replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) => {
+        return String.fromCharCode(parseInt(hex, 16));
+    });
+
+    // 2. Hex escape sequences (\x3c → <)
+    decoded = decoded.replace(/\\x([0-9a-fA-F]{2})/g, (_, hex) => {
+        return String.fromCharCode(parseInt(hex, 16));
+    });
+
+    // 3. HTML entities (&lt; → <, &#60; → <, &#x3c; → <)
+    decoded = decoded.replace(/&([a-z]+|#\d+|#x[0-9a-fA-F]+);/gi, (match) => {
+        const entities: Record<string, string> = {
+            'lt': '<',
+            'gt': '>',
+            'amp': '&',
+            'quot': '"',
+            'apos': "'",
+            'script': 'script', // Decode named entity
+        };
+
+        const lower = match.toLowerCase();
+        if (lower in entities) return entities[lower];
+
+        // Numeric entities (&#60; or &#x3c;)
+        if (match.startsWith('&#x')) {
+            const hex = match.slice(3, -1);
+            return String.fromCharCode(parseInt(hex, 16));
+        } else if (match.startsWith('&#')) {
+            const dec = match.slice(2, -1);
+            return String.fromCharCode(parseInt(dec, 10));
+        }
+
+        return match;
+    });
+
+    // 4. URL encoding (%3C → <, %3E → >)
+    try {
+        decoded = decodeURIComponent(decoded);
+    } catch (e) {
+        // If decoding fails, continue with current decoded value
+    }
+
+    // 5. Base64 detection (not decoding, but flagging)
+    // Pattern: sequences that look like base64 (long alphanumeric strings with +/= padding)
+    // We'll just flag this as suspicious, not decode it
+    const base64Pattern = /^[A-Za-z0-9+/]{20,}={0,2}$/;
+    if (base64Pattern.test(decoded.trim())) {
+        // Flag by adding a marker that will be caught by code injection detection
+        decoded = '<base64-detected>' + decoded;
+    }
+
+    return decoded;
+}
+
+/**
+ * Phase 2.4b: Input Normalization
  * Clean up whitespace and unicode issues
  */
 function normalizeInput(input: string): string {
@@ -361,8 +425,12 @@ export function validatePlayerInput(input: string): ValidationResult {
     const newlineViolation = detectExcessiveNewlines(input);
     if (newlineViolation) violations.push(newlineViolation);
 
-    // Pre-normalize (before other validations)
-    let sanitized = normalizeInput(input);
+    // CRITICAL: Decode encoding bypasses FIRST (before any pattern matching)
+    // This catches unicode escapes, HTML entities, URL encoding, etc.
+    let sanitized = decodeEncodingBypasses(input);
+
+    // Then normalize (clean up whitespace, emojis, etc.)
+    sanitized = normalizeInput(sanitized);
 
     // PHASE 1: Critical Security Checks (Block if violated)
 
