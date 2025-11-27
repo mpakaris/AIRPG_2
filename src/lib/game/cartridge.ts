@@ -986,16 +986,33 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                 }
             ],
 
-            // 6. OPEN - Need key to open
-            onOpen: {
-                conditions: [{ type: 'NO_FLAG', flag: 'safe_is_unlocked' }],
-                fail: {
-                    message: "Locked tight. Need the key. Try USING the key on it."
+            // 6. OPEN - Need key to open (Multi-State pattern)
+            onOpen: [
+                {
+                    // State 1: Already unlocked and opened
+                    conditions: [{ type: 'FLAG', flag: 'safe_is_unlocked', value: true }],
+                    success: {
+                        message: "Already open. TAKE the document inside.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762714567/Safe_newspaper_qy2ssi.png',
+                            description: 'Open wall safe with newspaper article',
+                            hint: 'The safe is already open'
+                        }
+                    }
                 },
-                success: {
-                    message: "Already open. TAKE the document inside."
+                {
+                    // State 2: Still locked (default)
+                    conditions: [],
+                    success: {
+                        message: "Locked tight. Need the key. Try USING the key on it.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761263220/safe_behind_Painting_dbo6qc.png',
+                            description: 'Locked wall safe',
+                            hint: 'Need the key to open'
+                        }
+                    }
                 }
-            },
+            ],
 
             // 7. CLOSE - Close open safe
             onClose: {

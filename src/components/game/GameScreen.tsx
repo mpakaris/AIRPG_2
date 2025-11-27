@@ -185,6 +185,12 @@ const MessageLog: FC<Pick<GameScreenProps, "messages">> = ({ messages }) => {
           const isSystemError = message.senderName === "⚠️ System Error";
           const isDatabaseError = message.senderName === "⚠️ Database Error";
 
+          // Check if this is an audio message
+          const isAudioMessage = message.image?.url && (
+            message.image.url.match(/\.(mp3|wav|m4a|aac|ogg)$/i) ||
+            message.type === "audio"
+          );
+
           return (
             <div
               key={message.id}
@@ -195,7 +201,8 @@ const MessageLog: FC<Pick<GameScreenProps, "messages">> = ({ messages }) => {
             >
               <div
                 className={cn(
-                  "max-w-[75%] rounded-2xl",
+                  "rounded-2xl",
+                  isAudioMessage ? "min-w-[75%] max-w-[90%]" : "max-w-[75%]",
                   !isImageOnly && "px-4 py-2",
                   isImageOnly && "overflow-hidden",
                   isPlayer

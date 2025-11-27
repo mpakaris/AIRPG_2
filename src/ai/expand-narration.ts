@@ -355,17 +355,17 @@ IMPORTANT: You MUST respond with valid JSON in this exact format:
     console.log(`================================\n`);
 
     // Trim to max length if needed
-    let response = result.response;
-    if (response.length > maxLength) {
+    let narrativeText = result.response;
+    if (narrativeText.length > maxLength) {
       // Try to cut at sentence boundary
-      const sentences = response.match(/[^.!?]+[.!?]+/g) || [];
-      response = sentences[0] || response.substring(0, maxLength);
+      const sentences = narrativeText.match(/[^.!?]+[.!?]+/g) || [];
+      narrativeText = sentences[0] || narrativeText.substring(0, maxLength);
     }
 
     // Cache the response
-    setCachedResponse(options, response);
+    setCachedResponse(options, narrativeText);
 
-    return response;
+    return narrativeText;
   } catch (error) {
     console.error(`\n❌ ===== EXPANSION FAILED =====`);
     console.error(`📝 Keyword: "${keyword}"`);

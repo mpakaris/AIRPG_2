@@ -115,15 +115,31 @@ export async function handleExamine(state: PlayerState, targetName: string, game
         }
 
         // Build message with media support
-        if (handler?.success) {
-            // Use outcome helper to extract message, media AND effects
-            effects.push(...buildEffectsFromOutcome(
-                { message: messageText, ...handler.success },
-                itemId,
-                'item',
-                game,
-                false // Using success outcome, so not a fail
-            ));
+        if (handler) {
+            // CRITICAL: Evaluate handler conditions to determine success vs fail outcome
+            const conditionsMet = Validator.evaluateConditions(handler.conditions, state, game);
+            const outcome = conditionsMet ? handler.success : handler.fail;
+            const isFail = !conditionsMet;
+
+            if (outcome) {
+                // Use outcome helper to extract message, media AND effects
+                effects.push(...buildEffectsFromOutcome(
+                    { message: outcome.message || messageText, ...outcome },
+                    itemId,
+                    'item',
+                    game,
+                    isFail
+                ));
+            } else {
+                // No outcome available - fallback
+                effects.push({
+                    type: 'SHOW_MESSAGE',
+                    speaker: 'narrator',
+                    content: messageText,
+                    messageType: 'image',
+                    imageId: itemId
+                });
+            }
         } else {
             // Fallback: standard message without outcome media
             effects.push({
@@ -187,15 +203,31 @@ export async function handleExamine(state: PlayerState, targetName: string, game
             }
 
             // Build message with media support
-            if (handler?.success) {
-                // Use outcome helper to extract message, media AND effects
-                effects.push(...buildEffectsFromOutcome(
-                    { message: messageText, ...handler.success },
-                    visibleItemId,
-                    'item',
-                    game,
-                    false // Using success outcome, so not a fail
-                ));
+            if (handler) {
+                // CRITICAL: Evaluate handler conditions to determine success vs fail outcome
+                const conditionsMet = Validator.evaluateConditions(handler.conditions, state, game);
+                const outcome = conditionsMet ? handler.success : handler.fail;
+                const isFail = !conditionsMet;
+
+                if (outcome) {
+                    // Use outcome helper to extract message, media AND effects
+                    effects.push(...buildEffectsFromOutcome(
+                        { message: outcome.message || messageText, ...outcome },
+                        visibleItemId,
+                        'item',
+                        game,
+                        isFail
+                    ));
+                } else {
+                    // No outcome available - fallback
+                    effects.push({
+                        type: 'SHOW_MESSAGE',
+                        speaker: 'narrator',
+                        content: messageText,
+                        messageType: 'image',
+                        imageId: visibleItemId
+                    });
+                }
             } else {
                 // Fallback: standard message without outcome media
                 effects.push({
@@ -273,15 +305,31 @@ export async function handleExamine(state: PlayerState, targetName: string, game
         }
 
         // Build message with media support
-        if (handler?.success) {
-            // Use outcome helper to extract message, media AND effects
-            effects.push(...buildEffectsFromOutcome(
-                { message: messageContent, ...handler.success },
-                targetObjectId,
-                'object',
-                game,
-                false // Using success outcome, so not a fail
-            ));
+        if (handler) {
+            // CRITICAL: Evaluate handler conditions to determine success vs fail outcome
+            const conditionsMet = Validator.evaluateConditions(handler.conditions, state, game);
+            const outcome = conditionsMet ? handler.success : handler.fail;
+            const isFail = !conditionsMet;
+
+            if (outcome) {
+                // Use outcome helper to extract message, media AND effects
+                effects.push(...buildEffectsFromOutcome(
+                    { message: outcome.message || messageContent, ...outcome },
+                    targetObjectId,
+                    'object',
+                    game,
+                    isFail
+                ));
+            } else {
+                // No outcome available - fallback
+                effects.push({
+                    type: 'SHOW_MESSAGE',
+                    speaker: 'narrator',
+                    content: messageContent,
+                    messageType: 'image',
+                    imageId: targetObjectId
+                });
+            }
         } else {
             // Fallback: standard message without outcome media
             effects.push({
