@@ -17,6 +17,7 @@ import { handleExamine } from '@/lib/game/actions/handle-examine';
 import { handleGo } from '@/lib/game/actions/handle-go';
 import { handleGoto } from '@/lib/game/actions/handle-goto';
 import { handleHelp } from '@/lib/game/actions/handle-help';
+import { handleContextualHelp } from '@/lib/game/actions/handle-contextual-help';
 import { handleInventory } from '@/lib/game/actions/handle-inventory';
 import { handleLook } from '@/lib/game/actions/handle-look';
 import { handleMove } from '@/lib/game/actions/handle-move';
@@ -1102,6 +1103,12 @@ export async function processCommand(
                     // Extract optional question from rest of command (e.g., "help how do I open the box")
                     const helpQuestion = restOfCommand || null;
                     effects = await handleHelp(currentState, helpQuestion, game);
+                    break;
+                case 'contextual_help':
+                    // NEW: handleContextualHelp returns Effect[]
+                    // For natural language expressions of confusion/frustration
+                    // Uses the original player input as context for more personalized help
+                    effects = await handleContextualHelp(currentState, rawPlayerInput, game);
                     break;
                 case 'go':
                     // NEW: handleGo returns Effect[]
