@@ -49,7 +49,8 @@ export type ContextualNpcConversationInput = z.infer<typeof ContextualNpcConvers
 const ContextualNpcConversationOutputSchema = z.object({
   npcResponse: z.string().describe('The NPC\'s natural response to the player'),
   conversationSummary: z.string().describe('Ultra-compact summary of conversation so far (no filler words, only key facts). Max 200 characters. Example: "Player asked about Silas 2x. Shared: regular, musician, quiet. Not revealed: business card."'),
-  shouldReveal: z.boolean().describe('Whether the NPC revealed the secret in this response')
+  shouldReveal: z.boolean().describe('Whether the NPC revealed the secret in this response'),
+  isInsult: z.boolean().describe('Whether the player input was insulting, rude, or disrespectful')
 });
 
 export type ContextualNpcConversationOutput = z.infer<typeof ContextualNpcConversationOutputSchema>;
@@ -136,18 +137,26 @@ Examples of GOOD varied openings:
    - NOT: "Silas? Yeah, he's a regular. Plays sax. He left a business card..."
 
 === YOUR TASK ===
+
+FIRST: Check if player input is insulting, rude, or disrespectful
+- Profanity, personal attacks, condescending language
+- If YES: Set isInsult=true, respond with brief shutdown: "Hey, not in this tone! Come back when you find your manners."
+- If NO: Continue normal conversation
+
+IF NOT AN INSULT:
 1. Check summary - what have you ALREADY said?
 2. Respond with ONE new piece of info (short!)
 3. Vary your opening phrase
 4. If reveal time, mention card briefly
 5. Stay in character
 
-Return THREE things:
+Return FOUR things:
 1. npcResponse: ONE sentence (two MAX). Natural, varied opening. NO REPETITION.
 2. conversationSummary: Ultra-compact (max 150 chars)
    - Format: "Asked X 3x. Shared: A,B,C. Hidden: D"
    - NO articles/filler
 3. shouldReveal: true if mentioned business card, false otherwise
+4. isInsult: true if player was rude/insulting, false otherwise
 `
 });
 

@@ -61,7 +61,37 @@ async function handleFreeformChat(npc: NPC, state: PlayerState, playerInput: str
         locationDescription: location.sceneDescription,
         gameSetting: game.setting || 'Modern-day USA, 2025'
     });
-    
+
+    // Check if player was insulting - shut down conversation immediately
+    if (aiResponse.isInsult) {
+        console.log(`[FREEFORM CHAT] ⚠️ Player insulted ${npc.name} - ending conversation`);
+
+        const insultEffects: Effect[] = [
+            {
+                type: 'SHOW_MESSAGE',
+                speaker: npc.id,
+                senderName: npc.name,
+                content: `"${aiResponse.npcResponse}"`,
+                messageType: 'text'
+            },
+            {
+                type: 'END_CONVERSATION'
+            },
+            {
+                type: 'INC_COUNTER',
+                key: `insulted_${npc.id}`,
+                by: 1
+            },
+            {
+                type: 'SHOW_MESSAGE',
+                speaker: 'system',
+                content: `${npc.name} ended the conversation.`
+            }
+        ];
+
+        return await processEffects(stateAfterIncrement, insultEffects, game);
+    }
+
     const message = createMessage(npc.id, npc.name, `"${aiResponse.npcResponse}"`, 'text', undefined, usage);
     return { newState: stateAfterIncrement, messages: [message] };
 }
@@ -153,6 +183,36 @@ async function handleContextualChat(npc: NPC, state: PlayerState, playerInput: s
         isCompleted,
         completedPersonality: npc.conversationStages?.completed.personality
     });
+
+    // Check if player was insulting - shut down conversation immediately
+    if (aiResponse.isInsult) {
+        console.log(`[CONTEXTUAL CHAT] ⚠️ Player insulted ${npc.name} - ending conversation`);
+
+        const insultEffects: Effect[] = [
+            {
+                type: 'SHOW_MESSAGE',
+                speaker: npc.id,
+                senderName: npc.name,
+                content: `"${aiResponse.npcResponse}"`,
+                messageType: 'text'
+            },
+            {
+                type: 'END_CONVERSATION'
+            },
+            {
+                type: 'INC_COUNTER',
+                key: `insulted_${npc.id}`,
+                by: 1
+            },
+            {
+                type: 'SHOW_MESSAGE',
+                speaker: 'system',
+                content: `${npc.name} ended the conversation.`
+            }
+        ];
+
+        return await processEffects(stateAfterIncrement, insultEffects, game);
+    }
 
     // Build effects list
     const effects: Effect[] = [];
@@ -270,6 +330,36 @@ async function handleScriptedChat(npc: NPC, state: PlayerState, playerInput: str
     // DEBUG: Log AI selection
     console.log(`[CONVERSATION DEBUG] Player input: "${playerInput}"`);
     console.log(`[CONVERSATION DEBUG] AI selected topic: ${aiResponse.topic}`);
+
+    // Check if player was insulting - shut down conversation immediately
+    if (aiResponse.topic === 'insult') {
+        console.log(`[SCRIPTED CHAT] ⚠️ Player insulted ${npc.name} - ending conversation`);
+
+        const insultEffects: Effect[] = [
+            {
+                type: 'SHOW_MESSAGE',
+                speaker: npc.id,
+                senderName: npc.name,
+                content: `"Hey, watch your mouth! I don't have to put up with that."`,
+                messageType: 'text'
+            },
+            {
+                type: 'END_CONVERSATION'
+            },
+            {
+                type: 'INC_COUNTER',
+                key: `insulted_${npc.id}`,
+                by: 1
+            },
+            {
+                type: 'SHOW_MESSAGE',
+                speaker: 'system',
+                content: `${npc.name} ended the conversation.`
+            }
+        ];
+
+        return await processEffects(stateAfterIncrement, insultEffects, game);
+    }
 
     const selectedTopic = npc.topics?.find(t => t.topicId === aiResponse.topic);
 

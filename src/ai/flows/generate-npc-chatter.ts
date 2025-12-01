@@ -25,6 +25,7 @@ export type GenerateNpcChatterInput = z.infer<typeof GenerateNpcChatterInputSche
 
 const GenerateNpcChatterOutputSchema = z.object({
   npcResponse: z.string().describe("The AI-generated, in-character, improvised response from the NPC. This response must not contain any game clues or plot-relevant information."),
+  isInsult: z.boolean().describe('Whether the player input was insulting, rude, or disrespectful')
 });
 export type GenerateNpcChatterOutput = z.infer<typeof GenerateNpcChatterOutputSchema>;
 
@@ -37,6 +38,12 @@ const prompt = ai.definePrompt({
   input: {schema: GenerateNpcChatterInputSchema},
   output: {schema: GenerateNpcChatterOutputSchema},
   prompt: `You are a world-class character actor in a text-based RPG. Your job is to improvise a short, believable line of dialogue for a background character.
+
+**FIRST: CHECK FOR INSULTS**
+Before responding, check if the player input is insulting, rude, or disrespectful:
+- Profanity, personal attacks, condescending language
+- If YES: Set isInsult=true and respond with: "Hey, watch your mouth! I don't have to put up with that."
+- If NO: Set isInsult=false and continue with normal response
 
 **CRITICAL RULES:**
 - **DO NOT** provide any clues, hints, or information related to any mystery, case, or main plot.
@@ -57,7 +64,9 @@ const prompt = ai.definePrompt({
 **Player says to your character:**
 "{{playerInput}}"
 
-Now, as {{npcName}}, give a short, improvised response based on your persona and the game setting.
+Return TWO things:
+1. npcResponse: Your in-character response (1-2 sentences)
+2. isInsult: true if player was rude/insulting, false otherwise
 `,
 });
 
