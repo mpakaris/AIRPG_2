@@ -65,6 +65,7 @@ export type CommandResult = {
 
 export type Effect =
   | { type: 'ADD_ITEM'; itemId: ItemId }
+  | { type: 'CREATE_DYNAMIC_ITEM'; item: Item } // NEW: Create and add dynamic item (for photos, etc.)
   | { type: 'REMOVE_ITEM'; itemId: ItemId } // From inventory
   | { type: 'REMOVE_ITEM_FROM_CONTAINER', itemId: ItemId, containerId: GameObjectId }
   | { type: 'DESTROY_ITEM'; itemId: ItemId } // From world
@@ -103,6 +104,7 @@ export type Effect =
   | { type: 'INCREMENT_ITEM_READ_COUNT', itemId: ItemId }
   | { type: 'INCREMENT_NPC_INTERACTION', npcId: NpcId }
   | { type: 'COMPLETE_NPC_TOPIC', npcId: NpcId, topicId: string }
+  | { type: 'UPDATE_CONVERSATION_SUMMARY', npcId: NpcId, summary: string } // NEW: Update NPC conversation summary
   | { type: 'SET_STORY', story: Story };
 
 
@@ -139,6 +141,7 @@ export type NpcState = {
     attitude: 'friendly' | 'neutral' | 'hostile' | 'suspicious';
     completedTopics: string[];
     interactionCount: number;
+    conversationSummary?: string; // NEW: LLM-generated compact summary of conversation history (for Type 1 NPCs)
 }
 
 export type LocationState = {
@@ -400,6 +403,8 @@ export type Capabilities = {
   combinable?: boolean;
   passage?: boolean;
   takable?: boolean;
+  camera?: boolean;  // NEW: Device can take photos (e.g., phone, camera)
+  photographable?: boolean;  // NEW: Object/NPC can be photographed
 };
 
 // ============================================================================
@@ -786,6 +791,35 @@ export type NPC = {
     once?: boolean;
   }[];
 
+  // NEW: Contextual conversation system (Type 1 NPCs with LLM-powered reveals)
+  contextualKnowledge?: {
+    general: string[];  // Facts NPC can share freely
+    topic: string[];  // Specific knowledge about the secret/topic
+  };
+
+  secret?: {
+    info: string;  // The critical information to reveal
+    revealConditions: {
+      anyOf: Array<
+        | { type: 'TOPIC_MENTIONS'; topic: string; minCount: number }
+        | { type: 'KEYWORDS'; keywords: string[] }
+        | { type: 'FLAG_SET'; flag: Flag }
+      >;
+    };
+    revealEffects: Effect[];  // What happens when secret is revealed
+  };
+
+  conversationStages?: {
+    active: {
+      personality: string;
+      maxInteractions: number;
+    };
+    completed: {
+      personality: string;
+      defaultResponse: string;
+    };
+  };
+
   fallbacks?: {
     default: string;
     offTopic?: string;
@@ -893,12 +927,42 @@ export type Hint = {
   text: string;
 };
 
+// ============================================================================
+// Happy Path System - Progressive Hints & Chapter Completion
+// ============================================================================
+
+/**
+ * Represents a single step in the chapter's "happy path" - the intended progression
+ * Used for:
+ * 1. AI-generated contextual hints when player asks for help
+ * 2. Automatic chapter completion detection
+ * 3. Progress tracking
+ */
+export type HappyPathStep = {
+  id: string;  // Unique identifier for this step (e.g., "step_find_box", "step_open_box")
+  order: number;  // Sequence order (1, 2, 3, etc.)
+  description: string;  // What this step represents (e.g., "Find the metal box")
+
+  // Completion criteria - ANY of these flags being true marks step as complete
+  completionFlags: Flag[];
+
+  // Hints for AI to use when generating help
+  baseHint: string;  // Generic hint (e.g., "Look around the cafe for something unusual")
+  detailedHint?: string;  // More specific hint (e.g., "Check under the table near the window")
+
+  // Optional: Context-aware hints based on player's current state
+  conditionalHints?: {
+    conditions: Condition[];  // If these conditions are met...
+    hint: string;  // ...show this hint instead
+  }[];
+};
+
 export type Chapter = {
   id: ChapterId;
   title: string;
   goal: string;
   objectives?: { flag: Flag, label: string }[];
-  hints?: Hint[];
+  hints?: Hint[];  // DEPRECATED: Use happyPath instead
   startLocationId: LocationId; // Can be a cell or a location
   startingFocus?: {
     entityId: string;  // ID of the object/item/NPC to focus on initially
@@ -910,6 +974,16 @@ export type Chapter = {
   postChapterMessage?: string;
   nextChapter?: { id: ChapterId, title: string, transitionCommand: string };
   storyGenerationDetails?: string;
+
+  // NEW: Happy path for progressive hints and completion detection
+  happyPath?: HappyPathStep[];
+
+  // NEW: Chapter completion settings
+  completionRequirements?: {
+    requireAllSteps?: boolean;  // Default: true - all steps must be completed
+    minimumStepsRequired?: number;  // Alternative: complete at least N steps
+    additionalFlags?: Flag[];  // Optional: additional flags that must be set
+  };
 
   // These will be deprecated in favor of the world model
   locations: Record<LocationId, Location>;

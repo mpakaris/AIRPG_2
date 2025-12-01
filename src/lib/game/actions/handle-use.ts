@@ -15,6 +15,7 @@ import { buildEffectsFromOutcome } from "@/lib/game/utils/outcome-helpers";
 import { findBestMatch } from "@/lib/game/utils/name-matching";
 import { getSmartNotFoundMessage } from "@/lib/game/utils/smart-messages";
 import { MessageExpander } from "@/lib/game/utils/message-expansion";
+import { attemptPhotograph, isCameraDevice } from "@/lib/game/utils/photography-helper";
 
 export async function handleUse(state: PlayerState, itemName: string, targetName: string, game: Game): Promise<Effect[]> {
   const normalizedItemName = normalizeName(itemName);
@@ -36,7 +37,7 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
     return [{
       type: 'SHOW_MESSAGE',
       speaker: 'narrator',
-      content: smartMessage.message
+      content: smartMessage.found ? `You notice that, but you can't use it from here.` : smartMessage.message
     }];
   }
 
@@ -94,6 +95,34 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
             content: FocusResolver.getOutOfFocusMessage('use ' + itemToUse.name + ' on', targetObject.name, state.currentFocusId, game)
           }];
         }
+      }
+
+      // PHOTOGRAPHY SYSTEM: Check if using a camera device to photograph
+      if (isCameraDevice(itemToUse)) {
+        const photoResult = attemptPhotograph(
+          itemToUse,
+          targetObjectId,
+          'object',
+          state,
+          game
+        );
+
+        // If photography succeeded, return those effects
+        if (photoResult.canPhotograph && photoResult.effects) {
+          return photoResult.effects;
+        }
+
+        // If photography failed with a specific reason, show it
+        // But only if there are no other handlers to try
+        const hasOtherHandlers = targetObject.handlers?.onUse || targetObject.handlers?.onUseWith;
+        if (!photoResult.canPhotograph && photoResult.reason && !hasOtherHandlers) {
+          return [{
+            type: 'SHOW_MESSAGE',
+            speaker: 'narrator',
+            content: photoResult.reason
+          }];
+        }
+        // Otherwise, continue to check other handlers
       }
 
       // Check if object has onUse handlers

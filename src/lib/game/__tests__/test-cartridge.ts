@@ -21,7 +21,7 @@ import type { Game, GameId, GameObject, GameObjectId, Item, ItemId, Location, Lo
 
 const gameObjects: Record<GameObjectId, GameObject> = {
   // TYPE 1: Simple Openable Container (No Lock)
-  'test_obj_box': {
+  ['test_obj_box' as GameObjectId]: {
     id: 'test_obj_box' as GameObjectId,
     name: 'Simple Box',
     alternateNames: ['box', 'simple box', 'container'],
@@ -246,7 +246,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
 
 const items: Record<ItemId, Item> = {
   // Item inside simple box
-  'test_item_coin': {
+  ['test_item_coin' as ItemId]: {
     id: 'test_item_coin' as ItemId,
     name: 'Gold Coin',
     alternateNames: ['coin', 'gold coin'],
@@ -374,7 +374,7 @@ const items: Record<ItemId, Item> = {
 // ============================================================================
 
 const locations: Record<LocationId, Location> = {
-  'test_loc_room': {
+  ['test_loc_room' as LocationId]: {
     locationId: 'test_loc_room' as LocationId,
     name: 'Test Room',
     sceneDescription: 'A simple test room with various containers and objects.',
@@ -391,7 +391,7 @@ const locations: Record<LocationId, Location> = {
 // ============================================================================
 
 const chapters: Record<ChapterId, Chapter> = {
-  'test_ch1': {
+  ['test_ch1' as ChapterId]: {
     id: 'test_ch1' as ChapterId,
     title: 'Test Chapter',
     goal: 'Test all container types',
@@ -419,7 +419,7 @@ export const testGame: Game = {
   title: 'Test Game Cartridge',
   description: 'Minimal game for automated testing',
   setting: 'Test Environment',
-  gameType: 'Test',
+  gameType: 'Escape Game',
   narratorName: 'Test Narrator',
   promptContext: 'Test prompt context',
   startChapterId: 'test_ch1' as ChapterId,
@@ -435,7 +435,7 @@ export const testGame: Game = {
     worldId: 'test_world' as WorldId,
     name: 'Test World',
     cells: {
-      'test_cell': {
+      ['test_cell' as CellId]: {
         cellId: 'test_cell' as CellId,
         coord: { x: 0, y: 0, z: 0 },
         type: 'room',
@@ -459,14 +459,8 @@ export const testGame: Game = {
     needsTarget: {
       examine: 'What do you want to examine?',
       take: 'What do you want to take?',
-      use: 'What do you want to use?',
       read: 'What do you want to read?',
-      open: 'What do you want to open?',
-      close: 'What do you want to close?',
-      move: 'What do you want to move?',
-      break: 'What do you want to break?',
-      talk: 'Who do you want to talk to?',
-      go: 'Where do you want to go?'
+      goto: 'Where do you want to go?'
     }
   },
 

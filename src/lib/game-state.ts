@@ -226,19 +226,14 @@ export function getInitialState(game: Game): PlayerState {
     counters: {},
 
     // NEW: Focus system - set starting focus from chapter
-    currentFocusId: startChapter.startingFocus?.entityId || null,
-    focusType: startChapter.startingFocus?.entityType || null,
+    currentFocusId: startChapter.startingFocus?.entityId || undefined,
+    focusType: startChapter.startingFocus?.entityType || undefined,
 
     stories: {},
     activeConversationWith: null,
     activeDeviceFocus: null,
     interactingWithObject: null,
   };
-
-  // Only add previousFocusId if it's not undefined (Firestore doesn't accept undefined)
-  if (startChapter.startingFocus?.previousEntityId !== undefined) {
-    initialState.previousFocusId = startChapter.startingFocus.previousEntityId;
-  }
 
   return initialState;
 }

@@ -122,6 +122,22 @@ export class GameStateManager {
           newState.world[effect.itemId].taken = true;
           break;
 
+        case 'CREATE_DYNAMIC_ITEM':
+          // Add the item to the game's items collection
+          if (game && effect.item) {
+            game.items[effect.item.id as any] = effect.item;
+          }
+          // Add to inventory
+          if (!newState.inventory.includes(effect.item.id as any)) {
+            newState.inventory.push(effect.item.id as any);
+          }
+          // Mark item as taken in world state
+          if (!newState.world[effect.item.id]) {
+            newState.world[effect.item.id] = {};
+          }
+          newState.world[effect.item.id].taken = true;
+          break;
+
         case 'REMOVE_ITEM':
           // IMPORTANT: Only remove items that are consumable
           // This prevents accidentally removing important items like the phone
@@ -368,6 +384,13 @@ export class GameStateManager {
           if (!newState.world[effect.npcId].completedTopics.includes(effect.topicId)) {
             newState.world[effect.npcId].completedTopics.push(effect.topicId);
           }
+          break;
+
+        case 'UPDATE_CONVERSATION_SUMMARY':
+          if (!newState.world[effect.npcId]) {
+            newState.world[effect.npcId] = {};
+          }
+          newState.world[effect.npcId].conversationSummary = effect.summary;
           break;
 
         case 'START_INTERACTION':

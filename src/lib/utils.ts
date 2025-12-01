@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
-import type { Game, GameObjectId, ItemId, Message, NpcId, PlayerState, TokenUsage } from '@/lib/game/types';
+import type { Flag, Game, GameObjectId, ItemId, Message, NpcId, PlayerState, TokenUsage } from '@/lib/game/types';
 import { getLiveGameObject, getLiveItem } from "@/lib/game/utils/helpers";
 
 export function cn(...inputs: ClassValue[]) {
@@ -16,7 +16,7 @@ export function normalizeName(name: string): string {
     .trim();
 }
 
-const examinedObjectFlag = (id: string) => `examined_${id}`;
+const examinedObjectFlag = (id: string): Flag => `examined_${id}` as Flag;
 
 export function createMessage(
   sender: Message['sender'],

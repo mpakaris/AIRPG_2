@@ -72,7 +72,7 @@ export async function handleRead(state: PlayerState, itemName: string, game: Gam
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'narrator',
-            content: smartMessage.message
+            content: smartMessage.found ? `You notice that, but you can't read it from here.` : smartMessage.message
         }];
     }
 
@@ -197,7 +197,7 @@ async function handleReadItemWithTarget(state: PlayerState, targetName: string, 
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'narrator',
-            content: smartMessage.message
+            content: smartMessage.found ? `You notice that, but you can't read it from here.` : smartMessage.message
         }];
     }
 

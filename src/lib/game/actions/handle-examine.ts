@@ -99,13 +99,14 @@ export async function handleExamine(state: PlayerState, targetName: string, game
 
         const effects: Effect[] = [];
 
-        // FOCUS LOGIC: Only set focus if this item is NOT a child of the current focus
-        // If examining a child item (e.g., newspaper inside notebook), keep focus on parent
+        // FOCUS LOGIC: Only set focus if this item is NOT in inventory and NOT a child of the current focus
+        // Inventory items are always accessible and don't need focus/navigation
         const entityState = GameStateManager.getEntityState(state, itemId);
         const isChildOfCurrentFocus = state.currentFocusId && entityState.parentId === state.currentFocusId;
+        const isInInventory = state.inventory.includes(itemId);
 
-        if (!isChildOfCurrentFocus) {
-            // Set focus on this item only if it's not a child of current focus
+        if (!isInInventory && !isChildOfCurrentFocus) {
+            // Set focus on this item only if it's not in inventory and not a child of current focus
             effects.push({
                 type: 'SET_FOCUS',
                 focusId: itemId,
@@ -399,7 +400,7 @@ async function handleExamineItemOnTarget(state: PlayerState, itemName: string, t
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'narrator',
-            content: smartMessage.message
+            content: smartMessage.found ? `You notice the ${normalizedItemName}, but it's not within reach right now.` : smartMessage.message
         }];
     }
 
@@ -423,7 +424,7 @@ async function handleExamineItemOnTarget(state: PlayerState, itemName: string, t
         return [{
             type: 'SHOW_MESSAGE',
             speaker: 'narrator',
-            content: smartMessage.message
+            content: smartMessage.found ? `You notice the ${normalizedTargetName}, but it's not within reach right now.` : smartMessage.message
         }];
     }
 

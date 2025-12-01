@@ -14,6 +14,9 @@ import { normalizeName } from "@/lib/utils";
 import { handleCall } from "./handle-call";
 import { handleRead } from "./handle-read";
 import { handleOpen } from "./handle-open";
+import { attemptPhotograph } from "@/lib/game/utils/photography-helper";
+import { VisibilityResolver } from "@/lib/game/engine";
+import { matchesName } from "@/lib/game/utils/name-matching";
 
 /**
  * Handle commands while in device focus mode
@@ -129,13 +132,113 @@ export async function handleDeviceCommand(
       }];
     }
 
-    // PHOTO / CAMERA (future feature)
-    if (verb === 'photo' || verb === 'camera' || verb === 'picture') {
-      return [{
-        type: 'SHOW_MESSAGE',
-        speaker: 'narrator',
-        content: 'Camera feature coming soon.'
-      }];
+    // PHOTO / CAMERA - Take pictures
+    if (verb === 'photo' || verb === 'camera' || verb === 'picture' || verb === 'photograph' || verb === 'take') {
+      // Parse target from commands like:
+      // "take picture of business card"
+      // "take photo of business card"
+      // "photograph business card"
+      // "picture business card"
+      let targetName = restOfCommand;
+
+      // Remove "picture of", "photo of", etc.
+      targetName = targetName
+        .replace(/^picture\s+of\s+/i, '')
+        .replace(/^photo\s+of\s+/i, '')
+        .replace(/^photograph\s+of\s+/i, '')
+        .replace(/^of\s+/i, '')
+        .trim();
+
+      if (!targetName) {
+        return [{
+          type: 'SHOW_MESSAGE',
+          speaker: 'narrator',
+          content: 'What do you want to photograph?\n\nUsage: TAKE PICTURE OF <object>'
+        }];
+      }
+
+      // Find the target object using VisibilityResolver + smart name matching
+      // VisibilityResolver ensures we find revealed objects (like business card)
+
+      // IMPORTANT: Strip location descriptors from the search term
+      // "business card on the counter" → "business card"
+      // "phone in my pocket" → "phone"
+      let cleanedTarget = targetName
+        .replace(/\s+(on|in|under|behind|inside|next to|beside|near|by|at)\s+the\s+\w+$/i, '')
+        .replace(/\s+(on|in|under|behind|inside|next to|beside|near|by|at)\s+\w+$/i, '')
+        .trim();
+
+      const normalizedTarget = normalizeName(cleanedTarget);
+      const visibleEntities = VisibilityResolver.getVisibleEntities(state, game);
+
+      console.log(`[PHOTOGRAPHY] Original: "${targetName}", Cleaned: "${cleanedTarget}", Looking in ${visibleEntities.objects.length} visible objects`);
+
+      // Use matchesName scoring to find the best match
+      let bestMatch: { id: GameObjectId; score: number } | null = null;
+
+      for (const objId of visibleEntities.objects) {
+        const obj = game.gameObjects[objId as GameObjectId];
+        if (obj) {
+          const matchResult = matchesName(obj, normalizedTarget);
+          if (matchResult.matches) {
+            if (!bestMatch || matchResult.score > bestMatch.score) {
+              bestMatch = { id: objId as GameObjectId, score: matchResult.score };
+            }
+          }
+        }
+      }
+
+      if (!bestMatch) {
+        console.log(`[PHOTOGRAPHY] No match found for "${cleanedTarget}"`);
+
+        return [{
+          type: 'SHOW_MESSAGE',
+          speaker: 'narrator',
+          content: `You don't see any "${targetName}" here to photograph.`
+        }];
+      }
+
+      const targetObjectId = bestMatch.id;
+      const targetObject = game.gameObjects[targetObjectId];
+
+      console.log(`[PHOTOGRAPHY] Matched object: "${targetObject?.name}" (score: ${bestMatch.score})`);
+
+      if (!targetObject) {
+        return [{
+          type: 'SHOW_MESSAGE',
+          speaker: 'narrator',
+          content: `You don't see any "${targetName}" here to photograph.`
+        }];
+      }
+
+      // Get the phone item
+      const phone = game.items[deviceId as ItemId];
+      if (!phone) {
+        return [{
+          type: 'SHOW_MESSAGE',
+          speaker: 'system',
+          content: 'Error: Phone not found.'
+        }];
+      }
+
+      // Attempt to photograph
+      const photoResult = attemptPhotograph(
+        phone,
+        targetObjectId as string,
+        'object',
+        state,
+        game
+      );
+
+      if (photoResult.canPhotograph && photoResult.effects) {
+        return photoResult.effects;
+      } else {
+        return [{
+          type: 'SHOW_MESSAGE',
+          speaker: 'narrator',
+          content: photoResult.reason || `You can't photograph the ${targetObject.name}.`
+        }];
+      }
     }
 
     // HELP - Show available phone commands
@@ -143,7 +246,7 @@ export async function handleDeviceCommand(
       return [{
         type: 'SHOW_MESSAGE',
         speaker: 'narrator',
-        content: `📱 Phone Commands:\n\n- CALL <number> - Dial a phone number\n- READ SD CARD - View SD card content\n- CONTACTS - View stored contacts\n- PUT PHONE AWAY - Exit phone mode\n- CLOSE PHONE - Exit phone mode`
+        content: `📱 Phone Commands:\n\n- CALL <number> - Dial a phone number\n- TAKE PICTURE OF <object> - Photograph something\n- READ SD CARD - View SD card content\n- CONTACTS - View stored contacts\n- PUT PHONE AWAY - Exit phone mode\n- CLOSE PHONE - Exit phone mode`
       }];
     }
   }

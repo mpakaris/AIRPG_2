@@ -135,10 +135,7 @@ const interpretPlayerCommandPrompt = ai.definePrompt({
   - NEVER respond with "You don't see foot/hand/fist here" - these are body parts, not game objects
 
   Output should be formatted as valid JSON.
-  `, safetySettings: [{
-    category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-    threshold: 'BLOCK_NONE',
-  }],
+  `,
 });
 
 // Define the Genkit flow for interpreting player commands

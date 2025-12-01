@@ -30,10 +30,10 @@ const ALWAYS_AVAILABLE_VERBS = ['EXAMINE', 'LOOK AT'];
 /**
  * Generates a list of applicable verbs based on entity capabilities.
  *
- * @param capabilities - The entity's capabilities object
+ * @param capabilities - The entity's capabilities object (GameObject or Item)
  * @returns Array of verb strings the entity supports
  */
-export function getApplicableVerbs(capabilities?: Capabilities): string[] {
+export function getApplicableVerbs(capabilities?: Capabilities | Item['capabilities']): string[] {
   const verbs = new Set<string>(ALWAYS_AVAILABLE_VERBS);
 
   if (!capabilities) {
@@ -68,22 +68,25 @@ export function supportsVerb(
   const caps = entity.capabilities;
   if (!caps) return false;
 
+  // Check if this is an Item (has isTakable) or GameObject (has takable)
+  const isItem = 'isTakable' in caps;
+
   switch (verb) {
     case 'take':
-      return caps.isTakable === true;
+      return isItem ? (caps as any).isTakable === true : (caps as any).takable === true;
     case 'open':
     case 'close':
-      return caps.openable === true;
+      return (caps as any).openable === true;
     case 'move':
-      return caps.movable === true;
+      return (caps as any).movable === true;
     case 'break':
-      return caps.breakable === true;
+      return (caps as any).breakable === true;
     case 'read':
-      return caps.readable === true || caps.isReadable === true;
+      return isItem ? (caps as any).isReadable === true : (caps as any).readable === true;
     case 'search':
-      return caps.searchable === true;
+      return (caps as any).searchable === true;
     case 'use':
-      return caps.usable === true;
+      return isItem ? (caps as any).isUsable === true : (caps as any).usable === true;
     // drop and combine are item-specific, always allowed if in inventory
     case 'drop':
     case 'combine':

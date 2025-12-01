@@ -1,8 +1,8 @@
 
 'use server';
 
-import { generateNpcChatter, selectNpcResponse } from "@/ai";
-import type { Game, NPC, NpcId, NpcState, PlayerState, Topic, CommandResult, Effect } from "@/lib/game/types";
+import { generateNpcChatter, selectNpcResponse, contextualNpcConversation } from "@/ai";
+import type { Flag, Game, NPC, NpcId, NpcState, PlayerState, Topic, CommandResult, Effect } from "@/lib/game/types";
 import { createMessage } from "@/lib/utils";
 import { processEffects } from "@/lib/game/actions/process-effects";
 import { getLiveNpc } from "@/lib/game/utils/helpers";
@@ -66,12 +66,135 @@ async function handleFreeformChat(npc: NPC, state: PlayerState, playerInput: str
     return { newState: stateAfterIncrement, messages: [message] };
 }
 
+/**
+ * NEW: Handles contextual conversation with LLM-powered Type 1 NPCs
+ * Uses conversation summary to save tokens and natural reveal conditions
+ */
+async function handleContextualChat(npc: NPC, state: PlayerState, playerInput: string, game: Game): Promise<CommandResult> {
+    // Increment interaction count
+    const { newState: stateAfterIncrement } = await processEffects(state, [{ type: 'INCREMENT_NPC_INTERACTION', npcId: npc.id }], game);
+    const liveNpcState = getLiveNpc(npc.id, stateAfterIncrement, npc);
+
+    // Check if completed (secret already revealed)
+    const isCompleted = liveNpcState.stage === 'demoted' || !npc.secret;
+
+    // Check interaction limit
+    const maxInteractions = npc.conversationStages?.active.maxInteractions || 10;
+    if (liveNpcState.interactionCount > maxInteractions) {
+        const limitMsg = npc.limits?.interactionLimitResponse ||
+                        npc.conversationStages?.completed.defaultResponse ||
+                        "I really must be going now.";
+        return { newState: stateAfterIncrement, messages: [createMessage(npc.id, npc.name, `"${limitMsg}"`)] };
+    }
+
+    // If completed, use brief responses
+    if (isCompleted && npc.conversationStages?.completed) {
+        const completedResponse = npc.conversationStages.completed.defaultResponse;
+        return {
+            newState: stateAfterIncrement,
+            messages: [createMessage(npc.id, npc.name, `"${completedResponse}"`)]
+        };
+    }
+
+    // Evaluate reveal conditions
+    let revealConditionsMet = false;
+    if (npc.secret && !isCompleted) {
+        // IMPORTANT: Require at least 1 interaction before reveal
+        // If player asks right question immediately (e.g., "do you have his contact?"), reveal it
+        // Keywords are specific enough to prevent accidental reveals
+        const minimumInteractionsForReveal = 1;
+
+        if (liveNpcState.interactionCount >= minimumInteractionsForReveal) {
+            const conditions = npc.secret.revealConditions.anyOf;
+
+            for (const condition of conditions) {
+                if (condition.type === 'TOPIC_MENTIONS') {
+                    // Check if topic mentioned enough times in summary
+                    const summary = liveNpcState.conversationSummary || '';
+                    const topicMentions = (summary.match(new RegExp(condition.topic, 'gi')) || []).length;
+                    if (topicMentions >= (condition.minCount || 1)) {
+                        revealConditionsMet = true;
+                        break;
+                    }
+                } else if (condition.type === 'KEYWORDS') {
+                    // Check if player input contains keywords
+                    const inputLower = playerInput.toLowerCase();
+                    if (condition.keywords?.some(kw => inputLower.includes(kw.toLowerCase()))) {
+                        revealConditionsMet = true;
+                        break;
+                    }
+                } else if (condition.type === 'FLAG_SET') {
+                    // Check if flag is set
+                    if (stateAfterIncrement.flags?.[condition.flag]) {
+                        revealConditionsMet = true;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    console.log(`[CONTEXTUAL CHAT] NPC: ${npc.name}, Interaction: ${liveNpcState.interactionCount}/${maxInteractions}, Reveal: ${revealConditionsMet}`);
+    console.log(`[CONTEXTUAL CHAT] Current summary: "${liveNpcState.conversationSummary || '(empty)'}"`);
+    console.log(`[CONTEXTUAL CHAT] Player input: "${playerInput}"`);
+
+    // Call AI flow for contextual conversation
+    const { output: aiResponse, usage } = await contextualNpcConversation({
+        playerInput,
+        npcName: npc.name,
+        npcPersona: npc.persona || npc.description,
+        generalKnowledge: npc.contextualKnowledge?.general || [],
+        topicKnowledge: npc.contextualKnowledge?.topic || [],
+        secretInfo: npc.secret?.info || '',
+        revealConditionsMet,
+        conversationSummary: liveNpcState.conversationSummary || '',
+        interactionCount: liveNpcState.interactionCount,
+        maxInteractions,
+        isCompleted,
+        completedPersonality: npc.conversationStages?.completed.personality
+    });
+
+    // Build effects list
+    const effects: Effect[] = [];
+
+    // Update conversation summary
+    console.log(`[CONTEXTUAL CHAT] 📝 New summary from AI: "${aiResponse.conversationSummary}"`);
+    effects.push({
+        type: 'UPDATE_CONVERSATION_SUMMARY',
+        npcId: npc.id,
+        summary: aiResponse.conversationSummary
+    });
+
+    // If secret was revealed, process reveal effects
+    if (aiResponse.shouldReveal && npc.secret) {
+        effects.push(...npc.secret.revealEffects);
+        console.log(`[CONTEXTUAL CHAT] 🔓 Secret revealed by ${npc.name}!`);
+    }
+
+    // Process effects
+    const { newState: finalState, messages: effectMessages } = await processEffects(stateAfterIncrement, effects, game);
+
+    // Check for demotion after reveal
+    const stateAfterDemotion = await checkDemotion(npc, finalState, game);
+
+    // Create NPC response message
+    const npcMessage = createMessage(npc.id, npc.name, `"${aiResponse.npcResponse}"`, 'text', undefined, usage);
+
+    // Combine messages
+    const allMessages = [npcMessage, ...effectMessages];
+
+    return { newState: stateAfterDemotion, messages: allMessages };
+}
+
 
 async function handleScriptedChat(npc: NPC, state: PlayerState, playerInput: string, game: Game): Promise<CommandResult> {
     // First, increment interaction count
     const { newState: stateAfterIncrement } = await processEffects(state, [{ type: 'INCREMENT_NPC_INTERACTION', npcId: npc.id }], game);
 
     const liveNpcState = getLiveNpc(npc.id, stateAfterIncrement, npc);
+
+    // DEBUG: Log interaction count
+    console.log(`[CONVERSATION DEBUG] NPC: ${npc.name}, Interaction Count: ${liveNpcState.interactionCount}`);
 
     // Check if NPC is demoted (moved to Type 2 or completed)
     if (liveNpcState.stage === 'demoted' && npc.postCompletionProfile) {
@@ -98,8 +221,9 @@ async function handleScriptedChat(npc: NPC, state: PlayerState, playerInput: str
 
                 // If conditions met, mark topic as newly available (via flag)
                 if (conditionsMet) {
-                    const revealFlag = `topic_revealed_${npc.id}_${reveal.topicId}`;
+                    const revealFlag = `topic_revealed_${npc.id}_${reveal.topicId}` as Flag;
                     if (!stateAfterIncrement.flags?.[revealFlag]) {
+                        console.log(`[CONVERSATION DEBUG] 🔓 Progressive Reveal triggered: ${reveal.topicId} at interaction ${liveNpcState.interactionCount}`);
                         const { newState: stateAfterReveal } = await processEffects(
                             stateAfterIncrement,
                             [{ type: 'SET_FLAG', flag: revealFlag, value: true }],
@@ -129,6 +253,9 @@ async function handleScriptedChat(npc: NPC, state: PlayerState, playerInput: str
         return true;
     }).map(t => ({ topic: t.topicId, response: t.response.message, keywords: t.keywords.join(', ') }));
 
+    // DEBUG: Log available topics
+    console.log(`[CONVERSATION DEBUG] Available topics (${availableTopics.length}):`, availableTopics.map(t => t.topic).join(', '));
+
     if (availableTopics.length === 0) {
         const fallback = npc.fallbacks?.noMoreHelp || npc.fallbacks?.default || "I have nothing more to say.";
         return { newState: stateAfterIncrement, messages: [createMessage(npc.id, npc.name, `"${fallback}"`)] };
@@ -139,6 +266,10 @@ async function handleScriptedChat(npc: NPC, state: PlayerState, playerInput: str
         npcName: npc.name,
         cannedResponses: availableTopics
     });
+
+    // DEBUG: Log AI selection
+    console.log(`[CONVERSATION DEBUG] Player input: "${playerInput}"`);
+    console.log(`[CONVERSATION DEBUG] AI selected topic: ${aiResponse.topic}`);
 
     const selectedTopic = npc.topics?.find(t => t.topicId === aiResponse.topic);
 
@@ -195,10 +326,15 @@ export async function handleConversation(state: PlayerState, playerInput: string
         return await processEffects(stateAfterDemotionCheck, effects, game);
     }
     
+    // NEW: Route to contextual chat if NPC has contextual knowledge defined
+    if (npc.contextualKnowledge || npc.secret) {
+        return handleContextualChat(npc, stateAfterDemotionCheck, playerInput, game);
+    }
+
     if (npc.dialogueType === 'scripted') {
         return handleScriptedChat(npc, stateAfterDemotionCheck, playerInput, game);
     }
-    
+
     if (npc.dialogueType === 'freeform') {
         return handleFreeformChat(npc, stateAfterDemotionCheck, playerInput, game);
     }

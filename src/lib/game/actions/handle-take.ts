@@ -61,7 +61,7 @@ export async function handleTake(state: PlayerState, targetName: string, game: G
     return [{
       type: 'SHOW_MESSAGE',
       speaker: 'narrator',
-      content: smartMessage.message,
+      content: smartMessage.found ? `You notice that, but you can't take it from here.` : smartMessage.message,
       messageType: 'image',
       imageUrl: game.systemMedia?.take?.failure?.url,
       imageDescription: game.systemMedia?.take?.failure?.description,

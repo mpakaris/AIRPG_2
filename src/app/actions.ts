@@ -145,26 +145,62 @@ export async function getGameData(gameId: GameId): Promise<Game | null> {
 
 // --- Chapter & Game Completion ---
 
+/**
+ * Checks if chapter is complete based on happy path or legacy objectives
+ *
+ * Priority:
+ * 1. Use happy path system if defined
+ * 2. Fall back to legacy objectives system
+ */
 function checkChapterCompletion(state: PlayerState, game: Game): { isComplete: boolean; messages: Message[] } {
-    const chapter = game.chapters[game.startChapterId]; // Simplified for now
-    const chapterCompletionFlagValue = `chapter_${game.startChapterId}_complete` as Flag;
+    const chapter = game.chapters[state.currentChapterId];
+    const chapterCompletionFlagValue = `chapter_${state.currentChapterId}_completed` as Flag;
     const isAlreadyComplete = GameStateManager.hasFlag(state, chapterCompletionFlagValue);
 
-    if (isAlreadyComplete || !chapter.objectives || chapter.objectives.length === 0) {
-        return { isComplete: isAlreadyComplete, messages: [] };
+    // If already marked complete, return early
+    if (isAlreadyComplete) {
+        return { isComplete: true, messages: [] };
     }
 
-    const allObjectivesMet = chapter.objectives.every(obj => GameStateManager.hasFlag(state, obj.flag));
+    let isComplete = false;
 
-    if (allObjectivesMet) {
+    // Priority 1: Check happy path system
+    if (chapter.happyPath && chapter.happyPath.length > 0) {
+        const { checkChapterCompletion: checkHappyPathCompletion } = require('@/lib/game/utils/happy-path-tracker');
+        isComplete = checkHappyPathCompletion(chapter, state, game);
+    }
+    // Priority 2: Fall back to legacy objectives
+    else if (chapter.objectives && chapter.objectives.length > 0) {
+        const allObjectivesMet = chapter.objectives.every(obj =>
+            GameStateManager.hasFlag(state, obj.flag)
+        );
+        isComplete = allObjectivesMet;
+    }
+
+    // If complete, generate completion messages
+    if (isComplete) {
         const messages: Message[] = [];
         const narratorName = game.narratorName || "Narrator";
+
+        // Show completion video
         if (chapter.completionVideo) {
-            messages.push(createMessage('narrator', narratorName, chapter.completionVideo, 'video'))
+            messages.push(createMessage('narrator', narratorName, chapter.completionVideo, 'video'));
         }
-        if(chapter.postChapterMessage) {
-            messages.push(createMessage('narrator', narratorName, chapter.postChapterMessage));
+
+        // Show post-chapter message
+        const completionMessage = chapter.postChapterMessage ||
+            `🎉 Congratulations! You've completed "${chapter.title}"!`;
+        messages.push(createMessage('narrator', narratorName, completionMessage));
+
+        // Show next chapter prompt
+        if (chapter.nextChapter) {
+            messages.push(createMessage(
+                'narrator',
+                narratorName,
+                `\nReady for the next chapter? Type "${chapter.nextChapter.transitionCommand}" to continue to "${chapter.nextChapter.title}".`
+            ));
         }
+
         return { isComplete: true, messages };
     }
 
@@ -395,6 +431,23 @@ export async function processCommand(
     const stateRef = doc(firestore, 'player_states', `${userId}_${gameId}`);
     const logRef = doc(firestore, 'logs', `${userId}_${gameId}`);
 
+    // Variables for unified command logging (declare here for function-wide scope, accessible in catch block)
+    let commandStartTime: number | undefined;
+    let stateBefore: PlayerState | undefined;
+    let preprocessedInput = safePlayerInput;
+    let uiMessagesThisTurn: Message[] = [];
+    let effects: Effect[] = [];
+    let preprocessingMs = 0;
+    let aiInterpretationMs = 0;
+    let executionMs = 0;
+    let stateUpdateMs = 0;
+    let safetyNetResult: any;
+    let verb = 'unknown';
+    let restOfCommand = '';
+    let executionSuccess = true;
+    let executionErrorMessage: string | undefined;
+    let executionErrorType: 'invalid_target' | 'invalid_action' | 'ai_unclear' | 'system_error' | undefined;
+
     try {
         // Try to load state and logs from database
         let stateSnap, logSnap;
@@ -446,11 +499,8 @@ export async function processCommand(
 
         const systemName = "System";
 
-        // Variables for unified command logging (declare here for function-wide scope)
-        let commandStartTime: number | undefined;
-        let stateBefore: PlayerState = currentState;
-        let preprocessedInput = safePlayerInput;
-        let uiMessagesThisTurn: Message[] = []; // Track UI messages for this turn only
+        // Initialize stateBefore now that currentState is assigned
+        stateBefore = currentState;
 
         let playerMessage: Message | null = null;
         if (safePlayerInput) {
@@ -460,29 +510,34 @@ export async function processCommand(
             // - Regular commands: add to uiMessagesThisTurn (for consolidated logging)
         }
 
-        // NEW ARCHITECTURE: Handlers now return Effect[] instead of CommandResult
-        let effects: Effect[] = [];
-        let preprocessingMs = 0;
-        let aiInterpretationMs = 0;
-        let executionMs = 0;
-        let stateUpdateMs = 0;
-        let safetyNetResult: any;
-        let verb = 'unknown';
-        let restOfCommand = '';
-        let executionSuccess = true;
-        let executionErrorMessage: string | undefined;
-        let executionErrorType: 'invalid_target' | 'invalid_action' | 'ai_unclear' | 'system_error' | undefined;
-
         // --- Core Command Logic ---
         if (currentState.activeConversationWith) {
-            // SPECIAL COMMAND: Conversation (old format)
-            if (playerMessage) allMessagesForSession.push(playerMessage);
+            // Check if player is trying to execute a game command (not dialogue)
+            // Commands like USE, EXAMINE, LOOK, GO, TAKE should break conversation context
+            const gameCommandPattern = /^(use|examine|look|take|go|read|open|close|move|search|break|unlock|enter|exit|help|inventory|map)\s+/i;
+            const isGameCommand = gameCommandPattern.test(safePlayerInput.trim());
 
-            // handleConversation still uses old architecture (legacy)
-            const legacyResult = await handleConversation(currentState, safePlayerInput, game);
-            allMessagesForSession.push(...legacyResult.messages);
-            currentState = legacyResult.newState;
-        } else if (currentState.activeDeviceFocus) {
+            if (isGameCommand) {
+                // Route to normal command interpretation instead of conversation
+                // This allows "use phone" to work even during conversation
+                console.log(`[CONVERSATION BYPASS] Detected game command during conversation: "${safePlayerInput}"`);
+                // Fall through to normal command processing below
+            } else {
+                // SPECIAL COMMAND: Conversation (old format)
+                if (playerMessage) allMessagesForSession.push(playerMessage);
+
+                // handleConversation still uses old architecture (legacy)
+                const legacyResult = await handleConversation(currentState, safePlayerInput, game);
+                allMessagesForSession.push(...legacyResult.messages);
+                currentState = legacyResult.newState;
+
+                // Save and return early - don't continue processing
+                await logAndSave(userId, gameId, currentState, allMessagesForSession);
+                return { newState: currentState, messages: extractUIMessages(allMessagesForSession) };
+            }
+        }
+
+        if (currentState.activeDeviceFocus) {
             // DEVICE FOCUS MODE: Use consolidated logging
             if (playerMessage) uiMessagesThisTurn.push(playerMessage);
 
@@ -688,7 +743,9 @@ export async function processCommand(
                 // SPECIAL CASE: Help (old format)
                 if (playerMessage) allMessagesForSession.push(playerMessage);
 
-                effects = await handleHelp(currentState, game);
+                // Extract question if player asked something specific (e.g., "help, I don't know how to open the box")
+                const playerQuestion = preprocessedInput.length > 10 ? preprocessedInput : null;
+                effects = await handleHelp(currentState, playerQuestion, game);
                 if (effects.length > 0) {
                     const result = await processEffects(currentState, effects, game);
                     currentState = result.newState;
@@ -943,7 +1000,9 @@ export async function processCommand(
                 case 'help':
                 case 'hint':
                     // NEW: handleHelp returns Effect[]
-                    effects = await handleHelp(currentState, game);
+                    // Extract optional question from rest of command (e.g., "help how do I open the box")
+                    const helpQuestion = restOfCommand || null;
+                    effects = await handleHelp(currentState, helpQuestion, game);
                     break;
                 case 'go':
                     // NEW: handleGo returns Effect[]
@@ -1363,7 +1422,7 @@ export async function processCommand(
             systemResponse: `Sorry, something went wrong while processing your command.\n\nError: ${errorMessage}`,
 
             // Context
-            context: {
+            context: typeof currentState !== 'undefined' ? {
                 userId: userId,
                 gameId: gameId,
                 chapterId: currentState?.currentChapterId,
@@ -1371,6 +1430,9 @@ export async function processCommand(
                 focusId: currentState?.currentFocusId,
                 focusType: currentState?.focusType,
                 activeConversation: currentState?.activeConversationWith,
+            } : {
+                userId: userId,
+                gameId: gameId,
             },
 
             // AI tracking (if available from scope)

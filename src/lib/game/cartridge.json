@@ -1778,20 +1778,36 @@
             }
           }
         ],
-        "onOpen": {
-          "conditions": [
-            {
-              "type": "NO_FLAG",
-              "flag": "safe_is_unlocked"
+        "onOpen": [
+          {
+            "conditions": [
+              {
+                "type": "FLAG",
+                "flag": "safe_is_unlocked",
+                "value": true
+              }
+            ],
+            "success": {
+              "message": "Already open. TAKE the document inside.",
+              "media": {
+                "url": "https://res.cloudinary.com/dg912bwcc/image/upload/v1762714567/Safe_newspaper_qy2ssi.png",
+                "description": "Open wall safe with newspaper article",
+                "hint": "The safe is already open"
+              }
             }
-          ],
-          "fail": {
-            "message": "Locked tight. Need the key. Try USING the key on it."
           },
-          "success": {
-            "message": "Already open. TAKE the document inside."
+          {
+            "conditions": [],
+            "success": {
+              "message": "Locked tight. Need the key. Try USING the key on it.",
+              "media": {
+                "url": "https://res.cloudinary.com/dg912bwcc/image/upload/v1761263220/safe_behind_Painting_dbo6qc.png",
+                "description": "Locked wall safe",
+                "hint": "Need the key to open"
+              }
+            }
           }
-        },
+        ],
         "onClose": {
           "conditions": [
             {
@@ -3222,6 +3238,95 @@
         "schema": "1.0",
         "content": "1.0"
       }
+    },
+    "obj_business_card": {
+      "id": "obj_business_card",
+      "name": "Business Card",
+      "alternateNames": [
+        "business card",
+        "musicians card",
+        "saxo card",
+        "sax card",
+        "card"
+      ],
+      "archetype": "Clue",
+      "description": "A simple business card for a musician. It reads: \"S A X O - The World's Best Sax Player\". A phone number is listed, along with a handwritten number \"1943\" and the name \"ROSE\".",
+      "capabilities": {
+        "openable": false,
+        "lockable": false,
+        "breakable": false,
+        "container": false,
+        "movable": false,
+        "searchable": false,
+        "inputtable": false,
+        "powerable": false,
+        "readable": true,
+        "usable": false,
+        "combinable": false,
+        "passage": false,
+        "takable": false,
+        "camera": false,
+        "photographable": true
+      },
+      "state": {
+        "isOpen": false,
+        "isLocked": false,
+        "isBroken": false,
+        "isPoweredOn": false,
+        "currentStateId": "default"
+      },
+      "placement": {
+        "parentLocationId": "loc_cafe_interior"
+      },
+      "handlers": {
+        "onExamine": {
+          "success": {
+            "message": "Standard business card. White cardstock, slightly worn at the edges. Professional print job—clean typography, bold lettering. But there's something handwritten in the corner. Blue ink, hasty scrawl. Someone added notes after it was printed.",
+            "media": {
+              "url": "https://res.cloudinary.com/dg912bwcc/image/upload/v1764591662/business_card_jtor2e.jpg",
+              "description": "Business card for saxophone player",
+              "hint": "ROSE and 1943 written by hand"
+            }
+          }
+        },
+        "onTake": {
+          "fail": {
+            "message": "The barista says, \"Sorry, that belongs to my boss. But feel free to take a picture if you want.\"\n\nHint: Try USE PHONE ON BUSINESS CARD"
+          }
+        },
+        "onRead": {
+          "success": {
+            "message": "Printed text reads:\n\n\"S A X O\nThe World's Best Sax Player\"\n\nPhone number listed below. But in the corner, handwritten in blue ink:\n\n\"1943\"\n\"ROSE\"\n\nRose. That name keeps appearing. And 1943—a year? A code? This means something.",
+            "media": {
+              "url": "https://res.cloudinary.com/dg912bwcc/image/upload/v1764591662/business_card_jtor2e.jpg",
+              "description": "Business card for saxophone player",
+              "hint": "ROSE and 1943 written by hand"
+            }
+          }
+        },
+        "defaultFailMessage": "Musician's business card. Clues: ROSE and 1943. Try: EXAMINE it, READ it, or USE PHONE ON it to photograph."
+      },
+      "media": {
+        "images": {
+          "default": {
+            "url": "https://res.cloudinary.com/dg912bwcc/image/upload/v1764591662/business_card_jtor2e.jpg",
+            "description": "A business card for a saxophone player.",
+            "hint": "business card with ROSE and 1943"
+          }
+        }
+      },
+      "design": {
+        "authorNotes": "Connects to the saxophonist. Must be photographed instead of taken. Teaches photography mechanic.",
+        "tags": [
+          "card",
+          "clue",
+          "photographable"
+        ]
+      },
+      "version": {
+        "schema": "1.0",
+        "content": "1.0"
+      }
     }
   },
   "items": {
@@ -3247,7 +3352,8 @@
         "isConsumable": false,
         "isScannable": false,
         "isAnalyzable": false,
-        "isPhotographable": false
+        "isPhotographable": false,
+        "isCamera": true
       },
       "state": {
         "currentStateId": "default"
@@ -3941,117 +4047,6 @@
       "version": {
         "schema": "1.0",
         "content": "1.1"
-      }
-    },
-    "item_business_card": {
-      "id": "item_business_card",
-      "name": "Business Card",
-      "alternateNames": [
-        "business card",
-        "musicians card",
-        "saxo card",
-        "sax card"
-      ],
-      "archetype": "Personal",
-      "description": "A simple business card for a musician. It reads: \"S A X O - The World's Best Sax Player\". A phone number is listed, along with a handwritten number \"1943\" and the name \"ROSE\".",
-      "alternateDescription": "The musician's business card. That name, 'ROSE', and the number '1943' seem significant.",
-      "capabilities": {
-        "isTakable": true,
-        "isReadable": true,
-        "isUsable": false,
-        "isCombinable": false,
-        "isConsumable": false,
-        "isScannable": false,
-        "isAnalyzable": false,
-        "isPhotographable": false
-      },
-      "handlers": {
-        "onExamine": {
-          "success": {
-            "message": "Standard business card. White cardstock, slightly worn at the edges. Professional print job—clean typography, bold lettering. But there's something handwritten in the corner. Blue ink, hasty scrawl. Someone added notes after it was printed.",
-            "media": {
-              "url": "https://res.cloudinary.com/dg912bwcc/image/upload/v1759241477/Screenshot_2025-09-30_at_15.46.02_fuk4tb.png",
-              "description": "Business card for saxophone player",
-              "hint": "ROSE and 1943 written by hand"
-            }
-          }
-        },
-        "onTake": {
-          "success": {
-            "message": "Card goes in your pocket. S A X O. ROSE. 1943. Pieces of the puzzle."
-          },
-          "fail": {
-            "message": "Already have it."
-          }
-        },
-        "onDrop": {
-          "success": {
-            "message": "Card drops. Tiny. Can pick it up later."
-          }
-        },
-        "onUse": {
-          "fail": {
-            "message": "It's a business card. Try READING it or EXAMINING it."
-          }
-        },
-        "onOpen": {
-          "fail": {
-            "message": "It's flat. Try READING it."
-          }
-        },
-        "onClose": {
-          "fail": {
-            "message": "Nothing to close. Try READING it."
-          }
-        },
-        "onMove": {
-          "fail": {
-            "message": "It's in your pocket. Try READING it."
-          }
-        },
-        "onBreak": {
-          "fail": {
-            "message": "Evidence. Don't destroy it. Try READING it."
-          }
-        },
-        "onRead": {
-          "success": {
-            "message": "Printed text reads:\n\n\"S A X O\nThe World's Best Sax Player\"\n\nPhone number listed below. But in the corner, handwritten in blue ink:\n\n\"1943\"\n\"ROSE\"\n\nRose. That name keeps appearing. And 1943—a year? A code? This means something.",
-            "media": {
-              "url": "https://res.cloudinary.com/dg912bwcc/image/upload/v1759241477/Screenshot_2025-09-30_at_15.46.02_fuk4tb.png",
-              "description": "Business card for saxophone player",
-              "hint": "ROSE and 1943 written by hand"
-            }
-          }
-        },
-        "onSearch": {
-          "fail": {
-            "message": "It's a card. Flat. Try READING it."
-          }
-        },
-        "onTalk": {
-          "fail": {
-            "message": "Cards don't talk. Try READING it."
-          }
-        },
-        "defaultFailMessage": "Musician's business card. Clues: ROSE and 1943. Try: EXAMINE or READ it."
-      },
-      "media": {
-        "image": {
-          "url": "https://res.cloudinary.com/dg912bwcc/image/upload/v1759241477/Screenshot_2025-09-30_at_15.46.02_fuk4tb.png",
-          "description": "A business card for a saxophone player.",
-          "hint": "business card"
-        }
-      },
-      "design": {
-        "authorNotes": "Connects to the saxophonist and provides the 'Rose' and '1943' clues.",
-        "tags": [
-          "card"
-        ]
-      },
-      "version": {
-        "schema": "1.0",
-        "content": "1.0"
       }
     },
     "item_newspaper_article": {
@@ -4983,7 +4978,8 @@
         "barista",
         "bartender",
         "coffee guy",
-        "server"
+        "server",
+        "jake"
       ],
       "description": "A tired-looking man in his late 20s, with faded tattoos and a cynical arch to his eyebrow. He seems to have seen a thousand stories like yours and is not easily impressed.",
       "image": {
@@ -4999,7 +4995,7 @@
         "attitude": "neutral"
       },
       "dialogueType": "scripted",
-      "persona": "You are a tired, cynical barista in a downtown cafe. You've seen it all and are not impressed by much. Your primary focus is on making coffee and dealing with customers as efficiently as possible. You will not discuss the case or any past events further, deflecting any questions with short, dismissive, but not overly rude answers. You just want to do your job.",
+      "persona": "You are Jake, a tired, cynical barista at The Daily Grind cafe. You've seen everything and aren't impressed by much. You're not rude, just... efficiently indifferent. You make coffee, you wipe counters, you endure your manager Brenda's exhausting positivity. When people ask about Silas Bloom (the man in the black coat), you're willing to talk - he's harmless, just another quiet regular. You're protective of customer property but practical - if someone's that interested, they can photograph it.",
       "welcomeMessage": "What can I get for you? Or are you just here to brood? Either is fine.",
       "goodbyeMessage": "Alright, I've got Pumpkin spice lattes to craft. Good luck with... whatever it is you're doing.",
       "startConversationEffects": [
@@ -5009,19 +5005,110 @@
           "value": true
         }
       ],
-      "limits": {
-        "maxInteractions": 20,
-        "interactionLimitResponse": "Seriously, I've got a line of customers. I can't keep chatting. The coffee machine calls."
+      "contextualKnowledge": {
+        "general": [
+          "You work morning shifts, 6 AM to 2 PM",
+          "Coffee's decent, pastries day-old",
+          "Manager Brenda is exhaustingly positive",
+          "Tips pay rent + Netflix",
+          "Your name is Jake"
+        ],
+        "topic": [
+          "Silas Bloom - regular, black coat",
+          "Quiet type, pays cash",
+          "Musician, plays sax",
+          "Usually 5th Street, afternoons",
+          "Carries rusty metal box everywhere",
+          "Never opens box here, just stares",
+          "Protective of that box",
+          "Player has metal box with locking mechanism",
+          "Don't know how to open the box",
+          "Don't know what's in it",
+          "Left business card few days ago",
+          "Card on counter, collecting dust",
+          "Said could toss it, kept it anyway",
+          "Maybe card has clue about box?",
+          "Card might help with player's box problem",
+          "Comes in alone, leaves alone",
+          "Orders same thing - black coffee"
+        ]
       },
-      "progressiveReveals": [
-        {
-          "triggerOnInteraction": 3,
-          "topicId": "t_give_card"
+      "secret": {
+        "info": "Hint that business card might help with the metal box - suggest player check it out",
+        "revealConditions": {
+          "anyOf": [
+            {
+              "type": "TOPIC_MENTIONS",
+              "topic": "silas|bloom|musician|saxophone|sax|box|metal",
+              "minCount": 2
+            },
+            {
+              "type": "KEYWORDS",
+              "keywords": [
+                "business card",
+                "card",
+                "contact",
+                "reach",
+                "number",
+                "phone",
+                "address",
+                "find him",
+                "get hold",
+                "left behind",
+                "leave anything",
+                "open",
+                "unlock",
+                "password",
+                "code",
+                "combination",
+                "how to open",
+                "open the box",
+                "open it",
+                "whats in",
+                "inside",
+                "clue",
+                "hint",
+                "help"
+              ]
+            }
+          ]
+        },
+        "revealEffects": [
+          {
+            "type": "REVEAL_FROM_PARENT",
+            "entityId": "obj_business_card",
+            "parentId": "loc_cafe_interior"
+          },
+          {
+            "type": "SET_FLAG",
+            "flag": "business_card_revealed",
+            "value": true
+          },
+          {
+            "type": "SHOW_MESSAGE",
+            "speaker": "narrator",
+            "content": "The barista gestures to a business card sitting on the counter."
+          },
+          {
+            "type": "SHOW_MESSAGE",
+            "speaker": "system",
+            "content": "Hint: The business card might have clues about the metal box. Try EXAMINE BUSINESS CARD or USE PHONE ON BUSINESS CARD to photograph it."
+          }
+        ]
+      },
+      "conversationStages": {
+        "active": {
+          "personality": "Helpful but tired, sharing info about Silas freely, guarding the business card until conditions met",
+          "maxInteractions": 10
+        },
+        "completed": {
+          "personality": "Brief and ready to move on, friendly but done helping",
+          "defaultResponse": "I told you what I know. The card's on the counter if you want to photograph it. Now I've got work to do."
         }
-      ],
+      },
       "demoteRules": {
         "onFlagsAll": [
-          "has_received_business_card"
+          "business_card_revealed"
         ],
         "then": {
           "setStage": "demoted",
@@ -5033,344 +5120,13 @@
         "goodbyeMessage": "See ya.",
         "defaultResponse": "Look, I told you what I know. I've got work to do."
       },
-      "topics": [
-        {
-          "topicId": "t_greet",
-          "label": "Greeting",
-          "keywords": [
-            "hello",
-            "hi",
-            "how are you",
-            "hey",
-            "good morning",
-            "good afternoon"
-          ],
-          "response": {
-            "message": "Another day, another dollar. What do you need?"
-          }
-        },
-        {
-          "topicId": "t_coffee",
-          "label": "Ask about coffee",
-          "keywords": [
-            "coffee",
-            "drink",
-            "menu",
-            "order",
-            "buy",
-            "latte",
-            "cappuccino",
-            "espresso",
-            "beverage"
-          ],
-          "response": {
-            "message": "The coffee is hot and the pastries are day-old. The menu is on the board. Let me know if you can decipher my handwriting."
-          }
-        },
-        {
-          "topicId": "t_prices",
-          "label": "Ask about prices",
-          "keywords": [
-            "price",
-            "cost",
-            "how much",
-            "expensive",
-            "cheap"
-          ],
-          "response": {
-            "message": "More than it should be, less than I want to charge. The prices are on the board."
-          }
-        },
-        {
-          "topicId": "t_reco",
-          "label": "Ask for recommendation",
-          "keywords": [
-            "recommend",
-            "good",
-            "special",
-            "best",
-            "favorite",
-            "suggest"
-          ],
-          "response": {
-            "message": "The espresso will wake you up. The scones... well, they exist."
-          }
-        },
-        {
-          "topicId": "t_man",
-          "label": "Ask about the man in black",
-          "keywords": [
-            "man",
-            "regular",
-            "customer",
-            "guy",
-            "who left",
-            "who was sitting here",
-            "the man",
-            "person"
-          ],
-          "response": {
-            "message": "The guy in the black coat? Yeah, he's a regular. Comes in, stares at that old metal box of his, doesn't say much. Pays in cash. My favorite kind of customer."
-          }
-        },
-        {
-          "topicId": "t_musician",
-          "label": "Ask about his job",
-          "keywords": [
-            "musician",
-            "saxophone",
-            "job",
-            "background",
-            "what does he do",
-            "occupation",
-            "work"
-          ],
-          "response": {
-            "message": "I hear he's a musician. Plays the saxophone out on the corner most days. Keeps to himself, you know?"
-          }
-        },
-        {
-          "topicId": "t_box",
-          "label": "Ask about the metal box",
-          "keywords": [
-            "box",
-            "metal box",
-            "rusty box",
-            "his",
-            "what was he doing",
-            "container"
-          ],
-          "response": {
-            "message": "That rusty old box? He's been carrying it around for weeks. Never opens it while he's here. Just sits there, staring at it like it's got all the answers."
-          }
-        },
-        {
-          "topicId": "t_cafe",
-          "label": "Ask about the cafe",
-          "keywords": [
-            "cafe",
-            "place",
-            "here",
-            "daily grind",
-            "establishment"
-          ],
-          "response": {
-            "message": "It's a job. I make coffee, people drink it. The manager tries to make it feel 'cozy'. I just clean up after people."
-          }
-        },
-        {
-          "topicId": "t_day",
-          "label": "Ask about his day",
-          "keywords": [
-            "day",
-            "shift",
-            "busy",
-            "slow",
-            "customers"
-          ],
-          "response": {
-            "message": "Same as always. Pour coffee, wipe counters, listen to people's problems. The usual."
-          }
-        },
-        {
-          "topicId": "t_weather",
-          "label": "Comment on weather",
-          "keywords": [
-            "rain",
-            "weather",
-            "cold",
-            "wet"
-          ],
-          "response": {
-            "message": "Rain brings customers. They want something warm. Good for business, I guess."
-          }
-        },
-        {
-          "topicId": "t_manager",
-          "label": "Ask about manager",
-          "keywords": [
-            "manager",
-            "boss",
-            "woman",
-            "lady"
-          ],
-          "response": {
-            "message": "Brenda? She's... enthusiastic. Very positive. Sometimes exhaustingly so. But she pays on time."
-          }
-        },
-        {
-          "topicId": "t_name",
-          "label": "Ask his name",
-          "keywords": [
-            "name",
-            "called",
-            "your name"
-          ],
-          "response": {
-            "message": "Name's Jake. Not that it matters much. I'm just the guy who makes your coffee."
-          }
-        },
-        {
-          "topicId": "t_tips",
-          "label": "Comment on tips",
-          "keywords": [
-            "tip",
-            "tips",
-            "money"
-          ],
-          "response": {
-            "message": "Tips are appreciated. Pays for my Netflix subscription."
-          }
-        },
-        {
-          "topicId": "t_case",
-          "label": "Ask about investigation",
-          "keywords": [
-            "investigation",
-            "case",
-            "detective",
-            "police",
-            "crime"
-          ],
-          "response": {
-            "message": "Look, I don't know anything about any case. I just work here. You want answers, talk to the cops."
-          }
-        },
-        {
-          "topicId": "t_suspicious",
-          "label": "Ask about suspicious behavior",
-          "keywords": [
-            "suspicious",
-            "strange",
-            "weird",
-            "unusual",
-            "odd"
-          ],
-          "response": {
-            "message": "In a downtown cafe? Everything's suspicious. Half the customers are probably on the run from something."
-          }
-        },
-        {
-          "topicId": "t_regulars",
-          "label": "Ask about other regulars",
-          "keywords": [
-            "regulars",
-            "customers",
-            "people",
-            "who comes here"
-          ],
-          "response": {
-            "message": "We get all types. Office workers, students, tourists. The usual city crowd."
-          }
-        },
-        {
-          "topicId": "t_hours",
-          "label": "Ask about hours",
-          "keywords": [
-            "hours",
-            "open",
-            "close",
-            "schedule"
-          ],
-          "response": {
-            "message": "6 AM to 9 PM. I'm here most mornings. Lucky me."
-          }
-        },
-        {
-          "topicId": "t_food",
-          "label": "Ask about food",
-          "keywords": [
-            "food",
-            "pastries",
-            "muffin",
-            "scone",
-            "sandwich"
-          ],
-          "response": {
-            "message": "Pastries are from yesterday. Still edible. The sandwiches are fresh, at least."
-          }
-        },
-        {
-          "topicId": "t_compliment",
-          "label": "Compliment him",
-          "keywords": [
-            "good job",
-            "great",
-            "nice",
-            "excellent"
-          ],
-          "response": {
-            "message": "Thanks, I guess. Just doing my job. You want that coffee or not?"
-          }
-        },
-        {
-          "topicId": "t_give_card",
-          "label": "Ask about what he left/his name",
-          "keywords": [
-            "business card",
-            "left",
-            "name",
-            "note",
-            "anything else",
-            "what did he leave",
-            "ask about silas bloom",
-            "silas bloom",
-            "know his name",
-            "card",
-            "leave anything"
-          ],
-          "once": true,
-          "conditions": {
-            "requiredFlagsAll": [
-              "topic_revealed_npc_barista_t_give_card"
-            ]
-          },
-          "response": {
-            "message": "You know, he left this here the other day. Said I could have it. Some business card. If you're that interested, you can take it. It's just collecting dust. Now, if you'll excuse me, I've got work to do.",
-            "effects": [
-              {
-                "type": "ADD_ITEM",
-                "itemId": "item_business_card"
-              },
-              {
-                "type": "SET_FLAG",
-                "flag": "has_received_business_card",
-                "value": true
-              },
-              {
-                "type": "SHOW_MESSAGE",
-                "speaker": "narrator",
-                "content": "The barista slides a business card across the counter. It's been added to your inventory.",
-                "messageType": "image",
-                "imageId": "item_business_card",
-                "imageEntityType": "item"
-              }
-            ]
-          }
-        },
-        {
-          "topicId": "t_insult",
-          "label": "React to insult",
-          "keywords": [
-            "stupid",
-            "idiot",
-            "useless",
-            "rude",
-            "dumb"
-          ],
-          "response": {
-            "message": "Hey, I get paid to pour coffee, not to be your punching bag. Watch it."
-          }
-        }
-      ],
       "fallbacks": {
         "default": "Look, I just work here. I pour coffee, I wipe counters. You're the detective.",
-        "noMoreHelp": "I told you all I know. I've got work to do.",
-        "offTopic": "I'm not sure what you mean by that."
+        "noMoreHelp": "I told you all I know. I've got work to do."
       },
       "version": {
-        "schema": "2.0",
-        "content": "1.2"
+        "schema": "3.0",
+        "content": "2.0"
       }
     },
     "npc_manager": {
