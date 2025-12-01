@@ -9,6 +9,7 @@ export * from './flows/generate-story-from-logs';
 export * from './flows/generate-npc-chatter';
 export * from './flows/generate-contextual-hint';
 export * from './flows/contextual-npc-conversation';
+export * from './flows/generate-cant-take-message';
 
 // Export hybrid command interpreter (supports both local and API LLM)
 export {

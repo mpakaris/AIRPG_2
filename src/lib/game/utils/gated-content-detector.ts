@@ -44,10 +44,19 @@ export function checkForGatedContent(
             );
 
             if (primaryNameMatch || alternateNamesMatch) {
-                // Object exists in game - check if revealed
+                // Object exists in game - check if it's in the current location (= visible by default)
+                const currentLocation = game.locations[state.currentLocationId];
+                const isInLocation = currentLocation?.objects?.includes(objectId as GameObjectId);
+
+                if (isInLocation) {
+                    // Object is in location's objects array = visible, not gated
+                    continue; // Check next entity
+                }
+
+                // Check if revealed via runtime state
                 const entityState = GameStateManager.getEntityState(state, objectId);
 
-                // Entity is gated if revealedBy is undefined (not revealed yet)
+                // Entity is gated if NOT in location AND revealedBy is undefined (not revealed yet)
                 if (!entityState.revealedBy) {
                     // Found gated content!
                     return {
@@ -71,9 +80,19 @@ export function checkForGatedContent(
             );
 
             if (primaryNameMatch || alternateNamesMatch) {
+                // Item exists in game - check if it's in the current location (= visible by default)
+                const currentLocation = game.locations[state.currentLocationId];
+                const isInLocation = currentLocation?.items?.includes(itemId as ItemId);
+
+                if (isInLocation) {
+                    // Item is in location's items array = visible, not gated
+                    continue; // Check next entity
+                }
+
+                // Check if revealed via runtime state
                 const entityState = GameStateManager.getEntityState(state, itemId);
 
-                // Entity is gated if revealedBy is undefined (not revealed yet)
+                // Entity is gated if NOT in location AND revealedBy is undefined (not revealed yet)
                 if (!entityState.revealedBy) {
                     return {
                         isGated: true,
@@ -163,6 +182,6 @@ function getContextualMessage(
         }
     }
 
-    // Generic gated content message
-    return `You can't access ${entity.name} right now. You might need to do something else first, or wait for the right moment.`;
+    // Generic gated content message (no hints - keep mystery intact)
+    return `You can't access ${entity.name} right now.`;
 }

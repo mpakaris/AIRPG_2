@@ -15,6 +15,7 @@ import { buildEffectsFromOutcome } from "@/lib/game/utils/outcome-helpers";
 import { findBestMatch } from "@/lib/game/utils/name-matching";
 import { getSmartNotFoundMessage } from "@/lib/game/utils/smart-messages";
 import { MessageExpander } from "@/lib/game/utils/message-expansion";
+import { generateCantTakeMessage } from "@/ai";
 
 export async function handleTake(state: PlayerState, targetName: string, game: Game): Promise<Effect[]> {
   const normalizedTarget = normalizeName(targetName);
@@ -29,10 +30,11 @@ export async function handleTake(state: PlayerState, targetName: string, game: G
   }
 
   // LOCATION-AWARE SEARCH: Find best match (prioritizes current location)
+  // NOTE: We search objects too, so we can give proper "can't take furniture" messages
   const bestMatch = findBestMatch(normalizedTarget, state, game, {
     searchInventory: true,
     searchVisibleItems: true,
-    searchObjects: false,  // Can't take objects
+    searchObjects: true,  // Search objects to detect furniture/objects player tries to take
     requireFocus: true
   });
 
@@ -51,12 +53,48 @@ export async function handleTake(state: PlayerState, targetName: string, game: G
     }];
   }
 
-  // 2. Check if item found in visible entities
+  // 2. Check if it's a GameObject (furniture/object) - can't take these
+  if (bestMatch?.category === 'object') {
+    const obj = game.gameObjects[bestMatch.id as GameObjectId];
+    let objectMessage: string;
+
+    try {
+      const location = game.locations[state.currentLocationId];
+      const aiResult = await generateCantTakeMessage({
+        itemName: obj?.name || targetName,
+        locationName: location?.name || 'Unknown',
+        gameSetting: game.setting || 'Modern-day detective game'
+      });
+      objectMessage = aiResult.output.message;
+    } catch (error) {
+      console.error("AI generation failed for cant-take-object message:", error);
+      objectMessage = `You can't take the ${obj?.name || targetName}.`;
+    }
+
+    return [
+      {
+        type: 'SHOW_MESSAGE',
+        speaker: 'narrator',
+        content: objectMessage,
+        messageType: 'image',
+        imageUrl: game.systemMedia?.take?.failure?.url,
+        imageDescription: game.systemMedia?.take?.failure?.description,
+        imageHint: game.systemMedia?.take?.failure?.hint
+      },
+      {
+        type: 'SHOW_MESSAGE',
+        speaker: 'system',
+        content: `Turns out, you can't take this item.`
+      }
+    ];
+  }
+
+  // 3. Check if item found in visible entities
   if (!bestMatch || bestMatch.category !== 'visible-item') {
     const smartMessage = getSmartNotFoundMessage(normalizedTarget, state, game, {
       searchInventory: true,
       searchVisibleItems: true,
-      searchObjects: false
+      searchObjects: false  // Objects already handled above
     });
     return [{
       type: 'SHOW_MESSAGE',
@@ -84,28 +122,56 @@ export async function handleTake(state: PlayerState, targetName: string, game: G
     }];
   }
 
-  // 3. Check if item is takable
+  // 4. Check if item is takable (if not, generate AI message)
   if (item.capabilities && !item.capabilities.isTakable) {
     const failOutcome = item.handlers?.onTake?.fail;
-    const failMessage = failOutcome?.message || `You can't take the ${item.name}.`;
     const failMedia = failOutcome?.media;
+    let failMessage: string;
 
-    return [{
-      type: 'SHOW_MESSAGE',
-      speaker: 'narrator',
-      content: failMessage,
-      messageType: 'image',
-      // Use custom handler media if present, otherwise fall back to system media
-      imageUrl: failMedia?.url || game.systemMedia?.take?.failure?.url,
-      imageDescription: failMedia?.description || game.systemMedia?.take?.failure?.description,
-      imageHint: failMedia?.hint || game.systemMedia?.take?.failure?.hint
-    }];
+    // PRIORITY 1: Use custom message if defined (for story-critical items)
+    if (failOutcome?.message) {
+      failMessage = failOutcome.message;
+    }
+    // PRIORITY 2: Generate creative AI message (no story spoilers)
+    else {
+      try {
+        const location = game.locations[state.currentLocationId];
+        const aiResult = await generateCantTakeMessage({
+          itemName: item.name,
+          locationName: location?.name || 'Unknown',
+          gameSetting: game.setting || 'Modern-day detective game'
+        });
+        failMessage = aiResult.output.message;
+      } catch (error) {
+        // PRIORITY 3: Generic fallback if AI fails
+        console.error("AI generation failed for cant-take message:", error);
+        failMessage = `You can't take the ${item.name}.`;
+      }
+    }
+
+    return [
+      {
+        type: 'SHOW_MESSAGE',
+        speaker: 'narrator',
+        content: failMessage,
+        messageType: 'image',
+        // Use custom handler media if present, otherwise fall back to system media
+        imageUrl: failMedia?.url || game.systemMedia?.take?.failure?.url,
+        imageDescription: failMedia?.description || game.systemMedia?.take?.failure?.description,
+        imageHint: failMedia?.hint || game.systemMedia?.take?.failure?.hint
+      },
+      {
+        type: 'SHOW_MESSAGE',
+        speaker: 'system',
+        content: `Turns out, you can't take this item.`
+      }
+    ];
   }
 
-  // 4. Find the parent container (if any)
+  // 5. Find the parent container (if any)
   const parentId = VisibilityResolver.findParent(itemId, state);
 
-  // 5. Build effects
+  // 6. Build effects
   const effects: Effect[] = [
     { type: 'ADD_ITEM', itemId: itemId as ItemId }
   ];
