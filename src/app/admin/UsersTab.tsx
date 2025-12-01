@@ -57,10 +57,19 @@ function calculateStats(logs: Message[], stories: Record<ChapterId, Story>): Gam
     let totalTokens = 0;
 
     logs.forEach(log => {
+        // Handle legacy message format (log.usage)
         if (log.usage) {
             totalInputTokens += log.usage.inputTokens || 0;
             totalOutputTokens += log.usage.outputTokens || 0;
             totalTokens += log.usage.totalTokens || 0;
+        }
+
+        // Handle consolidated command format (log.tokens)
+        if ((log as any).type === 'command' && (log as any).tokens) {
+            const tokens = (log as any).tokens;
+            totalInputTokens += tokens.input || 0;
+            totalOutputTokens += tokens.output || 0;
+            totalTokens += tokens.total || 0;
         }
     });
 

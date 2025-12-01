@@ -523,17 +523,116 @@ export async function processCommand(
                 console.log(`[CONVERSATION BYPASS] Detected game command during conversation: "${safePlayerInput}"`);
                 // Fall through to normal command processing below
             } else {
-                // SPECIAL COMMAND: Conversation (old format)
-                if (playerMessage) allMessagesForSession.push(playerMessage);
+                // CONVERSATION: Use consolidated logging
+                if (playerMessage) uiMessagesThisTurn.push(playerMessage);
 
-                // handleConversation still uses old architecture (legacy)
-                const legacyResult = await handleConversation(currentState, safePlayerInput, game);
-                allMessagesForSession.push(...legacyResult.messages);
-                currentState = legacyResult.newState;
+                // Track conversation timing and state
+                const conversationStartTime = Date.now();
+                const stateBefore = JSON.parse(JSON.stringify(currentState));
 
-                // Save and return early - don't continue processing
-                await logAndSave(userId, gameId, currentState, allMessagesForSession);
-                return { newState: currentState, messages: extractUIMessages(allMessagesForSession) };
+                // Handle conversation
+                const conversationResult = await handleConversation(currentState, safePlayerInput, game);
+                currentState = conversationResult.newState;
+
+                const conversationMs = Date.now() - conversationStartTime;
+
+                // Extract AI usage from conversation messages
+                let totalTokensInput = 0;
+                let totalTokensOutput = 0;
+                let totalCost = 0;
+                let conversationAIModel = 'unknown';
+
+                for (const msg of conversationResult.messages) {
+                    if (msg.usage) {
+                        totalTokensInput += msg.usage.inputTokens || 0;
+                        totalTokensOutput += msg.usage.outputTokens || 0;
+                        totalCost += msg.usage.totalTokens * 0.00000015; // Estimate cost
+                        conversationAIModel = 'gemini-2.5-flash-lite'; // Conversation AI model
+                    }
+                    uiMessagesThisTurn.push(msg);
+                }
+
+                // Create consolidated log entry for conversation
+                const consolidatedEntry = {
+                    id: `turn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                    type: 'command',
+                    timestamp: Date.now(),
+
+                    // 1. PLAYER INPUT (use "input" to match UI expectations)
+                    input: {
+                        raw: rawPlayerInput,
+                        sanitized: safePlayerInput,
+                        wasGibberish: false,
+                        preprocessingMs: 0,
+                    },
+
+                    // 2. AI INTERPRETATION (Conversation AI)
+                    aiInterpretation: {
+                        primaryAI: {
+                            model: conversationAIModel,
+                            handler: 'conversation',
+                            npcId: currentState.activeConversationWith,
+                            latencyMs: conversationMs,
+                            costUSD: totalCost,
+                        },
+                        finalDecision: {
+                            source: 'conversation_ai',
+                            handler: 'handleConversation',
+                        },
+                        totalAICalls: totalTokensInput > 0 ? 1 : 0,
+                        totalCostUSD: totalCost,
+                    },
+
+                    // 3. EXECUTION
+                    execution: {
+                        handler: 'conversation',
+                        targetEntity: currentState.activeConversationWith,
+                        effectsApplied: conversationResult.messages.length,
+                        success: true,
+                        executionMs: conversationMs,
+                    },
+
+                    // 4. UI MESSAGES
+                    uiMessages: uiMessagesThisTurn,
+
+                    // 5. STATE SNAPSHOTS
+                    stateSnapshot: {
+                        before: stateBefore,
+                        after: currentState,
+                    },
+
+                    // 6. TOKEN USAGE
+                    tokens: totalTokensInput > 0 ? {
+                        input: totalTokensInput,
+                        output: totalTokensOutput,
+                        total: totalTokensInput + totalTokensOutput,
+                    } : undefined,
+
+                    // 7. PERFORMANCE
+                    performance: {
+                        preprocessingMs: 0,
+                        aiInterpretationMs: conversationMs,
+                        executionMs: 0,
+                        totalMs: conversationMs,
+                    },
+
+                    // 8. CONTEXT
+                    context: {
+                        chapterId: currentState.currentChapterId,
+                        locationId: currentState.currentLocationId,
+                        turnNumber: allMessagesForSession.filter((msg: any) => msg.type === 'command').length + 1,
+                    },
+
+                    // 9. QUALITY METRICS
+                    wasSuccessful: true,
+                    wasUnclear: false,
+                };
+
+                // Save consolidated entry
+                const consolidatedMessages = [...allMessagesForSession, consolidatedEntry as any];
+                await logAndSave(userId, gameId, currentState, consolidatedMessages);
+
+                return { newState: currentState, messages: extractUIMessages(consolidatedMessages) };
             }
         }
 

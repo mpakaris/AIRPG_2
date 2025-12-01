@@ -2069,7 +2069,7 @@ const items: Record<ItemId, Item> = {
                         {
                             type: 'SHOW_MESSAGE',
                             speaker: 'system',
-                            content: 'Phone Mode Active\n\nType CALL <number> to dial.\nType HELP for available commands.\nType PUT PHONE AWAY or CLOSE PHONE when done.'
+                            content: 'Phone Mode Active\n\nType CALL <number> to dial.\nType TAKE PHOTO of ITEM for picture time.\n\nType PUT PHONE AWAY or CLOSE PHONE when done.'
                         }
                     ]
                 }
@@ -3440,7 +3440,7 @@ const npcs: Record<NpcId, NPC> = {
                 { type: 'REVEAL_FROM_PARENT', entityId: 'obj_business_card' as GameObjectId, parentId: 'loc_cafe_interior' as LocationId },
                 { type: 'SET_FLAG', flag: 'business_card_revealed' as Flag, value: true },
                 { type: 'SHOW_MESSAGE', speaker: 'narrator', content: "The barista gestures to a business card sitting on the counter." },
-                { type: 'SHOW_MESSAGE', speaker: 'system', content: "Hint: The business card might have clues about the metal box. Try EXAMINE BUSINESS CARD or USE PHONE ON BUSINESS CARD to photograph it." }
+                { type: 'SHOW_MESSAGE', speaker: 'system', content: "Hint: The business card might have clues about the metal box. Try to USE PHONE to copy the business card on the counter." }
             ]
         },
 
