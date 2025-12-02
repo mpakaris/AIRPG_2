@@ -996,7 +996,9 @@ export type Chapter = {
     entityId: string;  // ID of the object/item/NPC to focus on initially
     entityType: 'object' | 'item' | 'npc';
   };
-  introductionVideo?: string;
+  introductionVideo?: string; // DEPRECATED: Use introVideo1 and introVideo2 instead
+  introVideo1?: string; // First intro video (e.g., cutscene)
+  introVideo2?: string; // Second intro video (e.g., explanation)
   introMessage?: string; // Opening narration when chapter starts (e.g., "The rain hammers down...")
   completionVideo?: string;
   postChapterMessage?: string;

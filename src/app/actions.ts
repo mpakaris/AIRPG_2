@@ -273,24 +273,37 @@ export async function createInitialMessages(state: PlayerState, game: Game): Pro
     const narratorName = game.narratorName || "Narrator";
     const messages: Message[] = [];
 
-    if (chapter.introductionVideo) {
-        // Create video message with proper image property
-        const videoMessage = createMessage('narrator', narratorName, chapter.introMessage || 'Watch this video to begin your journey...', 'video');
-        // Manually set the image property since this isn't entity-based media
-        videoMessage.image = {
-            url: chapter.introductionVideo,
-            description: 'Introduction video',
-            hint: 'intro'
+    // 1. Welcome message
+    messages.push(createMessage('narrator', narratorName, 'Welcome to Bloodhaven! Watch the following Videos to start your journey!'));
+
+    // 2. Chapter title
+    messages.push(createMessage('narrator', narratorName, 'WALK IN JUSTICE - Burt Macklin Chronicles | Chapter I'));
+
+    // 3. First intro video (Cutscene)
+    if (chapter.introVideo1) {
+        const video1Message = createMessage('narrator', narratorName, '', 'video');
+        video1Message.image = {
+            url: chapter.introVideo1,
+            description: 'Burt Macklin - Cutscene I',
+            hint: 'intro-cutscene'
         };
-        messages.push(videoMessage);
-    } else if (chapter.introMessage) {
-        // Use chapter-specific intro message if no video
-        messages.push(createMessage('narrator', narratorName, chapter.introMessage));
+        messages.push(video1Message);
     }
 
-    // Use location intro message (first-time entry) or fall back to scene description
-    const introText = location.introMessage || location.sceneDescription;
-    messages.push(createMessage('narrator', narratorName, introText));
+    // 4. Second intro video (Explanation)
+    if (chapter.introVideo2) {
+        const video2Message = createMessage('narrator', narratorName, '', 'video');
+        video2Message.image = {
+            url: chapter.introVideo2,
+            description: 'Introduction Explanation',
+            hint: 'intro-explanation'
+        };
+        messages.push(video2Message);
+    }
+
+    // 5. Scene description
+    const sceneText = "You are inside The Daily Grind. It's a bustling downtown cafe, smelling of coffee and rain.\n\nA stranger just placed a mysterious Metal Box in front of you, out of nowhere.\n\nWhat do you do next, Burt Macklin?";
+    messages.push(createMessage('narrator', narratorName, sceneText));
 
     return messages;
 }

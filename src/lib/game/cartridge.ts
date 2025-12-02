@@ -3924,7 +3924,8 @@ const chapters: Record<ChapterId, Chapter> = {
         id: 'ch1-the-cafe' as ChapterId,
         title: 'A Blast from the Past',
         goal: "Find out what's inside the metal box and the safe.",
-        introductionVideo: 'https://res.cloudinary.com/dg912bwcc/video/upload/f_mp4/v1759670681/CH_I_Intro_ccy0og.mp4',
+        introVideo1: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1764513045/Burt_Macklin_-_Cutscene_I_pkxkp9.mp4',
+        introVideo2: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1764512536/Intro_Explanation_Video_btwphk.mov',
         completionVideo: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759678377/CH_I_completion_jqtyme.mp4',
         postChapterMessage: "Looks like we've got everything from this place. I'm thinking our next stop should be the jazz club mentioned in the article.",
         nextChapter: {
