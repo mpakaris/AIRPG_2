@@ -55,6 +55,7 @@ function calculateStats(logs: Message[], stories: Record<ChapterId, Story>): Gam
     let totalInputTokens = 0;
     let totalOutputTokens = 0;
     let totalTokens = 0;
+    let estimatedCost = 0;
 
     logs.forEach(log => {
         // Handle legacy message format (log.usage)
@@ -62,14 +63,26 @@ function calculateStats(logs: Message[], stories: Record<ChapterId, Story>): Gam
             totalInputTokens += log.usage.inputTokens || 0;
             totalOutputTokens += log.usage.outputTokens || 0;
             totalTokens += log.usage.totalTokens || 0;
+            // Legacy messages: recalculate cost using primary AI pricing
+            const legacyCost = (log.usage.inputTokens || 0) * PRICING.input + (log.usage.totalTokens || 0) * PRICING.output;
+            estimatedCost += legacyCost;
         }
 
         // Handle consolidated command format (log.tokens)
-        if ((log as any).type === 'command' && (log as any).tokens) {
-            const tokens = (log as any).tokens;
-            totalInputTokens += tokens.input || 0;
-            totalOutputTokens += tokens.output || 0;
-            totalTokens += tokens.total || 0;
+        if ((log as any).type === 'command') {
+            // Accumulate tokens if available
+            if ((log as any).tokens) {
+                const tokens = (log as any).tokens;
+                totalInputTokens += tokens.input || 0;
+                totalOutputTokens += tokens.output || 0;
+                totalTokens += tokens.total || 0;
+            }
+
+            // Use pre-calculated cost from aiInterpretation.totalCostUSD if available
+            // This accounts for different pricing of Primary/Safety/Help AI
+            if ((log as any).aiInterpretation?.totalCostUSD !== undefined) {
+                estimatedCost += (log as any).aiInterpretation.totalCostUSD;
+            }
         }
     });
 
@@ -78,13 +91,11 @@ function calculateStats(logs: Message[], stories: Record<ChapterId, Story>): Gam
             totalInputTokens += story.usage.inputTokens || 0;
             totalOutputTokens += story.usage.outputTokens || 0;
             totalTokens += story.usage.totalTokens || 0;
+            // Story generation: recalculate cost using primary AI pricing
+            const storyCost = (story.usage.inputTokens || 0) * PRICING.input + (story.usage.totalTokens || 0) * PRICING.output;
+            estimatedCost += storyCost;
         }
     });
-
-    const inputCost = totalInputTokens * PRICING.input;
-    // Use totalTokens for output cost calculation as it includes "thinking time"
-    const outputCost = totalTokens * PRICING.output;
-    const estimatedCost = inputCost + outputCost;
 
     return {
         totalMessages,

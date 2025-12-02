@@ -485,6 +485,7 @@ export type GameObject = {
     isBroken: boolean;
     isPoweredOn: boolean;
     currentStateId: string;
+    isVisible?: boolean; // Optional visibility flag for progressive disclosure
   };
 
   inventory?: {
@@ -570,6 +571,12 @@ export type GameObject = {
   children?: {
     objects?: string[];
     items?: string[];
+  };
+
+  // NEW: Placement system for parent-child relationships
+  placement?: {
+    parentId?: GameObjectId | LocationId; // Parent entity ID
+    parentLocationId?: LocationId; // Legacy: direct location placement
   };
 
   // NPCs located near this object (for proximity-based talk restrictions)

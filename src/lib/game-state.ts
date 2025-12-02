@@ -24,9 +24,45 @@ export function getInitialState(game: Game): PlayerState {
 
     // Check if object is a child of another object - if so, check parent state
     let isHiddenChild = false;
-    for (const parentObjId in game.gameObjects) {
-      const parentObj = game.gameObjects[parentObjId as GameObjectId];
-      if (parentObj.children?.objects?.includes(gameObject.id as any)) {
+
+    // NEW: Check placement.parentId FIRST (new system)
+    const parentIdFromPlacement = gameObject.placement?.parentId;
+    if (parentIdFromPlacement) {
+      const parentObj = game.gameObjects[parentIdFromPlacement as GameObjectId];
+      if (parentObj) {
+        // Object is a child via placement.parentId
+        const parentState = parentObj.state || {};
+
+        // If parent is a container, check if it's open/unlocked
+        if (parentObj.capabilities?.container) {
+          // If container is NOT openable, children are hidden until revealed (e.g., via examination)
+          if (!parentObj.capabilities?.openable) {
+            isHiddenChild = true;
+          }
+          // If container IS openable, children hidden if parent is closed OR locked
+          else if (!(parentState as any).isOpen || (parentState as any).isLocked) {
+            isHiddenChild = true;
+          }
+        }
+        // If parent is movable (non-container), check if it's moved
+        else if (parentObj.capabilities?.movable) {
+          // Movable objects: child hidden until parent is moved (e.g., safe behind painting)
+          if (!(parentState as any).isMoved) {
+            isHiddenChild = true;
+          }
+        }
+
+        // NEW: If GameObject has explicit isVisible: false in state, respect it
+        if (gameObject.state?.isVisible === false) {
+          isHiddenChild = true;
+        }
+      }
+    }
+    // LEGACY: Check children.objects (old system) if no placement.parentId
+    else {
+      for (const parentObjId in game.gameObjects) {
+        const parentObj = game.gameObjects[parentObjId as GameObjectId];
+        if (parentObj.children?.objects?.includes(gameObject.id as any)) {
         // Object is a child - check parent accessibility based on capabilities
         const parentState = parentObj.state || {};
 
@@ -50,6 +86,7 @@ export function getInitialState(game: Game): PlayerState {
         }
         break;
       }
+    }
     }
 
     world[gameObject.id] = {
@@ -194,6 +231,31 @@ export function getInitialState(game: Game): PlayerState {
           world[childId].parentId = gameObject.id;
         }
       }
+    }
+  }
+
+  // NEW: Also handle placement.parentId (new system) for parent-child relationships
+  for (const gameObjectId in game.gameObjects) {
+    const gameObject = game.gameObjects[gameObjectId as GameObjectId];
+
+    // If object has placement.parentId, set up the relationship
+    if (gameObject.placement?.parentId) {
+      const parentId = gameObject.placement.parentId as string;
+
+      // Initialize parent's containedEntities if needed
+      if (!world[parentId]) world[parentId] = {};
+      if (!world[parentId].containedEntities) {
+        world[parentId].containedEntities = [];
+      }
+
+      // Add child to parent's containedEntities (if not already there)
+      if (!world[parentId].containedEntities!.includes(gameObject.id)) {
+        world[parentId].containedEntities!.push(gameObject.id);
+      }
+
+      // Set parent on child
+      if (!world[gameObject.id]) world[gameObject.id] = {};
+      world[gameObject.id].parentId = parentId;
     }
   }
 

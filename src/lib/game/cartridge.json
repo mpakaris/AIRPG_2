@@ -3333,10 +3333,11 @@
         "isLocked": false,
         "isBroken": false,
         "isPoweredOn": false,
-        "currentStateId": "default"
+        "currentStateId": "default",
+        "isVisible": false
       },
       "placement": {
-        "parentLocationId": "loc_cafe_interior"
+        "parentId": "obj_counter"
       },
       "handlers": {
         "onExamine": {
@@ -5202,7 +5203,7 @@
           {
             "type": "REVEAL_FROM_PARENT",
             "entityId": "obj_business_card",
-            "parentId": "loc_cafe_interior"
+            "parentId": "obj_counter"
           },
           {
             "type": "SET_FLAG",

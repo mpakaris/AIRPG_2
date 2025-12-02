@@ -27,6 +27,11 @@ export type InterpretationWithConfidence = {
   commandToExecute: string;
   confidence: number;
   reasoning?: string;
+  usage?: {
+    inputTokens: number;
+    outputTokens: number;
+    totalTokens: number;
+  };
 };
 
 // Result type with metadata
@@ -36,6 +41,16 @@ export type SafetyNetResult = InterpretationWithConfidence & {
   latency: number;
   primaryConfidence?: number;
   safetyConfidence?: number;
+  primaryUsage?: {
+    inputTokens: number;
+    outputTokens: number;
+    totalTokens: number;
+  };
+  safetyUsage?: {
+    inputTokens: number;
+    outputTokens: number;
+    totalTokens: number;
+  };
 };
 
 /**
@@ -74,6 +89,7 @@ export async function interpretCommandWithSafetyNet(
       source: 'primary',
       latency: Date.now() - startTime,
       primaryConfidence: primaryResult.confidence,
+      primaryUsage: primaryResult.usage, // NEW: Include actual token usage
     };
   }
 
@@ -108,6 +124,8 @@ export async function interpretCommandWithSafetyNet(
     latency: Date.now() - startTime,
     primaryConfidence: primaryResult.confidence,
     safetyConfidence: safetyResult.confidence,
+    primaryUsage: primaryResult.usage, // NEW: Include primary AI token usage
+    safetyUsage: safetyResult.usage, // NEW: Include safety AI token usage
   };
 }
 
@@ -130,6 +148,7 @@ async function interpretWithPrimaryAI(
     commandToExecute: output.commandToExecute,
     confidence,
     reasoning: output.reasoning, // Kept for logging/debugging, but not shown to player
+    usage, // NEW: Pass through actual token usage
   };
 }
 
@@ -228,11 +247,19 @@ Return ONLY valid JSON in this exact format:
   const content = response.choices[0]?.message?.content || '{}';
   const parsed = JSON.parse(content);
 
+  // Extract actual token usage from OpenAI response
+  const usage = response.usage ? {
+    inputTokens: response.usage.prompt_tokens || 0,
+    outputTokens: response.usage.completion_tokens || 0,
+    totalTokens: response.usage.total_tokens || 0,
+  } : undefined;
+
   return {
     responseToPlayer: parsed.responseToPlayer || '',
     commandToExecute: parsed.commandToExecute || 'invalid',
     confidence: parsed.confidence || 0.5,
     reasoning: parsed.reasoning || 'No reasoning provided',
+    usage, // NEW: Include actual token usage from OpenAI
   };
 }
 

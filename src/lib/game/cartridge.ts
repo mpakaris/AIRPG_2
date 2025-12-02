@@ -2040,8 +2040,8 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             camera: false,
             photographable: true  // NEW: Can be photographed
         },
-        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        placement: { parentLocationId: 'loc_cafe_interior' as LocationId },  // On the bar/counter
+        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default', isVisible: false },  // Hidden until Barista reveals it
+        placement: { parentId: 'obj_counter' as GameObjectId },  // Child of counter - sitting ON the counter
         handlers: {
             // EXAMINE - Visual inspection
             onExamine: {
@@ -3562,7 +3562,7 @@ const npcs: Record<NpcId, NPC> = {
                 ]
             },
             revealEffects: [
-                { type: 'REVEAL_FROM_PARENT', entityId: 'obj_business_card' as GameObjectId, parentId: 'loc_cafe_interior' as LocationId },
+                { type: 'REVEAL_FROM_PARENT', entityId: 'obj_business_card' as GameObjectId, parentId: 'obj_counter' as GameObjectId },
                 { type: 'SET_FLAG', flag: 'business_card_revealed' as Flag, value: true },
                 { type: 'SHOW_MESSAGE', speaker: 'narrator', content: "The barista gestures to a business card sitting on the counter." },
                 { type: 'SHOW_MESSAGE', speaker: 'system', content: "Hint: The business card might have clues about the metal box. Try to USE PHONE to copy the business card on the counter." }

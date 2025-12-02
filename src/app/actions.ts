@@ -1363,27 +1363,34 @@ export async function processCommand(
                     if (msg.usage) {
                         helpTokensInput += msg.usage.inputTokens || 0;
                         helpTokensOutput += msg.usage.outputTokens || 0;
-                        console.log(`📊 Extracted AI usage from message: ${msg.usage.inputTokens} input, ${msg.usage.outputTokens} output tokens`);
+                        console.log(`📊 Extracted AI usage from help message: ${msg.usage.inputTokens} input, ${msg.usage.outputTokens} output tokens`);
                     }
                 }
 
-                const totalTokensInput = (safetyNetResult ? 1420 : 0) + helpTokensInput;  // Primary AI + Help AI
-                const totalTokensOutput = (safetyNetResult ? 75 : 0) + helpTokensOutput;   // Primary AI + Help AI
+                // Extract actual token usage from primary AI
+                const primaryTokensInput = safetyNetResult?.primaryUsage?.inputTokens || 0;
+                const primaryTokensOutput = safetyNetResult?.primaryUsage?.outputTokens || 0;
 
-                // Calculate primary AI cost (command interpretation only)
-                const primaryAICost = safetyNetResult
-                    ? (1420 * PRIMARY_AI_PRICING.input) + (75 * PRIMARY_AI_PRICING.output)
-                    : 0;
+                // Extract actual token usage from safety AI (if triggered)
+                const safetyTokensInput = safetyNetResult?.safetyUsage?.inputTokens || 0;
+                const safetyTokensOutput = safetyNetResult?.safetyUsage?.outputTokens || 0;
 
-                // Calculate help AI cost (contextual hints from help handlers)
+                const totalTokensInput = primaryTokensInput + safetyTokensInput + helpTokensInput;
+                const totalTokensOutput = primaryTokensOutput + safetyTokensOutput + helpTokensOutput;
+
+                // Calculate primary AI cost (Gemini Flash Lite)
+                const primaryAICost = (primaryTokensInput * PRIMARY_AI_PRICING.input) + (primaryTokensOutput * PRIMARY_AI_PRICING.output);
+
+                // Calculate safety AI cost (GPT-5 Nano)
+                const safetyAICost = (safetyTokensInput * SAFETY_AI_PRICING.input) + (safetyTokensOutput * SAFETY_AI_PRICING.output);
+
+                // Calculate help AI cost (contextual hints)
                 const helpAICost = (helpTokensInput * PRIMARY_AI_PRICING.input) + (helpTokensOutput * PRIMARY_AI_PRICING.output);
 
-                // Calculate safety AI cost (only if triggered - estimated 50% of primary tokens)
-                const safetyAICost = (safetyNetResult && safetyNetResult.aiCalls === 2)
-                    ? ((1420 * 0.5) * SAFETY_AI_PRICING.input) + ((75 * 0.5) * SAFETY_AI_PRICING.output)
-                    : 0;
+                const totalCost = primaryAICost + safetyAICost + helpAICost;
 
-                const totalCost = primaryAICost + helpAICost + safetyAICost;
+                console.log(`📊 Token usage - Primary: ${primaryTokensInput}/${primaryTokensOutput}, Safety: ${safetyTokensInput}/${safetyTokensOutput}, Help: ${helpTokensInput}/${helpTokensOutput}`);
+                console.log(`💰 Costs - Primary: $${primaryAICost.toFixed(6)}, Safety: $${safetyAICost.toFixed(6)}, Help: $${helpAICost.toFixed(6)}, Total: $${totalCost.toFixed(6)}`);
 
                 // Create ONE consolidated entry
                 const consolidatedEntry: EnhancedCommandLog = {
@@ -1450,11 +1457,11 @@ export async function processCommand(
                     },
 
                     // 6. TOKEN USAGE
-                    tokens: safetyNetResult ? {
+                    tokens: {
                         input: totalTokensInput,
                         output: totalTokensOutput,
                         total: totalTokensInput + totalTokensOutput,
-                    } : undefined,
+                    },
 
                     // 7. PERFORMANCE
                     performance: {
@@ -1476,6 +1483,14 @@ export async function processCommand(
                     wasSuccessful: executionSuccess && (typeof safetyNetResult === 'undefined' || safetyNetResult?.commandToExecute !== 'invalid'),
                     wasUnclear: typeof safetyNetResult !== 'undefined' ? safetyNetResult.confidence < 0.6 : false,
                 };
+
+                // Debug: Log what we're about to save
+                console.log(`🔍 DEBUG: Saving consolidated entry with tokens:`, JSON.stringify(consolidatedEntry.tokens, null, 2));
+                console.log(`🔍 DEBUG: Saving consolidated entry with AI costs:`, JSON.stringify({
+                    primaryCost: consolidatedEntry.aiInterpretation?.primaryAI?.costUSD,
+                    safetyCost: consolidatedEntry.aiInterpretation?.safetyAI?.costUSD,
+                    totalCost: consolidatedEntry.aiInterpretation?.totalCostUSD
+                }, null, 2));
 
                 // Save consolidated entry to Firebase
                 const consolidatedMessages = [...allMessagesForSession, consolidatedEntry as any];
