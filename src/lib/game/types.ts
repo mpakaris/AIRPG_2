@@ -578,6 +578,13 @@ export type GameObject = {
   // Optional transition narration when player focuses on this object
   transitionNarration?: string;
 
+  // Optional entity-specific hints for help system
+  hints?: {
+    subtle?: string;   // Gentle nudge (e.g., "Try examining this more closely")
+    medium?: string;   // Clearer direction (e.g., "This might open with the right key")
+    direct?: string;   // Explicit guidance (e.g., "Use the blue key to unlock this")
+  };
+
   design: {
     tags?: string[];
     authorNotes?: string;
@@ -679,7 +686,14 @@ export type Item = {
     usesPerTurn: number | null;
     cooldownTime: number | null; // in seconds
   };
-  
+
+  // Optional entity-specific hints for help system
+  hints?: {
+    subtle?: string;   // Gentle nudge (e.g., "Try reading this more carefully")
+    medium?: string;   // Clearer direction (e.g., "This document might reveal secrets if read multiple times")
+    direct?: string;   // Explicit guidance (e.g., "Read this three times to find the hidden note")
+  };
+
   design: {
     tags?: string[];
     authorNotes?: string;
@@ -825,6 +839,13 @@ export type NPC = {
     offTopic?: string;
     noMoreHelp?: string;
     rateLimited?: string;
+  };
+
+  // Optional entity-specific hints for help system
+  hints?: {
+    subtle?: string;   // Gentle nudge (e.g., "Try talking to this person")
+    medium?: string;   // Clearer direction (e.g., "This NPC might know about the metal box")
+    direct?: string;   // Explicit guidance (e.g., "Ask the barista about who left items on the counter")
   };
 
   version: {

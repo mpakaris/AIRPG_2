@@ -114,8 +114,36 @@ export async function handleHelp(
 
         const completedStepDescriptions = progress.completedSteps.map(s => s.description);
 
+        // Extract entity capabilities and handlers if player is focused on something
+        let focusedEntityName: string | undefined;
+        let focusedEntityCapabilities: any | undefined;
+        let focusedEntityHandlers: string[] | undefined;
+        let mentionedEntityNames: string[] = [];
+
+        if (state.currentFocusId) {
+            focusedEntityName = getEntityName(state.currentFocusId, game);
+            const entityInfo = getEntityInfo(state.currentFocusId, game);
+            focusedEntityCapabilities = entityInfo?.capabilities;
+            focusedEntityHandlers = entityInfo?.handlers;
+        }
+
+        // Detect entities mentioned in player's question
+        if (playerQuestion) {
+            mentionedEntityNames = detectMentionedEntities(playerQuestion, state, game);
+
+            // If player mentioned an entity they're NOT focused on, get its info instead
+            if (mentionedEntityNames.length > 0 && (!state.currentFocusId || !mentionedEntityNames.includes(focusedEntityName || ''))) {
+                const mentionedEntity = findEntityByName(mentionedEntityNames[0], state, game);
+                if (mentionedEntity) {
+                    focusedEntityName = mentionedEntity.name;
+                    focusedEntityCapabilities = mentionedEntity.capabilities;
+                    focusedEntityHandlers = mentionedEntity.handlers;
+                }
+            }
+        }
+
         // Generate AI-powered contextual hint
-        const { hint } = await generateContextualHint({
+        const { output, usage } = await generateContextualHint({
             chapterGoal: chapter.goal,
             currentStepDescription: progress.currentStep.description,
             baseHint: progress.currentStep.baseHint,
@@ -123,9 +151,13 @@ export async function handleHelp(
             playerQuestion: playerQuestion || undefined,
             gameContext,
             completedSteps: completedStepDescriptions,
+            focusedEntityName,
+            focusedEntityCapabilities,
+            focusedEntityHandlers,
+            mentionedEntityNames,
         });
 
-        hintContent = `💡 ${hint}`;
+        hintContent = `💡 ${output.hint}`;
 
         // Increment help counter
         effects.push({
@@ -149,7 +181,8 @@ export async function handleHelp(
         effects.push({
             type: 'SHOW_MESSAGE',
             speaker: 'narrator',
-            content: hintContent
+            content: hintContent,
+            usage
         });
 
         return effects;
@@ -200,4 +233,133 @@ function getEntityName(entityId: string, game: Game): string {
         game.npcs[entityId as any]?.name ||
         'something'
     );
+}
+
+/**
+ * Helper to extract capabilities and handlers from an entity
+ */
+function getEntityInfo(entityId: string, game: Game): { capabilities?: any; handlers?: string[] } | undefined {
+    const entity = game.gameObjects[entityId as any] || game.items[entityId as any] || game.npcs[entityId as any];
+
+    if (!entity) {
+        return undefined;
+    }
+
+    return {
+        capabilities: entity.capabilities,
+        handlers: entity.handlers ? Object.keys(entity.handlers) : []
+    };
+}
+
+/**
+ * Detect entity names mentioned in player's question
+ * Returns array of normalized entity names found in the question
+ */
+function detectMentionedEntities(question: string, state: PlayerState, game: Game): string[] {
+    const normalizedQuestion = question.toLowerCase();
+    const mentioned: string[] = [];
+
+    // Check all visible objects
+    const location = game.locations[state.currentLocationId];
+    if (location?.objects) {
+        for (const objId of location.objects) {
+            const obj = game.gameObjects[objId];
+            if (obj) {
+                // Check if object name or any word from name is in the question
+                const nameWords = obj.name.toLowerCase().split(' ');
+                const matchesName = nameWords.some(word => word.length > 3 && normalizedQuestion.includes(word));
+
+                if (normalizedQuestion.includes(obj.name.toLowerCase()) || matchesName) {
+                    mentioned.push(obj.name);
+                } else if (obj.alternateNames) {
+                    for (const altName of obj.alternateNames) {
+                        if (normalizedQuestion.includes(altName.toLowerCase())) {
+                            mentioned.push(obj.name);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Check all visible items
+    for (const itemId in game.items) {
+        const item = game.items[itemId as any];
+        if (item) {
+            // Check if item name or any word from name is in the question
+            const nameWords = item.name.toLowerCase().split(' ');
+            const matchesName = nameWords.some(word => word.length > 3 && normalizedQuestion.includes(word));
+
+            if (normalizedQuestion.includes(item.name.toLowerCase()) || matchesName) {
+                mentioned.push(item.name);
+            } else if (item.alternateNames) {
+                for (const altName of item.alternateNames) {
+                    if (normalizedQuestion.includes(altName.toLowerCase())) {
+                        mentioned.push(item.name);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    // Check NPCs
+    if (location?.npcs) {
+        for (const npcId of location.npcs) {
+            const npc = game.npcs[npcId];
+            if (npc) {
+                if (normalizedQuestion.includes(npc.name.toLowerCase())) {
+                    mentioned.push(npc.name);
+                }
+            }
+        }
+    }
+
+    return mentioned;
+}
+
+/**
+ * Find entity by name and return its info (capabilities and handlers)
+ */
+function findEntityByName(entityName: string, state: PlayerState, game: Game): { name: string; capabilities?: any; handlers?: string[] } | null {
+    const normalizedName = entityName.toLowerCase();
+
+    // Search objects
+    for (const objId in game.gameObjects) {
+        const obj = game.gameObjects[objId as any];
+        if (obj && obj.name.toLowerCase() === normalizedName) {
+            return {
+                name: obj.name,
+                capabilities: obj.capabilities,
+                handlers: obj.handlers ? Object.keys(obj.handlers) : []
+            };
+        }
+    }
+
+    // Search items
+    for (const itemId in game.items) {
+        const item = game.items[itemId as any];
+        if (item && item.name.toLowerCase() === normalizedName) {
+            return {
+                name: item.name,
+                capabilities: item.capabilities,
+                handlers: item.handlers ? Object.keys(item.handlers) : []
+            };
+        }
+    }
+
+    // Search NPCs
+    for (const npcId in game.npcs) {
+        const npc = game.npcs[npcId as any];
+        if (npc && npc.name.toLowerCase() === normalizedName) {
+            return {
+                name: npc.name,
+                capabilities: undefined, // NPCs don't have capabilities
+                handlers: npc.handlers ? Object.keys(npc.handlers) : []
+            };
+        }
+    }
+
+    return null;
 }

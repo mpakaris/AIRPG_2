@@ -386,6 +386,11 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             locked: "It's locked.",
             noEffect: "Using that on the metal box has no effect."
         },
+        hints: {
+            subtle: "This metal box is suspicious. Someone left it here for a reason.",
+            medium: "The metal box seems important. Try to find out who left it and what's inside.",
+            direct: "Talk to the barista about the metal box. They might know who left it."
+        },
         design: {
             authorNotes: "Central puzzle item for Chapter 1. Metal box contains SD card and confidential file.",
             tags: ['box', 'metal box', 'container']
@@ -538,11 +543,16 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             // Fallback for undefined actions
             defaultFailMessage: "The chalkboard's a piece of the scene. Try: EXAMINE, READ, MOVE, or SEARCH it."
         },
-        fallbackMessages: { 
+        fallbackMessages: {
             default: "Probably best to leave the menu alone. It's not part of the case.",
             notMovable: "It's a heavy stand, but you manage to slide it aside."
         },
-        design: { 
+        hints: {
+            subtle: "The chalkboard doesn't sit quite flush with the wall. Curious.",
+            medium: "That menu board looks like it could be moved. Maybe there's something behind it?",
+            direct: "Move the chalkboard to see what's hidden behind it."
+        },
+        design: {
             authorNotes: "Contains the 'justice' clue and hides the iron pipe.",
             tags: ['chalkboard', 'menu', 'board']
         },
@@ -596,6 +606,11 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                 fail: { message: "Solid oak, bolted to the floor. You'd need a crowbar and bad intentions. Try examining what's ON it instead of wrestling furniture." }
             },
             defaultFailMessage: "It's just a table. Try: EXAMINE it, or TAKE what's on it."
+        },
+        hints: {
+            subtle: "There's something on this table. Worth a look.",
+            medium: "Someone left a magazine here. You should examine or take it.",
+            direct: "Take the magazine from the table and read it."
         },
         design: {
             authorNotes: "Simple container for magazine item. Shows empty table after magazine is taken.",
@@ -754,6 +769,11 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             default: "It's just a bookshelf. Let's not get sidetracked.",
             notMovable: "It's too heavy to move by yourself."
         },
+        hints: {
+            subtle: "Those books on the shelf look interesting. Maybe take a closer look.",
+            medium: "Try reading the books. Some stories might have more to offer than you'd expect.",
+            direct: "Read 'Justice for My Love' on the bookshelf. Pay close attention - some books reveal secrets when read multiple times."
+        },
         design: {
             authorNotes: "Contains the other 'justice' clue for the metal box.",
             tags: ['books', 'shelf']
@@ -881,11 +901,16 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             // Fallback for undefined actions
             defaultFailMessage: "The painting's part of the scene. Try: EXAMINE, MOVE, or SEARCH behind it."
         },
-        fallbackMessages: { 
+        fallbackMessages: {
             default: "The painting is nice, but it's not a clue.",
             notMovable: "You can't move the painting, but you could try looking behind it."
         },
-        design: { 
+        hints: {
+            subtle: "That painting on the wall looks interesting. Maybe check behind it.",
+            medium: "The painting seems slightly crooked. Try moving it.",
+            direct: "Move the painting to reveal the wall safe hidden behind it."
+        },
+        design: {
             authorNotes: "Contains the 'S.B.' clue and hides the wall safe.",
             tags: ['painting', 'art']
         },
@@ -1095,6 +1120,11 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             locked: "It's locked tight. We need the wall safe key.",
             notMovable: "It's built into the wall. It's not going anywhere."
         },
+        hints: {
+            subtle: "The safe needs a password. Look for clues around the cafe.",
+            medium: "Find the password for the safe. The word 'justice' appears in multiple places.",
+            direct: "Use the password 'justice' to unlock the safe. Check the chalkboard menu and the book titles."
+        },
         design: {
             authorNotes: "Final puzzle for chapter 1. Opened by the wall safe key from the coffee machine.",
             tags: ['safe']
@@ -1160,6 +1190,11 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                 }
             },
             defaultFailMessage: "It's a counter. Try: EXAMINE it or interact with what's on it."
+        },
+        hints: {
+            subtle: "The counter looks like the main work area. Check out what's on it and underneath.",
+            medium: "Examine the counter more closely. The staff might keep useful tools nearby.",
+            direct: "Examine the counter to reveal the drawer and coffee machine. The drawer might contain tools you'll need later."
         },
         design: {
             authorNotes: "Central object for cafe interactions. Houses coffee machine, drawer with saw, and serves as focus point for NPC conversations.",
@@ -1370,6 +1405,11 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             ],
             defaultFailMessage: "A drawer under the counter. Try: EXAMINE, OPEN, or SEARCH it."
         },
+        hints: {
+            subtle: "That drawer under the counter might have something useful.",
+            medium: "Try opening the drawer when the staff isn't watching.",
+            direct: "Open the drawer at the counter to find a reciprocating saw. You'll need to wait until the manager is distracted."
+        },
         design: {
             authorNotes: "Contains reciprocating saw for cutting iron pipe or other metal. Not locked, just closed—easy to open.",
             tags: ['drawer', 'container', 'tool storage']
@@ -1536,10 +1576,15 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                 description: "The side panel of the coffee machine is smashed. Amidst the broken plastic, you can see where the key was hidden."
             }
         },
-        fallbackMessages: { 
+        fallbackMessages: {
             default: "That doesn't seem to work on the coffee machine.",
             notOpenable: "You can't open it. The compartment is jammed shut.",
             noEffect: "Using that on the coffee machine has no effect."
+        },
+        hints: {
+            subtle: "The coffee machine looks ordinary, but maybe it's worth a closer look.",
+            medium: "That coffee machine might hide something. Consider examining or interacting with it.",
+            direct: "Break the coffee machine to find what's hidden inside. Use the reciprocating saw."
         },
         design: {
             authorNotes: "Breakable object containing the wall safe key. Requires the iron pipe to break.",
@@ -1647,6 +1692,11 @@ const gameObjects: Record<GameObjectId, GameObject> = {
 
             // Fallback
             defaultFailMessage: "The SD card holds data. You need your phone to read it. Try: USE PHONE, then READ SD CARD."
+        },
+        hints: {
+            subtle: "An SD card in an old metal box. Seems anachronistic. Your phone might read it.",
+            medium: "Use your phone to read the SD card. It contains something important.",
+            direct: "Use your phone, then read the SD card to watch the video."
         },
         design: {
             authorNotes: "Media device containing the video clue about Silas Bloom. Requires phone to unlock/read.",
@@ -1759,6 +1809,11 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             },
 
             defaultFailMessage: "A tablet with a cryptic puzzle. Try: EXAMINE it, READ it, or visit https://airpg-minigames.vercel.app/games/tablet-puzzle"
+        },
+        hints: {
+            subtle: "That tablet screen is glowing. Might be worth investigating.",
+            medium: "The tablet shows a puzzle that needs solving. Try examining or reading it.",
+            direct: "Examine the tablet and visit the mini-game URL to solve the puzzle."
         },
         design: {
             authorNotes: "Tablet provides optional mini-game puzzle. Currently flavor content. Password validation can be updated when mini-game is built.",
@@ -1949,6 +2004,11 @@ const gameObjects: Record<GameObjectId, GameObject> = {
 
             defaultFailMessage: "A hidden door with a digital keypad. Try: EXAMINE it, OPEN it, or enter /password <your guess>."
         },
+        hints: {
+            subtle: "A hidden door with a keypad. Someone went to great lengths to conceal this.",
+            medium: "The hidden door needs a password. Search the cafe for clues about justice and remembrance.",
+            direct: "Use /password Justice for Rose Carmichael to unlock the door, then open it."
+        },
         design: {
             authorNotes: "Hidden door revealed after moving bookshelf. Unlocks with 'Justice for Rose Carmichael'. Contains victim NPC and tablet.",
             tags: ['door', 'hidden', 'locked', 'puzzle']
@@ -2015,6 +2075,11 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             },
 
             defaultFailMessage: "Musician's business card. Clues: ROSE and 1943. Try: EXAMINE it, READ it, or USE PHONE ON it to photograph."
+        },
+        hints: {
+            subtle: "That business card on the counter looks interesting. Someone wrote something on it.",
+            medium: "The business card has handwritten notes - ROSE and 1943. You should read or photograph it.",
+            direct: "Read the business card to see the clues, or use your phone on it to take a photo."
         },
         media: {
             images: {
@@ -2131,6 +2196,11 @@ const items: Record<ItemId, Item> = {
             // Fallback
             defaultFailMessage: "The phone's a tool. Try USING it ON something that needs it, or CALL a phone number."
         },
+        hints: {
+            subtle: "Your FBI phone is a versatile tool. It can read media and take photos.",
+            medium: "Use your phone to read SD cards, take photos of objects, or make calls.",
+            direct: "Use phone to activate it, then read SD cards, take photos, or call phone numbers you find."
+        },
         design: {
             authorNotes: "Universal tool/key for media devices and locked objects throughout the game.",
             tags: ['phone', 'device', 'tool', 'key']
@@ -2195,6 +2265,11 @@ const items: Record<ItemId, Item> = {
 
             // Fallback
             defaultFailMessage: "It's a voicemail recording. Try: EXAMINE to see details, or READ to listen again."
+        },
+        hints: {
+            subtle: "You received a mysterious voicemail. Worth listening to again.",
+            medium: "The voice message contains important clues about the case. Try reading it.",
+            direct: "Read or examine the audio message to hear the villain's message again."
         },
         design: {
             authorNotes: "Villain's first contact - Chapter 1 climax. Digital item (not takeable, stays in phone).",
@@ -2318,6 +2393,11 @@ const items: Record<ItemId, Item> = {
             // Fallback
             defaultFailMessage: "The pipe's a tool. Try: EXAMINE it, or USE it ON an object to break it open."
         },
+        hints: {
+            subtle: "This heavy iron pipe could be useful for forcing things open.",
+            medium: "The iron pipe is perfect for breaking stubborn objects. Try using it on something that won't open.",
+            direct: "Use the iron pipe on the coffee machine to break it open and find what's hidden inside."
+        },
         design: {
             authorNotes: "Tool for breaking objects like the coffee machine.",
             tags: ['pipe']
@@ -2440,6 +2520,11 @@ const items: Record<ItemId, Item> = {
             // Fallback
             defaultFailMessage: "The magazine's just atmosphere. Try: EXAMINE, READ, or DROP it."
         },
+        hints: {
+            subtle: "A magazine left on the table. Probably not important, but you could take a look.",
+            medium: "The magazine seems like background noise. You can examine or read it if you're curious.",
+            direct: "The magazine is just atmosphere - it won't help solve the case. Focus on other clues."
+        },
         design: {
             authorNotes: "Flavor item to build atmosphere. Not relevant to the case.",
             tags: ['magazine', 'paper']
@@ -2488,6 +2573,11 @@ const items: Record<ItemId, Item> = {
                 }
             },
             defaultFailMessage: "A reciprocating saw. Try: EXAMINE, TAKE, or USE it on something to cut."
+        },
+        hints: {
+            subtle: "A power saw hidden in the drawer. Could be useful for cutting through tough materials.",
+            medium: "The reciprocating saw is perfect for cutting through metal or other hard materials.",
+            direct: "Take the reciprocating saw from the drawer and use it on objects that need cutting."
         },
         design: {
             authorNotes: "Power tool for cutting through iron pipe or other metal obstacles. Alternative to brute force.",
@@ -2602,6 +2692,11 @@ const items: Record<ItemId, Item> = {
 
             // Fallback
             defaultFailMessage: "The key's for the wall safe. Try: EXAMINE it, or USE it ON the safe."
+        },
+        hints: {
+            subtle: "This brass key looks like it might fit a safe somewhere.",
+            medium: "The brass key is meant for the wall safe. You should use it there.",
+            direct: "Use the brass key on the wall safe behind the painting to open it."
         },
         design: {
             authorNotes: "Key found inside the broken coffee machine. Opens the wall safe behind the painting.",
@@ -2836,13 +2931,18 @@ const items: Record<ItemId, Item> = {
             // Fallback
             defaultFailMessage: "The article's from the 1940s. Try: EXAMINE it, or READ it."
         },
+        hints: {
+            subtle: "An old newspaper article from the 1940s. This could be important background.",
+            medium: "This newspaper article is about Silas Bloom. Read it to learn about the case's history.",
+            direct: "Take and read the newspaper article to discover important backstory about Silas Bloom and your grandfather."
+        },
         media: {
             images: {
                 default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759241463/Screenshot_2025-09-30_at_15.51.35_gyj3d5.png', description: 'A folded newspaper article.', hint: 'folded article' },
                 opened: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759241463/Screenshot_2025-09-30_at_15.51.35_gyj3d5.png', description: 'An unfolded newspaper article with text visible.', hint: 'open article' }
             }
         },
-        design: { 
+        design: {
             authorNotes: "Provides the main backstory and a personal connection for the player.",
             tags: ['article', 'newspaper', 'clipping']
         },
@@ -2937,6 +3037,11 @@ const items: Record<ItemId, Item> = {
                 }
             }
         },
+        hints: {
+            subtle: "A business book on the shelf. Probably not relevant, but you could browse it.",
+            medium: "The Art of the Deal looks like filler material. Reading it won't help your case.",
+            direct: "This book is just atmosphere - focus on clues that actually matter to solving the case."
+        },
         design: { tags: ['book', 'distraction'] },
         version: { schema: "1.0", content: "1.1" }
     },
@@ -3028,6 +3133,11 @@ const items: Record<ItemId, Item> = {
                     }
                 }
             }
+        },
+        hints: {
+            subtle: "An FBI history book. Might be interesting, but probably not crucial right now.",
+            medium: "This FBI history book is background reading. It won't help solve the current case.",
+            direct: "The FBI history book is just atmosphere - don't waste time on it unless you're curious."
         },
         design: { tags: ['book', 'distraction'] },
         version: { schema: "1.0", content: "1.1" }
@@ -3147,6 +3257,11 @@ const items: Record<ItemId, Item> = {
             onTalk: { fail: { message: "Books don't talk back. Small mercies. Try READING it instead." } },
             defaultFailMessage: "Romance novel. 'Justice' in the title. Try: EXAMINE or READ it."
         },
+        hints: {
+            subtle: "This romance novel seems out of place. Maybe read it carefully.",
+            medium: "Try reading 'Justice for My Love' multiple times. Some books hide secrets.",
+            direct: "Read this book three times to discover the hidden note inside."
+        },
         design: { tags: ['book', 'clue'] },
         version: { schema: "1.0", content: "1.1" }
     },
@@ -3238,6 +3353,11 @@ const items: Record<ItemId, Item> = {
                 }
             },
             defaultFailMessage: "A note with an incomplete phone number. Try: EXAMINE it, READ it, or SEARCH it."
+        },
+        hints: {
+            subtle: "A note with a partially scratched-out phone number. The missing digits must be somewhere.",
+            medium: "You have the first 7 digits: 555-444. Find the last 4 digits to complete the phone number.",
+            direct: "Talk to the kidnapped girl to get the last 4 digits (2025), then call 555-444-2025 on your phone."
         },
         design: { tags: ['note', 'clue', 'puzzle'] },
         version: { schema: "1.0", content: "1.0" }
@@ -3369,6 +3489,11 @@ const items: Record<ItemId, Item> = {
             // Fallback
             defaultFailMessage: "It's a stolen police file marked CONFIDENTIAL - POLICE USE ONLY. Try: EXAMINE it, READ it, or SEARCH through it."
         },
+        hints: {
+            subtle: "A stolen police file marked confidential. This must contain important information.",
+            medium: "Read the stolen police file to discover information about the hidden room and Veridian Dynamics.",
+            direct: "Take and read the stolen police file to learn about the secret room behind the bookshelf."
+        },
         design: { tags: ['file', 'document'] },
         version: { schema: "1.0", content: "1.0" }
     }
@@ -3470,6 +3595,11 @@ const npcs: Record<NpcId, NPC> = {
             default: "Look, I just work here. I pour coffee, I wipe counters. You're the detective.",
             noMoreHelp: "I told you all I know. I've got work to do.",
         },
+        hints: {
+            subtle: "The barista might have seen something. Try talking to them.",
+            medium: "Ask the barista about the metal box and recent customers.",
+            direct: "Talk to the barista about the metal box. They'll mention a business card on the counter."
+        },
         version: { schema: "3.0", content: "2.0" }  // Updated to contextual conversation system
     },
     'npc_manager': {
@@ -3499,6 +3629,11 @@ const npcs: Record<NpcId, NPC> = {
         },
         fallbacks: {
             default: "Oh, I'm not sure about that, but have you tried our new matcha latte? It's simply wonderful!"
+        },
+        hints: {
+            subtle: "The cafe manager seems friendly and chatty. She might know about the cafe's history.",
+            medium: "Talk to Brenda the manager if you want to learn about the cafe, but she won't help with the investigation.",
+            direct: "The manager is just flavor - she doesn't have useful information for solving the case."
         },
         version: { schema: "2.0", content: "1.2" }
     },
@@ -3660,6 +3795,11 @@ const npcs: Record<NpcId, NPC> = {
             default: "Please... help me. Find the clues. Solve his puzzles. Stop him before it's too late.",
             noMoreHelp: "I've told you everything I know. 555-444-2025. Call it.",
             offTopic: "I... I don't know. Please, just focus on catching him."
+        },
+        hints: {
+            subtle: "This kidnapped woman looks terrified. You should talk to her and remove the tape.",
+            medium: "Talk to Rose multiple times. First remove the tape, then ask about the phone number to get the missing digits.",
+            direct: "Remove tape from Rose, then talk to her at least twice to learn the missing phone digits are 2025. Call 555-444-2025."
         },
         version: { schema: "2.0", content: "1.1" }
     }

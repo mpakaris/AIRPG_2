@@ -826,6 +826,7 @@ export async function processCommand(
             // 1. PREPROCESS INPUT
             const preprocessingStartTime = Date.now();
             preprocessedInput = preprocessInput(safePlayerInput);
+            const lowerInput = preprocessedInput.toLowerCase();
             preprocessingMs = Date.now() - preprocessingStartTime;
 
             // 1.5. HANDLE /password COMMAND
@@ -839,21 +840,22 @@ export async function processCommand(
             }
 
             // 2. QUICK PATTERN CHECKS (no AI needed)
-            if (isHelpRequest(preprocessedInput)) {
-                // SPECIAL CASE: Help (old format)
-                if (playerMessage) allMessagesForSession.push(playerMessage);
+            // DISABLED: Old help system - now using entity-aware pre-filter below (line 910)
+            // if (isHelpRequest(preprocessedInput)) {
+            //     // SPECIAL CASE: Help (old format)
+            //     if (playerMessage) allMessagesForSession.push(playerMessage);
 
-                // Extract question if player asked something specific (e.g., "help, I don't know how to open the box")
-                const playerQuestion = preprocessedInput.length > 10 ? preprocessedInput : null;
-                effects = await handleHelp(currentState, playerQuestion, game);
-                if (effects.length > 0) {
-                    const result = await processEffects(currentState, effects, game);
-                    currentState = result.newState;
-                    allMessagesForSession.push(...result.messages);
-                }
-                await logAndSave(userId, gameId, currentState, allMessagesForSession);
-                return { newState: currentState, messages: extractUIMessages(allMessagesForSession) };
-            }
+            //     // Extract question if player asked something specific (e.g., "help, I don't know how to open the box")
+            //     const playerQuestion = preprocessedInput.length > 10 ? preprocessedInput : null;
+            //     effects = await handleHelp(currentState, playerQuestion, game);
+            //     if (effects.length > 0) {
+            //         const result = await processEffects(currentState, effects, game);
+            //         currentState = result.newState;
+            //         allMessagesForSession.push(...result.messages);
+            //     }
+            //     await logAndSave(userId, gameId, currentState, allMessagesForSession);
+            //     return { newState: currentState, messages: extractUIMessages(allMessagesForSession) };
+            // }
 
             if (isEmptyOrGibberish(preprocessedInput)) {
                 // SPECIAL CASE: Gibberish (old format)
@@ -906,7 +908,22 @@ export async function processCommand(
             // 4. AI INTERPRETATION WITH SAFETY NET
             const aiInterpretationStartTime = Date.now();
 
-            // Skip AI interpretation for explicit /password commands
+            // PRE-FILTER: Detect help questions BEFORE AI (faster + more reliable)
+            console.log('[DEBUG PRE-FILTER] Checking input:', lowerInput);
+            const isHelpQuestion =
+                lowerInput.startsWith('what should i do with') ||
+                lowerInput.startsWith('what should i do') ||
+                lowerInput.startsWith('what can i do with') ||
+                lowerInput.startsWith('what can i do') ||
+                lowerInput.startsWith('how do i') ||
+                lowerInput.startsWith('what about') ||
+                lowerInput === "i'm stuck" ||
+                lowerInput === "i'm confused" ||
+                lowerInput === "i'm lost" ||
+                lowerInput === "i don't know what to do";
+            console.log('[DEBUG PRE-FILTER] Is help question?', isHelpQuestion);
+
+            // Skip AI interpretation for explicit /password commands OR help questions
             if (skipAIInterpretation) {
                 // Bypass AI, use preprocessed command directly
                 safetyNetResult = {
@@ -916,6 +933,17 @@ export async function processCommand(
                     source: 'bypass' as const,
                     aiCalls: 0,
                     reasoning: 'Explicit /password command, bypassing AI interpretation'
+                };
+                aiInterpretationMs = 0;
+            } else if (isHelpQuestion) {
+                // Route directly to contextual help (bypass AI)
+                safetyNetResult = {
+                    commandToExecute: `contextual_help ${preprocessedInput}`,
+                    confidence: 1.0,
+                    primaryConfidence: 1.0,
+                    source: 'bypass' as const,
+                    aiCalls: 0,
+                    reasoning: 'Help question detected - bypassing AI for speed'
                 };
                 aiInterpretationMs = 0;
             } else {
@@ -1059,6 +1087,7 @@ export async function processCommand(
             }
 
             const commandToExecute = safetyNetResult.commandToExecute.toLowerCase();
+            console.log('[DEBUG] Full command to execute:', commandToExecute);
 
             const verbMatch = commandToExecute.match(/^(\w+)\s*/);
             verb = verbMatch ? verbMatch[1] : commandToExecute;
@@ -1327,20 +1356,34 @@ export async function processCommand(
                     output: (parseFloat(process.env.SAFETY_AI_OUTPUT_COST || '0.40')) / 1_000_000,
                 };
 
-                const totalTokensInput = safetyNetResult ? 1420 : 0;  // Realistic estimate for primary AI
-                const totalTokensOutput = safetyNetResult ? 75 : 0;   // Realistic estimate for primary AI
+                // Extract token usage from help system messages (if any)
+                let helpTokensInput = 0;
+                let helpTokensOutput = 0;
+                for (const msg of uiMessagesThisTurn) {
+                    if (msg.usage) {
+                        helpTokensInput += msg.usage.inputTokens || 0;
+                        helpTokensOutput += msg.usage.outputTokens || 0;
+                        console.log(`📊 Extracted AI usage from message: ${msg.usage.inputTokens} input, ${msg.usage.outputTokens} output tokens`);
+                    }
+                }
 
-                // Calculate primary AI cost
+                const totalTokensInput = (safetyNetResult ? 1420 : 0) + helpTokensInput;  // Primary AI + Help AI
+                const totalTokensOutput = (safetyNetResult ? 75 : 0) + helpTokensOutput;   // Primary AI + Help AI
+
+                // Calculate primary AI cost (command interpretation only)
                 const primaryAICost = safetyNetResult
-                    ? (totalTokensInput * PRIMARY_AI_PRICING.input) + (totalTokensOutput * PRIMARY_AI_PRICING.output)
+                    ? (1420 * PRIMARY_AI_PRICING.input) + (75 * PRIMARY_AI_PRICING.output)
                     : 0;
+
+                // Calculate help AI cost (contextual hints from help handlers)
+                const helpAICost = (helpTokensInput * PRIMARY_AI_PRICING.input) + (helpTokensOutput * PRIMARY_AI_PRICING.output);
 
                 // Calculate safety AI cost (only if triggered - estimated 50% of primary tokens)
                 const safetyAICost = (safetyNetResult && safetyNetResult.aiCalls === 2)
-                    ? ((totalTokensInput * 0.5) * SAFETY_AI_PRICING.input) + ((totalTokensOutput * 0.5) * SAFETY_AI_PRICING.output)
+                    ? ((1420 * 0.5) * SAFETY_AI_PRICING.input) + ((75 * 0.5) * SAFETY_AI_PRICING.output)
                     : 0;
 
-                const totalCost = primaryAICost + safetyAICost;
+                const totalCost = primaryAICost + helpAICost + safetyAICost;
 
                 // Create ONE consolidated entry
                 const consolidatedEntry: EnhancedCommandLog = {
