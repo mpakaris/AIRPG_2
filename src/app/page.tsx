@@ -7,15 +7,16 @@ import { initializeFirebase } from '@/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { getGameData, createInitialMessages } from '@/app/actions';
 import { extractUIMessages } from '@/lib/utils/extract-ui-messages';
+import { getAllLogs } from '@/lib/firestore/log-retrieval';
 
 const GAME_ID = 'blood-on-brass' as GameId;
 
 async function getInitialData(userId: string | null, game: Game): Promise<{ playerState: PlayerState, messages: Message[] }> {
     const initialGameState = getInitialState(game);
-    
+
     if (!userId) {
-        return { 
-            playerState: initialGameState, 
+        return {
+            playerState: initialGameState,
             messages: await createInitialMessages(initialGameState, game)
         };
     }
@@ -24,10 +25,8 @@ async function getInitialData(userId: string | null, game: Game): Promise<{ play
     const gameId = game.id;
 
     const stateRef = doc(firestore, 'player_states', `${userId}_${gameId}`);
-    const logRef = doc(firestore, 'logs', `${userId}_${gameId}`);
 
     const stateSnap = await getDoc(stateRef);
-    const logSnap = await getDoc(logRef);
 
     let playerState: PlayerState;
     if (stateSnap.exists()) {
@@ -36,10 +35,11 @@ async function getInitialData(userId: string | null, game: Game): Promise<{ play
         playerState = initialGameState;
     }
 
+    // Load logs using new helper that handles both old and new formats
     let messages: Message[] = [];
-    if (logSnap.exists() && logSnap.data()?.messages?.length > 0) {
+    const rawMessages = await getAllLogs(firestore, userId, gameId);
+    if (rawMessages.length > 0) {
         // Extract UI messages from consolidated log entries
-        const rawMessages = logSnap.data()?.messages || [];
         messages = extractUIMessages(rawMessages);
     } else {
         messages = await createInitialMessages(playerState, game);

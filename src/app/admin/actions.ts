@@ -4,6 +4,7 @@
 import { initializeFirebase } from '@/firebase';
 import { collection, getDocs, doc, getDoc, deleteDoc } from 'firebase/firestore';
 import type { User, PlayerState, Message, Game, GameId } from '@/lib/game/types';
+import { getAllLogs } from '@/lib/firestore/log-retrieval';
 
 // Now we fetch games from the database.
 export async function getGames(): Promise<Game[]> {
@@ -34,28 +35,40 @@ export async function getPlayerState(userId: string, gameId: GameId): Promise<Pl
 
 export async function getPlayerLogs(userId: string, gameId: GameId): Promise<Message[]> {
     const { firestore } = initializeFirebase();
-    const logRef = doc(firestore, 'logs', `${userId}_${gameId}`);
-    const logSnap = await getDoc(logRef);
-    if (logSnap.exists()) {
-        return logSnap.data()?.messages || [];
-    }
-    return [];
+    // Use new getAllLogs helper that handles both old and new formats
+    return await getAllLogs(firestore, userId, gameId);
 }
 
 export async function deleteUser(userId: string, gameIds: GameId[]): Promise<void> {
     const { firestore } = initializeFirebase();
-    
+
     try {
         const deletePromises: Promise<any>[] = [];
-        
+
         // Delete user document
         deletePromises.push(deleteDoc(doc(firestore, 'users', userId)));
 
         // Delete player state and logs for each game they have
-        gameIds.forEach(gameId => {
+        for (const gameId of gameIds) {
+            // Delete player state
             deletePromises.push(deleteDoc(doc(firestore, 'player_states', `${userId}_${gameId}`)));
+
+            // Delete log summary document
             deletePromises.push(deleteDoc(doc(firestore, 'logs', `${userId}_${gameId}`)));
-        });
+
+            // Delete turns subcollection (all turn documents)
+            // Note: Firestore doesn't support recursive deletes, so we need to fetch and delete each turn
+            try {
+                const turnsCol = collection(firestore, `logs/${userId}_${gameId}/turns`);
+                const turnsSnapshot = await getDocs(turnsCol);
+                turnsSnapshot.docs.forEach(turnDoc => {
+                    deletePromises.push(deleteDoc(turnDoc.ref));
+                });
+            } catch (error) {
+                // If turns subcollection doesn't exist (old format), continue
+                console.log(`No turns subcollection found for ${userId}_${gameId} (old format)`);
+            }
+        }
 
         await Promise.all(deletePromises);
         console.log(`Successfully deleted all data for user: ${userId}`);

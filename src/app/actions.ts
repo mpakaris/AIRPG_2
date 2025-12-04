@@ -36,6 +36,7 @@ import type { Chapter, ChapterId, CommandResult, Effect, Flag, Game, GameId, Gam
 import { createMessage } from '@/lib/utils';
 import { extractUIMessages } from '@/lib/utils/extract-ui-messages';
 import { dispatchMessage } from '@/lib/whinself-service';
+import { getAllLogs, logsExist } from '@/lib/firestore/log-retrieval';
 import { collection, deleteDoc, doc, getDoc, getDocs, setDoc } from 'firebase/firestore';
 
 
@@ -243,14 +244,14 @@ export async function findOrCreateUser(userId: string): Promise<{ user: User | n
             // User exists, but check if player state and logs exist
             console.log(`Existing user found: ${userId}. Checking for player state and logs...`);
             const stateRef = doc(firestore, 'player_states', `${userId}_${game.id}`);
-            const logRef = doc(firestore, 'logs', `${userId}_${game.id}`);
 
-            const [stateSnap, logSnap] = await Promise.all([getDoc(stateRef), getDoc(logRef)]);
+            const [stateSnap, logsValid] = await Promise.all([
+                getDoc(stateRef),
+                logsExist(firestore, userId, game.id)
+            ]);
 
             // Recreate if state is missing OR logs are missing/empty
-            const logsAreValid = logSnap.exists() && logSnap.data()?.messages?.length > 0;
-
-            if (!stateSnap.exists() || !logsAreValid) {
+            if (!stateSnap.exists() || !logsValid) {
                 console.log(`Player state or logs missing/empty for ${userId}. Recreating...`);
                 const freshState = getInitialState(game);
                 const initialMessages = await createInitialMessages(freshState, game);
@@ -336,10 +337,9 @@ export async function processCommand(
         const gameId = game.id;
         const { firestore } = initializeFirebase();
         const stateRef = doc(firestore, 'player_states', `${userId}_${gameId}`);
-        const logRef = doc(firestore, 'logs', `${userId}_${gameId}`);
 
-        // Get current state and existing messages
-        const [stateSnap, logSnap] = await Promise.all([getDoc(stateRef), getDoc(logRef)]);
+        // Get current state
+        const stateSnap = await getDoc(stateRef);
 
         let currentState: PlayerState;
         let allMessagesForSession: Message[] = [];
@@ -350,12 +350,13 @@ export async function processCommand(
             currentState = getInitialState(game);
         }
 
-        if (logSnap.exists() && logSnap.data()?.messages?.length > 0) {
-            const rawMessages = logSnap.data()?.messages || [];
-            allMessagesForSession = normalizeTimestamps(rawMessages);
-        } else {
+        // Load logs using new helper that handles both old and new formats
+        allMessagesForSession = await getAllLogs(firestore, userId, gameId);
+        if (allMessagesForSession.length === 0) {
             allMessagesForSession = await createInitialMessages(currentState, game);
         }
+        // Normalize timestamps for React serialization
+        allMessagesForSession = normalizeTimestamps(allMessagesForSession);
 
         // Create a single consolidated validation error message for UI display
         const errorDisplayMessage = createMessage(
@@ -443,7 +444,6 @@ export async function processCommand(
 
     const { firestore } = initializeFirebase();
     const stateRef = doc(firestore, 'player_states', `${userId}_${gameId}`);
-    const logRef = doc(firestore, 'logs', `${userId}_${gameId}`);
 
     // Variables for unified command logging (declare here for function-wide scope, accessible in catch block)
     let commandStartTime: number | undefined;
@@ -463,10 +463,10 @@ export async function processCommand(
     let executionErrorType: 'invalid_target' | 'invalid_action' | 'ai_unclear' | 'system_error' | undefined;
 
     try {
-        // Try to load state and logs from database
-        let stateSnap, logSnap;
+        // Try to load state from database
+        let stateSnap;
         try {
-            [stateSnap, logSnap] = await Promise.all([getDoc(stateRef), getDoc(logRef)]);
+            stateSnap = await getDoc(stateRef);
         } catch (dbReadError) {
             console.error('[Database Error] Failed to read game data:', dbReadError);
 
@@ -504,12 +504,13 @@ export async function processCommand(
             currentState = getInitialState(game);
         }
 
-        if (logSnap.exists() && logSnap.data()?.messages?.length > 0) {
-            const rawMessages = logSnap.data()?.messages || [];
-            allMessagesForSession = normalizeTimestamps(rawMessages);
-        } else {
+        // Load logs using new helper that handles both old and new formats
+        allMessagesForSession = await getAllLogs(firestore, userId, gameId);
+        if (allMessagesForSession.length === 0) {
             allMessagesForSession = await createInitialMessages(currentState, game);
         }
+        // Normalize timestamps for React serialization
+        allMessagesForSession = normalizeTimestamps(allMessagesForSession);
 
         const systemName = "System";
 
@@ -871,13 +872,19 @@ export async function processCommand(
             // }
 
             if (isEmptyOrGibberish(preprocessedInput)) {
-                // SPECIAL CASE: Gibberish (old format)
-                if (playerMessage) allMessagesForSession.push(playerMessage);
+                // SPECIAL CASE: Gibberish
+                const newMessages: Message[] = [];
+                if (playerMessage) newMessages.push(playerMessage);
 
                 const gibberishMsg = createMessage('narrator', game.narratorName || 'Narrator', getGibberishMessage(preprocessedInput));
-                allMessagesForSession.push(gibberishMsg);
-                await logAndSave(userId, gameId, currentState, allMessagesForSession);
-                return { newState: currentState, messages: extractUIMessages(allMessagesForSession) };
+                newMessages.push(gibberishMsg);
+
+                // Save only new messages (subcollection handles multiple turns)
+                await logAndSave(userId, gameId, currentState, newMessages);
+
+                // Return all messages for UI display
+                const allForUI = [...allMessagesForSession, ...newMessages];
+                return { newState: currentState, messages: extractUIMessages(allForUI) };
             }
 
             // REGULAR COMMAND: Use consolidated logging
@@ -1086,9 +1093,12 @@ export async function processCommand(
                     ]
                 };
 
-                allMessagesForSession.push(invalidCommandLog);
-                await logAndSave(userId, gameId, currentState, allMessagesForSession);
-                return { newState: currentState, messages: extractUIMessages(allMessagesForSession) };
+                // Save only new message log (subcollection handles multiple turns)
+                await logAndSave(userId, gameId, currentState, [invalidCommandLog]);
+
+                // Return all messages for UI display
+                const allForUI = [...allMessagesForSession, invalidCommandLog];
+                return { newState: currentState, messages: extractUIMessages(allForUI) };
             }
 
             // 7. LOW CONFIDENCE BUT VALID COMMAND - Let it execute anyway
@@ -1505,12 +1515,14 @@ export async function processCommand(
                     totalCost: consolidatedEntry.aiInterpretation?.totalCostUSD
                 }, null, 2));
 
-                // Save consolidated entry to Firebase
-                const consolidatedMessages = [...allMessagesForSession, consolidatedEntry as any];
-                const saveResult = await logAndSave(userId, gameId, finalResult.newState, consolidatedMessages);
+                // Save ONLY the new consolidated entry to Firebase (subcollection handles multiple turns)
+                const saveResult = await logAndSave(userId, gameId, finalResult.newState, [consolidatedEntry as any]);
+
+                // For UI display, combine previous messages with new entry
+                const allMessagesWithNew = [...allMessagesForSession, consolidatedEntry as any];
 
                 // If database save failed, create a db_error entry and add to messages
-                let finalMessages = consolidatedMessages;
+                let finalMessages = allMessagesWithNew;
                 if (!saveResult.success && saveResult.error) {
                     console.error('[Database Error] Failed to save game data:', saveResult.error);
                     const dbErrorLog = createDatabaseErrorLog(
@@ -1520,11 +1532,11 @@ export async function processCommand(
                         gameId,
                         safePlayerInput
                     );
-                    finalMessages = [...consolidatedMessages, dbErrorLog];
+                    finalMessages = [...allMessagesWithNew, dbErrorLog];
 
                     // Try to save with the error included (best effort - may also fail)
                     try {
-                        await logAndSave(userId, gameId, finalResult.newState, finalMessages);
+                        await logAndSave(userId, gameId, finalResult.newState, [dbErrorLog]);
                     } catch (secondaryError) {
                         console.error('[Database Error] Failed to save db_error log:', secondaryError);
                         // At least return the error to the user
@@ -1539,15 +1551,23 @@ export async function processCommand(
                 };
             } catch (error) {
                 console.error('[Consolidated Logging] Failed to create consolidated log:', error);
-                // Fall back to regular logging
-                await logAndSave(userId, gameId, finalResult.newState, allMessagesForSession);
-                const allUIMessages = extractUIMessages(allMessagesForSession);
+                // Fall back to saving only UI messages from this turn
+                const newMessagesThisTurn = uiMessagesThisTurn.length > 0 ? uiMessagesThisTurn : finalResult.messages;
+                await logAndSave(userId, gameId, finalResult.newState, newMessagesThisTurn);
+
+                // Return all messages for UI display
+                const allForUI = [...allMessagesForSession, ...newMessagesThisTurn];
+                const allUIMessages = extractUIMessages(allForUI);
                 return { newState: finalResult.newState, messages: allUIMessages };
             }
         } else {
-            // No tracking data (conversation or special commands)
-            await logAndSave(userId, gameId, finalResult.newState, allMessagesForSession);
-            const allUIMessages = extractUIMessages(allMessagesForSession);
+            // No tracking data (conversation or special commands) - save only new messages
+            const newMessagesThisTurn = finalResult.messages || [];
+            await logAndSave(userId, gameId, finalResult.newState, newMessagesThisTurn);
+
+            // Return all messages for UI display
+            const allForUI = [...allMessagesForSession, ...newMessagesThisTurn];
+            const allUIMessages = extractUIMessages(allForUI);
             return { newState: finalResult.newState, messages: allUIMessages };
         }
 
@@ -1666,11 +1686,27 @@ export async function resetGame(userId: string): Promise<CommandResult & { shoul
 
         try {
             console.log(`[RESET] Deleting all data for dev user: ${userId}`);
-            await Promise.all([
+
+            const deletePromises: Promise<any>[] = [
                 deleteDoc(userRef),
                 deleteDoc(stateRef),
                 deleteDoc(logRef)
-            ]);
+            ];
+
+            // Also delete turns subcollection (new format)
+            try {
+                const turnsCol = collection(firestore, `logs/${userId}_${gameId}/turns`);
+                const turnsSnapshot = await getDocs(turnsCol);
+                turnsSnapshot.docs.forEach(turnDoc => {
+                    deletePromises.push(deleteDoc(turnDoc.ref));
+                });
+                console.log(`[RESET] Deleting ${turnsSnapshot.docs.length} turn documents`);
+            } catch (error) {
+                // If turns subcollection doesn't exist (old format), continue
+                console.log(`[RESET] No turns subcollection found (old format)`);
+            }
+
+            await Promise.all(deletePromises);
             console.log(`[RESET] Successfully deleted user, state, and logs for ${userId}`);
 
             // Return signal to reload the browser
@@ -1847,6 +1883,25 @@ function createDatabaseErrorLog(
   };
 }
 
+// Write queue to prevent overwhelming Firestore
+let writeQueue: Promise<any> = Promise.resolve();
+let lastWriteTime = 0;
+const MIN_WRITE_INTERVAL_MS = 100; // Minimum 100ms between writes
+
+/**
+ * Save player state and logs to Firestore
+ *
+ * NEW ARCHITECTURE (to prevent 1MB document limit):
+ * - Player state: Stored in player_states/{userId}_{gameId} (as before)
+ * - Logs: Now stored in subcollection logs/{userId}_{gameId}/turns/{turnNumber}
+ *   - Each turn is a separate document (no 1MB limit)
+ *   - Summary document at logs/{userId}_{gameId} tracks metadata
+ *
+ * @param userId - User ID
+ * @param gameId - Game ID
+ * @param state - Current player state (will be saved with incremented turnCount)
+ * @param messages - Messages array to append to logs
+ */
 export async function logAndSave(
   userId: string,
   gameId: GameId,
@@ -1861,21 +1916,117 @@ export async function logAndSave(
   }
 
   const stateRef = doc(firestore, 'player_states', `${userId}_${gameId}`);
-  const logRef = doc(firestore, 'logs', `${userId}_${gameId}`);
 
-  try {
-    if (state) {
-        await setDoc(stateRef, state, { merge: false });
-    }
+  // NEW: Use subcollections for logs to avoid 1MB document limit
+  const logSummaryRef = doc(firestore, 'logs', `${userId}_${gameId}`);
 
-    await setDoc(logRef, { messages: messages }, { merge: false });
+  // Queue writes to prevent overwhelming Firestore write stream
+  return new Promise((resolve) => {
+    writeQueue = writeQueue.then(async () => {
+      // Throttle: Ensure minimum time between writes
+      const timeSinceLastWrite = Date.now() - lastWriteTime;
+      if (timeSinceLastWrite < MIN_WRITE_INTERVAL_MS) {
+        await new Promise(r => setTimeout(r, MIN_WRITE_INTERVAL_MS - timeSinceLastWrite));
+      }
 
-    return { success: true };
-  } catch (error) {
-    console.error('Failed to save game state or logs:', error);
-    const dbError = error instanceof Error ? error : new Error('Unknown database error');
-    return { success: false, error: dbError };
-  }
+      try {
+        const { writeBatch, collection } = await import('firebase/firestore');
+        const batch = writeBatch(firestore);
+
+        // Increment turn counter (or initialize to 1)
+        const turnNumber = (state.turnCount || 0) + 1;
+        const updatedState = { ...state, turnCount: turnNumber };
+
+        // Write 1: Update player state with new turnCount
+        if (updatedState) {
+          batch.set(stateRef, updatedState, { merge: false });
+        }
+
+        // Write 2: Append messages to turns subcollection (prevents 1MB limit)
+        // Each turn is a separate document: logs/{userId}_{gameId}/turns/{turnNumber}
+        const turnRef = doc(collection(firestore, `logs/${userId}_${gameId}/turns`), String(turnNumber));
+        batch.set(turnRef, {
+          messages: messages,
+          timestamp: Date.now(),
+          chapterId: updatedState.currentChapterId,
+          locationId: updatedState.currentLocationId,
+        });
+
+        // Write 3: Update summary document (tracks metadata)
+        batch.set(logSummaryRef, {
+          totalTurns: turnNumber,
+          lastUpdated: Date.now(),
+          currentChapter: updatedState.currentChapterId,
+          currentLocation: updatedState.currentLocationId,
+        }, { merge: true });
+
+        // Commit the batch (single write stream operation for all 3 writes)
+        await batch.commit();
+
+        lastWriteTime = Date.now();
+        console.log(`✅ Batched write completed for ${userId} (turn ${turnNumber})`);
+        resolve({ success: true });
+      } catch (error) {
+        console.error('Failed to save game state or logs:', error);
+
+        // Handle document size errors
+        if (error instanceof Error && error.message.includes('exceeds the maximum allowed size')) {
+          console.error('❌ Document too large. This should not happen with subcollections. Check log data.');
+          const sizeError = new Error('Log document exceeded size limit. Please contact support.');
+          resolve({ success: false, error: sizeError });
+          return;
+        }
+
+        // Handle RESOURCE_EXHAUSTED with exponential backoff
+        if (error instanceof Error && error.message.includes('RESOURCE_EXHAUSTED')) {
+          console.warn('⚠️ Firestore write buffer full. Retrying with backoff...');
+
+          // Wait 1 second and retry once
+          await new Promise(r => setTimeout(r, 1000));
+
+          try {
+            const { writeBatch, collection } = await import('firebase/firestore');
+            const retryBatch = writeBatch(firestore);
+
+            const turnNumber = (state.turnCount || 0) + 1;
+            const updatedState = { ...state, turnCount: turnNumber };
+
+            if (updatedState) {
+              retryBatch.set(stateRef, updatedState, { merge: false });
+            }
+
+            const turnRef = doc(collection(firestore, `logs/${userId}_${gameId}/turns`), String(turnNumber));
+            retryBatch.set(turnRef, {
+              messages: messages,
+              timestamp: Date.now(),
+              chapterId: updatedState.currentChapterId,
+              locationId: updatedState.currentLocationId,
+            });
+
+            retryBatch.set(logSummaryRef, {
+              totalTurns: turnNumber,
+              lastUpdated: Date.now(),
+              currentChapter: updatedState.currentChapterId,
+              currentLocation: updatedState.currentLocationId,
+            }, { merge: true });
+
+            await retryBatch.commit();
+
+            lastWriteTime = Date.now();
+            console.log(`✅ Retry succeeded for ${userId}`);
+            resolve({ success: true });
+          } catch (retryError) {
+            console.error('❌ Retry failed:', retryError);
+            const dbError = retryError instanceof Error ? retryError : new Error('Unknown database error');
+            resolve({ success: false, error: dbError });
+          }
+        } else {
+          const dbError = error instanceof Error ? error : new Error('Unknown database error');
+          resolve({ success: false, error: dbError });
+        }
+      }
+    });
+  });
 }
 
 export async function sendWhinselfTestMessage(userId: string, message: string): Promise<void> {
@@ -1901,24 +2052,26 @@ export async function sendWhinselfTestMessage(userId: string, message: string): 
 export async function generateStoryForChapter(userId: string, gameId: GameId, chapterId: ChapterId): Promise<{ newState: PlayerState }> {
     const { firestore } = initializeFirebase();
     const stateRef = doc(firestore, 'player_states', `${userId}_${gameId}`);
-    const logRef = doc(firestore, 'logs', `${userId}_${gameId}`);
 
-    const [stateSnap, logSnap, game] = await Promise.all([
-        getDoc(stateRef), 
-        getDoc(logRef),
+    const [stateSnap, game] = await Promise.all([
+        getDoc(stateRef),
         getGameData(gameId)
     ]);
 
-    if (!stateSnap.exists() || !logSnap.exists()) {
-        throw new Error("Player state or logs not found. Cannot generate story.");
+    if (!stateSnap.exists()) {
+        throw new Error("Player state not found. Cannot generate story.");
     }
     if (!game) {
         throw new Error("Game data could not be loaded. Cannot generate story.");
     }
 
     let playerState = stateSnap.data() as PlayerState;
-    const rawMessages = logSnap.data()?.messages || [];
-    const allMessages = normalizeTimestamps(rawMessages) as Message[];
+
+    // Load logs using new helper that handles both old and new formats
+    const allMessages = await getAllLogs(firestore, userId, gameId);
+    if (allMessages.length === 0) {
+        throw new Error("Logs not found. Cannot generate story.");
+    }
     const chapter = game.chapters[chapterId];
 
     if (!chapter) {

@@ -7,6 +7,7 @@ import { extractUIMessages } from '@/lib/utils/extract-ui-messages';
 import type { PlayerState, Message, GameId } from '@/lib/game/types';
 import { initializeFirebase } from '@/firebase';
 import { doc, getDoc } from 'firebase/firestore';
+import { getAllLogs } from '@/lib/firestore/log-retrieval';
 
 interface UserState {
     playerState: PlayerState;
@@ -21,14 +22,13 @@ async function fetchUserData(userId: string): Promise<UserState | null> {
     const { firestore } = initializeFirebase();
 
     const stateRef = doc(firestore, 'player_states', `${userId}_${GAME_ID}`);
-    const logRef = doc(firestore, 'logs', `${userId}_${GAME_ID}`);
 
     try {
-        const [stateSnap, logSnap] = await Promise.all([getDoc(stateRef), getDoc(logRef)]);
+        const stateSnap = await getDoc(stateRef);
 
-        if (stateSnap.exists() && logSnap.exists()) {
-            // Extract UI messages from consolidated log entries
-            const rawMessages = logSnap.data()?.messages || [];
+        if (stateSnap.exists()) {
+            // Load logs using new helper that handles both old and new formats
+            const rawMessages = await getAllLogs(firestore, userId, GAME_ID);
             const uiMessages = extractUIMessages(rawMessages);
 
             return {

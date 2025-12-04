@@ -229,6 +229,9 @@ export type PlayerState = {
   activeConversationWith: NpcId | null;
   activeDeviceFocus: GameObjectId | ItemId | null; // Device focus mode (phone, laptop, etc.)
   interactingWithObject: GameObjectId | null;
+
+  // Turn counter for log sharding (prevents 1MB document limit)
+  turnCount?: number; // Tracks total turns played (used for subcollection document IDs)
 };
 
 // ============================================================================
