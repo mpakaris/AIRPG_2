@@ -37,6 +37,7 @@ import { createMessage } from '@/lib/utils';
 import { extractUIMessages } from '@/lib/utils/extract-ui-messages';
 import { dispatchMessage } from '@/lib/whinself-service';
 import { getAllLogs, logsExist } from '@/lib/firestore/log-retrieval';
+import { calculateStateDiff } from '@/lib/game/utils/state-diff';
 import { collection, deleteDoc, doc, getDoc, getDocs, setDoc } from 'firebase/firestore';
 
 
@@ -532,9 +533,46 @@ export async function processCommand(
             const gameCommandPattern = /^(use|examine|look|take|go|read|open|close|move|search|break|unlock|enter|exit|help|inventory|map)\s+/i;
             const isGameCommand = gameCommandPattern.test(safePlayerInput.trim());
 
+            // Special case: trying to use device (phone, etc.) during conversation
+            const useDevicePattern = /^use\s+(phone|fbi\s*phone|device)/i;
+            const isUsingDevice = useDevicePattern.test(safePlayerInput.trim());
+
             if (isGameCommand) {
-                // Route to normal command interpretation instead of conversation
-                // This allows "use phone" to work even during conversation
+                // If trying to use a device, politely ask them to end conversation first
+                if (isUsingDevice) {
+                    const npc = game.npcs[currentState.activeConversationWith];
+                    const npcName = npc?.name || 'them';
+
+                    const politeMessage = createMessage(
+                        'narrator',
+                        game.narratorName || 'Narrator',
+                        `First end the conversation with ${npcName} before using your device. It's not polite to be on your phone when someone is talking to you. Type 'goodbye' or 'exit' to end the conversation.`
+                    );
+
+                    if (playerMessage) uiMessagesThisTurn.push(playerMessage);
+                    uiMessagesThisTurn.push(politeMessage);
+
+                    // Create simple log entry
+                    const blockEntry = {
+                        type: 'command',
+                        timestamp: Date.now(),
+                        input: { raw: safePlayerInput },
+                        execution: { handler: 'conversation_block', success: false },
+                        uiMessages: uiMessagesThisTurn,
+                        context: {
+                            chapterId: currentState.currentChapterId,
+                            locationId: currentState.currentLocationId,
+                            turnNumber: allMessagesForSession.filter((msg: any) => msg.type === 'command').length + 1,
+                        },
+                    };
+
+                    await logAndSave(userId, gameId, currentState, [blockEntry as any]);
+                    const allMessagesWithNew = [...allMessagesForSession, blockEntry as any];
+                    return { newState: currentState, messages: extractUIMessages(allMessagesWithNew) };
+                }
+
+                // Other game commands: Route to normal command interpretation
+                // This allows things like "examine" to work during conversation
                 console.log(`[CONVERSATION BYPASS] Detected game command during conversation: "${safePlayerInput}"`);
                 // Fall through to normal command processing below
             } else {
@@ -610,11 +648,8 @@ export async function processCommand(
                     // 4. UI MESSAGES
                     uiMessages: uiMessagesThisTurn,
 
-                    // 5. STATE SNAPSHOTS
-                    stateSnapshot: {
-                        before: stateBefore,
-                        after: currentState,
-                    },
+                    // 5. STATE DIFF (only changes, not full snapshots)
+                    stateDiff: calculateStateDiff(stateBefore || currentState, currentState),
 
                     // 6. TOKEN USAGE
                     tokens: totalTokensInput > 0 ? {
@@ -643,11 +678,12 @@ export async function processCommand(
                     wasUnclear: false,
                 };
 
-                // Save consolidated entry
-                const consolidatedMessages = [...allMessagesForSession, consolidatedEntry as any];
-                await logAndSave(userId, gameId, currentState, consolidatedMessages);
+                // Save ONLY the new consolidated entry (subcollection handles multiple turns)
+                await logAndSave(userId, gameId, currentState, [consolidatedEntry as any]);
 
-                return { newState: currentState, messages: extractUIMessages(consolidatedMessages) };
+                // For UI display, combine previous messages with new entry
+                const allMessagesWithNew = [...allMessagesForSession, consolidatedEntry as any];
+                return { newState: currentState, messages: extractUIMessages(allMessagesWithNew) };
             }
         }
 
@@ -723,12 +759,12 @@ export async function processCommand(
                 wasUnclear: false,
             };
 
-            // Save consolidated entry to Firebase
-            const consolidatedMessages = [...allMessagesForSession, consolidatedEntry as any];
-            await logAndSave(userId, gameId, currentState, consolidatedMessages);
+            // Save ONLY the new consolidated entry to Firebase (subcollection handles multiple turns)
+            await logAndSave(userId, gameId, currentState, [consolidatedEntry as any]);
 
-            // Extract all UI messages for client display
-            const allUIMessages = extractUIMessages(consolidatedMessages);
+            // For UI display, combine previous messages with new entry
+            const allMessagesWithNew = [...allMessagesForSession, consolidatedEntry as any];
+            const allUIMessages = extractUIMessages(allMessagesWithNew);
             return { newState: currentState, messages: allUIMessages };
         } else if (lowerInput === 'restart') {
             return await resetGame(userId);
@@ -822,12 +858,12 @@ export async function processCommand(
                 wasUnclear: false,
             };
 
-            // Save consolidated entry to Firebase
-            const consolidatedMessages = [...allMessagesForSession, consolidatedEntry as any];
-            await logAndSave(userId, gameId, currentState, consolidatedMessages);
+            // Save ONLY the new consolidated entry to Firebase (subcollection handles multiple turns)
+            await logAndSave(userId, gameId, currentState, [consolidatedEntry as any]);
 
-            // Extract all UI messages for client display
-            const allUIMessages = extractUIMessages(consolidatedMessages);
+            // For UI display, combine previous messages with new entry
+            const allMessagesWithNew = [...allMessagesForSession, consolidatedEntry as any];
+            const allUIMessages = extractUIMessages(allMessagesWithNew);
             return { newState: currentState, messages: allUIMessages };
         } else {
             // UNIFIED COMMAND LOGGING: Track everything for debugging and analytics
@@ -1473,11 +1509,9 @@ export async function processCommand(
                     // 4. UI MESSAGES (what player saw - includes media URLs)
                     uiMessages: uiMessagesThisTurn,
 
-                    // 5. STATE SNAPSHOTS (before/after)
-                    stateSnapshot: {
-                        before: stateBefore,
-                        after: finalResult.newState,
-                    },
+                    // 5. STATE DIFF (only changes, not full snapshots)
+                    // This reduces size from 8-12 KB per turn → 1-2 KB per turn
+                    stateDiff: calculateStateDiff(stateBefore || finalResult.newState, finalResult.newState),
 
                     // 6. TOKEN USAGE
                     tokens: {
@@ -1791,10 +1825,11 @@ export interface EnhancedCommandLog {
   // UI messages shown to player during this command
   uiMessages: Message[];
 
-  // State snapshots for bug reproduction
-  stateSnapshot: {
-    before: PlayerState;
-    after: PlayerState;
+  // State diff for bug reproduction (only changes, not full snapshots)
+  stateDiff?: {
+    changed: Record<string, any>;
+    added: Record<string, any>;
+    removed: string[];
   };
 
   // Token usage
@@ -2103,4 +2138,137 @@ export async function generateStoryForChapter(userId: string, gameId: GameId, ch
     await setDoc(stateRef, newState);
 
     return { newState };
+}
+
+/**
+ * DEV ONLY: Apply checkpoint to skip to specific part of game
+ */
+export async function applyDevCheckpoint(userId: string, checkpointId: string): Promise<{ newState: PlayerState; messages: Message[] }> {
+    // Only allow in development mode
+    if (process.env.NEXT_PUBLIC_NODE_ENV !== 'development') {
+        throw new Error('Dev checkpoints only available in development mode');
+    }
+
+    const game = await getGameData(GAME_ID);
+    if (!game) {
+        throw new Error("Game data could not be loaded");
+    }
+
+    const { firestore } = initializeFirebase();
+    const stateRef = doc(firestore, 'player_states', `${userId}_${GAME_ID}`);
+    const stateSnap = await getDoc(stateRef);
+
+    let currentState: PlayerState;
+    if (stateSnap.exists()) {
+        currentState = stateSnap.data() as PlayerState;
+    } else {
+        currentState = getInitialState(game);
+    }
+
+    // Define checkpoints
+    const checkpoints: Record<string, Effect[]> = {
+        'metal_box_opened': [
+            { type: 'SET_FLAG', flag: 'has_unlocked_notebook' as Flag, value: true },
+            { type: 'SET_ENTITY_STATE', entityId: 'obj_brown_notebook' as GameObjectId, patch: { currentStateId: 'unlocked_but_closed' } }
+        ],
+        'sd_card_watched': [
+            { type: 'SET_FLAG', flag: 'has_unlocked_notebook' as Flag, value: true },
+            { type: 'SET_FLAG', flag: 'notebook_video_watched' as Flag, value: true },
+            { type: 'SET_ENTITY_STATE', entityId: 'obj_brown_notebook' as GameObjectId, patch: { currentStateId: 'sd_card_watched_file_present' } }
+        ],
+        'confidential_file_read': [
+            { type: 'SET_FLAG', flag: 'has_unlocked_notebook' as Flag, value: true },
+            { type: 'SET_FLAG', flag: 'notebook_video_watched' as Flag, value: true },
+            { type: 'SET_FLAG', flag: 'notebook_article_read' as Flag, value: true },
+            { type: 'SET_FLAG', flag: 'read_secret_document' as Flag, value: true },
+            { type: 'SET_ENTITY_STATE', entityId: 'obj_brown_notebook' as GameObjectId, patch: { currentStateId: 'all_content_consumed' } }
+        ],
+        'recip_saw_found': [
+            { type: 'SET_FLAG', flag: 'has_unlocked_notebook' as Flag, value: true },
+            { type: 'SET_FLAG', flag: 'notebook_video_watched' as Flag, value: true },
+            { type: 'SET_FLAG', flag: 'notebook_article_read' as Flag, value: true },
+            { type: 'SET_FLAG', flag: 'read_secret_document' as Flag, value: true },
+            { type: 'SET_FLAG', flag: 'safe_is_unlocked' as Flag, value: true },
+            { type: 'ADD_ITEM', itemId: 'item_recip_saw' as ItemId },
+            { type: 'SET_ENTITY_STATE', entityId: 'item_recip_saw' as ItemId, patch: { currentStateId: 'taken', taken: true } }
+        ],
+        'hidden_door_found': [
+            // Set player location to cafe interior
+            { type: 'SET_LOCATION', locationId: 'loc_cafe_interior' as LocationId },
+            // Progress flags
+            { type: 'SET_FLAG', flag: 'has_unlocked_notebook' as Flag, value: true },
+            { type: 'SET_FLAG', flag: 'notebook_video_watched' as Flag, value: true },
+            { type: 'SET_FLAG', flag: 'notebook_article_read' as Flag, value: true },
+            { type: 'SET_FLAG', flag: 'read_secret_document' as Flag, value: true },
+            { type: 'SET_FLAG', flag: 'safe_is_unlocked' as Flag, value: true },
+            { type: 'SET_FLAG', flag: 'bookshelf_destroyed' as Flag, value: true },
+            // Give recip saw
+            { type: 'ADD_ITEM', itemId: 'item_recip_saw' as ItemId },
+            { type: 'SET_ENTITY_STATE', entityId: 'item_recip_saw' as ItemId, patch: { currentStateId: 'taken', taken: true } },
+            // Destroy bookshelf and reveal hidden door
+            { type: 'SET_ENTITY_STATE', entityId: 'obj_bookshelf' as GameObjectId, patch: { isBroken: true, isOpen: true } },
+            { type: 'REVEAL_FROM_PARENT', entityId: 'item_book_deal' as ItemId, parentId: 'obj_bookshelf' as GameObjectId },
+            { type: 'REVEAL_FROM_PARENT', entityId: 'item_book_fbi' as ItemId, parentId: 'obj_bookshelf' as GameObjectId },
+            { type: 'REVEAL_FROM_PARENT', entityId: 'item_book_justice' as ItemId, parentId: 'obj_bookshelf' as GameObjectId },
+            { type: 'REVEAL_FROM_PARENT', entityId: 'obj_hidden_door' as GameObjectId, parentId: 'obj_bookshelf' as GameObjectId }
+        ],
+        'hidden_door_opened': [
+            // Set player location to cafe interior
+            { type: 'SET_LOCATION', locationId: 'loc_cafe_interior' as LocationId },
+            // Progress flags
+            { type: 'SET_FLAG', flag: 'has_unlocked_notebook' as Flag, value: true },
+            { type: 'SET_FLAG', flag: 'notebook_video_watched' as Flag, value: true },
+            { type: 'SET_FLAG', flag: 'notebook_article_read' as Flag, value: true },
+            { type: 'SET_FLAG', flag: 'read_secret_document' as Flag, value: true },
+            { type: 'SET_FLAG', flag: 'safe_is_unlocked' as Flag, value: true },
+            { type: 'SET_FLAG', flag: 'bookshelf_destroyed' as Flag, value: true },
+            { type: 'SET_FLAG', flag: 'hidden_door_unlocked' as Flag, value: true },
+            { type: 'SET_FLAG', flag: 'hidden_door_opened' as Flag, value: true },
+            { type: 'SET_FLAG', flag: 'note_dropped_from_book' as Flag, value: true },
+            // Give recip saw
+            { type: 'ADD_ITEM', itemId: 'item_recip_saw' as ItemId },
+            { type: 'SET_ENTITY_STATE', entityId: 'item_recip_saw' as ItemId, patch: { currentStateId: 'taken', taken: true } },
+            // Destroy bookshelf and reveal hidden door
+            { type: 'SET_ENTITY_STATE', entityId: 'obj_bookshelf' as GameObjectId, patch: { isBroken: true, isOpen: true } },
+            { type: 'REVEAL_FROM_PARENT', entityId: 'item_book_deal' as ItemId, parentId: 'obj_bookshelf' as GameObjectId },
+            { type: 'REVEAL_FROM_PARENT', entityId: 'item_book_fbi' as ItemId, parentId: 'obj_bookshelf' as GameObjectId },
+            { type: 'REVEAL_FROM_PARENT', entityId: 'item_book_justice' as ItemId, parentId: 'obj_bookshelf' as GameObjectId },
+            { type: 'REVEAL_FROM_PARENT', entityId: 'obj_hidden_door' as GameObjectId, parentId: 'obj_bookshelf' as GameObjectId },
+            // Unlock and open hidden door
+            { type: 'SET_ENTITY_STATE', entityId: 'obj_hidden_door' as GameObjectId, patch: { isLocked: false, isOpen: true, currentStateId: 'unlocked' } },
+            // Reveal Lili and tablet inside
+            { type: 'REVEAL_FROM_PARENT', entityId: 'npc_victim_girl' as NpcId, parentId: 'obj_hidden_door' as GameObjectId },
+            { type: 'REVEAL_FROM_PARENT', entityId: 'obj_tablet' as GameObjectId, parentId: 'obj_hidden_door' as GameObjectId }
+        ]
+    };
+
+    const effects = checkpoints[checkpointId];
+    if (!effects) {
+        throw new Error(`Unknown checkpoint: ${checkpointId}`);
+    }
+
+    // Apply effects
+    const result = await processEffects(currentState, effects, game);
+    const newState = result.newState;
+
+    // Save state
+    await setDoc(stateRef, newState);
+
+    // Load all messages
+    const allMessages = await getAllLogs(firestore, userId, GAME_ID);
+
+    // Add checkpoint message
+    const checkpointMessage = createMessage(
+        'system',
+        'Dev Checkpoint',
+        `✅ Checkpoint applied: ${checkpointId.replace(/_/g, ' ')}`
+    );
+
+    const updatedMessages = [...allMessages, checkpointMessage];
+    await logAndSave(userId, GAME_ID, newState, [checkpointMessage]);
+
+    return {
+        newState,
+        messages: normalizeTimestamps(updatedMessages)
+    };
 }

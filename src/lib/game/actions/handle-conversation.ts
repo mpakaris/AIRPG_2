@@ -226,9 +226,32 @@ async function handleContextualChat(npc: NPC, state: PlayerState, playerInput: s
     });
 
     // If secret was revealed, process reveal effects
-    if (aiResponse.shouldReveal && npc.secret) {
+    // Also check if response contains key info as fallback (for when AI forgets to set shouldReveal)
+    // For Lili, check if response contains "2025" (the actual secret)
+    // For Barista, check if response contains "business card" or "card"
+    let responseContainsSecret = false;
+    if (npc.secret) {
+        // Check if AI's response contains any critical keywords that indicate secret was shared
+        const lowerResponse = aiResponse.npcResponse.toLowerCase();
+        responseContainsSecret = lowerResponse.includes('2025') ||
+                                 lowerResponse.includes('business card') ||
+                                 lowerResponse.includes('card on the counter');
+
+        console.log(`[CONTEXTUAL CHAT] 🔍 Checking secret reveal: revealConditionsMet=${revealConditionsMet}, shouldReveal=${aiResponse.shouldReveal}, responseContainsSecret=${responseContainsSecret}`);
+        console.log(`[CONTEXTUAL CHAT] 🔍 AI Response: "${aiResponse.npcResponse}"`);
+    }
+
+    // Process reveal if:
+    // 1. AI explicitly set shouldReveal=true, OR
+    // 2. Response contains the secret keyword (fallback for when AI forgets), OR
+    // 3. Reveal conditions were met AND AI should have revealed (but this requires explicit flag)
+    const shouldProcessReveal = (aiResponse.shouldReveal || responseContainsSecret) && npc.secret;
+
+    if (shouldProcessReveal) {
         effects.push(...npc.secret.revealEffects);
-        console.log(`[CONTEXTUAL CHAT] 🔓 Secret revealed by ${npc.name}!`);
+        console.log(`[CONTEXTUAL CHAT] 🔓 Secret revealed by ${npc.name}! (shouldReveal: ${aiResponse.shouldReveal}, containsSecret: ${responseContainsSecret})`);
+    } else if (npc.secret) {
+        console.log(`[CONTEXTUAL CHAT] ❌ Secret NOT revealed (shouldReveal: ${aiResponse.shouldReveal}, containsSecret: ${responseContainsSecret})`);
     }
 
     // Process effects

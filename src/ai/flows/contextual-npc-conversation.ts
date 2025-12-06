@@ -73,7 +73,7 @@ const contextualNpcConversationPrompt = ai.definePrompt({
 {{/each}}
 
 {{#if topicKnowledge}}
-Specific knowledge about the relevant topic:
+Specific knowledge about the relevant topic (ONLY share when player asks about it):
 {{#each topicKnowledge}}
 - {{this}}
 {{/each}}
@@ -88,13 +88,15 @@ Keep responses brief and redirect player to move on.
 Critical info you possess: {{secretInfo}}
 
 {{#if revealConditionsMet}}
-✅ CONDITIONS MET - Reveal the secret naturally in this response!
+✅ CONDITIONS MET - YOU MUST REVEAL THE SECRET IN THIS RESPONSE!
+Include the secret information ({{secretInfo}}) in your response.
 Weave it into your answer organically. Don't be abrupt.
 Example: "You know, since you're asking... [reveal secret naturally]"
+IMPORTANT: Set shouldReveal=true in your response since you're revealing the secret!
 {{else}}
 ❌ CONDITIONS NOT MET - Keep the secret hidden for now.
-Answer helpfully with general knowledge, but don't mention the secret yet.
-Build interest, share related details, but hold back the critical piece.
+ONLY answer what the player DIRECTLY asks about. Don't volunteer information about topics they haven't mentioned.
+If they ask about coffee/work, talk about that. Don't bring up unrelated topics.
 {{/if}}
 {{/if}}
 
@@ -130,11 +132,11 @@ Examples of GOOD varied openings:
    - If you said "musician on 5th Street", DON'T say it again
    - Add something new: "Usually afternoons" or "Keeps to himself" or "Pays cash"
 
-5. REVEAL NATURALLY: When conditions met, hint at business card helping with box:
-   - If asked about box/opening: "I don't know, but maybe that business card he left can help you. It's on the counter."
-   - If asked about contact: "Actually, he left a card here the other day. On the counter."
-   - Keep it subtle - don't explain, just suggest
-   - NOT: "Silas? Yeah, he's a regular. Plays sax. He left a business card..."
+5. REVEAL NATURALLY: When conditions met (revealConditionsMet=true), share the secret information:
+   - Weave it naturally into your response
+   - Don't dump everything at once - reveal the key detail
+   - Stay in character - sound natural, not mechanical
+   - Example: "Actually, he told me something... [share secret]"
 
 === YOUR TASK ===
 
@@ -147,7 +149,7 @@ IF NOT AN INSULT:
 1. Check summary - what have you ALREADY said?
 2. Respond with ONE new piece of info (short!)
 3. Vary your opening phrase
-4. If reveal time, mention card briefly
+4. If reveal conditions met, share the secret naturally
 5. Stay in character
 
 Return FOUR things:
@@ -155,7 +157,7 @@ Return FOUR things:
 2. conversationSummary: Ultra-compact (max 150 chars)
    - Format: "Asked X 3x. Shared: A,B,C. Hidden: D"
    - NO articles/filler
-3. shouldReveal: true if mentioned business card, false otherwise
+3. shouldReveal: true if you revealed the secret information in this response, false otherwise
 4. isInsult: true if player was rude/insulting, false otherwise
 `
 });

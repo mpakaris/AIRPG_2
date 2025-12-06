@@ -117,7 +117,7 @@ export function attemptPhotograph(
     {
       type: 'SHOW_MESSAGE',
       speaker: 'narrator',
-      content: `📸 You take a photo of the ${targetName}.`,
+      content: `The viewfinder frames it—sharp edges, faded ink, secrets pressed into fibrous paper. You press the shutter. The phone chirps. Another piece of evidence, digitized and filed, another shadow captured for the case file. The ${targetName} is now cataloged in your phone's evidence gallery, ready to haunt you later when the pieces finally connect.`,
       messageType: 'image',
       imageUrl,
       imageDescription,
@@ -127,11 +127,6 @@ export function attemptPhotograph(
     {
       type: 'CLEAR_DEVICE_FOCUS'
     },
-    {
-      type: 'SHOW_MESSAGE',
-      speaker: 'narrator',
-      content: `You pocket your ${cameraItem.name}.`
-    },
     // Automatically end any active conversation
     {
       type: 'END_CONVERSATION'
@@ -139,12 +134,7 @@ export function attemptPhotograph(
     {
       type: 'SHOW_MESSAGE',
       speaker: 'narrator',
-      content: `You ended the conversation.`
-    },
-    {
-      type: 'SHOW_MESSAGE',
-      speaker: 'system',
-      content: `You've gathered useful evidence. What do you want to do next?`
+      content: `You pocket your phone and step back. Another piece of the puzzle, cataloged and filed. Your instincts led you here—they always do. The city's shadows whisper their secrets to those who know how to listen. What do you do next, Agent Burt?`
     }
   ];
 

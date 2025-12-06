@@ -128,7 +128,13 @@ export async function handleCall(state: PlayerState, commandRest: string, game: 
     if (matchingHandlers.length > 0) {
       // Evaluate conditions for each matching handler
       for (const handler of matchingHandlers) {
+        console.log(`[CALL HANDLER] 📞 Calling ${normalizedNumber}`);
+        console.log(`[CALL HANDLER] 🔍 Handler conditions:`, JSON.stringify(handler.conditions, null, 2));
+        console.log(`[CALL HANDLER] 🔍 Current flags:`, JSON.stringify(state.flags, null, 2));
+
         const conditionsMet = Validator.evaluateConditions(handler.conditions, state, game);
+        console.log(`[CALL HANDLER] ${conditionsMet ? '✅' : '❌'} Conditions met: ${conditionsMet}`);
+
         const outcome = conditionsMet ? handler.success : handler.fail;
         const isFail = !conditionsMet;
 

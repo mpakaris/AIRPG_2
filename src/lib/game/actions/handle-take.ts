@@ -35,7 +35,7 @@ export async function handleTake(state: PlayerState, targetName: string, game: G
     searchInventory: true,
     searchVisibleItems: true,
     searchObjects: true,  // Search objects to detect furniture/objects player tries to take
-    requireFocus: true
+    requireFocus: false  // Search all visible entities (focus validation happens separately if needed)
   });
 
   // 1. Check if already in inventory

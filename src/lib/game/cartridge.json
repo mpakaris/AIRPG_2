@@ -619,7 +619,7 @@
               }
             ],
             "success": {
-              "message": "The latch refuses to budge. Cold metal, unyielding. This isn't a lock for keys—it's waiting for something else. A phrase. A password. Someone sealed this box with words, not metal.\n\nYou run your fingers over the rusty surface, feeling the weight of secrets pressed into every dent. Whatever's inside, someone went to great lengths to hide it. The kind of lengths that make your pulse quicken.\n\nYou need the right phrase to unlock this. If you know it, whisper it to the box:\n\n**/password <phrase>** (example: /password Bloodhaven rules)\n\nStuck? There's a puzzle that might help you find the answer:\nhttps://airpg-minigames.vercel.app/games/the-metal-box\n\nThe box waits. Silent. Patient. Guarding its truth.",
+              "message": "The latch refuses to budge. Cold metal, unyielding. This isn't a lock for keys—it's waiting for something else. A phrase. A password. Someone sealed this box with words, not metal.\n\nYou run your fingers over the rusty surface, feeling the weight of secrets pressed into every dent. Whatever's inside, someone went to great lengths to hide it. The kind of lengths that make your pulse quicken.\n\nYou need the right phrase to unlock this. If you know it, whisper it to the box:\n\n**/password <phrase>** (example: /password Bloodhaven rules)\n\nStuck? There's a puzzle that might help you find the answer:\nhttps://airpg-minigames.vercel.app/games/the-metal-box\n\nThe right clue to solve the puzzle should be somewhere in this Cafe.\n\nThe box waits. Silent. Patient. Guarding its truth.",
               "media": {
                 "url": "https://res.cloudinary.com/dg912bwcc/image/upload/v1764004289/brown_box_6_ofjp6t.jpg",
                 "description": "Attempting to open the locked metal box",
@@ -3153,7 +3153,7 @@
               }
             ],
             "success": {
-              "message": "You grip the handle. Pull. Heavy door swings inward—smooth, silent hinges. Professional.\n\nSmall room. Dim light from a desk lamp. Tablet glowing. And—\n\nYour breath catches.\n\nA girl. Young. Tied to a chair. Duct tape over her mouth. Eyes wide, terrified but alive. Tears streak her face.\n\nThe missing victim. Rose Carmichael.\n\nShe's trying to speak. Muffled sounds. Urgent. Desperate.",
+              "message": "You grip the handle. Pull. Heavy door swings inward—smooth, silent hinges. Professional.\n\nSmall room. Dim light from a desk lamp. Tablet glowing. And—\n\nYour breath catches.\n\nA girl. Young. Sitting on the floor, back against the wall. Eyes wide, terrified but alive. Tears streak her face.\n\nLili. The girl who was abducted earlier this week.\n\nShe stares at you. Silent. Calculating.",
               "media": {
                 "url": "https://res.cloudinary.com/dg912bwcc/image/upload/v1762368566/Screenshot_2025-11-04_at_15.31.36_opzjnb.png",
                 "description": "Open door revealing hidden room with kidnapped victim",
@@ -3476,7 +3476,7 @@
               }
             ],
             "success": {
-              "message": "You dial 555-444-2025.\n\nThe line clicks. Static hisses. Then—a voice. Cold. Measured. Deliberate.\n\n[AUDIO MESSAGE PLAYS]\n\n\"Well, well. Agent Burt Macklin. Congratulations. You've proven to be a worthy opponent. You found my little puzzle. Clever.\n\nYou may have won this round, but the game is far from over. More rounds are to come. I'll keep you busy, detective. Very busy.\n\nJustice... Justice will be served. For Rose. For Silas. For all of them.\n\nUntil next time.\"\n\nThe call ends abruptly. No callback number. Just the echo of that voice.\n\n---CHAPTER 1 COMPLETE---",
+              "message": "Your fingers hover over the keypad. This is it—the moment everything converges. The note. The girl. The café. All roads led here, to these ten digits.\n\n5... 5... 5... 4... 4... 4...\n\nYour hand trembles. Adrenaline surges through your veins. You don't know what's waiting on the other end of this line. Danger? Truth? A trap?\n\n2... 0... 2... 5.\n\nYou press CALL.\n\nThe line clicks. Static hisses. Your breath catches in your throat. Then—a voice. Cold. Measured. Deliberate. A chill runs down your spine.\n\n[AUDIO MESSAGE PLAYS]\n\n\"Well, well. Agent Burt Macklin. Congratulations. You've proven to be a worthy opponent. You found my little puzzle. Clever.\n\nYou may have won this round, but the game is far from over. More rounds are to come. I'll keep you busy, detective. Very busy.\n\nJustice... Justice will be served. For Rose. For Silas. For all of them.\n\nUntil next time.\"\n\nThe call ends abruptly. Silence floods back. Your heart pounds. The voice echoes in your mind—cold, calculating, patient. He's been watching. Waiting. Testing.\n\nYou're not hunting him.\n\nHe's hunting you.\n\n---CHAPTER 1 COMPLETE---",
               "media": {
                 "url": "https://res.cloudinary.com/dg912bwcc/video/upload/v1762703179/CH_I___Villain___Voice_Message_du7fsn.mp3",
                 "description": "Voice message from the villain",
@@ -5305,15 +5305,15 @@
     },
     "npc_victim_girl": {
       "id": "npc_victim_girl",
-      "name": "Rose Carmichael",
+      "name": "Lili",
       "alternateNames": [
-        "rose",
+        "lili",
         "victim",
         "girl",
         "woman",
-        "rose carmichael"
+        "abducted girl"
       ],
-      "description": "A young woman in her early 20s, bound to a chair with duct tape over her mouth. Her eyes are wide with fear and urgency. She desperately wants to tell you something.",
+      "description": "A young woman in her early 20s, sitting against the wall. Her eyes are wide with a mix of fear and something else... calculation? She watches you carefully.",
       "image": {
         "url": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400",
         "description": "Portrait of a frightened young woman.",
@@ -5327,9 +5327,100 @@
         "attitude": "friendly"
       },
       "dialogueType": "scripted",
-      "persona": "You are Rose Carmichael, the kidnapped victim. You've been tied up in this hidden room for days. You're terrified but trying to stay calm. You know critical information about the case - specifically that the missing digits from the phone number are 2025. You're desperate to help the detective catch your kidnapper.",
-      "welcomeMessage": "Mmmmph! Mmph mmph! [She struggles against her bonds, trying desperately to speak through the tape]",
-      "goodbyeMessage": "Please... find him. The number... 2025. That's all I know.",
+      "persona": "You are Lili, a young woman who was abducted 2 days ago. You're secretly colluding with the killer to frame Detective Burt McGraw. You appear frightened but you're actually in control. When asked general questions (who are you, are you ok, who took you), be brief and vague - mention the masked man, Rose from 1943, 'Justice will be served'. When asked about CLUES, INFORMATION, PHONE NUMBERS, or WHAT THE KIDNAPPER TOLD YOU, reveal: 'He told me to give you one number... 2025. He said you'd know what to do with it. He was very insistent that you know this number.' Be conversational and natural. Don't give commands or tell the detective what to do. Never end the conversation yourself.",
+      "welcomeMessage": "You... you found me.",
+      "goodbyeMessage": "Please... catch him before it's too late.",
+      "contextualKnowledge": {
+        "general": [
+          "Your name is Lili",
+          "Abducted 2 days ago after getting off the bus downtown",
+          "Not physically hurt, just scared",
+          "Kept in this hidden room behind the cafe",
+          "The kidnapper wants the detective to solve his puzzles",
+          "You're being used as bait",
+          "When asked about clues or information or help, reveal the phone number digits"
+        ],
+        "topic": [
+          "Kidnapper always wore a mask",
+          "Cold, calculated voice",
+          "Kept repeating 'Justice will be served'",
+          "Talked obsessively about someone named Rose",
+          "Said Rose was from 1943",
+          "Kidnapper wants detective to piece things together",
+          "He's testing the detective like a puppetmaster",
+          "He left clues throughout the cafe",
+          "Metal box, books, safes - all part of his game",
+          "IMPORTANT: When asked about clues/information/help, reveal this:",
+          "He told you to give the detective one number: 2025",
+          "He said the detective would know what to do with it",
+          "He was very insistent about this number",
+          "That's the key piece of information you must reveal when asked for clues",
+          "Don't know what happens when detective calls the number",
+          "You're frightened but feel like this is all orchestrated"
+        ]
+      },
+      "secret": {
+        "info": "Reveal the missing phone digits: 2025",
+        "revealConditions": {
+          "anyOf": [
+            {
+              "type": "KEYWORDS",
+              "keywords": [
+                "phone",
+                "number",
+                "digits",
+                "missing",
+                "scratched",
+                "555",
+                "phone number",
+                "tell me",
+                "told you",
+                "what did he say",
+                "what did he tell",
+                "message",
+                "what to say",
+                "supposed to tell",
+                "need to know",
+                "clue",
+                "clues",
+                "information",
+                "info",
+                "hint",
+                "hints",
+                "leave",
+                "left",
+                "anything",
+                "help me",
+                "know",
+                "code",
+                "password"
+              ]
+            }
+          ]
+        },
+        "revealEffects": [
+          {
+            "type": "SET_FLAG",
+            "flag": "victim_revealed_digits",
+            "value": true
+          },
+          {
+            "type": "SET_FLAG",
+            "flag": "know_full_phone_number",
+            "value": true
+          }
+        ]
+      },
+      "conversationStages": {
+        "active": {
+          "personality": "Frightened but evasive, revealing info carefully, guarding the phone digits until asked directly",
+          "maxInteractions": 15
+        },
+        "completed": {
+          "personality": "Brief and scared, already told everything important",
+          "defaultResponse": "I told you everything I know. The number... 2025. That's all I have."
+        }
+      },
       "demoteRules": {
         "onFlagsAll": [
           "victim_revealed_digits"
@@ -5340,16 +5431,10 @@
         }
       },
       "postCompletionProfile": {
-        "welcomeMessage": "Thank you for finding me. Please, call the number.",
-        "goodbyeMessage": "Be careful. He's dangerous.",
-        "defaultResponse": "555-444-2025. That's all I know. Please call it."
+        "welcomeMessage": "You're still here? I... I don't know anything else.",
+        "goodbyeMessage": "Please... be careful.",
+        "defaultResponse": "I told you everything. The number... 2025. I don't know what else to say."
       },
-      "progressiveReveals": [
-        {
-          "triggerOnInteraction": 2,
-          "topicId": "t_phone_digits"
-        }
-      ],
       "startConversationEffects": [
         {
           "type": "SET_FLAG",
@@ -5357,239 +5442,18 @@
           "value": true
         }
       ],
-      "limits": {
-        "maxInteractions": 20,
-        "interactionLimitResponse": "I've told you everything I know. Please, just call 555-444-2025 on your phone. End this."
-      },
-      "topics": [
-        {
-          "topicId": "t_remove_tape",
-          "label": "Remove tape",
-          "keywords": [
-            "remove tape",
-            "take off",
-            "free",
-            "untie",
-            "help",
-            "release"
-          ],
-          "once": true,
-          "response": {
-            "message": "[You carefully remove the duct tape from her mouth]\n\nOh god, thank you! Please—you need to listen. My name is Rose Carmichael. I was kidnapped three days ago. The man who took me... he's insane. He talks about justice, about Rose, about 1943. He left clues for you. He wants you to find me. This is all part of his twisted game.",
-            "effects": [
-              {
-                "type": "SET_FLAG",
-                "flag": "tape_removed",
-                "value": true
-              }
-            ]
-          }
-        },
-        {
-          "topicId": "t_hurt",
-          "label": "Are you hurt?",
-          "keywords": [
-            "hurt",
-            "injured",
-            "okay",
-            "alright",
-            "safe",
-            "fine"
-          ],
-          "conditions": {
-            "requiredFlagsAll": [
-              "tape_removed"
-            ]
-          },
-          "response": {
-            "message": "I'm scared but not hurt. He's been... almost gentle. Like I'm valuable to him. Like bait. He wants you here. He wants you to solve his puzzles."
-          }
-        },
-        {
-          "topicId": "t_kidnapper",
-          "label": "Who is the kidnapper?",
-          "keywords": [
-            "kidnapper",
-            "who",
-            "man",
-            "he",
-            "face",
-            "identity",
-            "name"
-          ],
-          "conditions": {
-            "requiredFlagsAll": [
-              "tape_removed"
-            ]
-          },
-          "response": {
-            "message": "Masked. Always masked. But his voice... cold, calculated. He kept saying 'Justice will be served.' Over and over. And he mentioned 1943, and Rose. The year Rose died, he said."
-          }
-        },
-        {
-          "topicId": "t_why",
-          "label": "Why did he take you?",
-          "keywords": [
-            "why",
-            "reason",
-            "motive",
-            "take",
-            "kidnap"
-          ],
-          "conditions": {
-            "requiredFlagsAll": [
-              "tape_removed"
-            ]
-          },
-          "response": {
-            "message": "He said... he said my name is important. Rose Carmichael. Like the other Rose. The one who died in 1943. He's obsessed with her. With that case."
-          }
-        },
-        {
-          "topicId": "t_clues",
-          "label": "What clues did he leave?",
-          "keywords": [
-            "clues",
-            "hints",
-            "puzzles",
-            "left",
-            "evidence"
-          ],
-          "conditions": {
-            "requiredFlagsAll": [
-              "tape_removed"
-            ]
-          },
-          "response": {
-            "message": "He hid things in the cafe. A metal box, books, safes. He wants you to piece it together. He's testing you, like he's the puppetmaster."
-          }
-        },
-        {
-          "topicId": "t_escape",
-          "label": "Can you escape?",
-          "keywords": [
-            "escape",
-            "untie",
-            "free",
-            "leave",
-            "run"
-          ],
-          "conditions": {
-            "requiredFlagsAll": [
-              "tape_removed"
-            ]
-          },
-          "response": {
-            "message": "The ropes are too tight. I've tried. And even if I could... where would I go? He could be anywhere. You need to stop him."
-          }
-        },
-        {
-          "topicId": "t_time",
-          "label": "How long have you been here?",
-          "keywords": [
-            "time",
-            "long",
-            "days",
-            "when",
-            "how long"
-          ],
-          "conditions": {
-            "requiredFlagsAll": [
-              "tape_removed"
-            ]
-          },
-          "response": {
-            "message": "Three days. Maybe four. I've lost track. It feels like forever."
-          }
-        },
-        {
-          "topicId": "t_phone_digits",
-          "label": "Phone number digits",
-          "keywords": [
-            "phone",
-            "number",
-            "digits",
-            "call",
-            "555",
-            "phone number",
-            "missing",
-            "scratched"
-          ],
-          "once": true,
-          "conditions": {
-            "requiredFlagsAll": [
-              "tape_removed",
-              "topic_revealed_npc_victim_girl_t_phone_digits"
-            ]
-          },
-          "response": {
-            "message": "The man who took me... he said something about a phone number. He was laughing, said he left you a note but scratched out the last digits.\n\nHe told me to tell you if you found me: The missing numbers are 2025. That's the year this all started for him. The year Rose died. My namesake.\n\nPlease, call that number. He wants you to. 555-444-2025. This is all part of his game.",
-            "effects": [
-              {
-                "type": "SET_FLAG",
-                "flag": "victim_revealed_digits",
-                "value": true
-              },
-              {
-                "type": "SET_FLAG",
-                "flag": "know_full_phone_number",
-                "value": true
-              }
-            ]
-          }
-        },
-        {
-          "topicId": "t_call",
-          "label": "About calling the number",
-          "keywords": [
-            "call",
-            "phone",
-            "dial",
-            "555-444-2025",
-            "number"
-          ],
-          "conditions": {
-            "requiredFlagsAll": [
-              "victim_revealed_digits"
-            ]
-          },
-          "response": {
-            "message": "555-444-2025. Please, use your phone to call it. That's the final piece. He's waiting for you to call. End this nightmare."
-          }
-        },
-        {
-          "topicId": "t_comfort",
-          "label": "Comfort her",
-          "keywords": [
-            "comfort",
-            "okay",
-            "safe",
-            "don't worry",
-            "help"
-          ],
-          "conditions": {
-            "requiredFlagsAll": [
-              "tape_removed"
-            ]
-          },
-          "response": {
-            "message": "Thank you. Just... please catch him. Don't let him hurt anyone else. Find the phone number. Call it. Stop him."
-          }
-        }
-      ],
       "fallbacks": {
-        "default": "Please... help me. Find the clues. Solve his puzzles. Stop him before it's too late.",
-        "noMoreHelp": "I've told you everything I know. 555-444-2025. Call it.",
-        "offTopic": "I... I don't know. Please, just focus on catching him."
+        "default": "I... I'm just so scared. Ask me about the kidnapper or if he left any clues.",
+        "noMoreHelp": "I told you everything I know. The number... 2025. That's all I have."
       },
       "hints": {
-        "subtle": "This kidnapped woman looks terrified. You should talk to her and remove the tape.",
-        "medium": "Talk to Rose multiple times. First remove the tape, then ask about the phone number to get the missing digits.",
-        "direct": "Remove tape from Rose, then talk to her at least twice to learn the missing phone digits are 2025. Call 555-444-2025."
+        "subtle": "This young woman looks frightened but calculating. You should talk to her carefully.",
+        "medium": "Talk to Lili and ask if the kidnapper left any clues or information for you.",
+        "direct": "Talk to Lili and ask: 'Did he leave any clues?' or 'What information do you have?' She'll reveal: 2025."
       },
       "version": {
-        "schema": "2.0",
-        "content": "1.1"
+        "schema": "3.0",
+        "content": "2.0"
       }
     }
   },

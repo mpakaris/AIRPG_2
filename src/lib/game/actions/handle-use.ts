@@ -25,7 +25,7 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
     searchInventory: true,
     searchVisibleItems: true,
     searchObjects: false,
-    requireFocus: true
+    requireFocus: false  // Search all visible entities (focus validation happens separately below)
   });
 
   if (!itemMatch) {
@@ -56,12 +56,16 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
   if (targetName) {
     const normalizedTargetName = normalizeName(targetName);
 
+    // IMPORTANT: When in device focus mode (phone, etc.), restrict search to current focus
+    // Otherwise, allow searching all visible entities
+    const isInDeviceMode = !!state.activeDeviceFocus;
+
     // LOCATION-AWARE SEARCH: Find target object (prioritizes current location)
     const targetMatch = findBestMatch(normalizedTargetName, state, game, {
       searchInventory: false,
       searchVisibleItems: false,
       searchObjects: true,
-      requireFocus: true
+      requireFocus: isInDeviceMode  // When using device (phone), search only within current focus
     });
 
     if (targetMatch?.category === 'object') {
@@ -203,7 +207,7 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
       searchInventory: true,
       searchVisibleItems: true,
       searchObjects: false,
-      requireFocus: true
+      requireFocus: isInDeviceMode  // When using device (phone), search only within current focus
     });
 
     if (targetItemMatch) {
