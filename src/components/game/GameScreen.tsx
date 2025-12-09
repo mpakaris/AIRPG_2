@@ -40,22 +40,31 @@ const CommandInput: FC<
   commandInputValue,
   setCommandInputValue,
 }) => {
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey && !isLoading) {
+      e.preventDefault();
+      if (commandInputValue.trim()) {
+        onCommandSubmit(commandInputValue.trim());
+      }
+    }
+  };
+
+  const handleSendClick = () => {
     if (commandInputValue.trim() && !isLoading) {
       onCommandSubmit(commandInputValue.trim());
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="relative flex w-full items-center" autoComplete="off">
+    <div className="relative flex w-full items-center">
       <Input
         type="text"
-        name="command"
+        name="game-command"
         id="game-command-input"
         placeholder="Type your command..."
         value={commandInputValue}
         onChange={(e) => setCommandInputValue(e.target.value)}
+        onKeyDown={handleKeyDown}
         disabled={isLoading}
         className="h-12 flex-1 rounded-full bg-muted pl-4 pr-14 text-base"
         autoFocus
@@ -65,11 +74,15 @@ const CommandInput: FC<
         spellCheck="false"
         inputMode="text"
         enterKeyHint="send"
+        data-lpignore="true"
+        data-form-type="other"
+        aria-autocomplete="none"
       />
       <Button
-        type="submit"
+        type="button"
         size="icon"
         disabled={isLoading}
+        onClick={handleSendClick}
         className="absolute right-2 h-9 w-9 rounded-full"
       >
         {isLoading ? (
@@ -79,7 +92,7 @@ const CommandInput: FC<
         )}
         <span className="sr-only">Send Command</span>
       </Button>
-    </form>
+    </div>
   );
 };
 
