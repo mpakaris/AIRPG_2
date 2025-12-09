@@ -14,7 +14,7 @@ import type { Message, PlayerState, SerializableGame } from "@/lib/game/types";
 import { cn } from "@/lib/utils";
 import { LoaderCircle, Menu, Send } from "lucide-react";
 import Image from "next/image";
-import { Fragment, useEffect, useRef, type FC } from "react";
+import { Fragment, useEffect, useRef, useState, type FC } from "react";
 
 interface GameScreenProps {
   messages: Message[];
@@ -57,6 +57,11 @@ const CommandInput: FC<
         disabled={isLoading}
         className="h-12 flex-1 rounded-full bg-muted pl-4 pr-14 text-base"
         autoFocus
+        autoComplete="off"
+        autoCorrect="off"
+        autoCapitalize="off"
+        spellCheck="false"
+        data-form-type="other"
       />
       <Button
         type="submit"
@@ -150,9 +155,11 @@ const splitMessagesForDisplay = (
   return result;
 };
 
-const MessageLog: FC<Pick<GameScreenProps, "messages">> = ({ messages }) => {
+const MessageLog: FC<Pick<GameScreenProps, "messages"> & { onScrollDirectionChange?: (isScrollingUp: boolean) => void }> = ({ messages, onScrollDirectionChange }) => {
   const scrollViewportRef = useRef<HTMLDivElement>(null);
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
+  const lastScrollTop = useRef<number>(0);
+  const scrollTimeout = useRef<NodeJS.Timeout | null>(null);
 
   // Scroll to bottom function
   const scrollToBottom = () => {
@@ -171,6 +178,52 @@ const MessageLog: FC<Pick<GameScreenProps, "messages">> = ({ messages }) => {
 
     return () => clearTimeout(timeoutId);
   }, [messages]);
+
+  // Track scroll direction for mobile input bar hide/show
+  useEffect(() => {
+    const viewport = scrollViewportRef.current;
+    if (!viewport || !onScrollDirectionChange) return;
+
+    const handleScroll = () => {
+      const scrollTop = viewport.scrollTop;
+      const scrollHeight = viewport.scrollHeight;
+      const clientHeight = viewport.clientHeight;
+
+      // Clear previous timeout
+      if (scrollTimeout.current) {
+        clearTimeout(scrollTimeout.current);
+      }
+
+      // Check if we're at the bottom (within 10px threshold)
+      const isAtBottom = scrollHeight - scrollTop - clientHeight < 10;
+
+      // If at bottom, always show input bar
+      if (isAtBottom) {
+        onScrollDirectionChange(false);
+        lastScrollTop.current = scrollTop;
+        return;
+      }
+
+      // Determine scroll direction
+      const isScrollingUp = scrollTop < lastScrollTop.current;
+
+      // Only trigger after scroll settles (debounce)
+      scrollTimeout.current = setTimeout(() => {
+        onScrollDirectionChange(isScrollingUp);
+      }, 50);
+
+      lastScrollTop.current = scrollTop;
+    };
+
+    viewport.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => {
+      viewport.removeEventListener('scroll', handleScroll);
+      if (scrollTimeout.current) {
+        clearTimeout(scrollTimeout.current);
+      }
+    };
+  }, [onScrollDirectionChange]);
 
   const displayMessages = splitMessagesForDisplay(messages);
 
@@ -449,6 +502,22 @@ export const GameScreen: FC<GameScreenProps> = ({
 }) => {
   const chapter = game.chapters[game.startChapterId]; // Simplified for now
   const location = game.locations[playerState.currentLocationId];
+  const [isScrollingUp, setIsScrollingUp] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile on mount
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Hide input bar on mobile when scrolling up
+  const shouldHideInputBar = isMobile && isScrollingUp;
+
   return (
     <div className="relative flex h-screen flex-col bg-background">
       {isLoading && (
@@ -470,9 +539,17 @@ export const GameScreen: FC<GameScreenProps> = ({
         </div>
       </header>
       <main className="flex flex-1 flex-col overflow-hidden">
-        <MessageLog messages={messages} />
+        <MessageLog
+          messages={messages}
+          onScrollDirectionChange={isMobile ? setIsScrollingUp : undefined}
+        />
       </main>
-      <footer className="border-t bg-card p-4">
+      <footer
+        className={cn(
+          "border-t bg-card p-4 transition-transform duration-300",
+          shouldHideInputBar && "translate-y-full"
+        )}
+      >
         <div className="mx-auto max-w-4xl">
           <CommandInput
             onCommandSubmit={onCommandSubmit}

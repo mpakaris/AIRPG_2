@@ -7,7 +7,6 @@ import type { SerializableGame, Message, PlayerState } from '@/lib/game/types';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { GameSidebar } from './GameSidebar';
 import { GameScreen } from './GameScreen';
-import { DevControls } from './DevControls';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/hooks/use-user';
 import { UserRegistration } from './UserRegistration';
@@ -165,10 +164,6 @@ export const GameClient: FC<GameClientProps> = ({ game, initialGameState, initia
             setCommandInputValue={setCommandInputValue}
             />
         </main>
-        <DevControls
-          userId={userId}
-          onStateUpdate={handleStateUpdate}
-        />
       </div>
     </SidebarProvider>
   );

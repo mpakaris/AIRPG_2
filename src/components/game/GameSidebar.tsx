@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { sendWhinselfTestMessage, findOrCreateUser, generateStoryForChapter } from '@/app/actions';
+import { sendWhinselfTestMessage, findOrCreateUser, generateStoryForChapter, applyDevCheckpoint } from '@/app/actions';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -48,6 +48,7 @@ const chapterCompletionFlag = (chapterId: ChapterId) => `chapter_${chapterId}_co
 
 export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommandSubmit, onResetGame, setCommandInputValue, userId, onStateUpdate }) => {
   const { toast } = useToast();
+  const [showCheckpoints, setShowCheckpoints] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [user, setUser] = useState<UserType | null>(null);
 
@@ -170,6 +171,56 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
                       <RotateCcw className='mr-2 h-4 w-4'/>
                       Reset Game
                     </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setShowCheckpoints(!showCheckpoints)}
+                    >
+                      <span className='mr-2'>🧪</span>
+                      Dev Checkpoints
+                    </Button>
+                    {showCheckpoints && (
+                      <div className='flex flex-col gap-1 mt-2 p-2 border border-gray-300 rounded-md bg-gray-50'>
+                        <p className='text-xs text-gray-600 mb-2'>Skip to specific parts of the game:</p>
+                        {[
+                          { id: 'metal_box_opened', label: 'Opened Metal Box' },
+                          { id: 'sd_card_watched', label: 'Saw SD Card' },
+                          { id: 'confidential_file_read', label: 'Read Confidential File' },
+                          { id: 'recip_saw_found', label: 'Found Recip Saw' },
+                          { id: 'hidden_door_found', label: 'Found Hidden Door' },
+                          { id: 'hidden_door_opened', label: 'Unlocked Hidden Door' },
+                        ].map((checkpoint) => (
+                          <Button
+                            key={checkpoint.id}
+                            variant="outline"
+                            size="sm"
+                            onClick={async () => {
+                              if (!userId) {
+                                toast({ title: 'Error', description: 'No user ID', variant: 'destructive' });
+                                return;
+                              }
+                              startTransition(async () => {
+                                try {
+                                  const result = await applyDevCheckpoint(userId, checkpoint.id);
+                                  onStateUpdate(result.newState);
+                                  toast({ title: 'Checkpoint Applied', description: checkpoint.label });
+                                } catch (error) {
+                                  toast({
+                                    title: 'Error',
+                                    description: error instanceof Error ? error.message : 'Failed to apply checkpoint',
+                                    variant: 'destructive'
+                                  });
+                                }
+                              });
+                            }}
+                            disabled={isPending}
+                            className='text-xs justify-start'
+                          >
+                            {checkpoint.label}
+                          </Button>
+                        ))}
+                      </div>
+                    )}
                 </div>
             </SidebarGroup>
         )}
