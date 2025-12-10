@@ -87,23 +87,23 @@ function normalizeTimestamps(obj: any): any {
 // --- Data Loading ---
 
 export async function getGameData(gameId: GameId): Promise<Game | null> {
-    if (process.env.NEXT_PUBLIC_NODE_ENV === 'development') {
-        console.log("DEV MODE: Loading game data from local cartridge.ts");
-        if (gameCartridge.id === gameId) {
-            return gameCartridge;
-        }
-        return null;
-    }
-
-    console.log(`PROD/TEST MODE: Loading game data for ${gameId} from Firestore.`);
+    // NEW: Load from Firebase in dev mode too (after auto-seeding on npm run dev)
+    console.log(`Loading game data for ${gameId} from Firestore...`);
     const { firestore } = initializeFirebase();
-    
+
     try {
         const gameRef = doc(firestore, 'games', gameId);
         const gameSnap = await getDoc(gameRef);
 
         if (!gameSnap.exists()) {
             console.error(`Game with ID ${gameId} not found in Firestore.`);
+
+            // Fallback to local cartridge only if Firebase fails
+            if (process.env.NEXT_PUBLIC_NODE_ENV === 'development' && gameCartridge.id === gameId) {
+                console.log("FALLBACK: Loading from local cartridge.ts");
+                return gameCartridge;
+            }
+
             return null;
         }
 
@@ -137,10 +137,18 @@ export async function getGameData(gameId: GameId): Promise<Game | null> {
         gameData.npcs = npcs as Record<string, NPC>;
         gameData.portals = portals as Record<string, Portal>;
 
+        console.log(`✅ Game data loaded from Firestore: ${gameData.title}`);
         return gameData;
 
     } catch(error) {
         console.error("Error fetching game data from Firestore:", error);
+
+        // Fallback to local cartridge in dev mode if Firebase fails
+        if (process.env.NEXT_PUBLIC_NODE_ENV === 'development' && gameCartridge.id === gameId) {
+            console.log("FALLBACK: Loading from local cartridge.ts");
+            return gameCartridge;
+        }
+
         return null;
     }
 }
@@ -1701,66 +1709,113 @@ export async function processCommand(
     }
 }
 
-export async function resetGame(userId: string): Promise<CommandResult & { shouldReload?: boolean }> {
+export async function resetGame(userId: string, gameId: GameId): Promise<CommandResult> {
     if (!userId) {
         throw new Error("User ID is required to reset the game.");
     }
-    const game = await getGameData(GAME_ID);
+    const game = await getGameData(gameId);
     if (!game) {
         throw new Error("Could not load game data to reset game.");
     }
-    const gameId = game.id;
 
-    // In development mode, delete all user data and signal a reload
-    if (process.env.NEXT_PUBLIC_NODE_ENV === 'development') {
-        const { firestore } = initializeFirebase();
-        const userRef = doc(firestore, 'users', userId);
-        const stateRef = doc(firestore, 'player_states', `${userId}_${gameId}`);
-        const logRef = doc(firestore, 'logs', `${userId}_${gameId}`);
+    // Reset only the current chapter's state and logs
+    const { firestore } = initializeFirebase();
+    const stateRef = doc(firestore, 'player_states', `${userId}_${gameId}`);
+    const logRef = doc(firestore, 'logs', `${userId}_${gameId}`);
 
+    try {
+        console.log(`[RESET GAME] Resetting chapter ${gameId} for user: ${userId}`);
+
+        const deletePromises: Promise<any>[] = [
+            deleteDoc(stateRef),
+            deleteDoc(logRef)
+        ];
+
+        // Also delete turns subcollection if exists
         try {
-            console.log(`[RESET] Deleting all data for dev user: ${userId}`);
-
-            const deletePromises: Promise<any>[] = [
-                deleteDoc(userRef),
-                deleteDoc(stateRef),
-                deleteDoc(logRef)
-            ];
-
-            // Also delete turns subcollection (new format)
-            try {
-                const turnsCol = collection(firestore, `logs/${userId}_${gameId}/turns`);
-                const turnsSnapshot = await getDocs(turnsCol);
-                turnsSnapshot.docs.forEach(turnDoc => {
-                    deletePromises.push(deleteDoc(turnDoc.ref));
-                });
-                console.log(`[RESET] Deleting ${turnsSnapshot.docs.length} turn documents`);
-            } catch (error) {
-                // If turns subcollection doesn't exist (old format), continue
-                console.log(`[RESET] No turns subcollection found (old format)`);
-            }
-
-            await Promise.all(deletePromises);
-            console.log(`[RESET] Successfully deleted user, state, and logs for ${userId}`);
-
-            // Return signal to reload the browser
-            return {
-                newState: getInitialState(game),
-                messages: [],
-                shouldReload: true
-            };
+            const turnsCol = collection(firestore, `logs/${userId}_${gameId}/turns`);
+            const turnsSnapshot = await getDocs(turnsCol);
+            turnsSnapshot.docs.forEach(turnDoc => {
+                deletePromises.push(deleteDoc(turnDoc.ref));
+            });
+            console.log(`[RESET GAME] Deleting ${turnsSnapshot.docs.length} turn documents`);
         } catch (error) {
-            console.error("[RESET] Error deleting user data:", error);
-            throw new Error("Failed to delete user data. Please try again.");
+            console.log(`[RESET GAME] No turns subcollection found`);
         }
+
+        await Promise.all(deletePromises);
+
+        // Create fresh state and messages for this chapter
+        const freshState = getInitialState(game);
+        const initialMessages = await createInitialMessages(freshState, game);
+        await logAndSave(userId, gameId, freshState, initialMessages);
+
+        console.log(`[RESET GAME] Successfully reset chapter ${gameId}`);
+
+        return { newState: freshState, messages: initialMessages };
+    } catch (error) {
+        console.error("[RESET GAME] Error resetting chapter:", error);
+        throw new Error("Failed to reset chapter. Please try again.");
+    }
+}
+
+export async function resetPlayer(userId: string): Promise<{ shouldReload: boolean }> {
+    if (!userId) {
+        throw new Error("User ID is required to reset player.");
     }
 
-    // In production, just reset state and logs without deleting user
-    const freshState = getInitialState(game);
-    const initialMessages = await createInitialMessages(freshState, game);
-    await logAndSave(userId, gameId, freshState, initialMessages);
+    const { firestore } = initializeFirebase();
 
-    return { newState: freshState, messages: initialMessages };
+    try {
+        console.log(`[RESET PLAYER] Deleting ALL data for user: ${userId}`);
+
+        const deletePromises: Promise<any>[] = [];
+
+        // Delete user document
+        const userRef = doc(firestore, 'users', userId);
+        deletePromises.push(deleteDoc(userRef));
+
+        // Delete all player_states (all chapters)
+        const statesSnapshot = await getDocs(collection(firestore, 'player_states'));
+        statesSnapshot.docs.forEach(stateDoc => {
+            if (stateDoc.id.startsWith(`${userId}_`)) {
+                deletePromises.push(deleteDoc(stateDoc.ref));
+                console.log(`[RESET PLAYER] Deleting state: ${stateDoc.id}`);
+            }
+        });
+
+        // Delete all logs (all chapters)
+        const logsSnapshot = await getDocs(collection(firestore, 'logs'));
+        logsSnapshot.docs.forEach(logDoc => {
+            if (logDoc.id.startsWith(`${userId}_`)) {
+                deletePromises.push(deleteDoc(logDoc.ref));
+                console.log(`[RESET PLAYER] Deleting log: ${logDoc.id}`);
+            }
+        });
+
+        // Delete all turns subcollections
+        for (const logDoc of logsSnapshot.docs) {
+            if (logDoc.id.startsWith(`${userId}_`)) {
+                try {
+                    const turnsCol = collection(firestore, `logs/${logDoc.id}/turns`);
+                    const turnsSnapshot = await getDocs(turnsCol);
+                    turnsSnapshot.docs.forEach(turnDoc => {
+                        deletePromises.push(deleteDoc(turnDoc.ref));
+                    });
+                } catch (error) {
+                    // Skip if no turns subcollection
+                }
+            }
+        }
+
+        await Promise.all(deletePromises);
+        console.log(`[RESET PLAYER] Successfully deleted all data for ${userId}`);
+
+        return { shouldReload: true };
+    } catch (error) {
+        console.error("[RESET PLAYER] Error deleting player data:", error);
+        throw new Error("Failed to reset player. Please try again.");
+    }
 }
 
 /**
@@ -2270,5 +2325,54 @@ export async function applyDevCheckpoint(userId: string, checkpointId: string): 
     return {
         newState,
         messages: normalizeTimestamps(updatedMessages)
+    };
+}
+
+// --- Chapter Switching (Dev Only) ---
+
+/**
+ * Switch to a different chapter (dev mode only)
+ * Loads the chapter's game data and player state from Firebase
+ */
+export async function switchChapter(userId: string, targetGameId: GameId): Promise<{
+    game: Game;
+    playerState: PlayerState;
+    messages: Message[];
+}> {
+    console.log(`🔄 Switching to chapter: ${targetGameId}`);
+
+    // Load the target game
+    const game = await getGameData(targetGameId);
+    if (!game) {
+        throw new Error(`Game ${targetGameId} not found in Firebase`);
+    }
+
+    // Initialize Firebase
+    const { firestore } = initializeFirebase();
+
+    // Load or create player state for this chapter
+    const stateRef = doc(firestore, 'player_states', `${userId}_${targetGameId}`);
+    const stateSnap = await getDoc(stateRef);
+
+    let playerState: PlayerState;
+    if (stateSnap.exists()) {
+        playerState = normalizeTimestamps(stateSnap.data() as PlayerState);
+        console.log(`✅ Loaded existing player state for ${targetGameId}`);
+    } else {
+        // Create initial state if it doesn't exist
+        playerState = getInitialState(game);
+        await setDoc(stateRef, playerState);
+        console.log(`✅ Created new player state for ${targetGameId}`);
+    }
+
+    // Load all messages for this chapter
+    const rawMessages = await getAllLogs(firestore, userId, targetGameId);
+    const uiMessages = extractUIMessages(rawMessages);
+    console.log(`✅ Loaded ${uiMessages.length} UI messages from ${rawMessages.length} log entries for ${targetGameId}`);
+
+    return {
+        game,
+        playerState,
+        messages: uiMessages
     };
 }

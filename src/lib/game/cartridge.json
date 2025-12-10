@@ -3466,17 +3466,12 @@
             "conditions": [
               {
                 "type": "FLAG",
-                "flag": "note_dropped_from_book",
-                "value": true
-              },
-              {
-                "type": "FLAG",
                 "flag": "victim_revealed_digits",
                 "value": true
               }
             ],
             "success": {
-              "message": "Your fingers hover over the keypad. This is it—the moment everything converges. The note. The girl. The café. All roads led here, to these ten digits.\n\n5... 5... 5... 4... 4... 4...\n\nYour hand trembles. Adrenaline surges through your veins. You don't know what's waiting on the other end of this line. Danger? Truth? A trap?\n\n2... 0... 2... 5.\n\nYou press CALL.\n\nThe line clicks. Static hisses. Your breath catches in your throat. Then—a voice. Cold. Measured. Deliberate. A chill runs down your spine.\n\n[AUDIO MESSAGE PLAYS]\n\n\"Well, well. Agent Burt Macklin. Congratulations. You've proven to be a worthy opponent. You found my little puzzle. Clever.\n\nYou may have won this round, but the game is far from over. More rounds are to come. I'll keep you busy, detective. Very busy.\n\nJustice... Justice will be served. For Rose. For Silas. For all of them.\n\nUntil next time.\"\n\nThe call ends abruptly. Silence floods back. Your heart pounds. The voice echoes in your mind—cold, calculating, patient. He's been watching. Waiting. Testing.\n\nYou're not hunting him.\n\nHe's hunting you.\n\n---CHAPTER 1 COMPLETE---",
+              "message": "Your fingers hover over the keypad. This is it—the moment everything converges. The note. The girl. The café. All roads led here, to these ten digits.\n\n5... 5... 5... 4... 4... 4...\n\nYour hand trembles. Adrenaline surges through your veins. You don't know what's waiting on the other end of this line. Danger? Truth? A trap?\n\n2... 0... 2... 5.\n\nYou press CALL.\n\nThe line clicks. Static hisses. Your breath catches in your throat. Then—a voice. Cold. Measured. Deliberate. A chill runs down your spine.",
               "media": {
                 "url": "https://res.cloudinary.com/dg912bwcc/video/upload/v1762703179/CH_I___Villain___Voice_Message_du7fsn.mp3",
                 "description": "Voice message from the villain",
@@ -3497,6 +3492,11 @@
                 {
                   "type": "ADD_ITEM",
                   "itemId": "item_audio_message"
+                },
+                {
+                  "type": "SHOW_MESSAGE",
+                  "speaker": "narrator",
+                  "content": "The call ends abruptly. Silence floods back. Your heart pounds. The voice echoes in your mind—cold, calculating, patient. He's been watching. Waiting. Testing.\n\nYou're not hunting him.\n\nHe's hunting you."
                 }
               ]
             },
@@ -5315,7 +5315,7 @@
       ],
       "description": "A young woman in her early 20s, sitting against the wall. Her eyes are wide with a mix of fear and something else... calculation? She watches you carefully.",
       "image": {
-        "url": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400",
+        "url": "",
         "description": "Portrait of a frightened young woman.",
         "hint": "kidnapped victim"
       },

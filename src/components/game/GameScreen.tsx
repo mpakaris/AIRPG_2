@@ -14,7 +14,7 @@ import type { Message, PlayerState, SerializableGame } from "@/lib/game/types";
 import { cn } from "@/lib/utils";
 import { LoaderCircle, Menu, Send } from "lucide-react";
 import Image from "next/image";
-import { Fragment, useEffect, useRef, useState, type FC } from "react";
+import { Fragment, useEffect, useRef, type FC } from "react";
 
 interface GameScreenProps {
   messages: Message[];
@@ -41,7 +41,7 @@ const CommandInput: FC<
   setCommandInputValue,
 }) => {
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey && !isLoading) {
+    if (e.key === "Enter" && !e.shiftKey && !isLoading) {
       e.preventDefault();
       if (commandInputValue.trim()) {
         onCommandSubmit(commandInputValue.trim());
@@ -66,7 +66,7 @@ const CommandInput: FC<
         onChange={(e) => setCommandInputValue(e.target.value)}
         onKeyDown={handleKeyDown}
         disabled={isLoading}
-        className="h-12 flex-1 rounded-full bg-muted pl-4 pr-14 text-base"
+        className="h-8 flex-1 rounded-full bg-muted pl-4 pr-14 text-xs"
         autoFocus
         autoComplete="off"
         autoCorrect="off"
@@ -83,7 +83,7 @@ const CommandInput: FC<
         size="icon"
         disabled={isLoading}
         onClick={handleSendClick}
-        className="absolute right-2 h-9 w-9 rounded-full"
+        className="absolute right-2 h-6 w-6 rounded-full"
       >
         {isLoading ? (
           <LoaderCircle className="animate-spin" />
@@ -105,7 +105,7 @@ const MessageContent: FC<{ message: Message }> = ({ message }) => {
   const parts = content.split(urlRegex);
 
   return (
-    <p className={cn("whitespace-pre-wrap", isAgent && "italic")}>
+    <p className={cn("whitespace-pre-wrap text-sm", isAgent && "italic")}>
       {parts.map((part, index) => {
         if (part.match(urlRegex)) {
           return (
@@ -135,12 +135,12 @@ const splitMessagesForDisplay = (
   messages.forEach((message) => {
     // Safety check: skip messages without content or image
     if (!message.content && !message.image) {
-      console.warn('Skipping message without content or image:', message);
+      console.warn("Skipping message without content or image:", message);
       return;
     }
 
     // Ensure content is a string (default to empty string if undefined)
-    const messageContent = message.content || '';
+    const messageContent = message.content || "";
 
     // If message has both content and image, split into two messages
     if (messageContent.trim() && message.image) {
@@ -178,7 +178,10 @@ const MessageLog: FC<Pick<GameScreenProps, "messages">> = ({ messages }) => {
   // Scroll to bottom function
   const scrollToBottom = () => {
     if (endOfMessagesRef.current) {
-      endOfMessagesRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
+      endOfMessagesRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "end",
+      });
     }
   };
 
@@ -207,10 +210,10 @@ const MessageLog: FC<Pick<GameScreenProps, "messages">> = ({ messages }) => {
           const isDatabaseError = message.senderName === "⚠️ Database Error";
 
           // Check if this is an audio message
-          const isAudioMessage = message.image?.url && (
-            message.image.url.match(/\.(mp3|wav|m4a|aac|ogg)$/i) ||
-            message.type === "audio"
-          );
+          const isAudioMessage =
+            message.image?.url &&
+            (message.image.url.match(/\.(mp3|wav|m4a|aac|ogg)$/i) ||
+              message.type === "audio");
 
           return (
             <div
@@ -230,9 +233,12 @@ const MessageLog: FC<Pick<GameScreenProps, "messages">> = ({ messages }) => {
                     ? "rounded-br-none bg-primary text-primary-foreground"
                     : "rounded-bl-none bg-muted",
                   isAgent && "bg-blue-500/10 border border-blue-500/20",
-                  isSecurityFilter && "bg-red-500/10 border-2 border-red-500/50",
-                  isSystemError && "bg-orange-500/10 border-2 border-orange-500/50",
-                  isDatabaseError && "bg-yellow-500/10 border-2 border-yellow-500/50"
+                  isSecurityFilter &&
+                    "bg-red-500/10 border-2 border-red-500/50",
+                  isSystemError &&
+                    "bg-orange-500/10 border-2 border-orange-500/50",
+                  isDatabaseError &&
+                    "bg-yellow-500/10 border-2 border-yellow-500/50"
                 )}
               >
                 {!isPlayer && !isImageOnly && (
@@ -270,8 +276,7 @@ const MessageLog: FC<Pick<GameScreenProps, "messages">> = ({ messages }) => {
 
                     // Check if this is a PDF URL (by file extension OR message type)
                     const isPdfUrl =
-                      src.match(/\.pdf$/i) ||
-                      message.type === "pdf";
+                      src.match(/\.pdf$/i) || message.type === "pdf";
 
                     // Check if this is an audio URL (by file extension OR message type)
                     const isAudioUrl =
@@ -313,7 +318,8 @@ const MessageLog: FC<Pick<GameScreenProps, "messages">> = ({ messages }) => {
                                   <polyline points="10 9 9 9 8 9"></polyline>
                                 </svg>
                                 <span className="font-semibold">
-                                  {message.image.description || "View PDF Document"}
+                                  {message.image.description ||
+                                    "View PDF Document"}
                                 </span>
                               </div>
                             </button>
@@ -325,7 +331,9 @@ const MessageLog: FC<Pick<GameScreenProps, "messages">> = ({ messages }) => {
                             <iframe
                               src={src}
                               className="w-full h-full rounded-lg"
-                              title={message.image.description || "PDF document"}
+                              title={
+                                message.image.description || "PDF document"
+                              }
                             />
                           </DialogContent>
                         </Dialog>
@@ -344,7 +352,10 @@ const MessageLog: FC<Pick<GameScreenProps, "messages">> = ({ messages }) => {
                               // Scroll to bottom after audio metadata loads
                               setTimeout(() => {
                                 if (endOfMessagesRef.current) {
-                                  endOfMessagesRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
+                                  endOfMessagesRef.current.scrollIntoView({
+                                    behavior: "smooth",
+                                    block: "end",
+                                  });
                                 }
                               }, 50);
                             }}
@@ -379,7 +390,10 @@ const MessageLog: FC<Pick<GameScreenProps, "messages">> = ({ messages }) => {
                                   // Scroll to bottom after video metadata loads
                                   setTimeout(() => {
                                     if (endOfMessagesRef.current) {
-                                      endOfMessagesRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
+                                      endOfMessagesRef.current.scrollIntoView({
+                                        behavior: "smooth",
+                                        block: "end",
+                                      });
                                     }
                                   }, 50);
                                 }}
@@ -427,7 +441,10 @@ const MessageLog: FC<Pick<GameScreenProps, "messages">> = ({ messages }) => {
                                 // Scroll to bottom after image loads
                                 setTimeout(() => {
                                   if (endOfMessagesRef.current) {
-                                    endOfMessagesRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
+                                    endOfMessagesRef.current.scrollIntoView({
+                                      behavior: "smooth",
+                                      block: "end",
+                                    });
                                   }
                                 }, 50);
                               }}

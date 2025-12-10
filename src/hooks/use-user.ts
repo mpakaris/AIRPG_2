@@ -15,20 +15,32 @@ interface UserState {
 }
 
 const USER_ID_STORAGE_KEY = 'textcraft-user-id';
-const GAME_ID = 'blood-on-brass' as GameId;
+const CURRENT_CHAPTER_STORAGE_KEY = 'airpg_current_chapter';
+const DEFAULT_GAME_ID = 'blood-on-brass' as GameId;
+
+// Get current game ID from localStorage or default
+function getCurrentGameId(): GameId {
+    if (typeof window !== 'undefined') {
+        const stored = localStorage.getItem(CURRENT_CHAPTER_STORAGE_KEY);
+        if (stored) {
+            return stored as GameId;
+        }
+    }
+    return DEFAULT_GAME_ID;
+}
 
 // This function is client-side only.
-async function fetchUserData(userId: string): Promise<UserState | null> {
+async function fetchUserData(userId: string, gameId: GameId): Promise<UserState | null> {
     const { firestore } = initializeFirebase();
 
-    const stateRef = doc(firestore, 'player_states', `${userId}_${GAME_ID}`);
+    const stateRef = doc(firestore, 'player_states', `${userId}_${gameId}`);
 
     try {
         const stateSnap = await getDoc(stateRef);
 
         if (stateSnap.exists()) {
             // Load logs using new helper that handles both old and new formats
-            const rawMessages = await getAllLogs(firestore, userId, GAME_ID);
+            const rawMessages = await getAllLogs(firestore, userId, gameId);
             const uiMessages = extractUIMessages(rawMessages);
 
             return {
@@ -53,7 +65,8 @@ export function useUser() {
 
   const loadUser = useCallback(async (id: string) => {
     setUserId(id);
-    const loadedUserState = await fetchUserData(id);
+    const currentGameId = getCurrentGameId();
+    const loadedUserState = await fetchUserData(id, currentGameId);
     if (loadedUserState) {
         setUserState(loadedUserState);
     } else {

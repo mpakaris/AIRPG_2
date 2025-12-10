@@ -288,8 +288,8 @@ export function getInitialState(game: Game): PlayerState {
     counters: {},
 
     // NEW: Focus system - set starting focus from chapter
-    currentFocusId: startChapter.startingFocus?.entityId || undefined,
-    focusType: startChapter.startingFocus?.entityType || undefined,
+    currentFocusId: startChapter.startingFocus?.entityId || null,
+    focusType: startChapter.startingFocus?.entityType || null,
 
     stories: {},
     activeConversationWith: null,

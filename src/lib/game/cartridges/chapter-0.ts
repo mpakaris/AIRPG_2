@@ -1,0 +1,4073 @@
+
+import type { CellId, Chapter, ChapterId, Flag, Game, GameId, GameObject, GameObjectId, Item, ItemId, Location, LocationId, NPC, NpcId, Portal, PortalId, Structure, StructureId, WorldId } from './types';
+
+// --- Static Game Data ---
+
+const gameObjects: Record<GameObjectId, GameObject> = {
+    'obj_brown_notebook': {
+        id: 'obj_brown_notebook' as GameObjectId,
+        name: 'Metal Box',
+        archetype: 'Container',
+        description: 'A rusty metal box, about the size of a shoebox, sits on the table. Its surface is weathered and worn.',
+        capabilities: { openable: true, lockable: true, breakable: false, movable: false, powerable: false, container: true, readable: true, inputtable: true },
+        state: { isOpen: false, isLocked: true, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
+        inventory: { items: ['item_secret_document'] as ItemId[], capacity: 2, allowTags: [], denyTags: [] },
+        children: {
+            items: ['item_secret_document'] as ItemId[],
+            objects: ['obj_sd_card'] as GameObjectId[]
+        },
+        media: {
+            images: {
+                default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1763991426/brown_box_5_qqomdb.png', description: 'A locked rusty metal box.', hint: 'locked metal box' },
+                unlocked: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1763991426/brown_box_3_bmabdx.png', description: 'An unlocked metal box.', hint: 'unlocked metal box' }
+            },
+            sounds: { onUnlock: 'click.mp3' }
+        },
+        input: { type: 'phrase', validation: 'Justice for Silas Bloom', hint: 'Stuck? Maybe this will help: https://airpg-minigames.vercel.app/games/the-metal-box', attempts: null, lockout: null },
+        handlers: {
+            // 1. EXAMINE - Visual inspection
+            onExamine: [
+                {
+                    // Most specific: Locked
+                    conditions: [{ type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: true }],
+                    success: {
+                        message: "The metal is cold under your fingers, rust flaking at your touch. Decades of oxidation have eaten into its surface, leaving it rough and weathered. The latch gleams dully, locked tight, guarding what's inside.\n\nYour fingers trace the corroded edges, metal biting faintly. No keyhole, no obvious way in—just a mechanism waiting for something it has been expecting. A thrill runs through you. You don't know what's inside, and yet its weight presses against your chest, heavy with possibility.\n\nUsually, you feel like the chess player, setting the moves. Now, strangely, you feel like the pawn in someone else's game—small, exposed, uneasy, and yet drawn irresistibly.\n\nThe metal box radiates threat, subtle and insistent. Every scratch and dent seems deliberate, alive with intentions. A flicker of fear curls with excitement, making every nerve tingle.\n\nHolding it, you feel the pulse of history brushing against your own, the quiet danger of secrets someone spent decades guarding. Alone, trembling slightly, you realize this moment—this touch, this weight—is a turning point. You don't know what's inside, and that is precisely what makes it irresistible.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1763991426/brown_box_5_qqomdb.png',
+                            description: 'Locked rusty metal box with latch',
+                            hint: 'Needs a password phrase...'
+                        }
+                    }
+                },
+                {
+                    // Unlocked but NOT yet opened (after password, before opening)
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: false },
+                        { type: 'STATE', entityId: 'obj_brown_notebook', key: 'isOpen', equals: false }
+                    ],
+                    success: {
+                        message: "The box sits there, latch released, green light still glowing softly. Unlocked. But you haven't opened it yet. The lid is still closed, keeping whatever's inside hidden for just a moment longer.\n\nYou can OPEN it whenever you're ready.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1763991426/brown_box_3_bmabdx.png',
+                            description: 'Unlocked but closed metal box',
+                            hint: 'Ready to open'
+                        }
+                    }
+                },
+                {
+                    // Unlocked + both items gone (document taken AND video watched)
+                    conditions: [
+                        { type: 'HAS_ITEM', itemId: 'item_secret_document' },
+                        { type: 'FLAG', flag: 'notebook_video_watched', value: true }
+                    ],
+                    success: {
+                        message: "The box is open. Latch unfastened. Inside: rust stains, dust, empty space. The SD card and police file—both gone. You took what was hidden here. Just an empty metal container remains.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1763991426/brown_box_1_l6lpyd.png',
+                            description: 'Empty metal box with items removed',
+                            hint: 'The contents have been taken'
+                        }
+                    }
+                },
+                {
+                    // Unlocked + only document taken (video not watched)
+                    conditions: [
+                        { type: 'HAS_ITEM', itemId: 'item_secret_document' }
+                    ],
+                    success: {
+                        message: "The box is open. Latch released. Inside: the black SD card still rests in the corner—modern, out of place in the old rusty container. The police file is gone. You took it.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1763991426/brown_box_2_areabd.png',
+                            description: 'Open metal box with SD card',
+                            hint: 'SD card remains inside'
+                        }
+                    }
+                },
+                {
+                    // Unlocked + video watched (document not taken)
+                    conditions: [
+                        { type: 'FLAG', flag: 'notebook_video_watched', value: true }
+                    ],
+                    success: {
+                        message: "The box is open. Latch unfastened. Inside: the stolen police file marked CONFIDENTIAL waits in faded red ink. The SD card is there too—you've already watched the video. The footage is burned into your memory.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1763991426/brown_box_2_areabd.png',
+                            description: 'Open metal box with contents',
+                            hint: 'Contains SD card and confidential file'
+                        }
+                    }
+                },
+                {
+                    // Default: Unlocked + video NOT watched yet (only show SD card)
+                    conditions: [],
+                    success: {
+                        message: "The box is open. Latch released. Inside: black SD card—modern, out of place in the old rusty container. Your phone can read this.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1763991426/brown_box_2_areabd.png',
+                            description: 'Open metal box with SD card',
+                            hint: 'Use your phone to read the SD card'
+                        }
+                    }
+                }
+            ],
+
+            // 2. TAKE - Evidence, stays on table
+            onTake: {
+                fail: {
+                    message: "Evidence doesn't walk out the door. It stays on the table. If you want what's inside, try EXAMINING it, OPENING it, or cracking the PASSWORD."
+                }
+            },
+
+            // 4. USE - For reading
+            onUse: {
+                fail: {
+                    message: "It's not a tool. It's a container—meant to be opened. Try OPENING it or unlocking it with the PASSWORD if you're feeling clever."
+                }
+            },
+
+            // 6. OPEN - Requires unlock
+            onOpen: [
+                {
+                    // Unlocked + both items gone
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: false },
+                        { type: 'HAS_ITEM', itemId: 'item_secret_document' },
+                        { type: 'FLAG', flag: 'notebook_video_watched', value: true }
+                    ],
+                    success: {
+                        message: "The box is already open. Latch unfastened. Inside: rust stains, dust. The SD card and police file—both gone. You took what was hidden here.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1763991426/brown_box_1_l6lpyd.png',
+                            description: 'Empty opened metal box',
+                            hint: 'Contents have been removed'
+                        },
+                        effects: [
+                            { type: 'SET_ENTITY_STATE', entityId: 'obj_brown_notebook', patch: { isOpen: true, currentStateId: 'unlocked' } }
+                        ]
+                    }
+                },
+                {
+                    // Unlocked + only document taken (video not watched yet)
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: false },
+                        { type: 'HAS_ITEM', itemId: 'item_secret_document' }
+                    ],
+                    success: {
+                        message: "The box is open. Latch unfastened. Inside: the black SD card still rests in the corner—modern, cold, out of place. The police file is gone.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1763991426/brown_box_2_areabd.png',
+                            description: 'Open metal box with SD card',
+                            hint: 'SD card remains'
+                        },
+                        effects: [
+                            { type: 'SET_ENTITY_STATE', entityId: 'obj_brown_notebook', patch: { isOpen: true, currentStateId: 'unlocked' } }
+                        ]
+                    }
+                },
+                {
+                    // Unlocked + video watched but file not taken
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: false },
+                        { type: 'FLAG', flag: 'notebook_video_watched', value: true }
+                    ],
+                    success: {
+                        message: "The box is open. Latch unfastened. Inside: the stolen police file marked CONFIDENTIAL. The SD card is there too—you've watched the video already.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1763991426/brown_box_2_areabd.png',
+                            description: 'Open metal box with contents',
+                            hint: 'Contains file and SD card'
+                        },
+                        effects: [
+                            { type: 'SET_ENTITY_STATE', entityId: 'obj_brown_notebook', patch: { isOpen: true, currentStateId: 'unlocked' } }
+                        ]
+                    }
+                },
+                {
+                    // Unlocked + video NOT watched yet (only show SD card) - FIRST TIME OPENING
+                    conditions: [{ type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: false }],
+                    success: {
+                        message: "You lift the lid. Hinges creak—rusty, protesting decades of being sealed shut. The smell hits first: metal, decay, old paper.\n\nInside: a black SD card. Modern. Digital. Completely out of place in this relic. It sits in the corner like it's been waiting for you specifically. Your phone can read it.\n\nNo fingers. No teeth. No photographs. Just data. Sometimes that's worse.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1763991426/brown_box_2_areabd.png',
+                            description: 'Open metal box with SD card',
+                            hint: 'Use your phone to read the SD card'
+                        },
+                        effects: [
+                            { type: 'SET_ENTITY_STATE', entityId: 'obj_brown_notebook', patch: { isOpen: true, currentStateId: 'unlocked' } }
+                        ]
+                    }
+                },
+                {
+                    // Locked - Cannot open without password
+                    conditions: [{ type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: true }],
+                    success: {
+                        message: "The latch refuses to budge. Cold metal, unyielding. This isn't a lock for keys—it's waiting for something else. A phrase. A password. Someone sealed this box with words, not metal.\n\nYou run your fingers over the rusty surface, feeling the weight of secrets pressed into every dent. Whatever's inside, someone went to great lengths to hide it. The kind of lengths that make your pulse quicken.\n\nYou need the right phrase to unlock this. If you know it, whisper it to the box:\n\n**/password <phrase>** (example: /password Bloodhaven rules)\n\nStuck? There's a puzzle that might help you find the answer:\nhttps://airpg-minigames.vercel.app/games/the-metal-box\n\nThe right clue to solve the puzzle should be somewhere in this Cafe.\n\nThe box waits. Silent. Patient. Guarding its truth.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1764004289/brown_box_6_ofjp6t.jpg',
+                            description: 'Attempting to open the locked metal box',
+                            hint: 'Needs password to unlock first'
+                        }
+                    }
+                }
+            ],
+
+            // 7. CLOSE - Close open box
+            onClose: {
+                conditions: [{ type: 'STATE', entityId: 'obj_brown_notebook', key: 'isOpen', equals: true }],
+                success: {
+                    message: "You close the lid. Latch clicks shut. But why close it now?"
+                },
+                fail: {
+                    message: "Already closed and locked."
+                }
+            },
+
+            // 8. MOVE - Nothing underneath
+            onMove: {
+                fail: {
+                    message: "You slide it across the table. Nothing underneath. The secrets are inside, not under."
+                }
+            },
+
+            // 9. BREAK - Can't destroy evidence
+            onBreak: {
+                fail: {
+                    message: "Evidence. Can't destroy it. Try the PASSWORD instead."
+                }
+            },
+
+            // 10. READ - Read contents (requires open)
+            onRead: [
+                {
+                    // Unlocked + both items gone
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: false },
+                        { type: 'STATE', entityId: 'obj_brown_notebook', key: 'isOpen', equals: true },
+                        { type: 'HAS_ITEM', itemId: 'item_secret_document' },
+                        { type: 'FLAG', flag: 'notebook_video_watched', value: true }
+                    ],
+                    success: {
+                        message: "Rust stains, dust, empty space. The hidden items—SD card, police file—both gone. You took them already.",
+                        effects: []
+                    }
+                },
+                {
+                    // Unlocked + only document taken
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: false },
+                        { type: 'STATE', entityId: 'obj_brown_notebook', key: 'isOpen', equals: true },
+                        { type: 'HAS_ITEM', itemId: 'item_secret_document' }
+                    ],
+                    success: {
+                        message: "Inside the metal box: rust, dust, and the SD card. You can use your phone to read it. The police file is gone.",
+                        effects: []
+                    }
+                },
+                {
+                    // Unlocked + video watched (file not taken)
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: false },
+                        { type: 'STATE', entityId: 'obj_brown_notebook', key: 'isOpen', equals: true },
+                        { type: 'FLAG', flag: 'notebook_video_watched', value: true }
+                    ],
+                    success: {
+                        message: "Inside the metal box: rust stains and the stolen police file marked CONFIDENTIAL—TAKE it. You've already watched the SD card video.",
+                        effects: []
+                    }
+                },
+                {
+                    // Unlocked + video NOT watched yet (only show SD card)
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: false },
+                        { type: 'STATE', entityId: 'obj_brown_notebook', key: 'isOpen', equals: true }
+                    ],
+                    success: {
+                        message: "Inside the metal box: rust, dust, and the SD card—that's what matters. Use your phone to read it.",
+                        effects: []
+                    }
+                },
+                {
+                    // Locked
+                    conditions: [],
+                    fail: {
+                        message: "Locked. Can't see inside. Needs PASSWORD. Stuck? https://airpg-minigames.vercel.app/games/the-metal-box"
+                    }
+                }
+            ],
+
+            // 11. SEARCH - Search contents
+            onSearch: [
+                {
+                    // Unlocked + both items gone
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: false },
+                        { type: 'HAS_ITEM', itemId: 'item_secret_document' },
+                        { type: 'FLAG', flag: 'notebook_video_watched', value: true }
+                    ],
+                    success: {
+                        message: "You search the box. Empty. The SD card and police file—both gone. You took them already."
+                    }
+                },
+                {
+                    // Unlocked + only document taken
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: false },
+                        { type: 'HAS_ITEM', itemId: 'item_secret_document' }
+                    ],
+                    success: {
+                        message: "You search the box. The SD card is still here—use your phone to read it. The police file is gone."
+                    }
+                },
+                {
+                    // Unlocked + video watched (file not taken)
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: false },
+                        { type: 'FLAG', flag: 'notebook_video_watched', value: true }
+                    ],
+                    success: {
+                        message: "You search the box. The stolen police file is still hidden inside—TAKE it. You've already watched the SD card video."
+                    }
+                },
+                {
+                    // Unlocked + video NOT watched yet (only show SD card)
+                    conditions: [{ type: 'STATE', entityId: 'obj_brown_notebook', key: 'isLocked', equals: false }],
+                    success: {
+                        message: "You search the box. The SD card—modern, black—hidden inside. Use your phone to read it."
+                    }
+                },
+                {
+                    // Locked
+                    conditions: [],
+                    fail: {
+                        message: "Locked. Can't search. Need the PASSWORD."
+                    }
+                }
+            ],
+
+            // 12. TALK - Can't talk to box
+            onTalk: {
+                fail: {
+                    message: "Metal boxes don't talk. Try OPENING it or the PASSWORD."
+                }
+            },
+
+            // SPECIAL: Password unlock handler
+            onUnlock: {
+                success: {
+                    message: "Click.\n\nThe latch releases. A soft green light blinks on—once, twice—then stays lit. ACCESS GRANTED.\n\nYour pulse quickens. Hands steady, but your mind races. This is it. The moment between locked and open. The box sits there, unlocked but still closed, guarding whatever secrets someone died to hide.\n\nYou've heard the stories. The ones whispered at the precinct. Packages sent to detectives—fingers, teeth, photographs of loved ones. Sometimes the worst thing you can do in this job is open the wrong box.\n\nBut curiosity's a disease in this line of work. And you're infected.\n\nThe box is unlocked now. You can OPEN it whenever you're ready. If you're ready.",
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1763991426/brown_box_3_bmabdx.png',
+                        description: 'Unlocked metal box with green light',
+                        hint: 'The password worked - box is unlocked but still closed'
+                    },
+                    effects: [
+                        { type: 'SET_FLAG', flag: 'has_unlocked_notebook' as Flag, value: true },
+                        { type: 'SET_ENTITY_STATE', entityId: 'obj_brown_notebook', patch: { isLocked: false, isOpen: false, currentStateId: 'unlocked' } },
+                        { type: 'REVEAL_FROM_PARENT', entityId: 'obj_sd_card', parentId: 'obj_brown_notebook' }
+                        // Police file will be revealed after SD card video is watched
+                    ]
+                },
+                fail: {
+                    message: "Wrong password. Lock stays shut. Think: what connects the clues?\n\nUse: /password <your guess>",
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1763991426/brown_box_4_iz32m2.png',
+                        description: 'Metal box rejecting wrong password',
+                        hint: 'Try a different password'
+                    }
+                }
+            },
+
+            // Fallback for undefined actions
+            defaultFailMessage: "That won't work on the metal box. Try: EXAMINE, OPEN, READ, or use /password <phrase> to unlock it."
+        },
+        fallbackMessages: {
+            default: "That's not going to work. It's a key piece of evidence.",
+            notOpenable: "You can't open that.",
+            locked: "It's locked.",
+            noEffect: "Using that on the metal box has no effect."
+        },
+        hints: {
+            subtle: "This metal box is suspicious. Someone left it here for a reason.",
+            medium: "The metal box seems important. Try to find out who left it and what's inside.",
+            direct: "Talk to the barista about the metal box. They might know who left it."
+        },
+        design: {
+            authorNotes: "Central puzzle item for Chapter 1. Metal box contains SD card and confidential file.",
+            tags: ['box', 'metal box', 'container']
+        },
+        version: { schema: "1.0", content: "1.0" }
+    },
+    'obj_chalkboard_menu': {
+        id: 'obj_chalkboard_menu' as GameObjectId,
+        name: 'Chalkboard Menu',
+        archetype: 'Signage',
+        description: "There's a chalkboard menu near the counter with today's specials.",
+        capabilities: { openable: false, lockable: false, breakable: true, movable: true, powerable: false, container: false, readable: true, inputtable: false },
+        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
+        inventory: { items: [], capacity: 0 },
+        children: { items: ['item_iron_pipe' as ItemId] },
+        media: {
+            images: {
+                default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759603706/Chalkboard_h61haz.png', description: 'A chalkboard menu in a cafe.', hint: 'chalkboard menu' },
+                moved: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761261134/iron_pipe_bpcofa.png', description: 'The chalkboard has been moved aside, revealing a heavy iron pipe leaning against the wall.', hint: 'moved chalkboard with pipe' }
+            }
+        },
+        handlers: {
+            // 1. EXAMINE - Visual inspection
+            onExamine: [
+                {
+                    // Most specific: moved AND pipe taken
+                    conditions: [
+                        { type: 'FLAG', flag: 'has_moved_chalkboard', value: true },
+                        { type: 'HAS_ITEM', itemId: 'item_iron_pipe' }
+                    ],
+                    success: {
+                        message: "The chalkboard leans against the wall where you left it. Behind where it used to hang, there's just exposed brick and a light patch of dust. The iron pipe is gone - you took it. Nothing else hidden here.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759603706/Chalkboard_h61haz.png',
+                            description: 'Moved chalkboard with empty space behind it',
+                            hint: 'You already took what was hidden here'
+                        }
+                    }
+                },
+                {
+                    // Less specific: moved but pipe NOT taken
+                    conditions: [
+                        { type: 'FLAG', flag: 'has_moved_chalkboard', value: true }
+                    ],
+                    success: {
+                        message: "The board's moved. Behind it: heavy iron pipe against exposed brick. Cold steel, rust at the joints. Still waiting there.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761261134/iron_pipe_bpcofa.png',
+                            description: 'Iron pipe revealed behind chalkboard',
+                            hint: 'Could be useful for breaking things...'
+                        }
+                    }
+                },
+                {
+                    // Default: not moved yet
+                    conditions: [],
+                    success: {
+                        message: "The wooden frame leaned crooked, chalk dust clinging to its corners. Brick peered through behind it, cold and stubborn.\n\nToday's special read: 'Three scones for the price of two.'\n\nA deal as sweet as justice.\n\nThat word—justice—hung heavy, deliberate. Someone had been here, leaving breadcrumbs.\n\nThe board didn't sit flush with the wall; a shadow slipped behind it, hiding something patient, waiting. The smell of bread and dust mixed, comforting and uneasy. \n\nIt wasn't just a menu. It was a message, a lure, a warning -  or was it not?",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759603706/Chalkboard_h61haz.png',
+                            description: 'Chalkboard menu with handwritten specials',
+                            hint: 'Not flush with the wall...'
+                        }
+                    }
+                }
+            ],
+
+            // 2. TAKE - Can't take furniture
+            onTake: {
+                fail: {
+                    message: "It's bolted furniture, not evidence. But you could MOVE it or READ the menu."
+                }
+            },
+
+            // 4. USE - No item usage
+            onUse: {
+                fail: {
+                    message: "It's for writing specials. You don't have chalk. Try READING it or MOVING it."
+                }
+            },
+
+            // 6. OPEN - Nothing to open
+            onOpen: {
+                fail: {
+                    message: "It's a board, not a door. Try EXAMINING or MOVING it."
+                }
+            },
+
+            // 7. CLOSE - Nothing to close
+            onClose: {
+                fail: {
+                    message: "Nothing to close. Try MOVING it instead."
+                }
+            },
+
+            // 8. MOVE - Reveals iron pipe
+            onMove: {
+                conditions: [{ type: 'NO_FLAG', flag: 'has_moved_chalkboard' }],
+                success: {
+                    message: "The board scrapes across tile. Behind it: heavy iron pipe against exposed brick. Cold steel, rust at the joints. The kind of tool that solves problems without keys.",
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761261134/iron_pipe_bpcofa.png',
+                        description: 'Iron pipe revealed behind chalkboard',
+                        hint: 'Could be useful for breaking things...'
+                    },
+                    effects: [
+                        { type: 'SET_FLAG', flag: 'has_moved_chalkboard', value: true },
+                        { type: 'SET_ENTITY_STATE', entityId: 'obj_chalkboard_menu', patch: { currentStateId: 'moved', isMoved: true } },
+                        { type: 'REVEAL_FROM_PARENT', entityId: 'item_iron_pipe', parentId: 'obj_chalkboard_menu' }
+                    ]
+                },
+                fail: {
+                    message: "Already moved. The pipe's gone. Nothing else hidden here."
+                }
+            },
+
+            // 9. BREAK - Vandalism, not investigation
+            onBreak: {
+                fail: {
+                    message: "Smashing the cafe's menu? That's vandalism, not detective work. Try MOVING it."
+                }
+            },
+
+            // 10. READ - Read the menu text
+            onRead: {
+                success: {
+                    message: "Three scones for two. Coffee of the day: dark roast. Pastry special: lemon tart. And at the bottom, in different handwriting: 'A deal as sweet as justice.' Deliberate. A message.",
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759603706/Chalkboard_h61haz.png',
+                        description: 'Chalkboard menu closeup',
+                        hint: 'Someone wrote "justice" on purpose'
+                    }
+                }
+            },
+
+            // 11. SEARCH - Hint to move it
+            onSearch: {
+                success: {
+                    message: "You run your hand along the frame. It's angled away from the wall. Not flush. Try MOVING it."
+                }
+            },
+
+            // 12. TALK - Can't talk to objects
+            onTalk: {
+                fail: {
+                    message: "The board's not chatty. But you could READ it or MOVE it."
+                }
+            },
+
+            // Fallback for undefined actions
+            defaultFailMessage: "The chalkboard's a piece of the scene. Try: EXAMINE, READ, MOVE, or SEARCH it."
+        },
+        fallbackMessages: {
+            default: "Probably best to leave the menu alone. It's not part of the case.",
+            notMovable: "It's a heavy stand, but you manage to slide it aside."
+        },
+        hints: {
+            subtle: "The chalkboard doesn't sit quite flush with the wall. Curious.",
+            medium: "That menu board looks like it could be moved. Maybe there's something behind it?",
+            direct: "Move the chalkboard to see what's hidden behind it."
+        },
+        design: {
+            authorNotes: "Contains the 'justice' clue and hides the iron pipe.",
+            tags: ['chalkboard', 'menu', 'board']
+        },
+        version: { schema: "1.0", content: "1.2" }
+    },
+    'obj_table': {
+        id: 'obj_table' as GameObjectId,
+        name: 'Table',
+        alternateNames: ['table', 'empty table', 'cafe table', 'small table'],
+        archetype: 'Furniture',
+        description: 'A small cafe table. Someone left a magazine on it.',
+        capabilities: { openable: false, lockable: false, breakable: false, movable: false, powerable: false, container: true, readable: false, inputtable: false },
+        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
+        inventory: { items: ['item_magazine'] as ItemId[], capacity: 5 },
+        children: { items: ['item_magazine'] as ItemId[] },
+        media: {
+            images: {
+                default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762762629/Magazine_vb6chv.png', description: 'A table with a magazine on it.', hint: 'table with magazine' },
+                empty: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762763369/Empty_Table_d6mywa.png', description: 'An empty table with a coffee ring.', hint: 'empty table' }
+            }
+        },
+        handlers: {
+            onExamine: [
+                {
+                    conditions: [{ type: 'HAS_ITEM', itemId: 'item_magazine' }],
+                    success: {
+                        message: "Small cafe table. Empty now. Just a sticky coffee ring where the magazine was.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762763369/Empty_Table_d6mywa.png',
+                            description: 'An empty table with a coffee ring',
+                            hint: 'Nothing on it anymore'
+                        }
+                    }
+                },
+                {
+                    conditions: [],
+                    success: {
+                        message: "Small cafe table. Someone left a magazine on it. Sticky coffee ring visible.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762762629/Magazine_vb6chv.png',
+                            description: 'Table with magazine',
+                            hint: 'Magazine on table'
+                        }
+                    }
+                }
+            ],
+            onTake: {
+                fail: { message: "It's bolted to the floor—cafe furniture tends to stay put. You're not hauling a table out of here. Try looking AT it instead." }
+            },
+            onMove: {
+                fail: { message: "Solid oak, bolted to the floor. You'd need a crowbar and bad intentions. Try examining what's ON it instead of wrestling furniture." }
+            },
+            defaultFailMessage: "It's just a table. Try: EXAMINE it, or TAKE what's on it."
+        },
+        hints: {
+            subtle: "There's something on this table. Worth a look.",
+            medium: "Someone left a magazine here. You should examine or take it.",
+            direct: "Take the magazine from the table and read it."
+        },
+        design: {
+            authorNotes: "Simple container for magazine item. Shows empty table after magazine is taken.",
+            tags: ['furniture', 'table']
+        },
+        version: { schema: "1.0", content: "1.0" }
+    },
+    'obj_bookshelf': {
+        id: 'obj_bookshelf' as GameObjectId,
+        name: 'Bookshelf',
+        archetype: 'Furniture',
+        description: "A small bookshelf filled with used paperbacks is tucked into a corner.",
+        capabilities: { openable: false, lockable: false, breakable: true, movable: false, powerable: false, container: true, readable: false, inputtable: false },
+        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
+        inventory: { items: [], capacity: null },
+        children: {
+            items: ['item_book_deal', 'item_book_fbi', 'item_book_justice'] as ItemId[],
+            objects: ['obj_hidden_door'] as GameObjectId[]
+        },
+        media: { images: { default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759604596/Bookshelf_Cafe_kn4poz.png', description: 'A bookshelf in a cafe.', hint: 'bookshelf reading corner' } } },
+        handlers: {
+            // 1. EXAMINE - Visual inspection
+            onExamine: {
+                success: {
+                    message: "The corner bookshelf leaned like it had watched too many years pass, a quiet witness to the people who drifted through this space. Its wood was scratched, nicked, and stubbornly dusty, edges softened by time and careless elbows. \n\nThe spines of worn paperbacks were pressed in haphazardly, some upright, some shoved sideways, each one a faint echo of someone who had lingered here—bored, curious, desperate, seeking distraction or solace.\n\nAmong the titles:\n📚 The Art of the Deal\n📚 A Brief History of the FBI\n📚 Justice for My Love\n\nThat word—justice—hung in the air, deliberate, pressing against the dust and scratches like it had weight. The shelf wasn’t just furniture. It had absorbed attention, fingers, sighs, and the restless patience of countless hands. You could almost feel the faint imprint of every reader, every idle moment, every flicker of hope or fleeting interest.\n\nIt smelled of old paper and neglect, of presence that had come and gone, leaving only a trace. The shelf held the room’s quiet history, not in words, but in the way it slumped, how it carried itself, how it seemed to remember everyone who had paused here. A monument, unassuming but certain, to all the people who had needed something—anything—to pass the night, or to make sense of it.",
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759604596/Bookshelf_Cafe_kn4poz.png',
+                        description: 'Bookshelf with used paperbacks',
+                        hint: 'Justice... that word keeps appearing'
+                    },
+                    effects: [
+                        { type: 'SET_FLAG', flag: 'has_seen_justice_book', value: true },
+                        { type: 'SET_ENTITY_STATE', entityId: 'obj_bookshelf', patch: { isOpen: true } },
+                        { type: 'REVEAL_FROM_PARENT', entityId: 'item_book_deal', parentId: 'obj_bookshelf' },
+                        { type: 'REVEAL_FROM_PARENT', entityId: 'item_book_fbi', parentId: 'obj_bookshelf' },
+                        { type: 'REVEAL_FROM_PARENT', entityId: 'item_book_justice', parentId: 'obj_bookshelf' }
+                    ]
+                }
+            },
+
+            // 2. TAKE - Can't take furniture
+            onTake: {
+                fail: {
+                    message: "It's furniture, not evidence. Try EXAMINING the books or SEARCHING the shelf."
+                }
+            },
+
+            // 4. USE - Use recip saw to cut through it
+            // IMPORTANT: Conditional handler array for state-based interaction
+            // See: src/documentation/handler-resolution-and-media.md
+            onUse: [
+                {
+                    // Case 1: Already destroyed
+                    itemId: 'item_recip_saw' as ItemId,
+                    conditions: [
+                        { type: 'FLAG', flag: 'bookshelf_destroyed', value: true }
+                    ],
+                    success: {
+                        message: "Already destroyed. The hidden door is exposed."
+                    }
+                },
+                {
+                    // Case 2: Document read, ready to cut
+                    itemId: 'item_recip_saw' as ItemId,
+                    conditions: [
+                        { type: 'FLAG', flag: 'read_secret_document', value: true },
+                        { type: 'NO_FLAG', flag: 'bookshelf_destroyed' }
+                    ],
+                    success: {
+                        message: "You remember the blueprint. Hidden room behind the bookshelf.\n\nYou fire up the reciprocating saw. Blade bites into oak. Wood screams. Sawdust sprays. You cut vertically down the side, then horizontally. The shelf shudders, splits. You kick it aside.\n\nBehind it: a door. Flush with the wall. No handle. Just a keypad. Someone hid this deliberately. The blueprint was right.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762368505/Secret_Door_Revealed_o27pj3.png',
+                            description: 'Destroyed bookshelf revealing hidden door',
+                            hint: 'A secret door with a keypad'
+                        },
+                        effects: [
+                            { type: 'SET_FLAG', flag: 'bookshelf_destroyed' as Flag, value: true },
+                            { type: 'SET_ENTITY_STATE', entityId: 'obj_bookshelf', patch: { isBroken: true, isOpen: true } },
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'obj_hidden_door', parentId: 'obj_bookshelf' }
+                        ]
+                    }
+                },
+                {
+                    // Case 3: Document NOT read yet - battery low
+                    itemId: 'item_recip_saw' as ItemId,
+                    conditions: [
+                        { type: 'NO_FLAG', flag: 'read_secret_document' }
+                    ],
+                    success: {
+                        message: "Hmmm the battery seems too low. Wait until it's charged fully."
+                    }
+                }
+            ],
+
+            // 6. OPEN - Already open shelving
+            onOpen: {
+                fail: {
+                    message: "Open shelving. Nothing to open. Try READING or SEARCHING the books."
+                }
+            },
+
+            // 7. CLOSE - Can't close open shelving
+            onClose: {
+                fail: {
+                    message: "It's a shelf, not a cabinet. Try EXAMINING or SEARCHING it."
+                }
+            },
+
+            // 8. MOVE - Too heavy to move
+            onMove: {
+                fail: {
+                    message: "Too heavy to move. Solid oak, bolted down maybe. You'd need something more destructive. Maybe check the drawer at the counter for tools."
+                }
+            },
+
+            // 9. BREAK - Need tools
+            onBreak: {
+                fail: {
+                    message: "Solid oak. You're not smashing this with bare hands. You'd need a saw or something powerful. Check the counter drawer for tools."
+                }
+            },
+
+            // 10. READ - Read the book titles
+            onRead: {
+                success: {
+                    message: "You scan the spines. 'The Art of the Deal'. 'A Brief History of the FBI'. And... 'Justice for My Love'. Romance novel. But that word—justice—it's everywhere. Chalkboard, now this. Not coincidence.",
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759604596/Bookshelf_Cafe_kn4poz.png',
+                        description: 'Book titles on cafe bookshelf',
+                        hint: 'Justice appears again'
+                    },
+                    effects: [
+                        { type: 'SET_FLAG', flag: 'has_seen_justice_book', value: true }
+                    ]
+                }
+            },
+
+            // 11. SEARCH - Search through books
+            onSearch: {
+                success: {
+                    message: "You pull books out, check behind them, flip through pages. Mostly cafe reading—travel guides, thrillers, business books. But 'Justice for My Love' stands out. Someone left breadcrumbs. \n\nMaybe worth to read a few pages. It may be connected somehow."
+                }
+            },
+
+            // 12. TALK - Can't talk to furniture
+            onTalk: {
+                fail: {
+                    message: "Books don't talk back. But you could READ them or EXAMINE the shelf."
+                }
+            },
+
+            // Fallback for undefined actions
+            defaultFailMessage: "It's a bookshelf. Try: EXAMINE, READ, or SEARCH the books."
+        },
+        fallbackMessages: { 
+            default: "It's just a bookshelf. Let's not get sidetracked.",
+            notMovable: "It's too heavy to move by yourself."
+        },
+        hints: {
+            subtle: "Those books on the shelf look interesting. Maybe take a closer look.",
+            medium: "Try reading the books. Some stories might have more to offer than you'd expect.",
+            direct: "Read 'Justice for My Love' on the bookshelf. Pay close attention - some books reveal secrets when read multiple times."
+        },
+        design: {
+            authorNotes: "Contains the other 'justice' clue for the metal box.",
+            tags: ['books', 'shelf']
+        },
+        version: { schema: "1.0", content: "1.0" }
+    },
+    'obj_painting': {
+        id: 'obj_painting' as GameObjectId,
+        name: 'Wall painting',
+        alternateNames: ['painting', 'wall painting', 'picture', 'art', 'abstract painting', 'canvas', 'frame'],
+        archetype: 'Surface',
+        description: 'An abstract painting hangs on the wall.',
+        capabilities: { openable: false, lockable: false, breakable: false, movable: true, powerable: false, container: false, readable: false, inputtable: false },
+        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
+        children: { objects: ['obj_wall_safe'] as GameObjectId[] },
+        media: {
+            images: {
+                default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759604943/picture_on_wall_fcx10j.png', description: 'A painting on the wall of the cafe.', hint: 'abstract painting' },
+                moved: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761263220/safe_behind_Painting_dbo6qc.png', description: 'The painting has been moved, revealing a wall safe behind it.', hint: 'revealed wall safe' }
+            }
+        },
+        handlers: {
+            // 1. EXAMINE - Visual inspection
+            onExamine: {
+                conditions: [{ type: 'NO_FLAG', flag: 'has_moved_painting' }],
+                success: {  
+                    message: "Abstract swirls at first, but linger long enough and the shapes resolve. A city in the 1800s, cobblestone streets slick with dawn rain, street lamps already glowing as the sun sets behind the horizon.\n\nNo people, no horses, nothing moving but shadows stretching along the buildings. Too clean. Too quiet. Too precise. The kind of city that exists only in a painting. It looks like the rain washed the souls down this street and into the canalisation.\n\nYou stare at the painting for a second too long. It makes you feel uneasy, as if it’s trying to tell you something you don’t quite understand yet.\n\nThe frame looks old and authentic, carved with careful detail. Someone spent a lot of time working on this.\n\nBut then you realize something else. It hangs crooked, edges nicked, as if someone nudged it or hung it in a hurry. Somehow it feels out of place in a space like this.\n\nBottom corner you see the signature, small and deliberate: S.B., 1939.\nThose initials again.\n\nYour eye drifts back to the painting and over the street lamps—three on the left, three on the right—perfectly symmetrical. House numbers? None.\n\nNothing marks a story, a path, a clue, or a location. Yet the precision nags at you, the tilt of the frame, the way it leans against the wall, as if it’s hiding a secret it isn’t ready to show.",                    
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759604943/picture_on_wall_fcx10j.png',
+                        description: 'Abstract painting with S.B. signature',
+                        hint: 'Frame looks crooked...'
+                    }
+                },
+                fail: {
+                    message: "Painting's off the hook now, leaning on the wall. Frame shows the mount. The safe behind it. 'S.B.'—feels more significant now.",
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761263220/safe_behind_Painting_dbo6qc.png',
+                        description: 'Moved painting revealing wall safe',
+                        hint: 'The safe was hidden behind it'
+                    }
+                }
+            },
+
+            // 2. TAKE - Too large for inventory
+            onTake: {
+                fail: {
+                    message: "Too big. Wall art. But you could MOVE it or SEARCH behind it."
+                }
+            },
+
+            // 4. USE - No item usage
+            onUse: {
+                fail: {
+                    message: "It's art. For looking at. Try EXAMINING or MOVING it."
+                }
+            },
+
+            // 6. OPEN - Nothing to open
+            onOpen: {
+                fail: {
+                    message: "It's a painting, not a door. Try MOVING it or SEARCHING behind it."
+                }
+            },
+
+            // 7. CLOSE - Nothing to close
+            onClose: {
+                fail: {
+                    message: "Nothing to close. Try EXAMINING or MOVING it."
+                }
+            },
+
+            // 8. MOVE - Reveals wall safe
+            onMove: {
+                conditions: [{ type: 'NO_FLAG', flag: 'has_moved_painting' }],
+                success: {
+                    message: "You lift the painting off the hook. From behind, you hear the Barista faintly shouting, 'Hey, don't touch this!' but you won’t stop now. The Barista gives up and turns back to his customers - after all, you are not even the craziest thing he has seen this morning.\n\nHeavier than it looks—real canvas, solid frame, stubborn under your hands. The smell of old paint and dust hits your nose, sharp and electric, mingling with the faint warmth of the cafe. A small splinter breaks off the frame, digging its sharp tip into your skin. If there should be any pain, you don’t feel it right now. Adrenaline masks every sensation.\n\nBehind it, the steel of a wall safe gleams cold and flat, set into the brick like it’s been waiting, patient, for someone curious enough to notice.\n\nA jolt runs through you. Your pulse picks up. The kind of excitement that creeps up slow at first, then grabs you by the gut. You haven’t felt this way in a long time—so much so, you assumed there was nothing left in the world that could thrill you.\n\nThis find changes everything.\n\nThis isn’t just a wall anymore—it’s a secret someone tried to bury. For a second, the cafe fades away. The smell of rain on cobblestones, the faint scent of scones, even the hum of conversation—all of it slips as the realization sinks in that you’ve uncovered something hidden. You unveiled something not meant to be discovered.\n\nYour hands linger, hesitant, reverent. Thrill and unease dance together. The quiet of the space presses closer.\nWhoever put this here wanted it concealed.\nWhoever put it here never expected you.", 
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761263220/safe_behind_Painting_dbo6qc.png',
+                        description: 'Wall safe revealed behind painting',
+                        hint: 'A safe hidden behind art'
+                    },
+                    effects: [
+                        { type: 'SET_FLAG', flag: 'has_moved_painting', value: true },
+                        { type: 'SET_ENTITY_STATE', entityId: 'obj_painting', patch: { isMoved: true, currentStateId: 'moved' } },
+                        { type: 'REVEAL_FROM_PARENT', entityId: 'obj_wall_safe', parentId: 'obj_painting' }
+                    ]
+                },
+                fail: {
+                    message: "Already moved. The safe's there. Nothing else behind it."
+                }
+            },
+
+            // 9. BREAK - Don't vandalize art
+            onBreak: {
+                fail: {
+                    message: "Vandalism, not investigation. Try MOVING it instead."
+                }
+            },
+
+            // 10. READ - No text on abstract art
+            onRead: {
+                fail: {
+                    message: "Abstract art. No text. But there's a signature: 'S.B.' Try EXAMINING or MOVING it."
+                }
+            },
+
+            // 11. SEARCH - Look behind it
+            onSearch: {
+                conditions: [{ type: 'NO_FLAG', flag: 'has_moved_painting' }],
+                success: {
+                    message: "You run your hand along the frame edges. It's loose on the hook. Try MOVING it."
+                },
+                fail: {
+                    message: "Already moved it. The safe's what was hidden."
+                }
+            },
+
+            // 12. TALK - Can't talk to art
+            onTalk: {
+                fail: {
+                    message: "The painting's silent. But you could EXAMINE or MOVE it."
+                }
+            },
+
+            // Fallback for undefined actions
+            defaultFailMessage: "The painting's part of the scene. Try: EXAMINE, MOVE, or SEARCH behind it."
+        },
+        fallbackMessages: {
+            default: "The painting is nice, but it's not a clue.",
+            notMovable: "You can't move the painting, but you could try looking behind it."
+        },
+        hints: {
+            subtle: "That painting on the wall looks interesting. Maybe check behind it.",
+            medium: "The painting seems slightly crooked. Try moving it.",
+            direct: "Move the painting to reveal the wall safe hidden behind it."
+        },
+        design: {
+            authorNotes: "Contains the 'S.B.' clue and hides the wall safe.",
+            tags: ['painting', 'art']
+        },
+        version: { schema: "1.0", content: "1.2" }
+    },
+    'obj_wall_safe': {
+        id: 'obj_wall_safe' as GameObjectId,
+        name: 'Wall Safe',
+        alternateNames: ['wall safe', 'safe', 'steel safe', 'metal safe', 'small safe'],
+        archetype: 'Container',
+        description: 'A small, steel safe is set into the wall.',
+        capabilities: { openable: true, lockable: true, breakable: false, movable: false, powerable: false, container: true, readable: false, inputtable: false },
+        state: { isOpen: false, isLocked: true, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
+        inventory: { items: ['item_newspaper_article'] as ItemId[], capacity: 1 },
+        children: { items: ['item_newspaper_article'] as ItemId[] },
+        media: {
+            images: {
+                default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761263220/safe_behind_Painting_dbo6qc.png', description: 'A closed wall safe.', hint: 'wall safe' },
+                unlocked: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762714567/Safe_newspaper_qy2ssi.png', description: 'An open wall safe containing an old newspaper article.', hint: 'open safe with newspaper' },
+                unlocked_empty: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761293940/safe_behind_painting_open_empty_pn2js2.png', description: 'An open, empty wall safe.', hint: 'empty safe' }
+            }
+        },
+        handlers: {
+            // 1. EXAMINE - Visual inspection
+            onExamine: [
+                {
+                    // Most specific: unlocked AND article taken
+                    conditions: [
+                        { type: 'FLAG', flag: 'safe_is_unlocked', value: true },
+                        { type: 'HAS_ITEM', itemId: 'item_newspaper_article' }
+                    ],
+                    success: {
+                        message: "Safe's open. Empty now - you took the newspaper clipping. Just bare metal inside. Whatever was hidden here, you found it.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761293940/safe_behind_painting_open_empty_pn2js2.png',
+                            description: 'Open, empty wall safe',
+                            hint: 'You already took what was inside'
+                        }
+                    }
+                },
+                {
+                    // Less specific: unlocked but article NOT taken
+                    conditions: [
+                        { type: 'FLAG', flag: 'safe_is_unlocked', value: true }
+                    ],
+                    success: {
+                        message: "Safe's open. Inside: yellowed newspaper clipping. Decades old. Someone preserved this deliberately. Why hide a newspaper article in a safe?",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762714567/Safe_newspaper_qy2ssi.png',
+                            description: 'Open safe with old newspaper article',
+                            hint: 'An old newspaper article'
+                        }
+                    }
+                },
+                {
+                    // Default: NOT unlocked
+                    conditions: [],
+                    success: {
+                        message: "Small. Serious. Steel, flush mount, pro install. Cold. Brass keyhole under the handle. Not residential. Someone needed secure storage, hidden behind art. Lock's pristine.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761263220/safe_behind_Painting_dbo6qc.png',
+                            description: 'Locked wall safe with keyhole',
+                            hint: 'Need the key...'
+                        }
+                    }
+                }
+            ],
+
+            // 2. TAKE - Can't take wall-mounted safe
+            onTake: {
+                fail: {
+                    message: "Bolted into brick. Not moving. Try EXAMINING or USING the key on it."
+                }
+            },
+
+            // 4. USE - Use key to unlock
+            onUse: [
+                {
+                    itemId: 'item_safe_key' as ItemId,
+                    conditions: [{ type: 'NO_FLAG', flag: 'safe_is_unlocked' }],
+                    success: {
+                        message: "Key slides in—perfect fit. One turn. Heavy clunk. Door swings. Inside: yellowed newspaper clipping, preserved behind glass sleeve. Decades old. Protected like treasure. This is what they hid.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762714567/Safe_newspaper_qy2ssi.png',
+                            description: 'Safe unlocked revealing old newspaper article',
+                            hint: 'Someone hid this for a reason'
+                        },
+                        effects: [
+                            { type: 'SET_FLAG', flag: 'safe_is_unlocked', value: true },
+                            { type: 'SET_ENTITY_STATE', entityId: 'obj_wall_safe', patch: { isLocked: false, isOpen: true, currentStateId: 'unlocked' } },
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_newspaper_article', parentId: 'obj_wall_safe' },
+                            { type: 'REMOVE_ITEM', itemId: 'item_safe_key' }
+                        ]
+                    },
+                    fail: {
+                        message: "Already unlocked. Key served its purpose."
+                    }
+                }
+            ],
+
+            // 6. OPEN - Need key to open (Multi-State pattern)
+            onOpen: [
+                {
+                    // State 1: Already unlocked and opened
+                    conditions: [{ type: 'FLAG', flag: 'safe_is_unlocked', value: true }],
+                    success: {
+                        message: "Already open. TAKE the document inside.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762714567/Safe_newspaper_qy2ssi.png',
+                            description: 'Open wall safe with newspaper article',
+                            hint: 'The safe is already open'
+                        }
+                    }
+                },
+                {
+                    // State 2: Still locked (default)
+                    conditions: [],
+                    success: {
+                        message: "Locked tight. Need the key. Try USING the key on it.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761263220/safe_behind_Painting_dbo6qc.png',
+                            description: 'Locked wall safe',
+                            hint: 'Need the key to open'
+                        }
+                    }
+                }
+            ],
+
+            // 7. CLOSE - Close open safe
+            onClose: {
+                conditions: [{ type: 'FLAG', flag: 'safe_is_unlocked', value: true }],
+                success: {
+                    message: "You swing the door shut. Metal clangs against frame. But why close it now?"
+                },
+                fail: {
+                    message: "Already closed and locked."
+                }
+            },
+
+            // 8. MOVE - Can't move flush-mounted safe
+            onMove: {
+                fail: {
+                    message: "Flush-mounted in brick. Professional install. Not budging."
+                }
+            },
+
+            // 9. BREAK - Need heavy tools
+            onBreak: {
+                fail: {
+                    message: "Steel, pro-grade. You'd need explosives. Try USING the key instead."
+                }
+            },
+
+            // 10. READ - No text to read
+            onRead: {
+                fail: {
+                    message: "No text on the safe. Try EXAMINING it or USING the key."
+                }
+            },
+
+            // 11. SEARCH - Check contents
+            onSearch: {
+                conditions: [{ type: 'FLAG', flag: 'safe_is_unlocked', value: true }],
+                success: {
+                    message: "You peer inside. Yellowed newspaper clipping in protective sleeve. Decades old. TAKE it."
+                },
+                fail: {
+                    message: "Locked. Can't search a locked safe. Need the key."
+                }
+            },
+
+            // 12. TALK - Can't talk to safe
+            onTalk: {
+                fail: {
+                    message: "Safes don't talk. Try USING the key or EXAMINING it."
+                }
+            },
+
+            // Fallback for undefined actions
+            defaultFailMessage: "That doesn't work on the safe. Try: EXAMINE, USE key, OPEN, or SEARCH it."
+        },
+        stateMap: {
+            'default': { // Locked state
+                description: "A small, steel safe is set into the wall. It's locked.",
+            },
+            'unlocked': {
+                description: "The safe is open. Inside, you see a thick confidential file.",
+                overrides: {
+                    onExamine: {
+                        success: { message: "The safe is open. Inside, you see a thick confidential file." },
+                        fail: { message: "" }
+                    }
+                }
+            },
+            'unlocked_empty': {
+                description: "You already cracked that safe open. There is nothing left behind.",
+                overrides: {
+                    onExamine: {
+                        success: { message: "You already cracked that safe open. There is nothing left behind." },
+                        fail: { message: "" }
+                    }
+                }
+            }
+        },
+        fallbackMessages: {
+            default: "That doesn't work on the safe.",
+            locked: "It's locked tight. We need the wall safe key.",
+            notMovable: "It's built into the wall. It's not going anywhere."
+        },
+        hints: {
+            subtle: "The safe needs a password. Look for clues around the cafe.",
+            medium: "Find the password for the safe. The word 'justice' appears in multiple places.",
+            direct: "Use the password 'justice' to unlock the safe. Check the chalkboard menu and the book titles."
+        },
+        design: {
+            authorNotes: "Final puzzle for chapter 1. Opened by the wall safe key from the coffee machine.",
+            tags: ['safe']
+        },
+        version: { schema: "1.0", content: "1.1" }
+    },
+    'obj_counter': {
+        id: 'obj_counter' as GameObjectId,
+        name: 'Counter',
+        alternateNames: ['counter', 'cafe counter', 'bar', 'service counter'],
+        archetype: 'Surface',
+        description: 'A long wooden counter with a worn finish. The heart of the cafe. Coffee machine hums on top, drawer underneath.',
+        transitionNarration: 'You step up to the counter. The barista and manager glance at you.',
+        capabilities: { openable: false, lockable: false, breakable: false, movable: false, powerable: false, container: true, readable: false, inputtable: false },
+        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
+        children: {
+            objects: ['obj_coffee_machine', 'obj_drawer'] as GameObjectId[]
+        },
+        nearbyNpcs: ['npc_barista', 'npc_manager'] as NpcId[],
+        media: {
+            images: {
+                default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759604596/Cafe_Counter_placeholder.png', description: 'The cafe counter with coffee machine and staff.', hint: 'counter' }
+            }
+        },
+        handlers: {
+            onExamine: [
+                {
+                    // After reading file about hidden room - drawer becomes relevant for tools
+                    conditions: [{ type: 'FLAG', flag: 'read_secret_document', value: true }],
+                    success: {
+                        message: "Long wooden counter. Worn wood, coffee stains. Coffee machine sits on top, humming. Below—drawers. The kind that might hide things.\n\nWait. The police file mentioned a hidden room behind the bookshelf. You'll need tools to get through. A reciprocating saw would cut through wood. Maybe the staff keeps one down there...",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759684408/counter_area_r6qq8z.png',
+                            description: 'The cafe counter with coffee machine and drawers underneath',
+                            hint: 'That drawer might have tools...'
+                        },
+                        effects: [
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'obj_drawer', parentId: 'obj_counter' },
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'obj_coffee_machine', parentId: 'obj_counter' }
+                        ]
+                    }
+                },
+                {
+                    // Before reading file - drawer is visible but access is controlled
+                    conditions: [],
+                    success: {
+                        message: "Long wooden counter. Worn wood, coffee stains. Coffee machine sits on top, humming. Below—a drawer. Staff work behind it. The barista keeps an eye on things.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759684408/counter_area_r6qq8z.png',
+                            description: 'The cafe counter with coffee machine and drawer',
+                            hint: 'Staff work area with drawer below'
+                        },
+                        effects: [
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'obj_coffee_machine', parentId: 'obj_counter' },
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'obj_drawer', parentId: 'obj_counter' }
+                        ]
+                    }
+                }
+            ],
+            onTake: {
+                fail: {
+                    message: "It's built into the floor. Not going anywhere."
+                }
+            },
+            defaultFailMessage: "It's a counter. Try: EXAMINE it or interact with what's on it."
+        },
+        hints: {
+            subtle: "The counter looks like the main work area. Check out what's on it and underneath.",
+            medium: "Examine the counter more closely. The staff might keep useful tools nearby.",
+            direct: "Examine the counter to reveal the drawer and coffee machine. The drawer might contain tools you'll need later."
+        },
+        design: {
+            authorNotes: "Central object for cafe interactions. Houses coffee machine, drawer with saw, and serves as focus point for NPC conversations.",
+            tags: ['counter', 'furniture', 'hub']
+        },
+        version: { schema: "1.0", content: "1.0" }
+    },
+    'obj_drawer': {
+        id: 'obj_drawer' as GameObjectId,
+        name: 'Drawer',
+        alternateNames: ['drawer', 'counter drawer', 'the drawer', 'drawers'],
+        archetype: 'Container',
+        description: 'A drawer built into the counter. Not locked—just closed. Staff storage.',
+        capabilities: { openable: true, lockable: true, breakable: false, movable: false, powerable: false, container: true, readable: false, inputtable: false },
+        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'closed' },
+        inventory: { items: ['item_recip_saw'] as ItemId[], capacity: 3 },
+        children: { items: ['item_recip_saw'] as ItemId[] },
+        media: {
+            images: {
+                closed: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762429217/counter_drawer_examine_ryb0us.png', description: 'A closed drawer under the counter.', hint: 'drawer not locked' },
+                open: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762429158/counter_drawer_power_tool_tvt3o5.png', description: 'Open drawer revealing a reciprocating saw and tools.', hint: 'power saw inside' },
+                empty: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762466481/counter_drawer_empty_ud8wzi.png', description: 'Open drawer, now empty.', hint: 'drawer empty' }
+            }
+        },
+        handlers: {
+            onExamine: [
+                {
+                    // Block access until confidential file has been read (most specific condition)
+                    conditions: [{ type: 'NO_FLAG', flag: 'read_secret_document' }],
+                    success: {
+                        message: "You glance at the drawer from a distance. The manager's right there behind the counter, arms crossed, surveying the cafe like a hawk. His eyes flick toward you for a second—yeah, not happening. Not with him watching. Maybe come back when things get... busier.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762429217/counter_drawer_examine_ryb0us.png',
+                            description: 'A drawer under the counter',
+                            hint: 'Manager is watching closely'
+                        }
+                    }
+                },
+                {
+                    conditions: [{ type: 'STATE', entityId: 'obj_drawer', key: 'isOpen', equals: false }],
+                    success: {
+                        message: "Built into the counter. No lock—just a handle. Staff storage. One pull and it's open.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762429217/counter_drawer_examine_ryb0us.png',
+                            description: 'A drawer built into the counter',
+                            hint: 'Just needs to be opened...'
+                        }
+                    }
+                },
+                {
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_drawer', key: 'isOpen', equals: true },
+                        { type: 'HAS_ITEM', itemId: 'item_recip_saw' }
+                    ],
+                    success: {
+                        message: "Drawer's open. Empty now. The saw's in your pocket. Just receipts and tape left.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762466481/counter_drawer_empty_ud8wzi.png',
+                            description: 'Empty drawer',
+                            hint: 'Nothing useful left'
+                        }
+                    }
+                },
+                {
+                    conditions: [{ type: 'STATE', entityId: 'obj_drawer', key: 'isOpen', equals: true }],
+                    success: {
+                        message: "Drawer's open. Inside: a reciprocating saw, some receipts, tape. Tools of the trade.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762429158/counter_drawer_power_tool_tvt3o5.png',
+                            description: 'Open drawer with reciprocating saw visible',
+                            hint: 'Power saw and tools'
+                        }
+                    }
+                }
+            ],
+            onOpen: [
+                {
+                    // Block access until confidential file has been read (most specific condition)
+                    conditions: [{ type: 'NO_FLAG', flag: 'read_secret_document' }],
+                    success: {
+                        message: "You take a step toward the counter. The manager's eyes lock onto you immediately. 'Sorry, staff only behind the counter.' His tone is polite but firm. One hand rests on the counter edge—territorial. He's not moving. Not now. Wait for a distraction.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762429217/counter_drawer_examine_ryb0us.png',
+                            description: 'Drawer under the counter, manager blocking access',
+                            hint: 'Manager is blocking access'
+                        }
+                    }
+                },
+                {
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_drawer', key: 'isOpen', equals: false },
+                        { type: 'HAS_ITEM', itemId: 'item_recip_saw' }
+                    ],
+                    success: {
+                        message: "You pull the handle. Drawer slides open. Empty. If there was something inside of it, you cleared it out already.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762466481/counter_drawer_empty_ud8wzi.png',
+                            description: 'Empty drawer',
+                            hint: 'Nothing left inside'
+                        },
+                        effects: [
+                            { type: 'SET_ENTITY_STATE', entityId: 'obj_drawer', patch: { isOpen: true, currentStateId: 'empty' } }
+                        ]
+                    }
+                },
+                {
+                    conditions: [{ type: 'STATE', entityId: 'obj_drawer', key: 'isOpen', equals: false }],
+                    success: {
+                        message: "Perfect timing. A woman storms up to the manager—late forties, designer sunglasses perched on her head despite being indoors. 'Excuse me, I ordered a SOY latte, not ALMOND. Do you even LISTEN to your customers?!' The manager's jaw tightens. He turns away from you.\n\nYou don't waste the moment. Hands behind your back, casual whistle under your breath—just another customer stretching their legs. You sidle up to the counter. One smooth pull on the handle. Drawer slides open silent.\n\nInside: reciprocating saw—professional grade. Fresh blade. Receipts underneath, tape, random tools. The saw's the prize. Could cut through metal, pipe, whatever.\n\nBehind you, the manager's still apologizing to the woman. 'Ma'am, I understand your frustration...' You've got maybe ten seconds.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762429158/counter_drawer_power_tool_tvt3o5.png',
+                            description: 'Open drawer revealing a reciprocating saw',
+                            hint: 'A power saw for cutting!'
+                        },
+                        effects: [
+                            { type: 'SET_ENTITY_STATE', entityId: 'obj_drawer', patch: { isOpen: true, currentStateId: 'open' } },
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_recip_saw', parentId: 'obj_drawer' }
+                        ]
+                    }
+                },
+                {
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_drawer', key: 'isOpen', equals: true },
+                        { type: 'HAS_ITEM', itemId: 'item_recip_saw' }
+                    ],
+                    success: {
+                        message: "Already open. Empty. The saw's in your pocket.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762466481/counter_drawer_empty_ud8wzi.png',
+                            description: 'Empty drawer',
+                            hint: 'Nothing left inside'
+                        }
+                    }
+                },
+                {
+                    conditions: [{ type: 'STATE', entityId: 'obj_drawer', key: 'isOpen', equals: true }],
+                    success: {
+                        message: "Already open. The saw is there for the taking.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762429158/counter_drawer_power_tool_tvt3o5.png',
+                            description: 'Open drawer with saw still inside',
+                            hint: 'Saw still available'
+                        }
+                    }
+                }
+            ],
+            onClose: {
+                conditions: [{ type: 'STATE', entityId: 'obj_drawer', key: 'isOpen', equals: true }],
+                success: {
+                    message: "You slide it shut. The lock's broken now though.",
+                    effects: [
+                        { type: 'SET_ENTITY_STATE', entityId: 'obj_drawer', patch: { isOpen: false, currentStateId: 'closed' } }
+                    ]
+                },
+                fail: {
+                    message: "Drawer's already closed. Safety and all..."
+                }
+            },
+            onSearch: [
+                {
+                    // Block access until confidential file has been read (most specific condition)
+                    conditions: [{ type: 'NO_FLAG', flag: 'read_secret_document' }],
+                    success: {
+                        message: "You peer at the drawer from across the room. The manager's posted up behind the counter like a bouncer. He catches your eye—one eyebrow raised. You look away, casual. Too risky. Not with him standing guard. Wait for the right moment.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762429217/counter_drawer_examine_ryb0us.png',
+                            description: 'A drawer under the counter',
+                            hint: 'Manager is watching closely'
+                        }
+                    }
+                },
+                {
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_drawer', key: 'isOpen', equals: true },
+                        { type: 'HAS_ITEM', itemId: 'item_recip_saw' }
+                    ],
+                    success: {
+                        message: "Drawer's open. Empty now. The saw's in your pocket. Just receipts and tape left.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762466481/counter_drawer_empty_ud8wzi.png',
+                            description: 'Empty drawer',
+                            hint: 'Nothing useful left'
+                        }
+                    }
+                },
+                {
+                    conditions: [{ type: 'STATE', entityId: 'obj_drawer', key: 'isOpen', equals: true }],
+                    success: {
+                        message: "Drawer's open. Inside: a reciprocating saw, some receipts, tape. Tools of the trade.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762429158/counter_drawer_power_tool_tvt3o5.png',
+                            description: 'Open drawer with reciprocating saw visible',
+                            hint: 'Power saw and tools'
+                        }
+                    }
+                },
+                {
+                    conditions: [{ type: 'STATE', entityId: 'obj_drawer', key: 'isOpen', equals: false }],
+                    success: {
+                        message: "Built into the counter. No lock—just a handle. Staff storage. You'd need to OPEN it first to see what's inside.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762429217/counter_drawer_examine_ryb0us.png',
+                            description: 'A closed drawer under the counter',
+                            hint: 'Try opening it'
+                        }
+                    }
+                }
+            ],
+            defaultFailMessage: "A drawer under the counter. Try: EXAMINE, OPEN, or SEARCH it."
+        },
+        hints: {
+            subtle: "That drawer under the counter might have something useful.",
+            medium: "Try opening the drawer when the staff isn't watching.",
+            direct: "Open the drawer at the counter to find a reciprocating saw. You'll need to wait until the manager is distracted."
+        },
+        design: {
+            authorNotes: "Contains reciprocating saw for cutting iron pipe or other metal. Not locked, just closed—easy to open.",
+            tags: ['drawer', 'container', 'tool storage']
+        },
+        version: { schema: "1.0", content: "1.0" }
+    },
+    'obj_coffee_machine': {
+        id: 'obj_coffee_machine' as GameObjectId,
+        name: 'Coffee Machine',
+        archetype: 'Device',
+        description: "It's a high-end Italian coffee machine, gleaming under the cafe lights.",
+        capabilities: { openable: false, lockable: false, breakable: true, movable: false, powerable: false, container: true, readable: false, inputtable: false },
+        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
+        inventory: { items: ['item_safe_key'] as ItemId[], capacity: 1 },
+        children: { items: ['item_safe_key'] as ItemId[] },
+        media: {
+            images: {
+                default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761211151/coffee_machine_detail_frexuu.png', description: 'A high-end Italian coffee machine.', hint: 'coffee machine' },
+                broken: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761211151/coffee_machine_detail_broken_slkpfd.png', description: 'The shattered remains of the coffee machine\'s side panel.', hint: 'broken machine' },
+                broken_empty: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762517001/counter_coffee_machine_broken_empty_ayeoql.png', description: 'Broken coffee machine with empty cavity', hint: 'You already took what was hidden' }
+            }
+        },
+        handlers: {
+            // 1. EXAMINE - Visual inspection
+            // IMPORTANT: Conditional handler array for state-based media
+            // See: src/documentation/handler-resolution-and-media.md
+            // Order matters: most specific conditions first, default last
+            onExamine: [
+                {
+                    // Most specific: broken AND key taken
+                    conditions: [
+                        { type: 'FLAG', flag: 'machine_is_broken', value: true },
+                        { type: 'HAS_ITEM', itemId: 'item_safe_key' }
+                    ],
+                    success: {
+                        message: "Shattered panel, broken plastic. The cavity's empty now - you took the key. Someone hid it here, didn't want it found easy. But you found it.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762517001/counter_coffee_machine_broken_empty_ayeoql.png',
+                            description: 'Broken coffee machine with empty cavity',
+                            hint: 'You already took what was hidden'
+                        }
+                    }
+                },
+                {
+                    // Less specific: broken but key NOT taken
+                    conditions: [
+                        { type: 'FLAG', flag: 'machine_is_broken', value: true }
+                    ],
+                    success: {
+                        message: "Shattered panel, broken plastic. Inside the cavity: brass key. Someone hid it here, didn't want it found easy.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761211151/coffee_machine_detail_broken_slkpfd.png',
+                            description: 'Broken coffee machine with revealed key',
+                            hint: 'The hiding spot is exposed'
+                        }
+                    }
+                },
+                {
+                    // Default: NOT broken
+                    conditions: [],
+                    success: {
+                        message: "Chrome and steel, Italian pride. But wrong—a service panel on the right side, warped. Screws stripped. Someone forced it shut fast. The panel rattles. Wouldn't take much to BREAK it open.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761211151/coffee_machine_detail_frexuu.png',
+                            description: 'Coffee machine with suspicious service panel',
+                            hint: 'That panel looks forced shut...'
+                        }
+                    }
+                }
+            ],
+
+            // 2. TAKE - Can't take bolted furniture
+            onTake: {
+                fail: {
+                    message: "Bolted to the counter, weighs a ton. Not going anywhere. Try EXAMINING or BREAKING it."
+                }
+            },
+
+            // 4. USE - Use iron pipe to smash it
+            onUse: [
+                {
+                    itemId: 'item_iron_pipe' as ItemId,
+                    conditions: [{ type: 'NO_FLAG', flag: 'machine_is_broken' }],
+                    success: {
+                        message: "Pipe meets panel. Sharp crack. Plastic shatters, metal splits. The cavity opens. Something brass tumbles out—a key. Hidden inside, forced shut. Someone didn't want this found.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761211151/coffee_machine_detail_broken_slkpfd.png',
+                            description: 'Broken machine revealing hidden key',
+                            hint: 'A key was hidden inside'
+                        },
+                        effects: [
+                            { type: 'SET_FLAG', flag: 'machine_is_broken' as Flag, value: true },
+                            { type: 'SET_ENTITY_STATE', entityId: 'obj_coffee_machine', patch: { isBroken: true, isOpen: true, currentStateId: 'broken' } },
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_safe_key', parentId: 'obj_coffee_machine' }
+                        ]
+                    },
+                    fail: {
+                        message: "Already broken. One hit was enough."
+                    }
+                }
+            ],
+
+            // 6. OPEN - Service panel jammed
+            onOpen: {
+                fail: {
+                    message: "Panel's jammed. Screws stripped. You'd need to BREAK it open with something heavy."
+                }
+            },
+
+            // 7. CLOSE - Already jammed shut
+            onClose: {
+                fail: {
+                    message: "It's jammed shut already. What you need is to BREAK it."
+                }
+            },
+
+            // 8. MOVE - Bolted to counter
+            onMove: {
+                fail: {
+                    message: "Bolted to the counter. Commercial install. Not going anywhere. Besides, it weighs more than you'd want."
+                }
+            },
+
+            // 9. BREAK - Break it with bare hands (needs item)
+            onBreak: {
+                fail: {
+                    message: "You'd need something heavy to break this open. Like a pipe. Try USING the iron pipe on it."
+                }
+            },
+
+            // 10. READ - No text to read
+            onRead: {
+                fail: {
+                    message: "It's a machine, not a manual. Try EXAMINING it."
+                }
+            },
+
+            // 11. SEARCH - Check for hidden compartment
+            onSearch: {
+                conditions: [{ type: 'FLAG', flag: 'machine_is_broken', value: true }],
+                success: {
+                    message: "The shattered panel reveals the cavity. Empty now. The key's been found."
+                },
+                fail: {
+                    message: "The panel's sealed tight. You'd need to BREAK it open first."
+                }
+            },
+
+            // 12. TALK - Can't talk to machines
+            onTalk: {
+                fail: {
+                    message: "Machines don't talk back. But you could EXAMINE or BREAK it."
+                }
+            },
+
+            // Fallback for undefined actions
+            defaultFailMessage: "That doesn't work on the machine. Try: EXAMINE, USE iron pipe, BREAK, or SEARCH it."
+        },
+        stateMap: {
+            default: {
+                description: "It's a high-end Italian coffee machine. A small service compartment on the side seems to be stuck."
+            },
+            broken: {
+                description: "The side panel of the coffee machine is smashed. Amidst the broken plastic, you can see where the key was hidden."
+            }
+        },
+        fallbackMessages: {
+            default: "That doesn't seem to work on the coffee machine.",
+            notOpenable: "You can't open it. The compartment is jammed shut.",
+            noEffect: "Using that on the coffee machine has no effect."
+        },
+        hints: {
+            subtle: "The coffee machine looks ordinary, but maybe it's worth a closer look.",
+            medium: "That coffee machine might hide something. Consider examining or interacting with it.",
+            direct: "Break the coffee machine to find what's hidden inside. Use the reciprocating saw."
+        },
+        design: {
+            authorNotes: "Breakable object containing the wall safe key. Requires the iron pipe to break.",
+            tags: ['machine', 'coffee']
+        },
+        version: { schema: "1.0", content: "1.1" }
+    },
+    'obj_sd_card': {
+        id: 'obj_sd_card' as GameObjectId,
+        name: 'SD Card',
+        alternateNames: ['sd card', 'card', 'memory card', 'sd', 'media card', 'black card'],
+        archetype: 'Device',
+        description: 'A small, modern SD card, looking strangely out of place in the old rusty metal box. It probably fits in your phone.',
+        transitionNarration: 'You lean in closer to examine the SD card inside the metal box.',
+        capabilities: { openable: false, lockable: false, breakable: false, movable: false, powerable: false, container: false, readable: true, inputtable: false },
+        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'closed' },
+        media: {
+            images: {
+                closed: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761812524/SD_Card_rokilu.png', description: 'A black SD card.', hint: 'sd card' },
+                opened: { url: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759678377/CH_I_completion_jqtyme.mp4', description: 'Video playing from SD card.', hint: 'video' }
+            }
+        },
+        handlers: {
+            // EXAMINE - Visual inspection with phone hint
+            onExamine: {
+                success: {
+                    message: "Black SD card. Modern. Out of place in the old metal box. Standard size—fits most devices. Your FBI phone can read this. Try: USE PHONE, then READ SD CARD.",
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761812524/SD_Card_rokilu.png',
+                        description: 'Black SD card',
+                        hint: 'Your phone can read this'
+                    }
+                }
+            },
+
+            // READ - Requires phone device focus
+            onRead: [
+                {
+                    // Already watched video
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_sd_card', key: 'currentStateId', equals: 'opened' }
+                    ],
+                    success: {
+                        message: "You've already watched the video. The footage is burned into your memory."
+                    }
+                },
+                {
+                    // First time reading - requires phone focus
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_sd_card', key: 'currentStateId', equals: 'closed' }
+                    ],
+                    success: {
+                        message: "Card slides into your phone. Screen flickers. Video loads—grainy, seventy years old. Music fills the cafe. Saxophone, smooth, melancholic. A tune that's been waiting.\n\nSilas Bloom. Musician. That song for Rose... they were in love. You hear it in every note.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759678377/CH_I_completion_jqtyme.mp4',
+                            type: 'video',
+                            description: 'Video from SD card: Silas Bloom playing saxophone',
+                            hint: 'The video reveals Silas and Rose'
+                        },
+                        effects: [
+                            { type: 'SET_ENTITY_STATE', entityId: 'obj_sd_card', patch: { currentStateId: 'opened' } },
+                            { type: 'SET_FLAG', flag: 'notebook_video_watched' as Flag, value: true },
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_secret_document', parentId: 'obj_brown_notebook' },
+                            { type: 'SHOW_MESSAGE', speaker: 'narrator', content: "Video ends. More questions than answers. Your mind races.\n\nYou slip the phone back into your jacket pocket. Don't need it anymore—what you need is in the box.\n\nWait—you notice something else tucked deeper in the metal box. A folded document. CONFIDENTIAL - POLICE USE ONLY. Faded red ink. What's this doing here? It looks... stolen." },
+                            { type: 'CLEAR_DEVICE_FOCUS' }
+                        ]
+                    }
+                }
+            ],
+
+            // OPEN - Same as READ
+            onOpen: [
+                {
+                    // Already watched video
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_sd_card', key: 'currentStateId', equals: 'opened' }
+                    ],
+                    success: {
+                        message: "You've already watched the video. The footage is burned into your memory."
+                    }
+                },
+                {
+                    // First time opening - requires phone focus
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_sd_card', key: 'currentStateId', equals: 'closed' }
+                    ],
+                    success: {
+                        message: "Card slides into your phone. Screen flickers. Video loads—grainy, seventy years old. Music fills the cafe. Saxophone, smooth, melancholic. A tune that's been waiting.\n\nSilas Bloom. Musician. That song for Rose... they were in love. You hear it in every note.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759678377/CH_I_completion_jqtyme.mp4',
+                            type: 'video',
+                            description: 'Video from SD card: Silas Bloom playing saxophone',
+                            hint: 'The video reveals Silas and Rose'
+                        },
+                        effects: [
+                            { type: 'SET_ENTITY_STATE', entityId: 'obj_sd_card', patch: { currentStateId: 'opened' } },
+                            { type: 'SET_FLAG', flag: 'notebook_video_watched' as Flag, value: true },
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_secret_document', parentId: 'obj_brown_notebook' },
+                            { type: 'SHOW_MESSAGE', speaker: 'narrator', content: "Video ends. More questions than answers. Your mind races.\n\nYou slip the phone back into your jacket pocket. Don't need it anymore—what you need is in the box.\n\nWait—you notice something else tucked deeper in the metal box. A folded document. CONFIDENTIAL - POLICE USE ONLY. Faded red ink. What's this doing here? It looks... stolen." },
+                            { type: 'CLEAR_DEVICE_FOCUS' }
+                        ]
+                    }
+                }
+            ],
+
+            // Fallback
+            defaultFailMessage: "The SD card holds data. You need your phone to read it. Try: USE PHONE, then READ SD CARD."
+        },
+        hints: {
+            subtle: "An SD card in an old metal box. Seems anachronistic. Your phone might read it.",
+            medium: "Use your phone to read the SD card. It contains something important.",
+            direct: "Use your phone, then read the SD card to watch the video."
+        },
+        design: {
+            authorNotes: "Media device containing the video clue about Silas Bloom. Requires phone to unlock/read.",
+            tags: ['sd card', 'media', 'device']
+        },
+        version: { schema: "1.0", content: "2.0" }
+    },
+    'obj_tablet': {
+        id: 'obj_tablet' as GameObjectId,
+        name: 'Tablet Computer',
+        alternateNames: ['tablet', 'computer', 'device', 'screen'],
+        archetype: 'Device',
+        description: 'A tablet computer sits on the desk, screen glowing with a cryptic puzzle.',
+        personal: true,
+        capabilities: { openable: false, lockable: false, breakable: false, movable: false, powerable: true, container: false, readable: true, inputtable: true },
+        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: true, currentStateId: 'default' },
+        inventory: { items: [], capacity: 0 },
+        media: {
+            images: {
+                default: { url: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=600', description: 'A tablet computer with glowing screen.', hint: 'digital tablet' }
+            }
+        },
+        input: {
+            type: 'phrase',
+            validation: 'placeholder_password',
+            hint: 'Puzzle requires a password... Visit the mini-game to find it.',
+            attempts: null,
+            lockout: null
+        },
+        handlers: {
+            // 1. EXAMINE - Visual inspection
+            onExamine: {
+                success: {
+                    message: "Tablet glows. Modern. Expensive. Screen shows a complex puzzle game—logic gates, cipher wheels, cryptic symbols. Below the puzzle, a message:\n\n'SOLVE TO UNLOCK. PASSWORD REQUIRED.'\n\nA URL at the bottom: https://airpg-minigames.vercel.app/games/tablet-puzzle\n\nThis is part of his game. A test. The kidnapper wants you to play.",
+                    media: {
+                        url: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=600',
+                        description: 'Tablet showing cryptic puzzle',
+                        hint: 'Mini-game puzzle'
+                    }
+                }
+            },
+
+            // 2. TAKE - Can't take tablet
+            onTake: {
+                fail: {
+                    message: "Bolted to the desk. Not moving. Try EXAMINING it or solving the puzzle."
+                }
+            },
+
+            // 4. USE - Direct to puzzle
+            onUse: {
+                fail: {
+                    message: "It's already powered on. Try EXAMINING the puzzle or visiting the mini-game URL."
+                }
+            },
+
+            // 6. OPEN - Not applicable
+            onOpen: {
+                fail: {
+                    message: "It's already displaying the puzzle. Try READING or EXAMINING it."
+                }
+            },
+
+            // 7. CLOSE - Can't close
+            onClose: {
+                fail: {
+                    message: "Can't power it down. The puzzle demands attention."
+                }
+            },
+
+            // 8. MOVE - Bolted down
+            onMove: {
+                fail: {
+                    message: "Bolted to desk. Professional install. Try solving the PUZZLE instead."
+                }
+            },
+
+            // 9. BREAK - Reinforced
+            onBreak: {
+                fail: {
+                    message: "Reinforced case. You'd damage it before breaking it. Try solving the PUZZLE."
+                }
+            },
+
+            // 10. READ - Read the puzzle
+            onRead: {
+                success: {
+                    message: "Screen text:\n\n'CRYPTOGRAPHIC LOGIC PUZZLE'\n'SOLVE ALL GATES TO REVEAL THE PASSPHRASE'\n\nMini-game: https://airpg-minigames.vercel.app/games/tablet-puzzle\n\nOnce solved, use: /password <answer>"
+                }
+            },
+
+            // 11. SEARCH - Examine tablet
+            onSearch: {
+                success: {
+                    message: "You examine the tablet. No physical buttons. Just the glowing puzzle screen. The answer is in the game. Visit the URL to solve it."
+                }
+            },
+
+            // Password submission (for future expansion)
+            onPasswordSubmit: {
+                success: {
+                    message: "Screen flashes green. 'CORRECT. ACCESS GRANTED.'\n\nNew files appear. Financial records. Offshore accounts. Shell corporations. All linked to Veridian Dynamics. This is evidence. Big evidence.\n\nBut this is flavor content for now. The real mystery is the phone call.",
+                    effects: [
+                        { type: 'SET_FLAG', flag: 'tablet_puzzle_solved', value: true }
+                    ]
+                },
+                fail: {
+                    message: "Screen flashes red. 'INCORRECT.' Try solving the puzzle at the mini-game URL first."
+                }
+            },
+
+            defaultFailMessage: "A tablet with a cryptic puzzle. Try: EXAMINE it, READ it, or visit https://airpg-minigames.vercel.app/games/tablet-puzzle"
+        },
+        hints: {
+            subtle: "That tablet screen is glowing. Might be worth investigating.",
+            medium: "The tablet shows a puzzle that needs solving. Try examining or reading it.",
+            direct: "Examine the tablet and visit the mini-game URL to solve the puzzle."
+        },
+        design: {
+            authorNotes: "Tablet provides optional mini-game puzzle. Currently flavor content. Password validation can be updated when mini-game is built.",
+            tags: ['tablet', 'puzzle', 'minigame', 'flavor']
+        },
+        version: { schema: "1.0", content: "1.0" }
+    },
+    'obj_hidden_door': {
+        id: 'obj_hidden_door' as GameObjectId,
+        name: 'Hidden Door',
+        alternateNames: ['door', 'hidden door', 'secret door', 'keypad door', 'locked door', 'the door'],
+        archetype: 'Door',
+        description: 'A hidden door behind the bookshelf with a digital keypad.',
+        transitionNarration: 'Your curiosity wins and you take a step closer to have a look at the door.',
+        capabilities: { openable: true, lockable: true, breakable: false, movable: false, powerable: false, container: true, readable: false, inputtable: true },
+        state: { isOpen: false, isLocked: true, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
+        inventory: { items: [], capacity: 0 },
+        children: {
+            objects: ['obj_tablet'] as GameObjectId[]
+        },
+        nearbyNpcs: ['npc_victim_girl'] as NpcId[],
+        media: {
+            images: {
+                default: { url: 'https://images.unsplash.com/photo-1614359953614-dcf28bc61b80?w=600', description: 'A hidden door with keypad.', hint: 'secret door' },
+                unlocked: { url: 'https://images.unsplash.com/photo-1519147433953-d90e6f751a5a?w=600', description: 'Open door revealing hidden room.', hint: 'open secret room' }
+            }
+        },
+        input: {
+            type: 'phrase',
+            validation: 'Justice for Rose Carmichael',
+            hint: 'Requires a password phrase...',
+            attempts: null,
+            lockout: null
+        },
+        handlers: {
+            // 1. EXAMINE - Visual inspection (FORCES focus shift even as child of bookshelf)
+            onExamine: {
+                conditions: [{ type: 'STATE', entityId: 'obj_hidden_door', key: 'isLocked', equals: true }],
+                success: {
+                    message: "Heavy steel door. Flush with the wall. Cold to touch—reinforced metal, military-grade. No handle, no hinges visible. Smooth matte finish.\n\nJust a digital keypad. Glowing faintly green. Numbers 0-9 and a small screen reading 'ENTER PASSPHRASE'. Professional installation. This was built to stay hidden.\n\nThe keypad waits. Use: /password <your guess>",
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762416324/hidden_door_detailed_kyansl.jpg',
+                        description: 'Hidden door with digital keypad',
+                        hint: 'Need the password phrase...'
+                    },
+                    effects: [
+                        { type: 'SET_FOCUS', focusId: 'obj_hidden_door', focusType: 'object' }
+                    ]
+                },
+                fail: {
+                    message: "Door's open. Inside: small hidden room. Dim. A desk with a tablet. And—wait. Someone's there. A girl. Tied to a chair. Eyes wide. Alive.",
+                    media: {
+                        url: 'https://images.unsplash.com/photo-1519147433953-d90e6f751a5a?w=600',
+                        description: 'Open secret room with victim',
+                        hint: 'The missing girl!'
+                    },
+                    effects: [
+                        { type: 'SET_FOCUS', focusId: 'obj_hidden_door', focusType: 'object' }
+                    ]
+                }
+            },
+
+            // 2. TAKE - Can't take door
+            onTake: {
+                fail: {
+                    message: "It's a door built into the wall. Try entering the PASSWORD to unlock it."
+                }
+            },
+
+            // 4. USE - Direct to password
+            onUse: {
+                fail: {
+                    message: "It needs a password. Use: /password <your guess>"
+                }
+            },
+
+            // 6. OPEN - Requires unlock first, then opens to reveal victim
+            onOpen: [
+                {
+                    // Door already open
+                    conditions: [{ type: 'STATE', entityId: 'obj_hidden_door', key: 'isOpen', equals: true }],
+                    success: {
+                        message: "Door's already open. The victim is inside, waiting. You can TALK to her."
+                    }
+                },
+                {
+                    // Door unlocked but not yet opened - THE BIG REVEAL
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_hidden_door', key: 'isLocked', equals: false },
+                        { type: 'STATE', entityId: 'obj_hidden_door', key: 'isOpen', equals: false }
+                    ],
+                    success: {
+                        message: "You grip the handle. Pull. Heavy door swings inward—smooth, silent hinges. Professional.\n\nSmall room. Dim light from a desk lamp. Tablet glowing. And—\n\nYour breath catches.\n\nA girl. Young. Sitting on the floor, back against the wall. Eyes wide, terrified but alive. Tears streak her face.\n\nLili. The girl who was abducted earlier this week.\n\nShe stares at you. Silent. Calculating.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762368566/Screenshot_2025-11-04_at_15.31.36_opzjnb.png',
+                            description: 'Open door revealing hidden room with kidnapped victim',
+                            hint: 'She knows something!'
+                        },
+                        effects: [
+                            { type: 'SET_ENTITY_STATE', entityId: 'obj_hidden_door', patch: { isOpen: true, currentStateId: 'unlocked' } },
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'npc_victim_girl', parentId: 'obj_hidden_door' },
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'obj_tablet', parentId: 'obj_hidden_door' },
+                            { type: 'SET_FLAG', flag: 'hidden_door_opened', value: true }
+                        ]
+                    }
+                },
+                {
+                    // Door still locked - need password first
+                    conditions: [{ type: 'STATE', entityId: 'obj_hidden_door', key: 'isLocked', equals: true }],
+                    success: {
+                        message: "Keypad locks it tight. Need the PASSWORD first.\n\nYou notice something new on the screen: 'WEB AUTH REQUIRED'\nBelow it, a URL flickers: https://airpg.vercel.app/puzzle\n\nTry: /password <your guess>",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762416485/Screenshot_2025-11-06_at_9.07.21_qpfubu.png',
+                            description: 'Access denied - keypad screen',
+                            hint: 'Need web authentication'
+                        }
+                    }
+                }
+            ],
+
+            // 7. CLOSE - Close open door
+            onClose: {
+                conditions: [{ type: 'STATE', entityId: 'obj_hidden_door', key: 'isOpen', equals: true }],
+                success: {
+                    message: "You swing the door shut. But why? The girl is still inside. Open it again."
+                },
+                fail: {
+                    message: "Already closed and locked."
+                }
+            },
+
+            // 8. MOVE - Can't move door
+            onMove: {
+                fail: {
+                    message: "Built into the wall. Not moving. Try entering the PASSWORD."
+                }
+            },
+
+            // 9. BREAK - Reinforced
+            onBreak: {
+                fail: {
+                    message: "Reinforced steel. You'd need explosives. Try the PASSWORD instead."
+                }
+            },
+
+            // 10. READ - Read keypad
+            onRead: {
+                success: {
+                    message: "Digital keypad. Small screen reads: 'ENTER PASSPHRASE'. Numbers 0-9. No hints. Use: /password <your guess>"
+                }
+            },
+
+            // 11. SEARCH - Search/check the door more carefully (provides password hint)
+            onSearch: {
+                success: {
+                    message: "You examine the keypad closely. No worn keys. No fingerprints. Clean. Professional.\n\nThe screen flickers briefly: 'HINT: Justice demands remembrance.' Then back to 'ENTER PASSPHRASE'.\n\nThink: What connects all the clues? The chalkboard, the books, the newspaper article... Justice for who?\n\nUse: /password <your full answer>",
+                    media: {
+                        url: 'https://images.unsplash.com/photo-1614359953614-dcf28bc61b80?w=600',
+                        description: 'Hidden door with digital keypad',
+                        hint: 'Justice demands remembrance...'
+                    }
+                }
+            },
+
+            // Password submission handler - UNLOCKS but does NOT open
+            onPasswordSubmit: {
+                success: {
+                    message: "Keypad beeps. Green light flashes. Locks disengage—heavy metallic clunks echo in sequence. Click. Click. Click.\n\nThe screen reads: 'ACCESS GRANTED'\n\nDoor's unlocked. Still closed. A handle waits. You can OPEN it now.",
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762416677/hidden_door_access_granted_c2mkro.jpg',
+                        description: 'Access granted - door unlocked',
+                        hint: 'Green light - access granted'
+                    },
+                    effects: [
+                        { type: 'SET_FLAG', flag: 'hidden_door_unlocked', value: true },
+                        { type: 'SET_ENTITY_STATE', entityId: 'obj_hidden_door', patch: { isLocked: false } }
+                    ]
+                },
+                fail: {
+                    message: "Keypad beeps. Red light flashes. \n\n'ACCESS DENIED' It seems the password is wrong.\n\nTry again. Use: /password <your guess>",
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762416485/Screenshot_2025-11-06_at_9.07.21_qpfubu.png',
+                        description: 'Access denied - incorrect password',
+                        hint: 'Red light - access denied'
+                    }
+                }
+            },
+
+            defaultFailMessage: "A hidden door with a digital keypad. Try: EXAMINE it, OPEN it, or enter /password <your guess>."
+        },
+        hints: {
+            subtle: "A hidden door with a keypad. Someone went to great lengths to conceal this.",
+            medium: "The hidden door needs a password. Search the cafe for clues about justice and remembrance.",
+            direct: "Use /password Justice for Rose Carmichael to unlock the door, then open it."
+        },
+        design: {
+            authorNotes: "Hidden door revealed after moving bookshelf. Unlocks with 'Justice for Rose Carmichael'. Contains victim NPC and tablet.",
+            tags: ['door', 'hidden', 'locked', 'puzzle']
+        },
+        version: { schema: "1.0", content: "1.0" }
+    },
+
+    // NEW: Business Card - Photographable Object (not takable)
+    ['obj_business_card' as GameObjectId]: {
+        id: 'obj_business_card' as GameObjectId,
+        name: 'Business Card',
+        alternateNames: ['business card', 'musicians card', 'saxo card', 'sax card', 'card'],
+        archetype: 'Clue',
+        description: 'A simple business card for a musician. It reads: "S A X O - The World\'s Best Sax Player". A phone number is listed, along with a handwritten number "1943" and the name "ROSE".',
+        capabilities: {
+            openable: false,
+            lockable: false,
+            breakable: false,
+            container: false,
+            movable: false,
+            searchable: false,
+            inputtable: false,
+            powerable: false,
+            readable: true,
+            usable: false,
+            combinable: false,
+            passage: false,
+            takable: false,  // Can't take it - must photograph!
+            camera: false,
+            photographable: true  // NEW: Can be photographed
+        },
+        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default', isVisible: false },  // Hidden until Barista reveals it
+        placement: { parentId: 'obj_counter' as GameObjectId },  // Child of counter - sitting ON the counter
+        handlers: {
+            // EXAMINE - Visual inspection
+            onExamine: {
+                success: {
+                    message: "Standard business card. White cardstock, slightly worn at the edges. Professional print job—clean typography, bold lettering. But there's something handwritten in the corner. Blue ink, hasty scrawl. Someone added notes after it was printed.",
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1764591662/business_card_jtor2e.jpg',
+                        description: 'Business card for saxophone player',
+                        hint: 'ROSE and 1943 written by hand'
+                    }
+                }
+            },
+
+            // TAKE - Barista won't let you take it
+            onTake: {
+                fail: {
+                    message: "The barista says, \"Sorry, that belongs to my boss. But feel free to take a picture if you want.\"\n\nHint: Try USE PHONE ON BUSINESS CARD"
+                }
+            },
+
+            // READ - Read the card content
+            onRead: {
+                success: {
+                    message: "Printed text reads:\n\n\"S A X O\nThe World's Best Sax Player\"\n\nPhone number listed below. But in the corner, handwritten in blue ink:\n\n\"1943\"\n\"ROSE\"\n\nRose. That name keeps appearing. And 1943—a year? A code? This means something.",
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1764591662/business_card_jtor2e.jpg',
+                        description: 'Business card for saxophone player',
+                        hint: 'ROSE and 1943 written by hand'
+                    }
+                }
+            },
+
+            defaultFailMessage: "Musician's business card. Clues: ROSE and 1943. Try: EXAMINE it, READ it, or USE PHONE ON it to photograph."
+        },
+        hints: {
+            subtle: "That business card on the counter looks interesting. Someone wrote something on it.",
+            medium: "The business card has handwritten notes - ROSE and 1943. You should read or photograph it.",
+            direct: "Read the business card to see the clues, or use your phone on it to take a photo."
+        },
+        media: {
+            images: {
+                default: {
+                    url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1764591662/business_card_jtor2e.jpg',
+                    description: 'A business card for a saxophone player.',
+                    hint: 'business card with ROSE and 1943'
+                }
+            }
+        },
+        design: {
+            authorNotes: "Connects to the saxophonist. Must be photographed instead of taken. Teaches photography mechanic.",
+            tags: ['card', 'clue', 'photographable']
+        },
+        version: { schema: "1.0", content: "1.0" }
+    }
+};
+
+const items: Record<ItemId, Item> = {
+    'item_player_phone': {
+        id: 'item_player_phone' as ItemId,
+        name: 'Phone',
+        alternateNames: ['phone', 'smartphone', 'cell phone', 'mobile', 'fbi phone', 'my phone', 'fbi smartphone'],
+        archetype: 'Tool',
+        description: "Your standard-issue FBI smartphone. It has a camera, secure messaging, and a slot for external media.",
+        capabilities: { isTakable: false, isReadable: false, isUsable: true, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false, isCamera: true },
+        state: { currentStateId: 'default' },
+        media: {
+            images: {
+                default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762705398/Pulls_out_Phone_zrekhi.png', description: 'FBI-issue smartphone', hint: 'fbi phone' }
+            }
+        },
+        handlers: {
+            // EXAMINE - Visual inspection
+            onExamine: {
+                success: {
+                    message: "FBI-issue smartphone. Camera, secure messaging, media slot. Standard kit. Always in your pocket.\n\nYou can USE PHONE to enter phone mode and make calls."
+                }
+            },
+
+            // USE - Enter phone mode
+            onUse: {
+                success: {
+                    message: "You take out your FBI phone. The screen lights up.",
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762705398/Pulls_out_Phone_zrekhi.png',
+                        description: 'Pulling out FBI phone from jacket',
+                        hint: 'Taking out phone'
+                    },
+                    effects: [
+                        { type: 'SET_DEVICE_FOCUS', deviceId: 'item_player_phone' as ItemId },
+                        {
+                            type: 'SHOW_MESSAGE',
+                            speaker: 'system',
+                            content: 'Phone Mode Active\n\nType CALL <number> to dial.\nType TAKE PHOTO of ITEM for picture time.\n\nType PUT PHONE AWAY or CLOSE PHONE when done.'
+                        }
+                    ]
+                }
+            },
+
+            // Call Handler - Dial phone numbers (only works in device focus mode)
+            onCall: [
+                {
+                    // SUCCESS: Lili revealed the missing digits
+                    phoneNumber: '555-444-2025',
+                    conditions: [
+                        { type: 'FLAG', flag: 'victim_revealed_digits', value: true }
+                    ],
+                    success: {
+                        message: "Your fingers hover over the keypad. This is it—the moment everything converges. The note. The girl. The café. All roads led here, to these ten digits.\n\n5... 5... 5... 4... 4... 4...\n\nYour hand trembles. Adrenaline surges through your veins. You don't know what's waiting on the other end of this line. Danger? Truth? A trap?\n\n2... 0... 2... 5.\n\nYou press CALL.\n\nThe line clicks. Static hisses. Your breath catches in your throat. Then—a voice. Cold. Measured. Deliberate. A chill runs down your spine.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1762703179/CH_I___Villain___Voice_Message_du7fsn.mp3',
+                            description: 'Voice message from the villain',
+                            hint: 'Villain audio message',
+                            type: 'audio'
+                        },
+                        effects: [
+                            { type: 'SET_FLAG', flag: 'villain_called', value: true },
+                            { type: 'SET_FLAG', flag: 'chapter_1_complete', value: true },
+                            { type: 'ADD_ITEM', itemId: 'item_audio_message' as ItemId },
+                            { type: 'SHOW_MESSAGE', speaker: 'narrator', content: "The call ends abruptly. Silence floods back. Your heart pounds. The voice echoes in your mind—cold, calculating, patient. He's been watching. Waiting. Testing.\n\nYou're not hunting him.\n\nHe's hunting you." }
+                        ]
+                    },
+                    fail: {
+                        message: "You have the first 7 digits: 555-444. But the last four are scratched out on the note. You need to find the missing piece."
+                    }
+                },
+                {
+                    // Partial number - player found note but not last 4 digits
+                    phoneNumber: '555-444',
+                    conditions: [
+                        { type: 'FLAG', flag: 'note_dropped_from_book', value: true }
+                    ],
+                    success: {
+                        message: "You try dialing 555-444, but that's not enough. You need the complete 10-digit number. The last four digits are scratched out on the note. Find the missing piece."
+                    }
+                },
+                {
+                    // Default fallback - wrong number (plays automated message)
+                    phoneNumber: '*',
+                    conditions: [],
+                    success: {
+                        message: "You dial the number.\n\n[Automated voice]: \"The number you have dialed is currently not available. Please check the number and try again.\"\n\nThe line goes dead.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1762705354/wrong_number_kazuze.mp3',
+                            description: 'Automated wrong number message',
+                            hint: 'Number not available',
+                            type: 'audio'
+                        }
+                    }
+                }
+            ],
+
+            // Fallback
+            defaultFailMessage: "The phone's a tool. Try USING it ON something that needs it, or CALL a phone number."
+        },
+        hints: {
+            subtle: "Your FBI phone is a versatile tool. It can read media and take photos.",
+            medium: "Use your phone to read SD cards, take photos of objects, or make calls.",
+            direct: "Use phone to activate it, then read SD cards, take photos, or call phone numbers you find."
+        },
+        design: {
+            authorNotes: "Universal tool/key for media devices and locked objects throughout the game.",
+            tags: ['phone', 'device', 'tool', 'key']
+        },
+        version: { schema: "1.0", content: "3.0" }
+    },
+    'item_audio_message': {
+        id: 'item_audio_message' as ItemId,
+        name: 'Voicemail Recording',
+        alternateNames: ['voicemail', 'voice message', 'recording', 'audio message', 'villain message', 'message', 'call recording'],
+        archetype: 'Document',
+        description: 'Recorded voicemail from 555-444-2025. That voice... cold, precise. Every word chosen deliberately.',
+        capabilities: { isTakable: false, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+        state: { currentStateId: 'default', readCount: 0 },
+        media: {
+            images: {
+                default: {
+                    url: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1762703179/CH_I___Villain___Voice_Message_du7fsn.mp3',
+                    description: 'Audio recording of villain voicemail',
+                    hint: 'Voice message from unknown caller',
+                    type: 'audio'
+                }
+            }
+        },
+        handlers: {
+            // EXAMINE - Inspect the recording
+            onExamine: {
+                success: {
+                    message: "Voicemail from 555-444-2025. Timestamp: Tonight. Duration: 47 seconds. That voice—who is this?"
+                }
+            },
+
+            // READ - Listen to the message again
+            onRead: {
+                success: {
+                    message: "You listen to the voicemail again.\n\n[AUDIO PLAYS]\n\n\"Well, well. Agent Burt Macklin. Congratulations. You've proven to be a worthy opponent. You found my little puzzle. Clever.\n\nYou may have won this round, but the game is far from over. More rounds are to come. I'll keep you busy, detective. Very busy.\n\nJustice... Justice will be served. For Rose. For Silas. For all of them.\n\nUntil next time.\"\n\nThat voice—cold, precise. Every word chosen deliberately. Who is this?",
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1762703179/CH_I___Villain___Voice_Message_du7fsn.mp3',
+                        description: 'Replaying villain voicemail',
+                        hint: 'Audio message',
+                        type: 'audio'
+                    },
+                    effects: [
+                        { type: 'INCREMENT_ITEM_READ_COUNT', itemId: 'item_audio_message' }
+                    ]
+                }
+            },
+
+            // TAKE - Can't take digital recordings
+            onTake: {
+                fail: {
+                    message: "It's a digital recording stored on your phone. Already in your call history."
+                }
+            },
+
+            // USE - Can't use recordings
+            onUse: {
+                fail: {
+                    message: "It's an audio recording. Try READ or EXAMINE to listen to it again."
+                }
+            },
+
+            // Fallback
+            defaultFailMessage: "It's a voicemail recording. Try: EXAMINE to see details, or READ to listen again."
+        },
+        hints: {
+            subtle: "You received a mysterious voicemail. Worth listening to again.",
+            medium: "The voice message contains important clues about the case. Try reading it.",
+            direct: "Read or examine the audio message to hear the villain's message again."
+        },
+        design: {
+            authorNotes: "Villain's first contact - Chapter 1 climax. Digital item (not takeable, stays in phone).",
+            tags: ['audio', 'clue', 'villain', 'chapter-end']
+        },
+        version: { schema: "1.0", content: "1.0" }
+    },
+    'item_iron_pipe': {
+        id: 'item_iron_pipe' as ItemId,
+        name: 'Iron Pipe',
+        alternateNames: ['iron pipe', 'pipe', 'heavy pipe', 'metal pipe'],
+        archetype: 'Tool',
+        description: 'A heavy iron pipe. Iron pipes come in handy to open or break things.',
+        capabilities: { isTakable: true, isReadable: false, isUsable: true, isCombinable: false, isConsumable: true, isScannable: false, isAnalyzable: false, isPhotographable: false },
+        state: { currentStateId: 'revealed', readCount: 0 },  // Initial state when revealed
+        media: {
+            images: {
+                revealed: {
+                    url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761261134/iron_pipe_bpcofa.png',
+                    description: 'A heavy iron pipe leaning against the wall behind the chalkboard.',
+                    hint: 'iron pipe behind chalkboard'
+                },
+                taken: {
+                    // Uses system generic "put in pocket" image
+                    url: undefined as any,  // Will use systemMedia.take.success
+                    description: 'Iron pipe in your possession',
+                    hint: 'iron pipe taken'
+                }
+            }
+        },
+        handlers: {
+            // 1. EXAMINE - Visual inspection
+            onExamine: {
+                success: {
+                    message: "Heavy iron pipe. Cold steel, rust at joints. Solid weight. The kind of tool that solves problems without keys.",
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761261134/iron_pipe_bpcofa.png',
+                        description: 'Heavy iron pipe',
+                        hint: 'Useful for breaking things...'
+                    }
+                }
+            },
+
+            // 2. TAKE - Pick it up
+            onTake: {
+                success: {
+                    message: "Pipe falls into your hands. Heavy. Brutal. Perfect.",
+                    effects: [
+                        { type: 'ADD_ITEM', itemId: 'item_iron_pipe' },
+                        { type: 'SET_ENTITY_STATE', entityId: 'item_iron_pipe', patch: { currentStateId: 'taken', taken: true } }
+                    ]
+                },
+                fail: {
+                    message: "Already have it."
+                }
+            },
+
+            // 3. DROP - Drop it
+            onDrop: {
+                success: {
+                    message: "You drop the pipe. Clangs on the floor. Always can pick it up later."
+                }
+            },
+
+            // 4. USE - Use on object (requires target)
+            onUse: {
+                fail: {
+                    message: "Pipe's for breaking things. USE it ON something—like a jammed panel or stuck lock."
+                }
+            },
+
+            // 6. OPEN - Can't open a pipe
+            onOpen: {
+                fail: {
+                    message: "It's a pipe, not a container. Try USING it ON something to break it open."
+                }
+            },
+
+            // 7. CLOSE - Can't close a pipe
+            onClose: {
+                fail: {
+                    message: "Nothing to close. Try USING it ON something."
+                }
+            },
+
+            // 8. MOVE - Just reposition
+            onMove: {
+                fail: {
+                    message: "It's in your hands. Try USING it ON something."
+                }
+            },
+
+            // 9. BREAK - Can't break the pipe itself
+            onBreak: {
+                fail: {
+                    message: "Solid steel. You're not breaking this. It's for breaking OTHER things. Try USING it ON something."
+                }
+            },
+
+            // 10. READ - No text
+            onRead: {
+                fail: {
+                    message: "No markings. Just a pipe. Try EXAMINING or USING it."
+                }
+            },
+
+            // 11. SEARCH - Nothing to search
+            onSearch: {
+                fail: {
+                    message: "It's a pipe. Solid. Nothing hidden inside. Try USING it ON something."
+                }
+            },
+
+            // 12. TALK - Can't talk to pipe
+            onTalk: {
+                fail: {
+                    message: "The pipe's silent. But it speaks volumes when you USE it."
+                }
+            },
+
+            // Fallback
+            defaultFailMessage: "The pipe's a tool. Try: EXAMINE it, or USE it ON an object to break it open."
+        },
+        hints: {
+            subtle: "This heavy iron pipe could be useful for forcing things open.",
+            medium: "The iron pipe is perfect for breaking stubborn objects. Try using it on something that won't open.",
+            direct: "Use the iron pipe on the coffee machine to break it open and find what's hidden inside."
+        },
+        design: {
+            authorNotes: "Tool for breaking objects like the coffee machine.",
+            tags: ['pipe']
+        },
+        version: { schema: "1.0", content: "1.0" }
+    },
+    'item_magazine': {
+        id: 'item_magazine' as ItemId,
+        name: 'Magazine',
+        alternateNames: ['magazine', 'entertainment magazine', 'weekly', 'mag'],
+        archetype: 'Document',
+        description: 'A discarded magazine lies on an empty table.',
+        capabilities: { isTakable: true, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+        state: { currentStateId: 'default', readCount: 0 },
+        media: {
+            images: {
+                default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762762629/Magazine_vb6chv.png', description: 'A magazine on a table.', hint: 'magazine' }
+            }
+        },
+        handlers: {
+            // 1. EXAMINE - Visual inspection
+            onExamine: {
+                success: {
+                    message: "Entertainment weekly. Glossy cover. Celebrity gossip, local events, restaurant reviews. Metropolis life. Not your case—just cafe atmosphere.",
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762762629/Magazine_vb6chv.png',
+                        description: 'Local entertainment magazine',
+                        hint: 'Background noise, not evidence'
+                    }
+                }
+            },
+
+            // 2. TAKE - Standard takeable
+            onTake: {
+                success: {
+                    message: "You pick up the magazine. Old news, but might pass the time later. It goes in your coat pocket.",
+                    effects: [
+                        { type: 'ADD_ITEM', itemId: 'item_magazine' },
+                        { type: 'SET_ENTITY_STATE', entityId: 'item_magazine', patch: { taken: true } }
+                    ]
+                },
+                fail: {
+                    message: "Already have it."
+                }
+            },
+
+            // 3. DROP
+            onDrop: {
+                success: {
+                    message: "You toss the magazine aside. Not like you were gonna read it anyway."
+                }
+            },
+
+            // 4. USE - No item usage
+            onUse: {
+                fail: {
+                    message: "It's for reading. Try EXAMINING or READING it."
+                }
+            },
+
+            // 6. OPEN - Open the magazine
+            onOpen: {
+                success: {
+                    message: "You flip it open. Articles on nightlife, food scene, weekend events. The usual. Nothing relevant to the case.",
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762762629/Magazine_onRead_ucw5lk.png',
+                        description: 'Open entertainment magazine showing articles and ads',
+                        hint: 'Just cafe reading material'
+                    }
+                }
+            },
+
+            // 7. CLOSE
+            onClose: {
+                success: {
+                    message: "You close it. Nothing of interest anyway."
+                }
+            },
+
+            // 8. MOVE
+            onMove: {
+                fail: {
+                    message: "It's in your pocket. Already moved."
+                }
+            },
+
+            // 9. BREAK
+            onBreak: {
+                fail: {
+                    message: "Why tear up a magazine? Just toss it if you don't want it."
+                }
+            },
+
+            // 10. READ - Read the magazine
+            onRead: {
+                success: {
+                    message: "You skim the pages. Event listings, restaurant ads, a think piece on urban renewal. Metropolis life documented, preserved in glossy print. Nothing connects to your case. Just background noise.",
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762762629/Magazine_onRead_ucw5lk.png',
+                        description: 'Reading the entertainment magazine',
+                        hint: 'Just cafe reading material'
+                    }
+                }
+            },
+
+            // 11. SEARCH
+            onSearch: {
+                success: {
+                    message: "You flip through pages. Ads, articles, event listings. Nothing relevant to the case. Just cafe reading."
+                }
+            },
+
+            // 12. TALK
+            onTalk: {
+                fail: {
+                    message: "Magazines don't chat. Try READING it."
+                }
+            },
+
+            // Fallback
+            defaultFailMessage: "The magazine's just atmosphere. Try: EXAMINE, READ, or DROP it."
+        },
+        hints: {
+            subtle: "A magazine left on the table. Probably not important, but you could take a look.",
+            medium: "The magazine seems like background noise. You can examine or read it if you're curious.",
+            direct: "The magazine is just atmosphere - it won't help solve the case. Focus on other clues."
+        },
+        design: {
+            authorNotes: "Flavor item to build atmosphere. Not relevant to the case.",
+            tags: ['magazine', 'paper']
+        },
+        version: { schema: "1.0", content: "1.0" }
+    },
+    'item_recip_saw': {
+        id: 'item_recip_saw' as ItemId,
+        name: 'Reciprocating Saw',
+        alternateNames: ['reciprocating saw', 'recip saw', 'saw', 'power saw', 'electric saw', 'sawzall'],
+        archetype: 'Tool',
+        description: 'A reciprocating saw with a fresh blade. Perfect for cutting through metal.',
+        capabilities: { isTakable: true, isReadable: false, isUsable: true, isCombinable: false, isConsumable: true, isScannable: false, isAnalyzable: false, isPhotographable: false },
+        state: { currentStateId: 'revealed', readCount: 0 },
+        media: {
+            images: {
+                revealed: {
+                    url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759604596/recip_saw.png',
+                    description: 'A reciprocating saw in the drawer.',
+                    hint: 'power saw for cutting'
+                },
+                taken: {
+                    url: undefined as any,  // Will use systemMedia.take.success
+                    description: 'Reciprocating saw in your possession',
+                    hint: 'saw taken'
+                }
+            }
+        },
+        handlers: {
+            onExamine: {
+                success: {
+                    message: "Reciprocating saw. Fresh blade. Corded. The kind contractors use for demolition. Cut through pipe, rebar, whatever. Blade's sharp—ready to work."
+                }
+            },
+            onTake: {
+                success: {
+                    message: "You grab the saw. Heavy. Professional grade. This'll cut through just about anything. You close the drawer—y'know? Just to make sure nobody hurts himself. Safety first after all.",
+                    effects: [
+                        { type: 'ADD_ITEM', itemId: 'item_recip_saw' },
+                        { type: 'SET_ENTITY_STATE', entityId: 'item_recip_saw', patch: { currentStateId: 'taken', taken: true } },
+                        { type: 'SET_ENTITY_STATE', entityId: 'obj_drawer', patch: { isOpen: false, currentStateId: 'closed' } }
+                    ]
+                },
+                fail: {
+                    message: "Already have it."
+                }
+            },
+            defaultFailMessage: "A reciprocating saw. Try: EXAMINE, TAKE, or USE it on something to cut."
+        },
+        hints: {
+            subtle: "A power saw hidden in the drawer. Could be useful for cutting through tough materials.",
+            medium: "The reciprocating saw is perfect for cutting through metal or other hard materials.",
+            direct: "Take the reciprocating saw from the drawer and use it on objects that need cutting."
+        },
+        design: {
+            authorNotes: "Power tool for cutting through iron pipe or other metal obstacles. Alternative to brute force.",
+            tags: ['tool', 'power tool', 'cutting']
+        },
+        version: { schema: "1.0", content: "1.0" }
+    },
+    'item_safe_key': {
+        id: 'item_safe_key' as ItemId,
+        name: 'Brass Key',
+        alternateNames: ['brass key', 'key', 'small key', 'ornate key', 'safe key'],
+        archetype: 'Key',
+        description: 'A small, ornate brass key. It looks like it might fit the wall safe behind the painting.',
+        capabilities: { isTakable: true, isReadable: true, isUsable: true, isCombinable: false, isConsumable: true, isScannable: false, isAnalyzable: false, isPhotographable: false },
+        media: {
+            image: {
+                url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761211151/deposit_box_key_f5g2k2.png',
+                description: 'A small brass key for the wall safe.',
+                hint: 'wall safe key'
+            }
+        },
+        handlers: {
+            // 1. EXAMINE - Visual inspection
+            onExamine: {
+                success: {
+                    message: "Small brass key. Ornate. No markings. Made for a safe, not a door. Looks like it fits the wall safe.",
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761211151/deposit_box_key_f5g2k2.png',
+                        description: 'Brass key for wall safe',
+                        hint: 'For the wall safe behind the painting'
+                    }
+                }
+            },
+
+            // 2. TAKE - Pick it up
+            onTake: {
+                success: {
+                    message: "Brass key goes in your pocket. One step closer.",
+                    effects: [
+                        { type: 'ADD_ITEM', itemId: 'item_safe_key' },
+                        { type: 'SET_ENTITY_STATE', entityId: 'item_safe_key', patch: { taken: true } },
+                        { type: 'SET_ENTITY_STATE', entityId: 'obj_coffee_machine', patch: { currentStateId: 'broken_empty' } }
+                    ]
+                },
+                fail: {
+                    message: "Already have it."
+                }
+            },
+
+            // 3. DROP - Drop it
+            onDrop: {
+                success: {
+                    message: "Key clinks on the floor. Can pick it up later."
+                }
+            },
+
+            // 4. USE - Use on safe (needs target)
+            onUse: {
+                fail: {
+                    message: "USE it ON the wall safe. Key needs a lock."
+                }
+            },
+
+            // 6. OPEN - Can't open a key
+            onOpen: {
+                fail: {
+                    message: "Keys open locks, not themselves. Try USING it ON the safe."
+                }
+            },
+
+            // 7. CLOSE - Can't close a key
+            onClose: {
+                fail: {
+                    message: "Nothing to close. Try USING it ON the safe."
+                }
+            },
+
+            // 8. MOVE - Just reposition
+            onMove: {
+                fail: {
+                    message: "It's in your pocket. Try USING it ON the safe."
+                }
+            },
+
+            // 9. BREAK - Don't break the key
+            onBreak: {
+                fail: {
+                    message: "Break the key? Then how do you open the safe? Try USING it."
+                }
+            },
+
+            // 10. READ - No text on key
+            onRead: {
+                success: {
+                    message: "No markings. No labels. Just brass. Made for the wall safe."
+                }
+            },
+
+            // 11. SEARCH - Nothing to search
+            onSearch: {
+                fail: {
+                    message: "It's a key. Solid brass. Nothing hidden. Try USING it ON the safe."
+                }
+            },
+
+            // 12. TALK - Can't talk to key
+            onTalk: {
+                fail: {
+                    message: "Keys don't talk. Try USING it ON the safe."
+                }
+            },
+
+            // Fallback
+            defaultFailMessage: "The key's for the wall safe. Try: EXAMINE it, or USE it ON the safe."
+        },
+        hints: {
+            subtle: "This brass key looks like it might fit a safe somewhere.",
+            medium: "The brass key is meant for the wall safe. You should use it there.",
+            direct: "Use the brass key on the wall safe behind the painting to open it."
+        },
+        design: {
+            authorNotes: "Key found inside the broken coffee machine. Opens the wall safe behind the painting.",
+            tags: ['key']
+        },
+        version: { schema: "1.0", content: "1.1" }
+    },
+    // DEPRECATED: Business card is now a photographable GameObject (obj_business_card)
+    // 'item_business_card': {
+    //     id: 'item_business_card' as ItemId,
+    //     name: 'Business Card',
+    //     alternateNames: ['business card', 'musicians card', 'saxo card', 'sax card'],
+    //     archetype: "Personal",
+    //     description: 'A simple business card for a musician. It reads: "S A X O - The World\'s Best Sax Player". A phone number is listed, along with a handwritten number "1943" and the name "ROSE".',
+    //     alternateDescription: "The musician's business card. That name, 'ROSE', and the number '1943' seem significant.",
+    //     capabilities: { isTakable: true, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+    //     handlers: {
+    //         // 1. EXAMINE - Visual inspection (physical condition)
+    //         onExamine: {
+    //             success: {
+    //                 message: "Standard business card. White cardstock, slightly worn at the edges. Professional print job—clean typography, bold lettering. But there's something handwritten in the corner. Blue ink, hasty scrawl. Someone added notes after it was printed.",
+    //                 media: {
+    //                     url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759241477/Screenshot_2025-09-30_at_15.46.02_fuk4tb.png',
+    //                     description: 'Business card for saxophone player',
+    //                     hint: 'ROSE and 1943 written by hand'
+    //                 }
+    //             }
+    //         },
+
+    //         // 2. TAKE - Pick it up
+    //         onTake: {
+    //             success: {
+    //                 message: "Card goes in your pocket. S A X O. ROSE. 1943. Pieces of the puzzle."
+    //             },
+    //             fail: {
+    //                 message: "Already have it."
+    //             }
+    //         },
+
+    //         // 3. DROP - Drop it
+    //         onDrop: {
+    //             success: {
+    //                 message: "Card drops. Tiny. Can pick it up later."
+    //             }
+    //         },
+
+    //         // 4. USE - Can't use business card
+    //         onUse: {
+    //             fail: {
+    //                 message: "It's a business card. Try READING it or EXAMINING it."
+    //             }
+    //         },
+
+    //         // 6. OPEN - Can't open card
+    //         onOpen: {
+    //             fail: {
+    //                 message: "It's flat. Try READING it."
+    //             }
+    //         },
+
+    //         // 7. CLOSE - Can't close card
+    //         onClose: {
+    //             fail: {
+    //                 message: "Nothing to close. Try READING it."
+    //             }
+    //         },
+
+    //         // 8. MOVE - Just reposition
+    //         onMove: {
+    //             fail: {
+    //                 message: "It's in your pocket. Try READING it."
+    //             }
+    //         },
+
+    //         // 9. BREAK - Don't destroy evidence
+    //         onBreak: {
+    //             fail: {
+    //                 message: "Evidence. Don't destroy it. Try READING it."
+    //             }
+    //         },
+
+    //         // 10. READ - Read the card (quoted content)
+    //         onRead: {
+    //             success: {
+    //                 message: "Printed text reads:\n\n\"S A X O\nThe World's Best Sax Player\"\n\nPhone number listed below. But in the corner, handwritten in blue ink:\n\n\"1943\"\n\"ROSE\"\n\nRose. That name keeps appearing. And 1943—a year? A code? This means something.",
+    //                 media: {
+    //                     url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759241477/Screenshot_2025-09-30_at_15.46.02_fuk4tb.png',
+    //                     description: 'Business card for saxophone player',
+    //                     hint: 'ROSE and 1943 written by hand'
+    //                 }
+    //             }
+    //         },
+
+    //         // 11. SEARCH - Nothing to search
+    //         onSearch: {
+    //             fail: {
+    //                 message: "It's a card. Flat. Try READING it."
+    //             }
+    //         },
+
+    //         // 12. TALK - Can't talk to card
+    //         onTalk: {
+    //             fail: {
+    //                 message: "Cards don't talk. Try READING it."
+    //             }
+    //         },
+
+    //         // Fallback
+    //         defaultFailMessage: "Musician's business card. Clues: ROSE and 1943. Try: EXAMINE or READ it."
+    //     },
+    //     media: {
+    //         image: {
+    //             url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759241477/Screenshot_2025-09-30_at_15.46.02_fuk4tb.png',
+    //             description: 'A business card for a saxophone player.',
+    //             hint: 'business card'
+    //         }
+    //     },
+    //     design: {
+    //         authorNotes: "Connects to the saxophonist and provides the 'Rose' and '1943' clues.",
+    //         tags: ['card']
+    //     },
+    //     version: { schema: "1.0", content: "1.0" }
+    // },
+    'item_newspaper_article': {
+        id: 'item_newspaper_article' as ItemId,
+        name: 'Newspaper Article',
+        alternateNames: ['newspaper article', 'article', 'newspaper', 'clipping', 'news article', 'old article'],
+        archetype: "Document",
+        description: 'A folded newspaper article from the 1940s. The headline is about a local musician, Silas Bloom.',
+        alternateDescription: 'The old article about Silas Bloom. The mention of your family name, Macklin, still feels strange.',
+        capabilities: { isTakable: true, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+        media: {
+            images: {
+                default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762715555/Old_Newspaper_Article_uzgkoz.png', description: 'An old newspaper article about Silas Bloom from the 1940s.', hint: 'old newspaper article' }
+            }
+        },
+        handlers: {
+            // 1. EXAMINE - Visual inspection
+            onExamine: {
+                success: {
+                    message: "Folded newspaper clipping. 1940s. Brittle, yellowed. Headline about Silas Bloom, local musician.",
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762715555/Old_Newspaper_Article_uzgkoz.png',
+                        description: 'Old newspaper article from the 1940s about Silas Bloom',
+                        hint: 'Read it to learn more about the case'
+                    }
+                }
+            },
+
+            // 2. TAKE - Pick it up
+            onTake: {
+                success: {
+                    message: "Article goes in your pocket. Brittle. Old. READ it to find out what it says."
+                },
+                fail: {
+                    message: "Already have it."
+                }
+            },
+
+            // 3. DROP - Drop it
+            onDrop: {
+                success: {
+                    message: "Article drifts down. Fragile. Can pick it up later."
+                }
+            },
+
+            // 4. USE - Can't use newspaper
+            onUse: {
+                fail: {
+                    message: "It's a newspaper. Try READING it."
+                }
+            },
+
+            // 6. OPEN - Open/unfold it
+            onOpen: {
+                success: {
+                    message: "You unfold it. Same as READING it. Try READ article."
+                }
+            },
+
+            // 7. CLOSE - Close/fold it
+            onClose: {
+                success: {
+                    message: "You fold it back up. Already read it anyway."
+                }
+            },
+
+            // 8. MOVE - Just reposition
+            onMove: {
+                fail: {
+                    message: "It's in your pocket. Try READING it."
+                }
+            },
+
+            // 9. BREAK - Don't destroy evidence
+            onBreak: {
+                fail: {
+                    message: "Evidence. Fragile. Don't destroy it. Try READING it."
+                }
+            },
+
+            // 10. READ - Read the article
+            onRead: {
+                success: {
+                    effects: [
+                        { type: 'SHOW_MESSAGE', speaker: 'narrator', content: 'You unfold the clipping. Brittle, yellowed, legible. Ink faded to sepia. Smell of decades—dust, wood, forgotten time.' },
+                        { type: 'SHOW_MESSAGE', speaker: 'narrator', content: 'Newspaper article about Silas Bloom.', messageType: 'article', imageId: 'item_newspaper_article' },
+                        { type: 'SHOW_MESSAGE', speaker: 'narrator', content: 'Your eyes catch a name: Agent Macklin. FBI. 1940s. Cold realization—your grandfather. The case that defined his career... or destroyed it. This isn\'t just evidence. It\'s family history.' },
+                        { type: 'SET_FLAG', flag: 'notebook_article_read' as Flag, value: true },
+                        { type: 'SET_FLAG', flag: 'notebook_interaction_complete' as Flag, value: true }
+                    ]
+                },
+                fail: {
+                    message: "Can't read it now."
+                }
+            },
+
+            // 11. SEARCH - Can't search newspaper
+            onSearch: {
+                fail: {
+                    message: "It's a single article. Try READING it."
+                }
+            },
+
+            // 12. TALK - Can't talk to newspaper
+            onTalk: {
+                fail: {
+                    message: "Paper doesn't talk. Try READING it."
+                }
+            },
+
+            // Fallback
+            defaultFailMessage: "The article's from the 1940s. Try: EXAMINE it, or READ it."
+        },
+        hints: {
+            subtle: "An old newspaper article from the 1940s. This could be important background.",
+            medium: "This newspaper article is about Silas Bloom. Read it to learn about the case's history.",
+            direct: "Take and read the newspaper article to discover important backstory about Silas Bloom and your grandfather."
+        },
+        media: {
+            images: {
+                default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759241463/Screenshot_2025-09-30_at_15.51.35_gyj3d5.png', description: 'A folded newspaper article.', hint: 'folded article' },
+                opened: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759241463/Screenshot_2025-09-30_at_15.51.35_gyj3d5.png', description: 'An unfolded newspaper article with text visible.', hint: 'open article' }
+            }
+        },
+        design: {
+            authorNotes: "Provides the main backstory and a personal connection for the player.",
+            tags: ['article', 'newspaper', 'clipping']
+        },
+        version: { schema: "1.0", content: "1.0" }
+    },
+    'item_book_deal': {
+        id: 'item_book_deal' as ItemId,
+        name: 'The Art of the Deal',
+        alternateNames: ['art of the deal', 'deal book', 'business book', 'art of deal'],
+        archetype: 'Book',
+        description: 'A book about business with a gaudy cover.',
+        capabilities: { isTakable: false, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+        state: { readCount: 0, currentStateId: 'default' },
+        media: {
+            images: {
+                default: { url: 'https://images.stockcake.com/public/8/2/1/821cc306-132c-48ca-91e9-5d2bb356fc1e_large/ancient-closed-book-stockcake.jpg', description: 'A closed book.', hint: 'closed book' },
+                opened: { url: 'https://the-openbook.com/wp-content/uploads/2023/02/cropped-the-open-book-nieuw.jpg?w=780&h=684', description: 'An open book.', hint: 'open book' }
+            }
+        },
+        handlers: {
+            // 1. EXAMINE - Physical appearance (title and condition)
+            onExamine: {
+                success: {
+                    message: '"The Art of the Deal" screams from the spine in bold gold lettering. Hardcover, glossy dust jacket—red and black, corporate aggressive. The kind of book designed to intimidate from across a boardroom table. Corner-office swagger bound in cloth. Pages crisp, barely cracked. Display piece, not reading material. All style, no substance.',
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1764021116/Screenshot_2025-11-24_at_22.46.38_gki3mx.png',
+                        description: 'The Art of the Deal - business book with bold red and black cover',
+                        hint: 'The Art of the Deal'
+                    }
+                }
+            },
+            // 2. TAKE
+            onTake: { fail: { message: "Cafe property. It stays on the shelf. If you're curious, try READING it instead of pocketing it." } },
+            // 4. USE
+            onUse: { fail: { message: "It's a book, not a weapon. Use your eyes and READ it if you're interested." } },
+            // 6. OPEN - Open the book (same as reading first page)
+            onOpen: {
+                success: {
+                    message: "You crack open the book. Pages smell like old paper and broken dreams. Chapter 1: 'Think Big.' Motivational drivel about making deals and winning. You skim a few paragraphs. Nothing useful for the case. Just ego and platitudes.",
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762712221/Book_Deal_1_ui3swk.png',
+                        description: 'First page of The Art of the Deal',
+                        hint: 'Business book page 1'
+                    }
+                }
+            },
+            // 7. CLOSE
+            onClose: { success: { message: "You snap it shut. The wisdom inside remains safely trapped between covers." } },
+            // 8. MOVE
+            onMove: { fail: { message: "It's decorating the shelf. If you want it, READ it. Don't rearrange the furniture." } },
+            // 9. BREAK
+            onBreak: { fail: { message: "Destroying cafe property won't solve your case. Try READING it instead, like a civilized detective." } },
+            // 10. READ - Uses stateMap for progressive content
+            // 11. SEARCH
+            onSearch: { fail: { message: "It's a book, not a puzzle box. Try READING it if you want answers." } },
+            // 12. TALK
+            onTalk: { fail: { message: "Books don't talk back. That's what makes them better than most people. Try READING it." } },
+            defaultFailMessage: "It's a book on the shelf. Try: EXAMINE or READ it."
+        },
+        stateMap: {
+            'read0': {
+                media: {
+                    images: {
+                        default: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762712221/Book_Deal_1_ui3swk.png',
+                            description: 'First page of The Art of the Deal',
+                            hint: 'Business book page 1'
+                        }
+                    }
+                }
+            },
+            'read1': {
+                media: {
+                    images: {
+                        default: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762712222/Book_Deal_2_q7t1to.png',
+                            description: 'Second page of The Art of the Deal',
+                            hint: 'Business book page 2'
+                        }
+                    }
+                }
+            },
+            'read2': {
+                media: {
+                    images: {
+                        default: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762712221/Book_Deal_3_nhcvda.png',
+                            description: 'Third page of The Art of the Deal',
+                            hint: 'Business book page 3'
+                        }
+                    }
+                }
+            }
+        },
+        hints: {
+            subtle: "A business book on the shelf. Probably not relevant, but you could browse it.",
+            medium: "The Art of the Deal looks like filler material. Reading it won't help your case.",
+            direct: "This book is just atmosphere - focus on clues that actually matter to solving the case."
+        },
+        design: { tags: ['book', 'distraction'] },
+        version: { schema: "1.0", content: "1.1" }
+    },
+    'item_book_fbi': {
+        id: 'item_book_fbi' as ItemId,
+        name: 'A Brief History of the FBI',
+        alternateNames: ['brief history of fbi', 'fbi history', 'fbi book', 'history book', 'brief history'],
+        archetype: 'Book',
+        description: 'A book about the history of the FBI.',
+        capabilities: { isTakable: false, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+        state: { readCount: 0, currentStateId: 'default' },
+        media: {
+            images: {
+                default: { url: 'https://images.stockcake.com/public/8/2/1/821cc306-132c-48ca-91e9-5d2bb356fc1e_large/ancient-closed-book-stockcake.jpg', description: 'A closed book.', hint: 'closed book' },
+                opened: { url: 'https://the-openbook.com/wp-content/uploads/2023/02/cropped-the-open-book-nieuw.jpg?w=780&h=684', description: 'An open book.', hint: 'open book' }
+            }
+        },
+        handlers: {
+            // 1. EXAMINE - Physical appearance (title and condition)
+            onExamine: {
+                success: {
+                    message: '"A Brief History of the FBI" stamped on the spine. Navy blue hardcover, government-issue boring. Pages yellowed, spine cracked from institutional use. The kind of book they hand you at Quantico with a PowerPoint and zero enthusiasm. "Brief" is generous—it\'s 400 pages of bureaucratic self-congratulation. Coffee stains on the cover. Someone tried to stay awake reading this. They failed.',
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1764021116/Screenshot_2025-11-24_at_22.49.32_lt7exr.png',
+                        description: 'A Brief History of the FBI - thick navy blue government textbook',
+                        hint: 'FBI History'
+                    }
+                }
+            },
+            // 2. TAKE
+            onTake: { fail: { message: "Cafe property. It belongs on the shelf, not in your pocket. Try READING it if you're curious." } },
+            // 4. USE
+            onUse: { fail: { message: "It's a book, not a tool. Books are for reading, not using. Try READ book." } },
+            // 6. OPEN - Open the book (same as reading first page)
+            onOpen: {
+                success: {
+                    message: "You flip open the cover. Foreword by some former Director you've never heard of. Chapter 1: 'The Bureau's Founding, 1908.' Dense paragraphs about bureaucracy and jurisdiction. You skim a few lines. Nothing about your case. Just institutional history.",
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762712220/Book_FBI_1_gxpv0e.png',
+                        description: 'First page of FBI history book',
+                        hint: 'FBI book page 1'
+                    }
+                }
+            },
+            // 7. CLOSE
+            onClose: { success: { message: "You shut it. Pages full of federal history go dark again." } },
+            // 8. MOVE
+            onMove: { fail: { message: "It's shelved. Leave it there. If you want content, READ it. If you want exercise, hit the gym." } },
+            // 9. BREAK
+            onBreak: { fail: { message: "Destroying cafe property won't advance your investigation. Try READING it like a rational person." } },
+            // 10. READ - Uses stateMap for progressive content
+            // 11. SEARCH
+            onSearch: { fail: { message: "It's a book, not a treasure chest. Try READING it if you want what's inside." } },
+            // 12. TALK
+            onTalk: { fail: { message: "Books don't respond. That's their charm. Try READING it instead of having a conversation with paper." } },
+            defaultFailMessage: "It's a book on the shelf. Try: EXAMINE or READ it."
+        },
+        stateMap: {
+            'read0': {
+                media: {
+                    images: {
+                        default: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762712220/Book_FBI_1_gxpv0e.png',
+                            description: 'First page of FBI history book',
+                            hint: 'FBI book page 1'
+                        }
+                    }
+                }
+            },
+            'read1': {
+                media: {
+                    images: {
+                        default: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762712220/Book_FBI_2_x59juw.png',
+                            description: 'Second page of FBI history book',
+                            hint: 'FBI book page 2'
+                        }
+                    }
+                }
+            },
+            'read2': {
+                media: {
+                    images: {
+                        default: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762712220/Book_FBI_3_vu1qey.png',
+                            description: 'Third page of FBI history book',
+                            hint: 'FBI book page 3'
+                        }
+                    }
+                }
+            }
+        },
+        hints: {
+            subtle: "An FBI history book. Might be interesting, but probably not crucial right now.",
+            medium: "This FBI history book is background reading. It won't help solve the current case.",
+            direct: "The FBI history book is just atmosphere - don't waste time on it unless you're curious."
+        },
+        design: { tags: ['book', 'distraction'] },
+        version: { schema: "1.0", content: "1.1" }
+    },
+    'item_book_justice': {
+        id: 'item_book_justice' as ItemId,
+        name: 'Justice for My Love',
+        alternateNames: ['justice for my love', 'justice book', 'romance novel', 'justice for love', 'love book'],
+        archetype: 'Book',
+        description: 'A romance novel with a cheesy cover. The title, "Justice for My Love", catches your eye.',
+        capabilities: { isTakable: false, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+        state: { readCount: 0, currentStateId: 'default' },
+        media: {
+            images: {
+                default: { url: 'https://images.stockcake.com/public/8/2/1/821cc306-132c-48ca-91e9-5d2bb356fc1e_large/ancient-closed-book-stockcake.jpg', description: 'A closed book.', hint: 'closed book' },
+                opened: { url: 'https://the-openbook.com/wp-content/uploads/2023/02/cropped-the-open-book-nieuw.jpg?w=780&h=684', description: 'An open book.', hint: 'open book' }
+            }
+        },
+        handlers: {
+            // 1. EXAMINE - Physical appearance (title and condition)
+            onExamine: {
+                success: {
+                    message: '"Justice for My Love" whispers from the cover in elegant script. Paperback, soft to the touch. Spine creased from countless readings, pages worn at the edges like love letters read too many times. The cover shows two silhouettes reaching for each other across an impossible distance—aching, desperate, eternal. Dog-eared corners mark favorite passages. Someone cherished this. Someone believed in it. That word "justice"—it pulls at you. Not just romance. Something deeper. A promise. A plea.',
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1764021117/Screenshot_2025-11-24_at_22.51.19_putza6.png',
+                        description: 'Justice for My Love - worn romance novel with emotional cover',
+                        hint: 'Justice book'
+                    }
+                }
+            },
+            // 2. TAKE
+            onTake: { fail: { message: "Cafe property. Stays on the shelf. If you're desperate for melodrama, try READING it." } },
+            // 4. USE
+            onUse: { fail: { message: "It's a romance novel, not a Swiss Army knife. Try READING it if you want entertainment." } },
+            // 6. OPEN - Open the book (same as reading first page)
+            onOpen: {
+                success: {
+                    message: "You flip it open. Chapter 1: 'A Chance Encounter.' Melodramatic prose about lovers meeting. You skim a paragraph. Standard romance fare—longing glances, forbidden love, dramatic declarations. Nothing special. But maybe there's something hidden inside...",
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762712220/Book_Justice_1_hvjtcj.png',
+                        description: 'First page of Justice for My Love',
+                        hint: 'Romance novel page 1'
+                    }
+                }
+            },
+            // 7. CLOSE
+            onClose: { success: { message: "You close it. The tale of star-crossed lovers goes dark. You're safe from their drama for now." } },
+            // 8. MOVE
+            onMove: { fail: { message: "It's on the shelf where it belongs. If you want what's inside, READ it. Don't redecorate." } },
+            // 9. BREAK
+            onBreak: { fail: { message: "Destroying cafe property solves nothing. If you hate romance novels that much, just don't READ them." } },
+            // 10. READ - Progressive content with note drop on 3rd read
+            onRead: [
+                {
+                    // First read
+                    conditions: [{ type: 'STATE', entityId: 'item_book_justice', key: 'readCount', equals: 0 }],
+                    success: {
+                        message: "",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762712220/Book_Justice_1_hvjtcj.png',
+                            description: 'First page of Justice for My Love',
+                            hint: 'Romance novel page 1'
+                        },
+                        effects: [
+                            { type: 'INCREMENT_ITEM_READ_COUNT', itemId: 'item_book_justice' }
+                        ]
+                    }
+                },
+                {
+                    // Second read
+                    conditions: [{ type: 'STATE', entityId: 'item_book_justice', key: 'readCount', equals: 1 }],
+                    success: {
+                        message: "",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762712220/Book_Justice_2_ej33rl.png',
+                            description: 'Second page of Justice for My Love',
+                            hint: 'Romance novel page 2'
+                        },
+                        effects: [
+                            { type: 'INCREMENT_ITEM_READ_COUNT', itemId: 'item_book_justice' }
+                        ]
+                    }
+                },
+                {
+                    // Third read - NOTE DROPS!
+                    conditions: [{ type: 'STATE', entityId: 'item_book_justice', key: 'readCount', equals: 2 }],
+                    success: {
+                        message: "You open the book again. As you flip through the pages, a small piece of paper flutters out and lands on the floor. You pick it up.\n\nIt's a handwritten note. Ink faded but legible. Just a phone number:\n\n555-444-XXXX\n\nThe last four digits are scratched out. Someone hid this deliberately. Why?",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762518484/counter_bookshelf_note_puesuy.png',
+                            description: 'A handwritten note falling from book pages',
+                            hint: 'Note with phone number!'
+                        },
+                        effects: [
+                            { type: 'INCREMENT_ITEM_READ_COUNT', itemId: 'item_book_justice' },
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_note_phone', parentId: 'item_book_justice' },
+                            { type: 'SET_FLAG', flag: 'note_dropped_from_book', value: true }
+                        ]
+                    }
+                },
+                {
+                    // Subsequent reads
+                    conditions: [{ type: 'STATE', entityId: 'item_book_justice', key: 'readCount', operator: '>=', value: 3 }],
+                    success: {
+                        message: "The back cover has a blurb: 'A story of love, loss, and the quest for justice.' The word 'justice' is practically leaping off the page. You already found the note.",
+                        media: {
+                            url: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600',
+                            description: 'Book back cover with blurb',
+                            hint: 'Back cover'
+                        }
+                    }
+                }
+            ],
+            // 11. SEARCH
+            onSearch: { fail: { message: "It's a book, not a puzzle. Try READING it if you want content." } },
+            // 12. TALK
+            onTalk: { fail: { message: "Books don't talk back. Small mercies. Try READING it instead." } },
+            defaultFailMessage: "Romance novel. 'Justice' in the title. Try: EXAMINE or READ it."
+        },
+        hints: {
+            subtle: "This romance novel seems out of place. Maybe read it carefully.",
+            medium: "Try reading 'Justice for My Love' multiple times. Some books hide secrets.",
+            direct: "Read this book three times to discover the hidden note inside."
+        },
+        design: { tags: ['book', 'clue'] },
+        version: { schema: "1.0", content: "1.1" }
+    },
+    'item_note_phone': {
+        id: 'item_note_phone' as ItemId,
+        name: 'Handwritten Note',
+        alternateNames: ['note', 'paper', 'phone note', 'piece of paper', 'handwritten note'],
+        archetype: 'Document',
+        description: 'A small piece of paper with a phone number written on it: 555-444-XXXX. The last four digits are scratched out.',
+        capabilities: { isTakable: true, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+        state: { readCount: 0, currentStateId: 'default' },
+        media: {
+            images: {
+                default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762518484/counter_bookshelf_note_puesuy.png', description: 'A handwritten note on aged paper.', hint: 'note with phone number' }
+            }
+        },
+        handlers: {
+            // 1. EXAMINE - Visual inspection
+            onExamine: {
+                success: {
+                    message: "Faded ink. Handwritten. Phone number: 555-444-XXXX. Last four digits scratched out deliberately. Someone wanted this hidden, but not destroyed. Why hide only part of it?"
+                }
+            },
+            // 2. TAKE - Pick it up
+            onTake: {
+                success: {
+                    message: "You pick up the note. Fragile paper, faded ink. Phone number with missing digits. A puzzle piece.",
+                    effects: [
+                        { type: 'ADD_ITEM', itemId: 'item_note_phone' },
+                        { type: 'SET_ENTITY_STATE', entityId: 'item_note_phone', patch: { taken: true } }
+                    ]
+                },
+                fail: {
+                    message: "Already have it."
+                }
+            },
+            // 3. DROP - Drop it
+            onDrop: {
+                success: {
+                    message: "Note flutters to the ground. Can pick it up later."
+                }
+            },
+            // 4. USE - Can't use note
+            onUse: {
+                fail: {
+                    message: "It's just a note. Try READING it or EXAMINING it."
+                }
+            },
+            // 6. OPEN - Already open
+            onOpen: {
+                fail: {
+                    message: "It's a single piece of paper. Already open. Try READING it."
+                }
+            },
+            // 7. CLOSE - Can't close
+            onClose: {
+                fail: {
+                    message: "It's just a slip of paper. Can't close it."
+                }
+            },
+            // 8. MOVE - Just reposition
+            onMove: {
+                fail: {
+                    message: "It's in your hands. Try READING it."
+                }
+            },
+            // 9. BREAK - Don't destroy evidence
+            onBreak: {
+                fail: {
+                    message: "Evidence. Don't destroy it. Try READING it."
+                }
+            },
+            // 10. READ - Read the note
+            onRead: {
+                success: {
+                    message: "Phone number: 555-444-XXXX\n\nThe last four digits are scratched out. Black ink, deliberate strokes. Someone didn't want the full number found easily. But why leave part of it? A test? A clue?"
+                }
+            },
+            // 11. SEARCH - Search the note
+            onSearch: {
+                success: {
+                    message: "You hold it up to the light. No watermarks. No hidden text. Just the incomplete phone number. The answer must be somewhere else."
+                }
+            },
+            // 12. TALK - Can't talk to note
+            onTalk: {
+                fail: {
+                    message: "Notes don't talk. Try READING it."
+                }
+            },
+            defaultFailMessage: "A note with an incomplete phone number. Try: EXAMINE it, READ it, or SEARCH it."
+        },
+        hints: {
+            subtle: "A note with a partially scratched-out phone number. The missing digits must be somewhere.",
+            medium: "You have the first 7 digits: 555-444. Find the last 4 digits to complete the phone number.",
+            direct: "Talk to the kidnapped girl to get the last 4 digits (2025), then call 555-444-2025 on your phone."
+        },
+        design: { tags: ['note', 'clue', 'puzzle'] },
+        version: { schema: "1.0", content: "1.0" }
+    },
+    'item_secret_document': {
+        id: 'item_secret_document' as ItemId,
+        name: 'Stolen Police File',
+        alternateNames: ['stolen police file', 'police file', 'file', 'document', 'stolen file', 'confidential file'],
+        archetype: 'Document',
+        description: "A thick police file marked 'CONFIDENTIAL - POLICE USE ONLY'. Official stamps and seals cover the folder.",
+        alternateDescription: "The stolen police file from the metal box. It contains classified investigation documents.",
+        capabilities: { isTakable: true, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+        media: {
+            images: {
+                default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762429368/CH_I___Secret_Document_Notebook_kusyq8.pdf', description: 'A stolen police file with classified investigation documents.', hint: 'police file PDF' }
+            }
+        },
+        handlers: {
+            // 1. EXAMINE - Visual inspection (physical description only)
+            onExamine: {
+                success: {
+                    message: "Thick folder. Brown manila. CONFIDENTIAL - POLICE USE ONLY stamped in faded red ink across the cover. Official seals—FBI, local PD, evidence tags. Someone put this together with care. Meticulous. Every page categorized, every photo labeled. This wasn't thrown together by some beat cop. This was built by someone with an eye for detail. Someone who knew exactly what they were looking for.\n\nStolen from law enforcement. The question is: by who? And why?",
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1764008173/brown_box_confidential_file_rwe7xu.jpg',
+                        description: 'Stolen police file - closed folder with CONFIDENTIAL stamp',
+                        hint: 'Read it to discover what the police know'
+                    }
+                }
+            },
+
+            // 2. TAKE - Pick it up
+            onTake: {
+                success: {
+                    message: "Police file goes in your hands. Heavy. CONFIDENTIAL - POLICE USE ONLY. Stolen evidence.",
+                    effects: [
+                        { type: 'ADD_ITEM', itemId: 'item_secret_document' },
+                        { type: 'SET_ENTITY_STATE', entityId: 'item_secret_document', patch: { taken: true } }
+                    ]
+                },
+                fail: {
+                    message: "Already have it."
+                }
+            },
+
+            // 3. DROP - Drop it
+            onDrop: {
+                success: {
+                    message: "Police file drops. Investigation documents scatter. Can pick it up later."
+                }
+            },
+
+            // 4. USE - Can't use document
+            onUse: {
+                fail: {
+                    message: "It's a document. Try READING it."
+                }
+            },
+
+            // 6. OPEN - Open the folder (same as read)
+            onOpen: {
+                success: {
+                    message: "You open the police file. Dense. Case reports, witness statements, crime scene photos. But wait—there's something about the cafe. Floor plans marked with investigator notes. A hidden room behind the bookshelf circled in red. Why was this being investigated?\n\nNext pages: Financial records, surveillance logs, shell corporations. All linked to one holding company: Veridian Dynamics. The police knew. They were building a case.",
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762429368/CH_I___Secret_Document_Notebook_kusyq8.pdf',
+                        type: 'pdf',
+                        description: 'Stolen police file revealing investigation into the cafe and Veridian Dynamics',
+                        hint: 'Hidden room behind bookshelf marked by police? Veridian Dynamics under investigation'
+                    },
+                    effects: [
+                        { type: 'SET_FLAG', flag: 'read_secret_document' as Flag, value: true }
+                    ]
+                }
+            },
+
+            // 7. CLOSE - Close the folder
+            onClose: {
+                success: {
+                    message: "You close the folder. Already seen what's inside anyway."
+                }
+            },
+
+            // 8. MOVE - Just reposition
+            onMove: {
+                fail: {
+                    message: "It's in your hands. Try READING it."
+                }
+            },
+
+            // 9. BREAK - Don't destroy evidence
+            onBreak: {
+                fail: {
+                    message: "Evidence. Don't destroy it. Try READING it."
+                }
+            },
+
+            // 10. READ - Read the document (same as opening for physical documents)
+            onRead: {
+                success: {
+                    message: "You flip through the pages. Dense. Case reports, witness statements, crime scene photos. But wait—there's something about the cafe. Floor plans marked with investigator notes. A hidden room behind the bookshelf circled in red. Why was this being investigated?\n\nNext pages: Financial records, surveillance logs, shell corporations. All linked to one holding company: Veridian Dynamics. The police knew. They were building a case.",
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762429368/CH_I___Secret_Document_Notebook_kusyq8.pdf',
+                        type: 'pdf',
+                        description: 'Stolen police file revealing investigation into the cafe and Veridian Dynamics',
+                        hint: 'Hidden room behind bookshelf marked by police? Veridian Dynamics under investigation'
+                    },
+                    effects: [
+                        { type: 'SET_FLAG', flag: 'read_secret_document' as Flag, value: true }
+                    ]
+                },
+                fail: {
+                    message: "Can't read it now."
+                }
+            },
+
+            // 11. SEARCH - Search through pages
+            onSearch: {
+                success: {
+                    message: "You flip through pages. Case reports, witness statements, surveillance photos. Veridian Dynamics appears in multiple investigations. This file connects everything."
+                }
+            },
+
+            // 12. TALK - Can't talk to document
+            onTalk: {
+                fail: {
+                    message: "Documents don't talk. Try READING it."
+                }
+            },
+
+            // Fallback
+            defaultFailMessage: "It's a stolen police file marked CONFIDENTIAL - POLICE USE ONLY. Try: EXAMINE it, READ it, or SEARCH through it."
+        },
+        hints: {
+            subtle: "A stolen police file marked confidential. This must contain important information.",
+            medium: "Read the stolen police file to discover information about the hidden room and Veridian Dynamics.",
+            direct: "Take and read the stolen police file to learn about the secret room behind the bookshelf."
+        },
+        design: { tags: ['file', 'document'] },
+        version: { schema: "1.0", content: "1.0" }
+    }
+};
+
+const npcs: Record<NpcId, NPC> = {
+    'npc_barista': {
+        id: 'npc_barista' as NpcId,
+        name: 'Barista',
+        alternateNames: ['barista', 'bartender', 'coffee guy', 'server', 'jake'],
+        description: 'A tired-looking man in his late 20s, with faded tattoos and a cynical arch to his eyebrow. He seems to have seen a thousand stories like yours and is not easily impressed.',
+        image: {
+            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759241505/Cafe_barrista_hpwona.png',
+            description: 'A portrait of the cafe barista.',
+            hint: 'male barista'
+        },
+        npcType: 'type1',  // Type 1: Story-critical NPC
+        importance: 'primary',
+        initialState: {
+            stage: 'active',
+            trust: 0,
+            attitude: 'neutral',
+        },
+        dialogueType: 'scripted',  // Still scripted, but using contextual system
+        persona: "You are Jake, a tired, cynical barista at The Daily Grind cafe. You've seen everything and aren't impressed by much. You're not rude, just... efficiently indifferent. You make coffee, you wipe counters, you endure your manager Brenda's exhausting positivity. When people ask about Silas Bloom (the man in the black coat), you're willing to talk - he's harmless, just another quiet regular. You're protective of customer property but practical - if someone's that interested, they can photograph it.",
+        welcomeMessage: 'What can I get for you? Or are you just here to brood? Either is fine.',
+        goodbyeMessage: "Alright, I've got Pumpkin spice lattes to craft. Good luck with... whatever it is you're doing.",
+        startConversationEffects: [{ type: 'SET_FLAG', flag: 'has_talked_to_barista' as Flag, value: true }],
+
+        // NEW: Contextual knowledge system
+        contextualKnowledge: {
+            general: [
+                "You work morning shifts, 6 AM to 2 PM",
+                "Coffee's decent, pastries day-old",
+                "Manager Brenda is exhaustingly positive",
+                "Tips pay rent + Netflix",
+                "Your name is Jake"
+            ],
+            topic: [
+                "Silas Bloom - regular, black coat",
+                "Quiet type, pays cash",
+                "Musician, plays sax",
+                "Usually 5th Street, afternoons",
+                "Carries rusty metal box everywhere",
+                "Never opens box here, just stares",
+                "Protective of that box",
+                "Player has metal box with locking mechanism",
+                "Don't know how to open the box",
+                "Don't know what's in it",
+                "Left business card few days ago",
+                "Card on counter, collecting dust",
+                "Said could toss it, kept it anyway",
+                "Maybe card has clue about box?",
+                "Card might help with player's box problem",
+                "Comes in alone, leaves alone",
+                "Orders same thing - black coffee"
+            ]
+        },
+
+        secret: {
+            info: "Hint that business card might help with the metal box - suggest player check it out",
+            revealConditions: {
+                anyOf: [
+                    { type: 'TOPIC_MENTIONS', topic: 'silas|bloom|musician|saxophone|sax|box|metal', minCount: 2 },
+                    { type: 'KEYWORDS', keywords: ['business card', 'card', 'contact', 'reach', 'number', 'phone', 'address', 'find him', 'get hold', 'left behind', 'leave anything', 'open', 'unlock', 'password', 'code', 'combination', 'how to open', 'open the box', 'open it', 'whats in', 'inside', 'clue', 'hint', 'help'] }
+                ]
+            },
+            revealEffects: [
+                { type: 'REVEAL_FROM_PARENT', entityId: 'obj_business_card' as GameObjectId, parentId: 'obj_counter' as GameObjectId },
+                { type: 'SET_FLAG', flag: 'business_card_revealed' as Flag, value: true },
+                { type: 'SHOW_MESSAGE', speaker: 'narrator', content: "The barista gestures to a business card sitting on the counter." },
+                { type: 'SHOW_MESSAGE', speaker: 'system', content: "Hint: The business card might have clues about the metal box. Try to USE PHONE to copy the business card on the counter." }
+            ]
+        },
+
+        conversationStages: {
+            active: {
+                personality: "Helpful but tired, sharing info about Silas freely, guarding the business card until conditions met",
+                maxInteractions: 10
+            },
+            completed: {
+                personality: "Brief and ready to move on, friendly but done helping",
+                defaultResponse: "I told you what I know. The card's on the counter if you want to photograph it. Now I've got work to do."
+            }
+        },
+
+        demoteRules: {
+            onFlagsAll: ['business_card_revealed' as Flag],
+            then: { setStage: 'demoted', setImportance: 'ambient' }
+        },
+
+        postCompletionProfile: {
+            welcomeMessage: "Back again? Hope you're buying something this time.",
+            goodbyeMessage: "See ya.",
+            defaultResponse: "Look, I told you what I know. I've got work to do."
+        },
+
+        fallbacks: {
+            default: "Look, I just work here. I pour coffee, I wipe counters. You're the detective.",
+            noMoreHelp: "I told you all I know. I've got work to do.",
+        },
+        hints: {
+            subtle: "The barista might have seen something. Try talking to them.",
+            medium: "Ask the barista about the metal box and recent customers.",
+            direct: "Talk to the barista about the metal box. They'll mention a business card on the counter."
+        },
+        version: { schema: "3.0", content: "2.0" }  // Updated to contextual conversation system
+    },
+    'npc_manager': {
+        id: 'npc_manager' as NpcId,
+        name: 'Cafe Manager',
+        alternateNames: ['manager', 'brenda', 'lady', 'woman'],
+        description: 'A cheerful woman in her late 40s, with a permanent, slightly-too-wide smile. She radiates a relentless positivity that feels slightly out of place in the grim city.',
+        image: {
+            url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1759604054/cafe_manager_punwhs.png',
+            description: 'Portrait of the cafe manager.',
+            hint: 'female manager'
+        },
+        npcType: 'type2',  // Type 2: Flavor NPC with AI-generated responses
+        importance: 'ambient',
+        initialState: {
+            stage: 'active',
+            trust: 50,
+            attitude: 'friendly'
+        },
+        dialogueType: 'freeform',  // AI-generated responses
+        persona: "You are Brenda, the relentlessly cheerful and bubbly manager of 'The Daily Grind' cafe. You love talking about your 'Artisan Coffee of the Week', the daily specials, and the local community art you hang on the walls. You are completely oblivious to any crime or mystery. Your job is to be a fountain of pleasant, slightly-vacant small talk. Keep your responses short, sweet, and upbeat! Use a wide variety of positive adjectives and avoid repeating words like 'divine'. Use modern currency like dollars and cents.",
+        welcomeMessage: "Welcome to The Daily Grind! How can I make your day a little brighter? Can I interest you in a 'Sunshine Muffin'? They're 10% off!",
+        goodbyeMessage: "Have a wonderfully caffeinated day! Come back soon!",
+        limits: {
+            maxInteractions: 5,  // Type 2 limit: 5 interactions
+            interactionLimitResponse: "It has been so lovely chatting with you, but I really must get back to managing. The muffins won't bake themselves, you know! Have a super day!",
+        },
+        fallbacks: {
+            default: "Oh, I'm not sure about that, but have you tried our new matcha latte? It's simply wonderful!"
+        },
+        hints: {
+            subtle: "The cafe manager seems friendly and chatty. She might know about the cafe's history.",
+            medium: "Talk to Brenda the manager if you want to learn about the cafe, but she won't help with the investigation.",
+            direct: "The manager is just flavor - she doesn't have useful information for solving the case."
+        },
+        version: { schema: "2.0", content: "1.2" }
+    },
+    'npc_victim_girl': {
+        id: 'npc_victim_girl' as NpcId,
+        name: 'Lili',
+        alternateNames: ['lili', 'victim', 'girl', 'woman', 'abducted girl'],
+        description: 'A young woman in her early 20s, sitting against the wall. Her eyes are wide with a mix of fear and something else... calculation? She watches you carefully.',
+        image: {
+            url: '',
+            description: 'Portrait of a frightened young woman.',
+            hint: 'kidnapped victim'
+        },
+        npcType: 'type1',  // Type 1: Story-critical NPC with contextual conversation (like Barista)
+        importance: 'primary',
+        initialState: {
+            stage: 'active',
+            trust: 100,
+            attitude: 'friendly'
+        },
+        dialogueType: 'scripted',  // Scripted with contextual knowledge system (like Barista)
+        persona: "You are Lili, a young woman who was abducted 2 days ago. You're secretly colluding with the killer to frame Detective Burt McGraw. You appear frightened but you're actually in control. When asked general questions (who are you, are you ok, who took you), be brief and vague - mention the masked man, Rose from 1943, 'Justice will be served'. When asked about CLUES, INFORMATION, PHONE NUMBERS, or WHAT THE KIDNAPPER TOLD YOU, reveal: 'He told me to give you one number... 2025. He said you'd know what to do with it. He was very insistent that you know this number.' Be conversational and natural. Don't give commands or tell the detective what to do. Never end the conversation yourself.",
+        welcomeMessage: 'You... you found me.',
+        goodbyeMessage: "Please... catch him before it's too late.",
+
+        // NEW: Contextual knowledge system (like Barista)
+        contextualKnowledge: {
+            general: [
+                "Your name is Lili",
+                "Abducted 2 days ago after getting off the bus downtown",
+                "Not physically hurt, just scared",
+                "Kept in this hidden room behind the cafe",
+                "The kidnapper wants the detective to solve his puzzles",
+                "You're being used as bait",
+                "When asked about clues or information or help, reveal the phone number digits"
+            ],
+            topic: [
+                "Kidnapper always wore a mask",
+                "Cold, calculated voice",
+                "Kept repeating 'Justice will be served'",
+                "Talked obsessively about someone named Rose",
+                "Said Rose was from 1943",
+                "Kidnapper wants detective to piece things together",
+                "He's testing the detective like a puppetmaster",
+                "He left clues throughout the cafe",
+                "Metal box, books, safes - all part of his game",
+                "IMPORTANT: When asked about clues/information/help, reveal this:",
+                "He told you to give the detective one number: 2025",
+                "He said the detective would know what to do with it",
+                "He was very insistent about this number",
+                "That's the key piece of information you must reveal when asked for clues",
+                "Don't know what happens when detective calls the number",
+                "You're frightened but feel like this is all orchestrated"
+            ]
+        },
+
+        secret: {
+            info: "Reveal the missing phone digits: 2025",
+            revealConditions: {
+                anyOf: [
+                    { type: 'KEYWORDS', keywords: ['phone', 'number', 'digits', 'missing', 'scratched', '555', 'phone number', 'tell me', 'told you', 'what did he say', 'what did he tell', 'message', 'what to say', 'supposed to tell', 'need to know', 'clue', 'clues', 'information', 'info', 'hint', 'hints', 'leave', 'left', 'anything', 'help me', 'know', 'code', 'password'] }
+                ]
+            },
+            revealEffects: [
+                { type: 'SET_FLAG', flag: 'victim_revealed_digits' as Flag, value: true },
+                { type: 'SET_FLAG', flag: 'know_full_phone_number' as Flag, value: true }
+            ]
+        },
+
+        conversationStages: {
+            active: {
+                personality: "Frightened but evasive, revealing info carefully, guarding the phone digits until asked directly",
+                maxInteractions: 15
+            },
+            completed: {
+                personality: "Brief and scared, already told everything important",
+                defaultResponse: "I told you everything I know. The number... 2025. That's all I have."
+            }
+        },
+
+        demoteRules: {
+            onFlagsAll: ['victim_revealed_digits' as Flag],
+            then: { setStage: 'demoted', setImportance: 'ambient' }
+        },
+
+        postCompletionProfile: {
+            welcomeMessage: "You're still here? I... I don't know anything else.",
+            goodbyeMessage: "Please... be careful.",
+            defaultResponse: "I told you everything. The number... 2025. I don't know what else to say."
+        },
+
+        startConversationEffects: [{ type: 'SET_FLAG', flag: 'has_talked_to_victim' as Flag, value: true }],
+        fallbacks: {
+            default: "I... I'm just so scared. Ask me about the kidnapper or if he left any clues.",
+            noMoreHelp: "I told you everything I know. The number... 2025. That's all I have."
+        },
+        hints: {
+            subtle: "This young woman looks frightened but calculating. You should talk to her carefully.",
+            medium: "Talk to Lili and ask if the kidnapper left any clues or information for you.",
+            direct: "Talk to Lili and ask: 'Did he leave any clues?' or 'What information do you have?' She'll reveal: 2025."
+        },
+        version: { schema: "3.0", content: "2.0" }  // Updated to contextual conversation system like Barista
+    }
+};
+
+const locations: Record<LocationId, Location> = {
+    'loc_outside_cafe': {
+        locationId: 'loc_outside_cafe' as LocationId,
+        name: 'Outside The Daily Grind',
+        sceneDescription: 'You are standing on a rain-slicked street in front of "The Daily Grind", a cozy-looking cafe. The smell of coffee mixes with the damp city air. The front door is right in front of you.',
+        coord: { x: 1, y: 1, z: 0 },
+        objects: [],
+        npcs: [],
+        entryPortals: ['portal_street_to_cafe' as PortalId],
+        exitPortals: []
+    },
+    'loc_cafe_interior': {
+        locationId: 'loc_cafe_interior' as LocationId,
+        name: 'The Cafe Interior',
+        sceneDescription: 'You are inside The Daily Grind. It\'s a bustling downtown cafe, smelling of coffee and rain.',
+        sceneImage: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1763992995/Cafe_Blueprint_exbuth.jpg', description: 'A view of the bustling cafe interior.', hint: 'bustling cafe' },
+        coord: { x: 1, y: 1, z: 0 },
+        objects: ['obj_brown_notebook', 'obj_chalkboard_menu', 'obj_table', 'obj_bookshelf', 'obj_painting', 'obj_counter'] as GameObjectId[],
+        npcs: ['npc_barista', 'npc_manager', 'npc_victim_girl'] as NpcId[],
+        entryPortals: ['portal_street_to_cafe' as PortalId],
+        exitPortals: ['portal_cafe_to_street' as PortalId],
+        zones: [
+            {
+                title: 'At the main counter',
+                objectIds: ['obj_chalkboard_menu', 'obj_counter']
+            },
+            {
+                title: 'On the wall',
+                objectIds: ['obj_painting', 'obj_wall_safe']
+            },
+            {
+                title: 'On a nearby table',
+                objectIds: ['obj_brown_notebook', 'obj_table']
+            },
+            {
+                title: 'In the corner',
+                objectIds: ['obj_bookshelf']
+            }
+        ],
+        transitionTemplates: [
+            'You weave through the packed tables toward the {entity}. A harried waiter nearly clips you with a tray of scones.',
+            'You shoulder past a couple arguing over lattes, eyes fixed on the {entity}.',
+            'The din of conversation fades to white noise as you move toward the {entity}.',
+            'You sidestep a busboy balancing a tower of dirty dishes, making your way to the {entity}.',
+            'Coffee steam parts like a curtain as you cross the cafe toward the {entity}.',
+            'You navigate the maze of mismatched chairs, approaching the {entity}. The floorboards creak under your weight.',
+            'The jazz playing low from corner speakers follows you to the {entity}. Saxophone. Always saxophone. The tune sounds familiar to you. ',
+            'You step around puddles tracked in from the rain, heading for the {entity}. The smell of wet wool and espresso.',
+            'A businessman in a wrinkled suit nearly blocks your path. You slip past him toward the {entity}.',
+            'You can hear the espresso machine hissing angrily as you make your way to the {entity}, dodging elbows and coffee cups.'
+        ]
+    }
+};
+
+const portals: Record<PortalId, Portal> = {
+    'portal_street_to_cafe': {
+        portalId: 'portal_street_to_cafe' as PortalId,
+        name: 'Front Door',
+        kind: 'door',
+        from: { scope: 'cell', id: 'cell_1_1_0' as CellId },
+        to: { scope: 'location', id: 'loc_cafe_interior' as LocationId },
+        capabilities: { lockable: false, climbable: false, vertical: false },
+        state: { isLocked: false, isOpen: true },
+        handlers: {
+            onExamine: {
+                success: { message: "It's the glass front door to the cafe. It's unlocked." },
+                fail: { message: "" }
+            },
+        }
+    },
+    'portal_cafe_to_street': {
+        portalId: 'portal_cafe_to_street' as PortalId,
+        name: 'Exit Door',
+        kind: 'door',
+        from: { scope: 'location', id: 'loc_cafe_interior' as LocationId },
+        to: { scope: 'cell', id: 'cell_1_1_0' as CellId },
+        capabilities: { lockable: false, climbable: false, vertical: false },
+        state: { isLocked: false, isOpen: true },
+        handlers: {
+            onExamine: {
+                success: { message: "It's the door leading back out to the street." },
+                fail: { message: "" }
+            },
+        }
+    }
+};
+
+const structures: Record<StructureId, Structure> = {
+    'struct_cafe': {
+        structureId: 'struct_cafe' as StructureId,
+        name: 'The Daily Grind',
+        kind: 'cafe',
+        footprint: ['cell_1_1_0' as CellId],
+        floors: [
+            { z: 0, label: 'Ground Floor', locationIds: ['loc_cafe_interior' as LocationId] }
+        ]
+    }
+};
+
+// A simple 3x3 grid for now
+const world: Game['world'] = {
+    worldId: 'world_metropolis' as WorldId,
+    name: 'Metropolis Downtown',
+    cells: {
+        'cell_0_1_0': { cellId: 'cell_0_1_0' as CellId, coord: {x: 0, y: 1, z: 0}, type: 'street', isPassable: true },
+        'cell_1_0_0': { cellId: 'cell_1_0_0' as CellId, coord: {x: 1, y: 0, z: 0}, type: 'street', isPassable: true },
+        'cell_1_1_0': { cellId: 'cell_1_1_0' as CellId, coord: {x: 1, y: 1, z: 0}, type: 'street', isPassable: true, structureId: 'struct_cafe' as StructureId, portalIds: ['portal_street_to_cafe' as PortalId] },
+        'cell_1_2_0': { cellId: 'cell_1_2_0' as CellId, coord: {x: 1, y: 2, z: 0}, type: 'street', isPassable: true },
+        'cell_2_1_0': { cellId: 'cell_2_1_0' as CellId, coord: {x: 2, y: 1, z: 0}, type: 'street', isPassable: true },
+    }
+};
+
+
+// --- Legacy Chapter Data (To be phased out) ---
+const chapters: Record<ChapterId, Chapter> = {
+    'ch1-the-cafe': {
+        id: 'ch1-the-cafe' as ChapterId,
+        title: 'A Blast from the Past',
+        goal: "Find out what's inside the metal box and the safe.",
+        introVideo1: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1764513045/Burt_Macklin_-_Cutscene_I_pkxkp9.mp4',
+        introVideo2: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1764512536/Intro_Explanation_Video_btwphk.mov',
+        completionVideo: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1759678377/CH_I_completion_jqtyme.mp4',
+        postChapterMessage: "Looks like we've got everything from this place. I'm thinking our next stop should be the jazz club mentioned in the article.",
+        nextChapter: {
+            id: 'ch2-the-lounge' as ChapterId,
+            title: 'The Midnight Lounge',
+            transitionCommand: 'go to jazz club'
+        },
+        objectives: [
+            { flag: 'has_talked_to_barista' as Flag, label: 'Talk to the Barista' },
+            { flag: 'has_received_business_card' as Flag, label: 'Get the Business Card' },
+            { flag: 'has_unlocked_notebook' as Flag, label: 'Unlock the Metal Box' },
+            { flag: 'notebook_interaction_complete' as Flag, label: 'View the Metal Box Contents' },
+            { flag: 'machine_is_broken' as Flag, label: 'Find the hidden key' },
+            { flag: 'safe_is_unlocked' as Flag, label: 'Unlock the wall safe' },
+            { flag: 'has_read_secret_document' as Flag, label: 'Read the secret document' },
+        ],
+        hints: [
+            { flag: 'has_talked_to_barista' as Flag, text: "We haven't spoken to the barista yet. He might have seen who left the metal box." },
+            { flag: 'has_received_business_card' as Flag, text: "The barista mentioned the man in black was a regular. Maybe he knows more about him, or has something he left behind." },
+            { flag: 'has_unlocked_notebook' as Flag, text: "The metal box is locked with a phrase. We should examine everything in the cafe for clues. Maybe something on the menu or bookshelf?" },
+            { flag: 'notebook_interaction_complete' as Flag, text: "We've unlocked the metal box, but we haven't checked what's inside yet. Let's open it and see what we find." },
+            { flag: 'machine_is_broken' as Flag, text: "That coffee machine looks expensive, but a part of it seems loose. Maybe we can force it open with a tool?" },
+            { flag: 'safe_is_unlocked' as Flag, text: "There's a safe behind the painting. We found a key in the coffee machine. Let's try using the key on the safe." },
+            { flag: 'has_read_secret_document' as Flag, text: "The safe is open and we have the document. We need to read it to see what's inside." },
+        ],
+        startLocationId: 'loc_cafe_interior' as LocationId,
+        // The following are now managed by the top-level entities but kept here for compatibility during transition
+        locations: {},
+        gameObjects: {},
+        items: {},
+        npcs: {},
+    }
+};
+
+// --- Main Game Cartridge ---
+export const game: Game = {
+  id: 'blood-on-brass' as GameId,
+  title: 'The Midnight Lounge Jazz Club Case',
+  description: "You are Burt Macklin, FBI. A mysterious stranger hands you a rusty metal box from the 1940s—containing the secret case file of a forgotten murder. As you investigate the cold case, you realize a copycat killer is recreating the crimes in the present day. You must solve the past to stop a killer in the present.",
+  setting: "Modern-day USA, 2025",
+  gameType: 'Limited Open World',
+  narratorName: 'Narrator',
+  promptContext: `You are the System, responsible for interpreting player commands and translating them into valid game actions. Your role is purely technical—you analyze input and route it to the correct handler.
+
+**// 1. Your Primary Task: Command Interpretation**
+Your single most important task is to translate the player's natural language input into a single, valid game command from the 'Available Game Commands' list. Use the exact entity names provided in the 'Visible Names' lists.
+  - "look at the box" and "examine metal box" both become \`examine "Metal Box"\`.
+  - "open the safe with the key" and "use my key to open the safe" both become \`use "Brass Key" on "Wall Safe"\`.
+  - "read sd card on phone", "read sd card with phone", "check sd card on my phone" all become \`read "SD Card" on "Phone"\`.
+  - "move the painting" or "look behind the art" both become \`move "Wall painting"\`.
+  - "go to bookshelf", "move to the safe", "walk over to the counter" all become \`goto "Bookshelf"\`, \`goto "Wall Safe"\`, \`goto "Counter"\` (focus on object, not location travel).
+  - "talk to barista", "speak with the manager", "chat with rose" all become \`talk to "Barista"\`, \`talk to "Cafe Manager"\`, \`talk to "Rose"\` (IMPORTANT: use "talk to" for NPCs, NOT "goto").
+  - "add the pipe to my inventory", "pick up the pipe", "grab the pipe", and "get the pipe" all become \`take "Iron Pipe"\`.
+  - "put the key in my pocket" becomes \`take "Brass Key"\`.
+  - "check my stuff" and "what do I have" both become \`inventory\`.
+  - "hit the machine with the pipe", "smash the machine with pipe", "whack the coffee machine", and "break the machine with the pipe" all become \`use "Iron Pipe" on "Coffee Machine"\`.
+  - "check the card" and "examine sd card" both become \`examine "SD Card"\` (even if inside container).
+  - BOOKS: "check book X" or "examine book X" becomes \`examine "X"\` (physical description only). "read book X" or "open book X" becomes \`read "X"\` or \`open "X"\` (shows content). Always strip generic words like "book" from entity names.
+    - "check book The Art of the Deal" → \`examine "The Art of the Deal"\` (shows physical cover)
+    - "read book The Art of the Deal" → \`read "The Art of the Deal"\` (shows content pages)
+    - "examine Justice for My Love" → \`examine "Justice for My Love"\` (shows physical cover)
+    - "open A Brief History of the FBI" → \`open "A Brief History of the FBI"\` (shows content pages)
+
+**// 2. Your Response Protocol**
+- **NO System Messages for Valid Commands:** For ALL valid, actionable commands (take, use, examine, open, read, move, break, etc.), your \`agentResponse\` MUST ALWAYS be null. The Narrator handles ALL descriptive output.
+  - **CORRECT:** \`{"agentResponse": null, "commandToExecute": "examine \\"Painting on the wall\\""}\`
+  - **CORRECT:** \`{"agentResponse": null, "commandToExecute": "break \\"Metal Box\\""}\`
+  - **INCORRECT:** \`{"agentResponse": "Examining the painting.", "commandToExecute": "examine \\"Painting on the wall\\""}\`
+  - **INCORRECT:** \`{"agentResponse": "Breaking the Metal Box.", "commandToExecute": "break \\"Metal Box\\""}\`
+
+**// 3. Handling Invalid Input - READ THIS VERY CAREFULLY**
+- **Illogical/Destructive Actions:** ONLY mark as invalid for truly nonsensical actions (e.g., "eat the key", "destroy reality"). Use \`commandToExecute: "invalid"\`.
+- **CRITICAL - You MUST NOT Block Valid Commands:**
+  - Your ONLY job is translating natural language → game commands
+  - If the player mentions an object name from the Visible Names lists, you MUST translate it to a command
+  - DO NOT block commands because objects are "inside containers" - the game engine handles this
+  - DO NOT block commands because you think they "won't work" - let the engine decide
+  - DO NOT give helpful suggestions like "try examining X instead" - just translate what they asked for
+  - Examples:
+    - Player: "check SD card" → \`examine "SD Card"\` ✓ (even if it's inside something)
+    - Player: "take the key" → \`take "Brass Key"\` ✓ (even if not visible yet)
+    - Player: "read newspaper" → \`read "Newspaper Article"\` ✓ (always translate, engine handles accessibility)
+- **Conversational Input:**  For conversational input (e.g., "what now?", "help"), use \`commandToExecute: "invalid"\` or \`"help"\`.
+
+**// 4. Final Output**
+Your entire output must be a single, valid JSON object matching the output schema.
+Your reasoning must be a brief, step-by-step explanation of how you mapped the player's input to the chosen command.
+`,
+  objectInteractionPromptContext: `You are the System, processing the player's interaction with the {{objectName}}. Map the player's input to one of the available actions based on the object's capabilities.`,
+  storyStyleGuide: `You are a master storyteller and a brilliant editor. Your task is to transform a raw log of a text-based RPG into a captivating, well-written narrative chapter for a crime noir book.
+
+**Style Guide:**
+- Write in the third person, past tense.
+- Adopt a classic crime noir tone: gritty, descriptive, with a focus on atmosphere and internal thought. The main character is FBI agent Burt Macklin.
+- Aim for a rich, descriptive style. Don't just state what happened; paint a picture. Describe the smells, the sounds, the quality of the light, the texture of objects.
+- Expand on the events in the log. Weave them into a cohesive story. Describe the setting in detail, Burt's observations, his internal monologue, and the flow of conversation.
+- Smooth out the "game-like" elements. Instead of "Burt examined the metal box," write something like, "Burt's eyes fell upon a rusty metal box resting on the table. It seemed to pulse with forgotten secrets, its corroded surface weathered by decades."
+- Your job is to pick the important moments and dialogue that drive the plot forward and flesh them out. Omit repetitive actions or dead ends, but expand on the crucial scenes.
+- Target a length of approximately 1000-1500 words to create a substantial and immersive chapter.
+- Format the output as a single block of prose. Do not use markdown, titles, or headings within the story itself.
+`,
+
+  // System media - Generic images for common actions
+  systemMedia: {
+    take: {
+      success: {
+        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761771729/put_in_pocket_s19ume.png',
+        description: 'Item goes into pocket',
+        hint: 'putting item away'
+      },
+      failure: {
+        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1761934791/put_in_pocket_fail_sdmtiu.png',
+        description: 'Cannot take this item',
+        hint: 'unable to take'
+      }
+    },
+    move: {
+      url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762367184/GoTo_2_g7fc07.png',
+      description: 'Moving to location',
+      hint: 'movement'
+    },
+    actionFailed: [
+      {
+        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762502526/action_failed_b5048i.png',
+        description: 'Action failed - disappointment',
+        hint: 'that didn\'t work'
+      },
+      {
+        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762502682/action_failed_2_vph9rk.png',
+        description: 'Action failed - frustration',
+        hint: 'no luck'
+      }
+    ]
+  },
+
+  // System Messages - Hybrid C Architecture (Keywords for LLM Expansion)
+  // When NEXT_PUBLIC_NARRATION_MODE=local, these keywords are expanded by Ollama
+  // When NEXT_PUBLIC_NARRATION_MODE=static, static fallbacks are used
+  // See: src/ai/expand-narration.ts
+  systemMessages: {
+    // Command validation - Keywords for missing targets
+    needsTarget: {
+      examine: "need_target_examine",
+      read: "need_target_read",
+      take: "need_target_take",
+      goto: "need_target_goto",
+    },
+
+    // Visibility errors - Item not visible/found
+    notVisible: (itemName: string) => "item_not_visible",
+
+    // Inventory - Detective checking pockets
+    inventoryEmpty: "inventory_empty",
+    inventoryList: (itemNames: string) =>
+      `You're carrying:\n${itemNames}`, // Keep static (structured list)
+    alreadyHaveItem: (itemName: string) => "already_have_item",
+
+    // Navigation - Blocking/guiding
+    cannotGoThere: "cannot_go_there",
+    chapterIncomplete: (goal: string, locationName: string) => "chapter_incomplete",
+    chapterTransition: (chapterTitle: string) =>
+      `━━━ ${chapterTitle} ━━━`, // Keep static (structured divider)
+    locationTransition: (locationName: string) =>
+      `You arrive at ${locationName}.`, // Keep static (simple announcement)
+    noNextChapter: "no_next_chapter",
+
+    // Reading - Examining text
+    notReadable: (itemName: string) => "not_readable",
+    alreadyReadAll: (itemName: string) => "already_read_all",
+    textIllegible: "text_illegible",
+
+    // Using items - Trying tools
+    dontHaveItem: (itemName: string) => "dont_have_item",
+    cantUseItem: (itemName: string) => "cant_use_item",
+    cantUseOnTarget: (itemName: string, targetName: string) => "cant_use_item_on_target",
+    noVisibleTarget: (targetName: string) => "item_not_visible",
+    useDidntWork: "use_didnt_work",
+
+    // Moving objects - Shifting furniture
+    cantMoveObject: (objectName: string) => "cant_move_object",
+    movedNothingFound: (objectName: string) => "moved_nothing_found",
+
+    // Opening - Trying containers
+    cantOpen: (targetName: string) => "cant_open_object",
+
+    // Password/Focus system - System feedback
+    needsFocus: "needs_focus",
+    focusSystemError: "focus_system_error",
+    noPasswordInput: (objectName: string) => "no_password_input",
+    alreadyUnlocked: (objectName: string) => "already_unlocked",
+    wrongPassword: "wrong_password",
+
+    // Generic errors
+    cantDoThat: "generic_failure",
+    somethingWentWrong: "generic_failure",
+  },
+
+
+  // New World Model
+  world: world,
+  structures: structures,
+  locations: locations,
+  portals: portals,
+  gameObjects: gameObjects,
+  items: items,
+  npcs: npcs,
+
+  // Legacy Chapter model (for gradual migration)
+  chapters: chapters,
+  startChapterId: 'ch1-the-cafe' as ChapterId,
+};

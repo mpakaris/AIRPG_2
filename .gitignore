@@ -41,3 +41,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .env
+
+# Baked cartridges (generated)
+src/lib/game/cartridges/baked/

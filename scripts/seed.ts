@@ -35,92 +35,126 @@ try {
 
 const db = getFirestore();
 
-// Function to read the baked JSON cartridge
-function loadCartridgeFromFile(): Game {
-    const filePath = path.resolve(__dirname, '../src/lib/game/cartridge.json');
-    if (!fs.existsSync(filePath)) {
-        throw new Error(`cartridge.json not found at ${filePath}. Please run 'npm run db:bake' first.`);
+// Function to load all baked cartridges
+function loadAllCartridges(): Game[] {
+    const bakedDir = path.resolve(__dirname, '../src/lib/game/cartridges/baked');
+    if (!fs.existsSync(bakedDir)) {
+        throw new Error(`Baked cartridges directory not found at ${bakedDir}. Please run 'npm run db:bake' first.`);
     }
-    const fileContent = fs.readFileSync(filePath, 'utf-8');
-    return JSON.parse(fileContent);
+
+    const files = fs.readdirSync(bakedDir);
+    const cartridgeFiles = files.filter(file => file.endsWith('.json'));
+
+    if (cartridgeFiles.length === 0) {
+        throw new Error('No baked cartridges found. Please run \'npm run db:bake\' first.');
+    }
+
+    const cartridges: Game[] = [];
+    for (const file of cartridgeFiles) {
+        const filePath = path.join(bakedDir, file);
+        const fileContent = fs.readFileSync(filePath, 'utf-8');
+        const cartridge = JSON.parse(fileContent);
+        cartridges.push(cartridge);
+        console.log(`Loaded cartridge: ${file} (${cartridge.id})`);
+    }
+
+    return cartridges;
 }
 
-const gameCartridge = loadCartridgeFromFile();
+const allCartridges = loadAllCartridges();
 
 async function seedGameCartridge() {
-    console.log('Starting game cartridge seed from cartridge.json...');
-    
-    const gameId = gameCartridge.id;
-    const gameDocData: Omit<Game, 'chapters' | 'locations' | 'gameObjects' | 'items' | 'npcs' | 'portals' | 'structures' | 'world'> = { ...gameCartridge };
-    delete (gameDocData as any).chapters;
-    delete (gameDocData as any).locations;
-    delete (gameDocData as any).gameObjects;
-    delete (gameDocData as any).items;
-    delete (gameDocData as any).npcs;
-    delete (gameDocData as any).portals;
-    delete (gameDocData as any).structures;
-    delete (gameDocData as any).world;
+    console.log(`\n${'='.repeat(60)}`);
+    console.log(`Starting game cartridge seed...`);
+    console.log(`Found ${allCartridges.length} cartridge(s) to seed`);
+    console.log(`${'='.repeat(60)}\n`);
 
-    const gameRef = db.collection('games').doc(gameId);
-    await gameRef.set(gameDocData, { merge: true });
-    console.log(`Game document ${gameId} seeded.`);
+    for (const gameCartridge of allCartridges) {
+        console.log(`\n📦 Seeding: ${gameCartridge.title} (${gameCartridge.id})\n`);
 
-    const seedSubCollection = async <T extends {id?: string; locationId?: string; portalId?: string}>(subCollectionName: string, data: Record<string, T> | undefined) => {
-        if (!data) {
-            console.log(`Skipping empty sub-collection: ${subCollectionName}`);
-            return;
-        }
-        console.log(`Seeding sub-collection: games/${gameId}/${subCollectionName}...`);
-        const batch = db.batch();
-        for (const key in data) {
-            const entity = data[key];
-            const docId = entity.id || entity.locationId || entity.portalId;
-            if (!docId) {
-                console.warn(`Skipping entity in ${subCollectionName} with key ${key} because it has no 'id', 'locationId', or 'portalId'.`);
-                continue;
+        const gameId = gameCartridge.id;
+        const gameDocData: Omit<Game, 'chapters' | 'locations' | 'gameObjects' | 'items' | 'npcs' | 'portals' | 'structures' | 'world'> = { ...gameCartridge };
+        delete (gameDocData as any).chapters;
+        delete (gameDocData as any).locations;
+        delete (gameDocData as any).gameObjects;
+        delete (gameDocData as any).items;
+        delete (gameDocData as any).npcs;
+        delete (gameDocData as any).portals;
+        delete (gameDocData as any).structures;
+        delete (gameDocData as any).world;
+
+        const gameRef = db.collection('games').doc(gameId);
+        await gameRef.set(gameDocData, { merge: true });
+        console.log(`   ✅ Game document ${gameId} seeded`);
+
+        const seedSubCollection = async <T extends {id?: string; locationId?: string; portalId?: string}>(subCollectionName: string, data: Record<string, T> | undefined) => {
+            if (!data) {
+                console.log(`   ⏭️  Skipping empty sub-collection: ${subCollectionName}`);
+                return;
             }
-            const docRef = db.collection('games').doc(gameId).collection(subCollectionName).doc(docId);
-            batch.set(docRef, { ...entity }, { merge: true });
-        }
-        await batch.commit();
-        console.log(`Sub-collection ${subCollectionName} seeded with ${Object.keys(data).length} documents.`);
-    };
+            const batch = db.batch();
+            for (const key in data) {
+                const entity = data[key];
+                const docId = entity.id || entity.locationId || entity.portalId;
+                if (!docId) {
+                    console.warn(`   ⚠️  Skipping entity in ${subCollectionName} with key ${key} (no ID)`);
+                    continue;
+                }
+                const docRef = db.collection('games').doc(gameId).collection(subCollectionName).doc(docId);
+                batch.set(docRef, { ...entity }, { merge: true });
+            }
+            await batch.commit();
+            console.log(`   ✅ ${subCollectionName}: ${Object.keys(data).length} documents`);
+        };
 
-    await seedSubCollection('chapters', gameCartridge.chapters as Record<string, Chapter>);
-    await seedSubCollection('locations', gameCartridge.locations as Record<string, Location>);
-    await seedSubCollection('game_objects', gameCartridge.gameObjects as Record<string, GameObject>);
-    await seedSubCollection('items', gameCartridge.items as Record<string, Item>);
-    await seedSubCollection('npcs', gameCartridge.npcs as Record<string, NPC>);
-    await seedSubCollection('portals', gameCartridge.portals as Record<string, Portal>);
-    
-    console.log('Game cartridge seeded successfully.');
+        await seedSubCollection('chapters', gameCartridge.chapters as Record<string, Chapter>);
+        await seedSubCollection('locations', gameCartridge.locations as Record<string, Location>);
+        await seedSubCollection('game_objects', gameCartridge.gameObjects as Record<string, GameObject>);
+        await seedSubCollection('items', gameCartridge.items as Record<string, Item>);
+        await seedSubCollection('npcs', gameCartridge.npcs as Record<string, NPC>);
+        await seedSubCollection('portals', gameCartridge.portals as Record<string, Portal>);
+
+        console.log(`   ✅ ${gameCartridge.title} seeded successfully!`);
+    }
+
+    console.log(`\n${'='.repeat(60)}`);
+    console.log(`All game cartridges seeded successfully!`);
+    console.log(`${'='.repeat(60)}\n`);
 }
 
 async function seedAll() {
-    console.log('Starting full database seed...');
+    console.log('\n🌱 Starting full database seed...\n');
     await seedGameCartridge();
 
+    // Seed user with all cartridge IDs
+    const allGameIds = allCartridges.map(c => c.id);
     const userRef = db.collection('users').doc(DEV_USER_ID);
-    console.log(`Seeding user: ${DEV_USER_ID}`);
+    console.log(`\n👤 Seeding user: ${DEV_USER_ID}`);
     await userRef.set({
         id: DEV_USER_ID,
         username: 'dev_user',
-        purchasedGames: [gameCartridge.id],
+        purchasedGames: allGameIds,
     }, { merge: true });
-    console.log('User seeded successfully.');
+    console.log('   ✅ User seeded successfully');
 
-    const initialPlayerState = getInitialState(gameCartridge);
-    const playerStateRef = db.collection('player_states').doc(`${DEV_USER_ID}_${gameCartridge.id}`);
-    console.log(`Seeding player state for user ${DEV_USER_ID} and game ${gameCartridge.id}`);
-    await playerStateRef.set(initialPlayerState);
-    console.log('Player state seeded successfully.');
+    // Seed player states and logs for each cartridge
+    console.log(`\n📊 Seeding player states and logs...\n`);
+    for (const gameCartridge of allCartridges) {
+        console.log(`   ${gameCartridge.title} (${gameCartridge.id}):`);
 
-    const logRef = db.collection('logs').doc(`${DEV_USER_ID}_${gameCartridge.id}`);
-    console.log(`Wiping logs for user ${DEV_USER_ID} and game ${gameCartridge.id}`);
-    await logRef.set({ messages: [] });
-    console.log('Logs wiped successfully.');
+        const initialPlayerState = getInitialState(gameCartridge);
+        const playerStateRef = db.collection('player_states').doc(`${DEV_USER_ID}_${gameCartridge.id}`);
+        await playerStateRef.set(initialPlayerState);
+        console.log(`      ✅ Player state seeded`);
 
-    console.log('Full database seeding complete!');
+        const logRef = db.collection('logs').doc(`${DEV_USER_ID}_${gameCartridge.id}`);
+        await logRef.set({ messages: [] });
+        console.log(`      ✅ Logs wiped`);
+    }
+
+    console.log(`\n${'='.repeat(60)}`);
+    console.log('🎉 Full database seeding complete!');
+    console.log(`${'='.repeat(60)}\n`);
 }
 
 const args = process.argv.slice(2);
