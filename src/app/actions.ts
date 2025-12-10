@@ -84,6 +84,30 @@ function normalizeTimestamps(obj: any): any {
     return obj;
 }
 
+/**
+ * Gets the current game ID for a user by checking their user document
+ * Falls back to default game ID if not found
+ */
+async function getCurrentGameIdForUser(userId: string): Promise<GameId> {
+    const { firestore } = initializeFirebase();
+
+    // Get from user document's currentGame field
+    const userRef = doc(firestore, 'users', userId);
+    const userSnap = await getDoc(userRef);
+
+    if (userSnap.exists()) {
+        const userData = userSnap.data();
+        if (userData.currentGame) {
+            console.log(`📍 User ${userId} is currently playing: ${userData.currentGame}`);
+            return userData.currentGame as GameId;
+        }
+    }
+
+    // Fallback to default game
+    console.log(`📍 No currentGame found for user ${userId}, using default: ${GAME_ID}`);
+    return GAME_ID;
+}
+
 // --- Data Loading ---
 
 export async function getGameData(gameId: GameId): Promise<Game | null> {
@@ -239,6 +263,7 @@ export async function findOrCreateUser(userId: string): Promise<{ user: User | n
                 id: userId,
                 username: `Player_${userId.substring(userId.length - 4)}`,
                 purchasedGames: [game.id],
+                currentGame: game.id,
                 createdAt: Date.now(),
             };
             await setDoc(userRef, newUser);
@@ -338,7 +363,8 @@ export async function processCommand(
         console.log(`   Original: "${rawPlayerInput.substring(0, 50)}${rawPlayerInput.length > 50 ? '...' : ''}"`);
         console.log(`   Reason: ${errorMsg}\n`);
 
-        const game = await getGameData(GAME_ID);
+        const currentGameId = await getCurrentGameIdForUser(userId);
+        const game = await getGameData(currentGameId);
         if (!game) {
             throw new Error("Critical: Game data could not be loaded.");
         }
@@ -360,9 +386,12 @@ export async function processCommand(
         }
 
         // Load logs using new helper that handles both old and new formats
-        allMessagesForSession = await getAllLogs(firestore, userId, gameId);
-        if (allMessagesForSession.length === 0) {
+        const rawLogs = await getAllLogs(firestore, userId, gameId);
+        if (rawLogs.length === 0) {
             allMessagesForSession = await createInitialMessages(currentState, game);
+        } else {
+            // Extract UI messages from raw logs (handles consolidated format)
+            allMessagesForSession = extractUIMessages(rawLogs);
         }
         // Normalize timestamps for React serialization
         allMessagesForSession = normalizeTimestamps(allMessagesForSession);
@@ -434,8 +463,9 @@ export async function processCommand(
         console.log(`   Sanitized: "${safePlayerInput}"\n`);
     }
 
-    const game = await getGameData(GAME_ID);
-  
+    const currentGameId = await getCurrentGameIdForUser(userId);
+    const game = await getGameData(currentGameId);
+
     if (!game) {
         throw new Error("Critical: Game data could not be loaded. Cannot process command.");
     }
@@ -514,9 +544,12 @@ export async function processCommand(
         }
 
         // Load logs using new helper that handles both old and new formats
-        allMessagesForSession = await getAllLogs(firestore, userId, gameId);
-        if (allMessagesForSession.length === 0) {
+        const rawLogs = await getAllLogs(firestore, userId, gameId);
+        if (rawLogs.length === 0) {
             allMessagesForSession = await createInitialMessages(currentState, game);
+        } else {
+            // Extract UI messages from raw logs (handles consolidated format)
+            allMessagesForSession = extractUIMessages(rawLogs);
         }
         // Normalize timestamps for React serialization
         allMessagesForSession = normalizeTimestamps(allMessagesForSession);
@@ -927,8 +960,9 @@ export async function processCommand(
                 await logAndSave(userId, gameId, currentState, newMessages);
 
                 // Return all messages for UI display
-                const allForUI = [...allMessagesForSession, ...newMessages];
-                return { newState: currentState, messages: extractUIMessages(allForUI) };
+                // allMessagesForSession is already UI-extracted, newMessages are UI messages
+                const allUIMessages = [...allMessagesForSession, ...newMessages];
+                return { newState: currentState, messages: allUIMessages };
             }
 
             // REGULAR COMMAND: Use consolidated logging
@@ -1141,8 +1175,10 @@ export async function processCommand(
                 await logAndSave(userId, gameId, currentState, [invalidCommandLog]);
 
                 // Return all messages for UI display
-                const allForUI = [...allMessagesForSession, invalidCommandLog];
-                return { newState: currentState, messages: extractUIMessages(allForUI) };
+                // allMessagesForSession is already UI-extracted, invalidCommandLog contains uiMessages
+                const uiMessagesFromLog = invalidCommandLog.uiMessages || [];
+                const allUIMessages = [...allMessagesForSession, ...uiMessagesFromLog];
+                return { newState: currentState, messages: allUIMessages };
             }
 
             // 7. LOW CONFIDENCE BUT VALID COMMAND - Let it execute anyway
@@ -1608,8 +1644,8 @@ export async function processCommand(
             await logAndSave(userId, gameId, finalResult.newState, newMessagesThisTurn);
 
             // Return all messages for UI display
-            const allForUI = [...allMessagesForSession, ...newMessagesThisTurn];
-            const allUIMessages = extractUIMessages(allForUI);
+            // allMessagesForSession is already UI-extracted, newMessagesThisTurn are UI messages
+            const allUIMessages = [...allMessagesForSession, ...newMessagesThisTurn];
             return { newState: finalResult.newState, messages: allUIMessages };
         }
 
@@ -2355,6 +2391,8 @@ export async function switchChapter(userId: string, targetGameId: GameId): Promi
     const stateSnap = await getDoc(stateRef);
 
     let playerState: PlayerState;
+    let shouldCreateInitialMessages = false;
+
     if (stateSnap.exists()) {
         playerState = normalizeTimestamps(stateSnap.data() as PlayerState);
         console.log(`✅ Loaded existing player state for ${targetGameId}`);
@@ -2362,12 +2400,27 @@ export async function switchChapter(userId: string, targetGameId: GameId): Promi
         // Create initial state if it doesn't exist
         playerState = getInitialState(game);
         await setDoc(stateRef, playerState);
+        shouldCreateInitialMessages = true;
         console.log(`✅ Created new player state for ${targetGameId}`);
     }
 
+    // Update user's currentGame field
+    const userRef = doc(firestore, 'users', userId);
+    await setDoc(userRef, { currentGame: targetGameId }, { merge: true });
+    console.log(`✅ Updated user's currentGame to ${targetGameId}`);
+
     // Load all messages for this chapter
     const rawMessages = await getAllLogs(firestore, userId, targetGameId);
-    const uiMessages = extractUIMessages(rawMessages);
+    let uiMessages = extractUIMessages(rawMessages);
+
+    // If no messages exist, create initial messages
+    if (uiMessages.length === 0 || shouldCreateInitialMessages) {
+        console.log(`📝 Creating initial messages for ${targetGameId}`);
+        const initialMessages = await createInitialMessages(playerState, game);
+        await logAndSave(userId, targetGameId, playerState, initialMessages);
+        uiMessages = initialMessages;
+    }
+
     console.log(`✅ Loaded ${uiMessages.length} UI messages from ${rawMessages.length} log entries for ${targetGameId}`);
 
     return {
