@@ -51,6 +51,24 @@ Before committing:
 
 ---
 
+## ⛔ CRITICAL: Server and Process Management
+
+**NEVER RUN THESE COMMANDS:**
+- ❌ `npm run dev` - User runs the server manually
+- ❌ `npm run start` - User runs the server manually
+- ❌ `npm run genkit:dev` - User runs Genkit manually
+- ❌ ANY command with `run_in_background: true` parameter
+
+**ONLY USE BASH FOR:**
+- ✅ `npm run db:bake` - Converting TypeScript to JSON
+- ✅ `npm run db:seed` - Seeding database
+- ✅ Git operations (status, add, commit, checkout, etc.)
+- ✅ Simple file checks (ls, grep, etc.)
+
+**WHY:** The user manages their own development server. Running servers or background processes causes port conflicts and requires manual cleanup. This rule applies across ALL conversation sessions, regardless of context summaries.
+
+---
+
 ## Development Commands
 
 ### Running the application

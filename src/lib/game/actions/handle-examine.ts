@@ -48,12 +48,12 @@ export async function handleExamine(state: PlayerState, targetName: string, game
 
     // Otherwise, standard examination
     // LOCATION-AWARE SEARCH: Find best match (prioritizes current location)
-    // IMPORTANT: Respect focus boundaries to prevent cross-contamination
+    // Allow examining anything visible in the location, not just within current focus
     const bestMatch = findBestMatch(normalizedTarget, state, game, {
         searchInventory: true,
         searchVisibleItems: true,
         searchObjects: true,
-        requireFocus: true
+        requireFocus: false  // Allow examining objects outside current focus
     });
 
     // Process the best match found
