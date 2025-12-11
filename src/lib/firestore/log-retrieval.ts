@@ -63,8 +63,8 @@ export async function getAllLogs(
   const logRef = doc(firestore, 'logs', `${userId}_${gameId}`);
   const logSnap = await getDoc(logRef);
 
-  // Check if old format exists (monolithic array)
-  if (logSnap.exists() && logSnap.data()?.messages) {
+  // Check if old format exists (monolithic array) and has actual messages
+  if (logSnap.exists() && logSnap.data()?.messages && Array.isArray(logSnap.data()!.messages) && logSnap.data()!.messages.length > 0) {
     console.log(`📖 [Logs] Loading legacy format for ${userId}`);
     const messages = logSnap.data()!.messages as Message[];
     return normalizeTimestamps(messages);
@@ -77,14 +77,19 @@ export async function getAllLogs(
     const turnsQuery = query(turnsRef, orderBy('timestamp', 'asc'));
     const turnsSnap = await getDocs(turnsQuery);
 
+    console.log(`📖 [Logs] Found ${turnsSnap.size} turn documents`);
+
     // Combine all messages from all turns
     const allMessages: Message[] = [];
     turnsSnap.forEach(turnDoc => {
       const turnData = turnDoc.data();
+      console.log(`📖 [Logs] Turn ${turnDoc.id}:`, turnData);
       if (turnData.messages && Array.isArray(turnData.messages)) {
         allMessages.push(...turnData.messages);
       }
     });
+
+    console.log(`📖 [Logs] Total messages from subcollections: ${allMessages.length}`);
 
     // Normalize timestamps before returning
     return normalizeTimestamps(allMessages);

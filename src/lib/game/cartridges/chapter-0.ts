@@ -3897,7 +3897,7 @@ const chapters: Record<ChapterId, Chapter> = {
 // --- Main Game Cartridge ---
 export const game: Game = {
   id: 'blood-on-brass' as GameId,
-  title: 'The Midnight Lounge Jazz Club Case',
+  title: 'Walk in Justice - Chapter 0',
   description: "You are Burt Macklin, FBI. A mysterious stranger hands you a rusty metal box from the 1940s—containing the secret case file of a forgotten murder. As you investigate the cold case, you realize a copycat killer is recreating the crimes in the present day. You must solve the past to stop a killer in the present.",
   setting: "Modern-day USA, 2025",
   gameType: 'Limited Open World',

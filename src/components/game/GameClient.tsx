@@ -19,7 +19,7 @@ interface GameClientProps {
 }
 
 export const GameClient: FC<GameClientProps> = ({ game: initialGame, initialGameState, initialMessages }) => {
-  const { userId, isUserLoading, showRegistration, registerUser, userState } = useUser();
+  const { userId, isUserLoading, showRegistration, registerUser, userState, refetchUserData } = useUser();
   const [game, setGame] = useState<SerializableGame>(initialGame);
   const [playerState, setPlayerState] = useState<PlayerState>(initialGameState);
   const [messages, setMessages] = useState<Message[]>(initialMessages);
@@ -79,6 +79,10 @@ export const GameClient: FC<GameClientProps> = ({ game: initialGame, initialGame
             // Update state for current chapter
             setPlayerState(result.newState);
             setMessages(result.messages);
+
+            // Refetch user data to ensure hook state is synced with Firebase
+            await refetchUserData();
+
             toast({
               title: "Chapter Reset",
               description: `${game.title} has been reset to the beginning.`,

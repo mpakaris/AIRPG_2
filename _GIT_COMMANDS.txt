@@ -30,3 +30,24 @@ npm test -- --run
 
 Test whether Local LLM is responding: 
 npm run test:llm
+
+
+KILL PORT 9002.
+Run these in Terminal.
+	1.	See what’s using port 9002:
+
+lsof -i :9002
+
+	2.	Kill everything on that port:
+
+kill -9 $(lsof -ti :9002)
+
+If you get permission errors, use:
+
+sudo kill -9 $(sudo lsof -ti :9002)
+
+Re-check:
+
+lsof -i :9002
+
+No output = port 9002 is free.

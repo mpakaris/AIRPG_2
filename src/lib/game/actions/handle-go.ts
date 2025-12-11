@@ -20,7 +20,7 @@ const chapterCompletionFlag = (chapterId: ChapterId) => `chapter_${chapterId}_co
  */
 function findLocationContaining(entityId: GameObjectId | ItemId, entityType: 'object' | 'item', game: Game): Location | undefined {
     for (const location of Object.values(game.locations)) {
-        if (entityType === 'object' && location.gameObjects?.includes(entityId as GameObjectId)) {
+        if (entityType === 'object' && location.objects?.includes(entityId as GameObjectId)) {
             return location;
         }
         if (entityType === 'item' && location.items?.includes(entityId as ItemId)) {
@@ -151,22 +151,32 @@ export async function handleGo(state: PlayerState, targetName: string, game: Gam
         const locationWithEntity = findLocationContaining(entityId, entityType, game);
 
         if (locationWithEntity) {
-            const effects: Effect[] = [
-                { type: 'MOVE_TO_LOCATION', toLocationId: locationWithEntity.locationId },
-                { type: 'END_CONVERSATION' },
-                { type: 'END_INTERACTION' },
-                { type: 'SHOW_MESSAGE', speaker: 'system', content: game.systemMessages.locationTransition(locationWithEntity.name) },
-                createLocationMessage(locationWithEntity)
-            ];
+            const effects: Effect[] = [];
+
+            // Only do location transition if moving to a DIFFERENT location
+            if (locationWithEntity.locationId !== state.currentLocationId) {
+                effects.push(
+                    { type: 'MOVE_TO_LOCATION', toLocationId: locationWithEntity.locationId },
+                    { type: 'END_CONVERSATION' },
+                    { type: 'END_INTERACTION' },
+                    { type: 'SHOW_MESSAGE', speaker: 'system', content: game.systemMessages.locationTransition(locationWithEntity.name) },
+                    createLocationMessage(locationWithEntity)
+                );
+            }
 
             // If it's an object (not an item), set focus on it
             if (entityType === 'object') {
                 const targetObject = game.gameObjects[entityId as GameObjectId];
                 if (targetObject) {
+                    // Get transition narration from handle-goto.ts logic
+                    const { FocusResolver } = await import('@/lib/game/engine/FocusResolver');
+                    const transitionMessage = FocusResolver.getTransitionNarration(entityId as GameObjectId, 'object', state, game);
+
                     effects.push({
                         type: 'SET_FOCUS',
                         focusId: entityId as GameObjectId,
-                        focusType: 'object'
+                        focusType: 'object',
+                        transitionMessage: transitionMessage || undefined
                     });
                 }
             }

@@ -35,8 +35,11 @@ export async function getPlayerState(userId: string, gameId: GameId): Promise<Pl
 
 export async function getPlayerLogs(userId: string, gameId: GameId): Promise<Message[]> {
     const { firestore } = initializeFirebase();
+    console.log(`[Admin Action] Getting logs for userId: ${userId}, gameId: ${gameId}`);
     // Use new getAllLogs helper that handles both old and new formats
-    return await getAllLogs(firestore, userId, gameId);
+    const logs = await getAllLogs(firestore, userId, gameId);
+    console.log(`[Admin Action] Retrieved ${logs.length} logs`);
+    return logs;
 }
 
 export async function deleteUser(userId: string, gameIds: GameId[]): Promise<void> {

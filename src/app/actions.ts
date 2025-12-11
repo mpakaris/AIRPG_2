@@ -308,37 +308,53 @@ export async function createInitialMessages(state: PlayerState, game: Game): Pro
     const narratorName = game.narratorName || "Narrator";
     const messages: Message[] = [];
 
-    // 1. Welcome message
-    messages.push(createMessage('narrator', narratorName, 'Welcome to Bloodhaven! Watch the following Videos to start your journey!'));
+    // Check if this chapter has intro videos (Chapter 0 pattern)
+    const hasIntroVideos = chapter.introVideo1 || chapter.introVideo2;
 
-    // 2. Chapter title
-    messages.push(createMessage('narrator', narratorName, 'WALK IN JUSTICE - Burt Macklin Chronicles | Chapter I'));
+    if (hasIntroVideos) {
+        // Chapter 0 pattern: Welcome message + videos + scene
+        // 1. Welcome message
+        messages.push(createMessage('narrator', narratorName, 'Welcome to Bloodhaven! Watch the following Videos to start your journey!'));
 
-    // 3. First intro video (Cutscene)
-    if (chapter.introVideo1) {
-        const video1Message = createMessage('narrator', narratorName, '', 'video');
-        video1Message.image = {
-            url: chapter.introVideo1,
-            description: 'Burt Macklin - Cutscene I',
-            hint: 'intro-cutscene'
-        };
-        messages.push(video1Message);
+        // 2. Chapter title
+        messages.push(createMessage('narrator', narratorName, 'WALK IN JUSTICE - Burt Macklin Chronicles | Chapter I'));
+
+        // 3. First intro video (Cutscene)
+        if (chapter.introVideo1) {
+            const video1Message = createMessage('narrator', narratorName, '', 'video');
+            video1Message.image = {
+                url: chapter.introVideo1,
+                description: 'Burt Macklin - Cutscene I',
+                hint: 'intro-cutscene'
+            };
+            messages.push(video1Message);
+        }
+
+        // 4. Second intro video (Explanation)
+        if (chapter.introVideo2) {
+            const video2Message = createMessage('narrator', narratorName, '', 'video');
+            video2Message.image = {
+                url: chapter.introVideo2,
+                description: 'Introduction Explanation',
+                hint: 'intro-explanation'
+            };
+            messages.push(video2Message);
+        }
+
+        // 5. Scene description (Chapter 0 hardcoded)
+        const sceneText = "You are inside The Daily Grind. It's a bustling downtown cafe, smelling of coffee and rain.\n\nA stranger just placed a mysterious Metal Box in front of you, out of nowhere.\n\nWhat do you do next, Burt Macklin?";
+        messages.push(createMessage('narrator', narratorName, sceneText));
+    } else {
+        // Chapter 1+ pattern: Use chapter introMessage and location intro
+        if (chapter.introMessage) {
+            messages.push(createMessage('narrator', narratorName, chapter.introMessage));
+        }
+
+        // Add location intro if available
+        if (location.introMessage) {
+            messages.push(createMessage('narrator', narratorName, location.introMessage));
+        }
     }
-
-    // 4. Second intro video (Explanation)
-    if (chapter.introVideo2) {
-        const video2Message = createMessage('narrator', narratorName, '', 'video');
-        video2Message.image = {
-            url: chapter.introVideo2,
-            description: 'Introduction Explanation',
-            hint: 'intro-explanation'
-        };
-        messages.push(video2Message);
-    }
-
-    // 5. Scene description
-    const sceneText = "You are inside The Daily Grind. It's a bustling downtown cafe, smelling of coffee and rain.\n\nA stranger just placed a mysterious Metal Box in front of you, out of nowhere.\n\nWhat do you do next, Burt Macklin?";
-    messages.push(createMessage('narrator', narratorName, sceneText));
 
     return messages;
 }

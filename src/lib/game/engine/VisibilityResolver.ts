@@ -61,8 +61,8 @@ export class VisibilityResolver {
       const entityState = GameStateManager.getEntityState(state, objectId);
       const hasBeenRevealed = entityState.isVisible === true;
 
-      // Object is potentially visible if in location OR revealed
-      if (isInLocation || hasBeenRevealed) {
+      // Object is ONLY visible if in current location (revealed status handled by children check)
+      if (isInLocation) {
         // Check if accessible (parent chain grants access)
         const isAccessible = GameStateManager.isAccessible(state, game, objectId);
 

@@ -78,6 +78,17 @@ export function useUser() {
     }
   }, []);
 
+  // Expose a refetch function for external components to trigger reload
+  const refetchUserData = useCallback(async () => {
+    if (userId) {
+      const currentGameId = getCurrentGameId();
+      const loadedUserState = await fetchUserData(userId, currentGameId);
+      if (loadedUserState) {
+        setUserState(loadedUserState);
+      }
+    }
+  }, [userId]);
+
 
   const registerUser = useCallback(async (id: string): Promise<{ success: boolean; message: string }> => {
     // `findOrCreateUser` checks the DB. If user exists, it returns it. If not, it creates it.
@@ -127,5 +138,5 @@ export function useUser() {
     identifyUser();
   }, [currentEnv, registerUser, loadUser]);
 
-  return { userId, isUserLoading, showRegistration, registerUser, userState };
+  return { userId, isUserLoading, showRegistration, registerUser, userState, refetchUserData };
 }
