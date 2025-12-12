@@ -40,8 +40,22 @@ const nextConfig: NextConfig = {
         hostname: '1drv.ms',
         port: '',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'via.placeholder.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'placeholder.com',
+        port: '',
+        pathname: '/**',
       }
     ],
+    // Allow any domain starting with "placeholder-" for development
+    unoptimized: process.env.NODE_ENV === 'development',
   },
   env: {
     NEXT_PUBLIC_FIREBASE_API_KEY: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,

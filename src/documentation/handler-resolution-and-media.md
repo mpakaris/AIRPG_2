@@ -1,6 +1,6 @@
 # Handler Resolution and Media System
 
-**Last Updated**: 2025-11-07
+**Last Updated**: 2025-12-12
 **Critical System Documentation**
 
 ## Overview
@@ -364,6 +364,61 @@ onUse: [
 
 ## Common Mistakes to Avoid
 
+### ❌ DON'T: Write Handlers Without success/fail Wrapper
+
+```typescript
+// ❌ WRONG: Missing success wrapper
+onExamine: {
+  message: "You examine the object...",
+  media: undefined
+}
+
+// ❌ WRONG: Missing success wrapper
+onSearch: {
+  message: "You search and find nothing.",
+  media: undefined
+}
+```
+
+**Problem**: The game engine expects ALL handlers to follow Pattern 1 (Binary) structure with `success` and/or `fail` objects. Handlers without this wrapper will return the entity's `description` field instead of the handler message.
+
+**Correct way**:
+
+```typescript
+// ✅ CORRECT: Wrapped in success object
+onExamine: {
+  success: {
+    message: "You examine the object...",
+    media: undefined
+  }
+}
+
+// ✅ CORRECT: Even simple handlers need success wrapper
+onSearch: {
+  success: {
+    message: "You search and find nothing.",
+    media: undefined
+  }
+}
+
+// ✅ CORRECT: Handlers with effects also need wrapper
+onUse: {
+  success: {
+    message: "You use the item successfully.",
+    media: undefined,
+    effects: [
+      { type: 'SET_FLAG', flag: 'used', value: true }
+    ]
+  }
+}
+```
+
+**Rule**: Every handler MUST have a `success` object (and optionally a `fail` object). Even if there are no conditions, even if it's a simple one-time action, the structure must include the success wrapper.
+
+**Why**: The handler resolution system (`HandlerResolver.getEffectiveHandler()`) expects to extract `handler.success` or `handler.fail`. Without this structure, the game falls back to showing the entity's generic `description` field instead of your carefully crafted handler message.
+
+**CRITICAL FOR NEW CHAPTERS**: When creating new cartridges (Chapter 2, 3, etc.), ALWAYS use the `success` wrapper for every single handler. This is not optional.
+
 ### ❌ DON'T: Make Local Fixes to Individual Objects
 
 ```typescript
@@ -475,6 +530,14 @@ When modifying handler resolution or media systems, verify:
 ---
 
 ## Version History
+
+**2025-12-12**:
+- **CRITICAL ADDITION**: Added warning about missing success/fail wrappers in handlers
+  - All handlers MUST use `success: { message, media, effects }` structure
+  - Even simple one-time handlers require the wrapper
+  - Without wrapper, game engine falls back to entity `description` field
+  - Added examples of correct vs incorrect handler structure
+  - This prevents Chapter 2+ from repeating Chapter 1's mistake
 
 **2025-11-07**:
 - Initial documentation after fixing conditional handler resolution bug
