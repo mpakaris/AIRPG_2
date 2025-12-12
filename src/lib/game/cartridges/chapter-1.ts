@@ -13,7 +13,7 @@ const items: Record<ItemId, Item> = {
         id: 'item_audio_message' as ItemId,
         name: 'Audio Message',
         description: 'A voice message from your colleague about the Lili abduction case.',
-        capabilities: { takeable: false, consumable: false, readable: false, inputtable: false },
+        capabilities: { takable: false, consumable: false, readable: false, inputtable: false },
         startingLocation: 'player',
         media: {
             audio: {
@@ -38,7 +38,7 @@ const items: Record<ItemId, Item> = {
         id: 'item_police_report' as ItemId,
         name: 'Police Report',
         description: 'Police report PDF about Lili\'s abduction. Received via email attachment.',
-        capabilities: { takeable: false, consumable: false, readable: true, inputtable: false },
+        capabilities: { takable: false, consumable: false, readable: true, inputtable: false },
         startingLocation: 'player',
         media: {
             document: {
@@ -67,7 +67,7 @@ const items: Record<ItemId, Item> = {
         id: 'item_invoice' as ItemId,
         name: 'Invoice',
         description: 'A crumpled invoice lying near the bus station bench.',
-        capabilities: { takeable: true, consumable: false, readable: true, inputtable: false },
+        capabilities: { takable: true, consumable: false, readable: true, inputtable: false },
         startingLocation: 'loc_street' as LocationId,
         parentId: 'obj_bench' as GameObjectId,
         revealMethod: 'REVEAL_FROM_PARENT',
@@ -88,7 +88,7 @@ const items: Record<ItemId, Item> = {
         id: 'item_crowbar' as ItemId,
         name: 'Crowbar',
         description: 'A heavy steel crowbar. Rust-spotted but still solid. Good for prying things open.',
-        capabilities: { takeable: true, consumable: false, readable: false, inputtable: false },
+        capabilities: { takable: true, consumable: false, readable: false, inputtable: false },
         startingLocation: 'loc_street' as LocationId,
         parentId: 'obj_tire_stack' as GameObjectId,
         revealMethod: 'REVEAL_FROM_PARENT',
@@ -119,7 +119,7 @@ const items: Record<ItemId, Item> = {
         id: 'item_crumpled_note' as ItemId,
         name: 'Crumpled Note',
         description: 'A handwritten note, crumpled and stained. Found in the dumpster.',
-        capabilities: { takeable: true, consumable: false, readable: true, inputtable: false },
+        capabilities: { takable: true, consumable: false, readable: true, inputtable: false },
         startingLocation: 'loc_street' as LocationId,
         parentId: 'obj_dumpster' as GameObjectId,
         revealMethod: 'REVEAL_FROM_PARENT',
@@ -150,7 +150,7 @@ const items: Record<ItemId, Item> = {
         id: 'item_photo_tire_marks' as ItemId,
         name: 'Photo of Tire Marks',
         description: 'A photograph of tire marks left in the alley. Clear tread pattern visible.',
-        capabilities: { takeable: false, consumable: false, readable: false, inputtable: false },
+        capabilities: { takable: false, consumable: false, readable: false, inputtable: false },
         startingLocation: 'player',
         handlers: {
             onExamine: {
@@ -528,28 +528,70 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         capabilities: { openable: false, lockable: false, breakable: false, movable: true, powerable: false, container: false, readable: false, inputtable: false },
         state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
         handlers: {
-            onExamine: {
-                success: {
-                    message: 'Old wooden crates stacked haphazardly. Some are marked with faded shipping labels—delivery companies from decades ago. The wood is splintered and warped from moisture and age.\n\nThey\'re stacked against the wall, heavy and solid. Too heavy to move by hand. You\'d need leverage—a crowbar, maybe—to shift them.',
-                    media: {
-                        url: '',
-                        description: 'Weathered wooden crates',
-                        hint: 'old shipping crates'
+            onExamine: [
+                {
+                    // State 1: UNTOUCHED - Door not revealed yet
+                    conditions: [
+                        { type: 'OBJECT_IN_WORLD', objectId: 'obj_courtyard_door', inWorld: false }
+                    ],
+                    success: {
+                        message: 'Old wooden crates stacked haphazardly. Some are marked with faded shipping labels—delivery companies from decades ago. The wood is splintered and warped from moisture and age.\n\nThey\'re stacked against the wall, heavy and solid. Too heavy to move by hand. You\'d need leverage—a crowbar, maybe—to shift them.',
+                        media: {
+                            url: '',
+                            description: 'Weathered wooden crates',
+                            hint: 'old shipping crates'
+                        }
+                    }
+                },
+                {
+                    // State 2: REVEALED - Door revealed, crates moved
+                    conditions: [],
+                    success: {
+                        message: 'The crates sit where you moved them, shifted several feet to the side. The hidden door behind them is now fully visible—old, rusted, with that keypad on the frame.',
+                        media: undefined
                     }
                 }
-            },
-            onMove: {
-                success: {
-                    message: 'You try to shove the crates aside. They don\'t budge. Too heavy. Decades of moisture have made the wood waterlogged, dense.\n\nYou need leverage. Something to pry them loose.',
-                    media: undefined
+            ],
+            onMove: [
+                {
+                    // State 1: UNTOUCHED - Trying without crowbar
+                    conditions: [
+                        { type: 'OBJECT_IN_WORLD', objectId: 'obj_courtyard_door', inWorld: false }
+                    ],
+                    success: {
+                        message: 'You try to shove the crates aside. They don\'t budge. Too heavy. Decades of moisture have made the wood waterlogged, dense.\n\nYou need leverage. Something to pry them loose.',
+                        media: undefined
+                    }
+                },
+                {
+                    // State 2: REVEALED - Already moved
+                    conditions: [],
+                    success: {
+                        message: 'The crates are already moved. The door is visible behind them.',
+                        media: undefined
+                    }
                 }
-            },
-            onSearch: {
-                success: {
-                    message: 'You check between the crates, looking for anything hidden in the gaps. Nothing. Empty spaces, cobwebs, dust.',
-                    media: undefined
+            ],
+            onSearch: [
+                {
+                    // State 1: UNTOUCHED - Nothing hidden
+                    conditions: [
+                        { type: 'OBJECT_IN_WORLD', objectId: 'obj_courtyard_door', inWorld: false }
+                    ],
+                    success: {
+                        message: 'You check between the crates, looking for anything hidden in the gaps. Nothing. Empty spaces, cobwebs, dust.',
+                        media: undefined
+                    }
+                },
+                {
+                    // State 2: REVEALED - Already searched
+                    conditions: [],
+                    success: {
+                        message: 'You already moved the crates and revealed the door. Nothing else here.',
+                        media: undefined
+                    }
                 }
-            },
+            ],
             onUse: [
                 {
                     // Using crowbar on crates
@@ -652,15 +694,49 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                     media: undefined
                 }
             },
-            onSearch: {
-                success: {
-                    message: 'You hold your breath and dig through the trash. Rotting food. Soaked newspapers. Empty bottles.\n\nThen—something that doesn\'t belong. A piece of paper, crumpled but relatively clean. Like it was thrown away recently, not weeks ago.\n\nYou pull it out. A handwritten note.',
-                    media: undefined,
-                    effects: [
-                        { type: 'REVEAL_FROM_PARENT', entityId: 'item_crumpled_note', parentId: 'obj_dumpster' }
-                    ]
+            onSearch: [
+                {
+                    // State 3: TAKEN - Note already taken
+                    conditions: [
+                        { type: 'HAS_ITEM', itemId: 'item_crumpled_note' }
+                    ],
+                    success: {
+                        message: 'You already searched through this dumpster. Found that note. Nothing else of interest here—just garbage, rot, and the smell of decay.',
+                        media: undefined
+                    }
+                },
+                {
+                    // State 2: REVEALED - Note found but not taken
+                    conditions: [
+                        { type: 'ITEM_IN_WORLD', itemId: 'item_crumpled_note', inWorld: true }
+                    ],
+                    success: {
+                        message: 'You already dug through the garbage. The crumpled note is right there—you pulled it out. Just take it if you need it.',
+                        media: undefined
+                    }
+                },
+                {
+                    // Must open dumpster first before searching
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_dumpster', key: 'isOpen', equals: false }
+                    ],
+                    success: {
+                        message: 'The dumpster lid is closed. You need to OPEN it before you can search through the contents.',
+                        media: undefined
+                    }
+                },
+                {
+                    // State 1: UNTOUCHED - Finding the note (fallback/default)
+                    conditions: [],
+                    success: {
+                        message: 'You hold your breath and dig through the trash. Rotting food. Soaked newspapers. Empty bottles.\n\nYour hands plunge deeper. Slime. Mold. Something wet that soaks through your sleeve.\n\nThen—something that doesn\'t belong.\n\nA piece of paper. Crumpled but relatively clean. Like it was thrown away recently, not weeks ago. Deliberately placed, maybe, not just tossed.\n\nYou pull it out carefully, shaking off the grime.\n\nA handwritten note.',
+                        media: undefined,
+                        effects: [
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_crumpled_note', parentId: 'obj_dumpster' }
+                        ]
+                    }
                 }
-            },
+            ],
             onMove: {
                 success: {
                     message: 'You grip the dumpster\'s edge and push. It\'s heavy—really heavy—full of trash and years of rust. The metal scrapes against concrete, a harsh grinding sound echoing in the alley.\n\nYou push harder. Inch by inch, it slides away from the wall.\n\nAnd there it is. Behind the dumpster, hidden for who knows how long: an old metal door. Rusted, peeling paint, no handle—just a keyhole. Someone wanted this door hidden.\n\nWhy?',
@@ -706,58 +782,100 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         handlers: {
             onExamine: [
                 {
-                    // Before finding crowbar
+                    // State 3: TAKEN - After taking crowbar
                     conditions: [
-                        { type: 'NOT_HAS_ITEM', itemId: 'item_crowbar' },
-                        { type: 'ITEM_IN_WORLD', itemId: 'item_crowbar', inWorld: false }
+                        { type: 'HAS_ITEM', itemId: 'item_crowbar' }
                     ],
                     success: {
-                        message: 'Five or six old car tires, stacked haphazardly against the brick wall like someone tossed them there and forgot. The rubber is cracked, dry-rotted from years of exposure. Deep fissures run along the treads where the material split and separated. Black flakes dust your fingers when you touch them.\n\nWeeds have colonized the centers—dandelions gone to seed, scraggly grass pushing through the holes. Nature reclaiming what was abandoned.\n\nThe smell is distinct: burnt rubber mixed with decay, that chemical petroleum stench that never fully fades. It clings to the back of your throat.\n\nThey\'re heavier than they look. Decades of moisture absorbed into the rubber, making them dense, waterlogged. Someone would need to roll them aside one by one if they wanted to move them.\n\nBut why would anyone? They\'re just trash. Forgotten debris in a forgotten alley.\n\nUnless they\'re hiding something.',
+                        message: 'The tire pile sits where you left it, slightly disturbed from your search. The crowbar is gone—you took it. Just old rubber remains, cracked and weathered, weeds growing through the centers.\n\nNothing else hidden here. You checked.',
                         media: undefined
                     }
                 },
                 {
-                    // After finding crowbar
+                    // State 2: REVEALED - Crowbar found but not taken yet
+                    conditions: [
+                        { type: 'ITEM_IN_WORLD', itemId: 'item_crowbar', inWorld: true }
+                    ],
+                    success: {
+                        message: 'The tire pile sits slightly disturbed from your search. The crowbar you found is still here, lying where you pulled it out—two feet of rust-spotted steel wedged between the third and fourth tire.\n\nYou should take it. Could be useful.',
+                        media: undefined
+                    }
+                },
+                {
+                    // State 1: UNTOUCHED - Before finding crowbar (fallback/default)
                     conditions: [],
                     success: {
-                        message: 'The tire pile sits where you left it, slightly disturbed from your search. The crowbar is gone—you took it. Just old rubber remains, cracked and weathered, weeds growing through the centers.\n\nNothing else hidden here. You checked.',
+                        message: 'Five or six old car tires, stacked haphazardly against the brick wall like someone tossed them there and forgot. The rubber is cracked, dry-rotted from years of exposure. Deep fissures run along the treads where the material split and separated. Black flakes dust your fingers when you touch them.\n\nWeeds have colonized the centers—dandelions gone to seed, scraggly grass pushing through the holes. Nature reclaiming what was abandoned.\n\nThe smell is distinct: burnt rubber mixed with decay, that chemical petroleum stench that never fully fades. It clings to the back of your throat.\n\nThey\'re heavier than they look. Decades of moisture absorbed into the rubber, making them dense, waterlogged. Someone would need to roll them aside one by one if they wanted to move them.\n\nBut why would anyone? They\'re just trash. Forgotten debris in a forgotten alley.\n\nUnless they\'re hiding something.',
                         media: undefined
                     }
                 }
             ],
             onSearch: [
                 {
-                    // Finding the crowbar
+                    // State 3: TAKEN - Already found and taken
                     conditions: [
-                        { type: 'NOT_HAS_ITEM', itemId: 'item_crowbar' },
-                        { type: 'ITEM_IN_WORLD', itemId: 'item_crowbar', inWorld: false }
+                        { type: 'HAS_ITEM', itemId: 'item_crowbar' }
                     ],
                     success: {
-                        message: 'You crouch down and start checking between the tires, fingers probing the gaps. Most are empty—just dead leaves, dirt compacted into paste, spider webs stretched across the voids.\n\nThe third tire from the top: nothing.\nThe fourth: empty.\nThe fifth—\n\nMetal. Cold. Hard.\n\nYou grip it and pull. Resistance. Wedged tight. You pull harder.\n\nIt slides free with a scrape.\n\nA crowbar. Steel, about two feet long. Rust-spotted but solid. The kind of tool you use when you need leverage.\n\nSomeone hid this here. Deliberately. Tucked it inside the tire where no one would look.\n\nWhy?',
+                        message: 'You\'ve already searched the tires. The crowbar is gone—you took it. Nothing else here but rubber and weeds.',
+                        media: undefined
+                    }
+                },
+                {
+                    // State 2: REVEALED - Crowbar found but not taken
+                    conditions: [
+                        { type: 'ITEM_IN_WORLD', itemId: 'item_crowbar', inWorld: true }
+                    ],
+                    success: {
+                        message: 'You already moved the tires apart. The crowbar is right there—you can see it lying between the rubber. Just take it if you need it.',
+                        media: undefined
+                    }
+                },
+                {
+                    // State 1: UNTOUCHED - Hint only, don't reveal yet
+                    conditions: [],
+                    success: {
+                        message: 'You crouch down and reach between the tires, fingers probing the gaps. Most are empty—just dead leaves, dirt compacted into paste, spider webs.\n\nBut wait.\n\nYour fingers brush something. Cold. Hard. Metal.\n\nIt\'s wedged tight between the third and fourth tire, deep in the gap. You can feel the shape—long, narrow, maybe two feet. A rod? A pipe?\n\nYou try to pull it out. Can\'t. Stuck. The tires are too heavy, pinning it in place.\n\nYou need to MOVE the tires apart if you want to get at whatever this is.',
+                        media: undefined
+                    }
+                }
+            ],
+            onMove: [
+                {
+                    // State 3: TAKEN - Already moved and taken
+                    conditions: [
+                        { type: 'HAS_ITEM', itemId: 'item_crowbar' }
+                    ],
+                    success: {
+                        message: 'You already moved the tires. The crowbar is gone—you took it. Nothing else here.',
+                        media: undefined
+                    }
+                },
+                {
+                    // State 2: REVEALED - Already moved, crowbar visible
+                    conditions: [
+                        { type: 'ITEM_IN_WORLD', itemId: 'item_crowbar', inWorld: true }
+                    ],
+                    success: {
+                        message: 'You already moved the tires apart. The crowbar is lying right there between the rubber. Take it if you need it.',
+                        media: undefined
+                    }
+                },
+                {
+                    // State 1: UNTOUCHED - Moving reveals the crowbar
+                    conditions: [],
+                    success: {
+                        message: 'You grip the top tire and roll it aside. Heavy. The rubber is slick with grime, waterlogged from years of exposure. It hits the ground with a dull thud.\n\nSecond tire. Roll it away.\n\nThird tire. You pause. This is the one. You felt something metal wedged against it.\n\nYou push it aside, and there it is—\n\nA crowbar.\n\nSteel, about two feet long. Rust-spotted but solid. The curved pry end catches the dim light. The kind of tool you use when you need leverage.\n\nSomeone hid this here. Deliberately. Tucked it between the tires where no casual passerby would find it.\n\nWhy?\n\nYou should take it. Could be useful.',
                         media: undefined,
                         effects: [
                             { type: 'REVEAL_FROM_PARENT', entityId: 'item_crowbar', parentId: 'obj_tire_stack' }
                         ]
                     }
-                },
-                {
-                    // Already found
-                    conditions: [],
-                    success: {
-                        message: 'You\'ve already searched the tires. The crowbar is gone. Nothing else here but rubber and weeds.',
-                        media: undefined
-                    }
                 }
             ],
-            onMove: {
-                success: {
-                    message: 'You grip the top tire and roll it aside. Heavy. Awkward. The rubber is slick with grime.\n\nOne by one, you roll them away from the wall. Each one hits the ground with a dull thud, bouncing slightly before settling.\n\nBeneath the pile: cracked concrete. Dirt. A few cigarette butts ground into the pavement.\n\nNothing hidden under them. But that crowbar you found wedged inside one of the tires—that\'s useful.',
-                    media: undefined
-                }
-            },
             onTake: {
                 fail: {
-                    message: 'The tires are too heavy and awkward to carry. Besides, what would you do with a pile of old rubber? Leave them here. If you want what\'s hidden inside them, try SEARCHING instead.',
+                    message: 'The tires are too heavy and awkward to carry. Besides, what would you do with a pile of old rubber? Leave them here.\n\nIf you think something\'s hidden inside them, try SEARCHING first, then MOVE the tires apart to get at it.',
                     media: undefined
                 }
             }
@@ -777,44 +895,44 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         handlers: {
             onExamine: [
                 {
-                    // Before photographing
+                    // After photographing
                     conditions: [
-                        { type: 'NOT_HAS_ITEM', itemId: 'item_photo_tire_marks' }
+                        { type: 'HAS_ITEM', itemId: 'item_photo_tire_marks' }
                     ],
                     success: {
-                        message: 'You crouch down, knees cracking, and study the marks.\n\nTwo parallel tracks pressed into the layer of dirt and grime coating the alley concrete. The treads are distinct—deep grooves cut in a diagonal crosshatch pattern, the kind of aggressive tread you see on commercial vehicles. Not passenger cars. Something heavier. A van, most likely.\n\nThe marks are fresh. Recent. You can tell by the way the dirt hasn\'t settled back into the grooves yet. A week old, maybe less. Rain would have washed them away if they\'d been here longer.\n\nYou run your finger along one track. The groove is deep—eighth of an inch, maybe more. New tires. Someone replaced them recently, or the vehicle doesn\'t see much mileage.\n\nThe police report mentioned a gray van. Witnesses saw it near the bus stop around the time Lili disappeared. These could be from that van. The timing matches. The location matches.\n\nYou should photograph these. Document the tread pattern. Compare it to the forensic report—they always catalog tire types when there\'s vehicle involvement.\n\nSomething about these tracks bothers you. They\'re too clean. Too perfect. Like someone wanted them found.',
+                        message: 'The tire marks remain pressed into the grime—two parallel tracks with that distinctive diagonal crosshatch tread. You\'ve already photographed them. The pattern\'s documented in your phone.\n\nNow you just need to match it to the police report.',
                         media: undefined
                     }
                 },
                 {
-                    // After photographing
+                    // Before photographing (fallback/default)
                     conditions: [],
                     success: {
-                        message: 'The tire marks remain pressed into the grime—two parallel tracks with that distinctive diagonal crosshatch tread. You\'ve already photographed them. The pattern\'s documented in your phone.\n\nNow you just need to match it to the police report.',
+                        message: 'You crouch down, knees cracking, and study the marks.\n\nTwo parallel tracks pressed into the layer of dirt and grime coating the alley concrete. The treads are distinct—deep grooves cut in a diagonal crosshatch pattern, the kind of aggressive tread you see on commercial vehicles. Not passenger cars. Something heavier. A van, most likely.\n\nThe marks are fresh. Recent. You can tell by the way the dirt hasn\'t settled back into the grooves yet. A week old, maybe less. Rain would have washed them away if they\'d been here longer.\n\nYou run your finger along one track. The groove is deep—eighth of an inch, maybe more. New tires. Someone replaced them recently, or the vehicle doesn\'t see much mileage.\n\nThe police report mentioned a gray van. Witnesses saw it near the bus stop around the time Lili disappeared. These could be from that van. The timing matches. The location matches.\n\nYou should photograph these. Document the tread pattern. Compare it to the forensic report—they always catalog tire types when there\'s vehicle involvement.\n\nSomething about these tracks bothers you. They\'re too clean. Too perfect. Like someone wanted them found.',
                         media: undefined
                     }
                 }
             ],
             onPhotograph: [
                 {
-                    // First time photographing
+                    // Already photographed
                     conditions: [
-                        { type: 'NOT_HAS_ITEM', itemId: 'item_photo_tire_marks' }
+                        { type: 'HAS_ITEM', itemId: 'item_photo_tire_marks' }
                     ],
+                    success: {
+                        message: 'You\'ve already photographed the tire marks. The images are stored in your phone—clear shots of the tread pattern.',
+                        media: undefined
+                    }
+                },
+                {
+                    // First time photographing (fallback/default)
+                    conditions: [],
                     success: {
                         message: 'You pull out your phone, angle it to get the best light, and snap several photos. The camera focuses, capturing the tread pattern in sharp detail.\n\nClick. Click. Click.\n\nYou review the images. Clear. Usable. The diagonal crosshatch pattern is visible, the depth of the grooves apparent even in the photo. Good enough for comparison.\n\n*Photo added to evidence.*\n\nNow check the police report. They mentioned tire analysis in the forensics section.',
                         media: undefined,
                         effects: [
                             { type: 'ADD_ITEM_TO_INVENTORY', itemId: 'item_photo_tire_marks' }
                         ]
-                    }
-                },
-                {
-                    // Already photographed
-                    conditions: [],
-                    success: {
-                        message: 'You\'ve already photographed the tire marks. The images are stored in your phone—clear shots of the tread pattern.',
-                        media: undefined
                     }
                 }
             ],
@@ -1319,7 +1437,8 @@ const locations: Record<LocationId, Location> = {
             'You step around cracked pavement, moving toward the {entity}. This neighborhood has seen better days.',
             'The kiosk vendor watches you briefly as you head to the {entity}, then returns to his newspaper.',
             'You walk past faded storefronts toward the {entity}. Elm Street feels frozen in time, stuck somewhere between neglect and normalcy.'
-        ]
+        ],
+        spatialMode: 'sprawling' // Large outdoor area - requires navigation between zones
     },
 
     'loc_courtyard': {

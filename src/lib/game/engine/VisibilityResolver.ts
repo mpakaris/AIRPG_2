@@ -24,8 +24,11 @@ export class VisibilityResolver {
   /**
    * Get all entities that should be visible AND accessible in current context
    * This is the main entry point for getting what the player can see/interact with
+   *
+   * @param includeChildrenOfLocationObjects - If true, recursively include children of location objects (OLD BEHAVIOR - breaks levels)
+   *                                            If false, only show top-level location objects (NEW BEHAVIOR - respects levels)
    */
-  static getVisibleEntities(state: PlayerState, game: Game): {
+  static getVisibleEntities(state: PlayerState, game: Game, includeChildrenOfLocationObjects: boolean = false): {
     objects: string[];
     items: string[];
     npcs: string[];
@@ -72,18 +75,23 @@ export class VisibilityResolver {
             visibleObjects.push(objectId);
           }
 
-          // Recursively get accessible children
-          const children = VisibilityResolver.getAccessibleChildren(objectId, state, game);
+          // LEVEL-BASED VISIBILITY FIX:
+          // Only recursively get children if explicitly requested (for backward compatibility)
+          // For "look around" commands, this should be FALSE to respect hierarchy levels
+          if (includeChildrenOfLocationObjects) {
+            // OLD BEHAVIOR: Recursively get accessible children (breaks levels)
+            const children = VisibilityResolver.getAccessibleChildren(objectId, state, game);
 
-          // Only add children that aren't already in the arrays (prevent duplicates)
-          for (const childObj of children.objects) {
-            if (!visibleObjects.includes(childObj)) {
-              visibleObjects.push(childObj);
+            // Only add children that aren't already in the arrays (prevent duplicates)
+            for (const childObj of children.objects) {
+              if (!visibleObjects.includes(childObj)) {
+                visibleObjects.push(childObj);
+              }
             }
-          }
-          for (const childItem of children.items) {
-            if (!visibleItems.includes(childItem)) {
-              visibleItems.push(childItem);
+            for (const childItem of children.items) {
+              if (!visibleItems.includes(childItem)) {
+                visibleItems.push(childItem);
+              }
             }
           }
         }

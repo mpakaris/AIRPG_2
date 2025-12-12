@@ -932,6 +932,7 @@ export type Location = {
   onExitLocation?: Handler;
   zones?: { title: string, objectIds: GameObjectId[] }[];
   transitionTemplates?: string[]; // Location-specific atmospheric transitions. Use {entity} placeholder for object/NPC name.
+  spatialMode?: 'compact' | 'sprawling'; // 'compact' = all objects within reach (default, Cartridge 0), 'sprawling' = requires navigation between children (Cartridge 1+)
 };
 
 export type Portal = {

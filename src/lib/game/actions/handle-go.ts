@@ -16,14 +16,46 @@ import { MessageExpander } from "@/lib/game/utils/message-expansion";
 const chapterCompletionFlag = (chapterId: ChapterId) => `chapter_${chapterId}_complete` as Flag;
 
 /**
+ * Helper to recursively check if an entity is a child (or nested child) of any object
+ */
+function isChildOfAnyObject(entityId: GameObjectId | ItemId, searchObjects: GameObjectId[], game: Game): boolean {
+    for (const objectId of searchObjects) {
+        const obj = game.gameObjects[objectId];
+        if (!obj) continue;
+
+        // Check direct children
+        if (obj.children?.objects?.includes(entityId as GameObjectId) ||
+            obj.children?.items?.includes(entityId as ItemId)) {
+            return true;
+        }
+
+        // Recursively check nested children (e.g., tire_stack → alley → location)
+        if (obj.children?.objects && obj.children.objects.length > 0) {
+            if (isChildOfAnyObject(entityId, obj.children.objects, game)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+/**
  * Helper to find which location contains a specific object or item
+ * Supports nested children (e.g., tire_stack inside side_alley inside loc_street)
  */
 function findLocationContaining(entityId: GameObjectId | ItemId, entityType: 'object' | 'item', game: Game): Location | undefined {
     for (const location of Object.values(game.locations)) {
+        // Check direct children of location (existing behavior - preserves Cartridge 0)
         if (entityType === 'object' && location.objects?.includes(entityId as GameObjectId)) {
             return location;
         }
         if (entityType === 'item' && location.items?.includes(entityId as ItemId)) {
+            return location;
+        }
+
+        // NEW: Check nested children for Cartridge 1's reveal system
+        // (e.g., "go to pile of tires" when tires are children of side_alley)
+        if (location.objects && isChildOfAnyObject(entityId, location.objects, game)) {
             return location;
         }
     }
@@ -128,30 +160,64 @@ export async function handleGo(state: PlayerState, targetName: string, game: Gam
     }
 
     // If not a location, try to find as an object or item
-    const normalizedTargetName = normalizeName(targetName);
+    // Strip ALL quotes that AI might have added (both surrounding and embedded)
+    const cleanedTargetName = targetName.replace(/["']/g, '');
+    console.log('[DEBUG GOTO] Original target:', targetName, '→ Cleaned:', cleanedTargetName);
+    console.log('[DEBUG GOTO] Current focus:', { focusId: state.focus?.focusId, currentFocusId: state.currentFocusId });
+    const normalizedTargetName = normalizeName(cleanedTargetName);
     const bestMatch = findBestMatch(normalizedTargetName, state, game, {
         searchInventory: false,
         searchVisibleItems: true,
         searchObjects: true,
         requireFocus: false  // Don't require focus for "go to" command
     });
+    console.log('[DEBUG GOTO] findBestMatch result:', bestMatch);
 
     if (bestMatch) {
         let entityId = bestMatch.id as GameObjectId | ItemId;
         let entityType: 'object' | 'item' = bestMatch.category === 'object' ? 'object' : 'item';
 
-        // If it's a child entity, find the parent object
+        // NEW: Check if target is a child of another object
         const parentId = findParentObject(entityId, game);
-        if (parentId) {
-            entityId = parentId;
-            entityType = 'object';
-        }
 
-        // Find which location contains this entity
+        // Find which location contains this entity (supports nested children)
         const locationWithEntity = findLocationContaining(entityId, entityType, game);
 
         if (locationWithEntity) {
             const effects: Effect[] = [];
+            const spatialMode = locationWithEntity.spatialMode || 'compact'; // Default to compact for backward compatibility
+
+            // DEBUG: Log spatial navigation check
+            console.log('[SPRAWLING DEBUG]', {
+                entityId,
+                parentId,
+                spatialMode,
+                currentFocus: state.focus?.focusId,
+                locationId: locationWithEntity.locationId,
+                checkResult: spatialMode === 'sprawling' && parentId && state.focus?.focusId !== parentId
+            });
+
+            // SPRAWLING LOCATION LOGIC: Require step-by-step navigation through parent hierarchy
+            if (spatialMode === 'sprawling' && parentId) {
+                // Player wants to navigate to a child object (e.g., tire_stack)
+                // In sprawling mode, they must be at the parent first (e.g., side_alley)
+                const currentFocus = state.currentFocusId || state.focus?.focusId;
+
+                if (currentFocus !== parentId) {
+                    // Not at parent - redirect to parent first
+                    const parentObj = game.gameObjects[parentId];
+                    const message = await MessageExpander.static(
+                        `You need to get closer to the ${parentObj?.name || 'area'} first. Try: GO TO ${parentObj?.name?.toUpperCase() || 'PARENT'}`
+                    );
+                    return [{ type: 'SHOW_MESSAGE', speaker: 'system', content: message }];
+                }
+
+                // Player IS at parent - allow navigation to child
+                // Continue to focus logic below (don't redirect to parent)
+            }
+
+            // COMPACT LOCATION LOGIC (default - Cartridge 0): Allow direct navigation to children
+            // OR player is already at parent in sprawling mode - continue
 
             // Only do location transition if moving to a DIFFERENT location
             if (locationWithEntity.locationId !== state.currentLocationId) {
@@ -168,9 +234,21 @@ export async function handleGo(state: PlayerState, targetName: string, game: Gam
             if (entityType === 'object') {
                 const targetObject = game.gameObjects[entityId as GameObjectId];
                 if (targetObject) {
-                    // Get transition narration from handle-goto.ts logic
-                    const { FocusResolver } = await import('@/lib/game/engine/FocusResolver');
-                    const transitionMessage = FocusResolver.getTransitionNarration(entityId as GameObjectId, 'object', state, game);
+                    // In sprawling mode, always use the object's transitionNarration (don't filter out children)
+                    // In compact mode, use FocusResolver which filters out children
+                    let transitionMessage: string | null = null;
+
+                    if (spatialMode === 'sprawling' && targetObject.transitionNarration) {
+                        // Sprawling: children ARE spatially distant, use their narration
+                        transitionMessage = targetObject.transitionNarration;
+                    } else {
+                        // Compact: use FocusResolver (filters out small items inside containers)
+                        const { FocusResolver } = await import('@/lib/game/engine/FocusResolver');
+                        transitionMessage = FocusResolver.getTransitionNarration(entityId as GameObjectId, 'object', state, game);
+                    }
+
+                    console.log('[DEBUG GOTO] Transition message:', transitionMessage);
+                    console.log('[DEBUG GOTO] Spatial mode:', spatialMode);
 
                     effects.push({
                         type: 'SET_FOCUS',

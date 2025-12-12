@@ -299,7 +299,8 @@ export function findBestMatch(
     } else {
         // Normal mode: search all visible entities
         if (options.searchVisibleItems || options.searchObjects) {
-            const visible = VisibilityResolver.getVisibleEntities(state, game);
+            // IMPORTANT: Pass true to include revealed children (e.g., tire_stack revealed from side_alley)
+            const visible = VisibilityResolver.getVisibleEntities(state, game, true);
             visibleEntities.items = visible.items;
             visibleEntities.objects = visible.objects;
 

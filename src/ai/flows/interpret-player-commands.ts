@@ -88,7 +88,20 @@ const interpretPlayerCommandPrompt = ai.definePrompt({
   {{/each}}
 
   Based on the player's command, determine which command to execute.
-  Ensure the command starts with a valid verb from the list of available commands (examine, take, go, goto, moveto, shift, use, talk, look, inventory, password, read, open, break, search, drop, close, move, combine).
+  Ensure the command starts with a valid verb from the list of available commands (examine, take, go, use, talk, look, inventory, password, read, open, break, search, drop, close, move, combine).
+
+  **IMPORTANT: Navigation commands**
+  - ONLY use "go" for ALL navigation (goto, moveto, shift are deprecated - use "go" instead)
+  - Examples: "go side alley", "go pile of tires", "go cafe"
+
+  **CRITICAL: ALWAYS PRESERVE THE TARGET (WITHOUT QUOTES)**
+  - ALWAYS include the target object/item/location in your command output
+  - DO NOT wrap target names in quotes - output plain text only
+  - Examples:
+    - "examine side alley" → commandToExecute: "examine side alley" ✅ (NOT "examine" ❌, NOT "examine \"side alley\"" ❌)
+    - "go to pile of tires" → commandToExecute: "go pile of tires" ✅ (NOT "go \"pile of tires\"" ❌)
+    - "take crowbar" → commandToExecute: "take crowbar" ✅ (NOT "take \"crowbar\"" ❌)
+  - ONLY omit the target for commands that don't need one (look around, inventory, help)
 
   **CRITICAL: responseToPlayer field**
   - Leave responseToPlayer EMPTY ("") for normal command interpretation
@@ -125,11 +138,17 @@ const interpretPlayerCommandPrompt = ai.definePrompt({
     - "check the safe" → "examine safe" ✅
   - RULE: "check" = visual inspection = "examine", NOT opening/manipulating
 
-  **IMPORTANT FOCUS COMMANDS:**
-  - Use 'goto', 'moveto', or 'shift' when the player wants to position themselves at an object/NPC without performing an action
-  - Examples: "go to the bookshelf" → "goto bookshelf", "move to the safe" → "moveto safe", "approach the counter" → "goto counter", "walk to the door" → "goto door"
-  - Use 'go' only for moving between locations/rooms (not objects)
-  - Note: 'examine', 'search', and 'goto' all set focus, so players don't need to explicitly "go to" before interacting
+  **IMPORTANT NAVIGATION COMMANDS:**
+  - The 'go' command intelligently routes based on target type
+  - If target is a location/room → moves to that location
+  - If target is an object → moves to object's location (if needed) + sets focus on object
+  - Map all navigation verbs to "go": "move to X", "approach X", "walk to X" all become "go X"
+  - Examples:
+    - "go to the cafe" → "go cafe" (location navigation)
+    - "go to the bookshelf" → "go bookshelf" (object focus)
+    - "move to the safe" → "go safe" (object focus)
+    - "approach the counter" → "go counter" (object focus)
+  - Note: 'examine' and 'search' also set focus, so players don't need to explicitly navigate before interacting
 
   **IMPORTANT TAKE COMMAND VARIATIONS:**
   - Use 'take' for any of these player intents: "take", "grab", "pick up", "put in pocket", "add to inventory", "take with me"

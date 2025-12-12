@@ -15,7 +15,6 @@ import { handleDeviceCommand } from '@/lib/game/actions/handle-device-command';
 import { handleDrop } from '@/lib/game/actions/handle-drop';
 import { handleExamine } from '@/lib/game/actions/handle-examine';
 import { handleGo } from '@/lib/game/actions/handle-go';
-import { handleGoto } from '@/lib/game/actions/handle-goto';
 import { handleHelp } from '@/lib/game/actions/handle-help';
 import { handleContextualHelp } from '@/lib/game/actions/handle-contextual-help';
 import { handleInventory } from '@/lib/game/actions/handle-inventory';
@@ -989,23 +988,41 @@ export async function processCommand(
 
             // IMPORTANT: Use VisibilityResolver to get ALL visible entities
             // This includes entities revealed via REVEAL_FROM_PARENT (children of containers)
+            // Pass includeChildrenOfLocationObjects=true so AI sees ALL revealed entities (not just top-level)
             const { VisibilityResolver } = await import('@/lib/game/engine');
-            const visibleEntities = VisibilityResolver.getVisibleEntities(currentState, game);
+            const visibleEntities = VisibilityResolver.getVisibleEntities(currentState, game, true);
 
-            // Get names of all visible objects
+            // DEBUG: Log visible entities
+            console.log('[DEBUG] Visible entities:', {
+                objects: visibleEntities.objects,
+                items: visibleEntities.items
+            });
+
+            // Get names of all visible objects (including alternate names)
             let visibleEntityNames: string[] = [];
             for (const objectId of visibleEntities.objects) {
                 const obj = game.gameObjects[objectId as GameObjectId];
                 if (obj) {
                     visibleEntityNames.push(obj.name);
+                    // Include alternate names so AI recognizes them
+                    if (obj.alternateNames) {
+                        visibleEntityNames.push(...obj.alternateNames);
+                    }
                 }
             }
 
-            // Get names of all visible items (including inventory)
+            // DEBUG: Log entity names being sent to AI
+            console.log('[DEBUG] Visible entity names for AI:', visibleEntityNames);
+
+            // Get names of all visible items (including inventory and alternate names)
             for (const itemId of visibleEntities.items) {
                 const item = game.items[itemId as ItemId];
                 if (item) {
                     visibleEntityNames.push(item.name);
+                    // Include alternate names so AI recognizes them
+                    if (item.alternateNames) {
+                        visibleEntityNames.push(...item.alternateNames);
+                    }
                 }
             }
 
@@ -1183,6 +1200,7 @@ export async function processCommand(
 
                     // UI messages (what player sees)
                     uiMessages: [
+                        createMessage('player', 'You', safePlayerInput),
                         createMessage('narrator', game.narratorName || 'Narrator', responseMessage)
                     ]
                 };
@@ -1259,14 +1277,14 @@ export async function processCommand(
                     effects = await handleContextualHelp(currentState, rawPlayerInput, game);
                     break;
                 case 'go':
-                    // NEW: handleGo returns Effect[]
-                    effects = await handleGo(currentState, restOfCommand, game);
-                    break;
                 case 'goto':
                 case 'moveto':
                 case 'shift':
-                    // NEW: handleGoto changes focus without performing an action
-                    effects = await handleGoto(currentState, restOfCommand, game);
+                    // NEW: handleGo returns Effect[]
+                    // Handles BOTH location navigation AND object focus
+                    // If target is a location → move to location
+                    // If target is an object → move to location (if needed) + set focus
+                    effects = await handleGo(currentState, restOfCommand, game);
                     break;
                  case 'talk':
                      // NEW: handleTalk returns Effect[]
@@ -1414,8 +1432,24 @@ export async function processCommand(
                     }
                     break;
                 case 'invalid':
-                     // Do nothing
-                     break;
+                    // Show player message + helpful error feedback
+                    if (playerMessage) uiMessagesThisTurn.push(playerMessage);
+
+                    // Create helpful error message using AI's reasoning
+                    const errorFeedback = safetyNetResult?.reasoning ||
+                        "I'm not sure what you mean by that. Try commands like: look, examine, take, use, or type /help for more options.";
+
+                    const invalidMessage = createMessage(
+                        'narrator',
+                        game.narratorName || 'Narrator',
+                        errorFeedback
+                    );
+                    uiMessagesThisTurn.push(invalidMessage);
+
+                    executionSuccess = false;
+                    executionErrorType = 'ai_unclear';
+                    executionErrorMessage = errorFeedback;
+                    break;
                 default:
                     // Do nothing
                     break;

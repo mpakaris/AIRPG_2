@@ -20,7 +20,15 @@ import { getSmartNotFoundMessage } from "@/lib/game/utils/smart-messages";
 const examinedObjectFlag = (id: string) => `examined_${id}`;
 
 export async function handleExamine(state: PlayerState, targetName: string, game: Game): Promise<Effect[]> {
-    const normalizedTarget = normalizeName(targetName);
+    let normalizedTarget = normalizeName(targetName);
+
+    // FALLBACK: If no target provided but player has focus, examine the focused object
+    if (!normalizedTarget && state.focus?.focusId) {
+        const focusedEntity = game.gameObjects[state.focus.focusId as any] || game.items[state.focus.focusId as any];
+        if (focusedEntity) {
+            normalizedTarget = normalizeName(focusedEntity.name);
+        }
+    }
 
     if (!normalizedTarget) {
         const message = await MessageExpander.static(game.systemMessages.needsTarget.examine);
@@ -55,6 +63,32 @@ export async function handleExamine(state: PlayerState, targetName: string, game
         searchObjects: true,
         requireFocus: false  // Allow examining objects outside current focus
     });
+
+    // SPRAWLING MODE: Check spatial distance for objects
+    if (bestMatch?.category === 'object') {
+        const objectId = bestMatch.id as GameObjectId;
+        const obj = game.gameObjects[objectId];
+
+        // Skip sprawling check for personal equipment (phone, badge, etc.) - always accessible
+        if (!obj?.personal) {
+            // Get current location's spatial mode
+            const currentLocation = game.locations[state.currentLocationId];
+            const spatialMode = currentLocation?.spatialMode || 'compact';
+
+            // In sprawling mode, require focus on the object before examining
+            // This applies to ALL objects in the location (not just children of other objects)
+            if (spatialMode === 'sprawling' && state.currentFocusId !== objectId) {
+                const message = await MessageExpander.static(
+                    `The ${obj?.name || 'object'} is too far away to examine in detail. You should get closer first. Try: GO TO ${obj?.name?.toUpperCase() || 'OBJECT'}`
+                );
+                return [{
+                    type: 'SHOW_MESSAGE',
+                    speaker: 'system',
+                    content: message
+                }];
+            }
+        }
+    }
 
     // Process the best match found
     if (bestMatch?.category === 'inventory') {

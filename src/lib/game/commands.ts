@@ -1,10 +1,7 @@
 
 export const AVAILABLE_COMMANDS = [
   // Navigation
-  'go <direction or location name>',
-  'goto <object or npc>',
-  'move to <object or npc>',
-  'shift to <object or npc>',
+  'go <location or object name>',
 
   // Examination
   'examine <object or item>',
