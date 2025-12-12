@@ -79,11 +79,11 @@ export async function handleExamine(state: PlayerState, targetName: string, game
             // This applies to ALL objects in the location (not just children of other objects)
             if (spatialMode === 'sprawling' && state.currentFocusId !== objectId) {
                 const message = await MessageExpander.static(
-                    `The ${obj?.name || 'object'} is too far away to examine in detail. You should get closer first. Try: GO TO ${obj?.name?.toUpperCase() || 'OBJECT'}`
+                    `The ${obj?.name || 'object'} is too far away to examine in detail from here. You'll need to get closer to see it properly.`
                 );
                 return [{
                     type: 'SHOW_MESSAGE',
-                    speaker: 'system',
+                    speaker: 'narrator',
                     content: message
                 }];
             }
