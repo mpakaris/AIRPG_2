@@ -55,6 +55,7 @@ export const chapterMetadata = {
     description: 'Digging deeper into the cold case',
     devCheckpoints: [
       { id: 'chapter_1_intro_complete', label: 'Intro Complete', description: 'Completed Chapter 1 introduction' },
+      { id: 'side_alley_find_crowbar', label: 'Side Alley | Find Crowbar', description: 'At tire pile, ready to take crowbar' },
     ],
   },
 } as const;

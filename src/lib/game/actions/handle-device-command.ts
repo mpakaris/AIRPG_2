@@ -91,6 +91,82 @@ export async function handleDeviceCommand(
 
   // PHONE-SPECIFIC COMMANDS
   if (deviceId === 'item_player_phone') {
+    // CHECK MESSAGES / VOICEMAIL
+    if ((verb === 'check' && (restOfCommand.includes('message') || restOfCommand.includes('voicemail'))) ||
+        verb === 'messages' || verb === 'voicemail') {
+      const phone = game.items[deviceId as ItemId];
+      if (phone && phone.handlers?.onCheckMessages) {
+        // Find matching handler based on conditions
+        const handlers = Array.isArray(phone.handlers.onCheckMessages)
+          ? phone.handlers.onCheckMessages
+          : [phone.handlers.onCheckMessages];
+
+        for (const handler of handlers) {
+          // Check conditions
+          const conditions = handler.conditions || [];
+          const conditionsMet = conditions.every(cond => {
+            if (cond.type === 'HAS_ITEM') {
+              return state.inventory?.includes(cond.itemId as ItemId);
+            }
+            return true;
+          });
+
+          if (conditionsMet) {
+            const effects: Effect[] = [];
+            if (handler.success?.message) {
+              effects.push({
+                type: 'SHOW_MESSAGE',
+                speaker: 'narrator',
+                content: handler.success.message
+              });
+            }
+            if (handler.success?.effects) {
+              effects.push(...handler.success.effects);
+            }
+            return effects;
+          }
+        }
+      }
+    }
+
+    // CHECK EMAILS
+    if ((verb === 'check' && (restOfCommand.includes('email') || restOfCommand.includes('mail'))) ||
+        verb === 'emails' || verb === 'email' || verb === 'mail') {
+      const phone = game.items[deviceId as ItemId];
+      if (phone && phone.handlers?.onCheckEmails) {
+        // Find matching handler based on conditions
+        const handlers = Array.isArray(phone.handlers.onCheckEmails)
+          ? phone.handlers.onCheckEmails
+          : [phone.handlers.onCheckEmails];
+
+        for (const handler of handlers) {
+          // Check conditions
+          const conditions = handler.conditions || [];
+          const conditionsMet = conditions.every(cond => {
+            if (cond.type === 'HAS_ITEM') {
+              return state.inventory?.includes(cond.itemId as ItemId);
+            }
+            return true;
+          });
+
+          if (conditionsMet) {
+            const effects: Effect[] = [];
+            if (handler.success?.message) {
+              effects.push({
+                type: 'SHOW_MESSAGE',
+                speaker: 'narrator',
+                content: handler.success.message
+              });
+            }
+            if (handler.success?.effects) {
+              effects.push(...handler.success.effects);
+            }
+            return effects;
+          }
+        }
+      }
+    }
+
     // CALL / DIAL
     if (verb === 'call' || verb === 'dial') {
       return handleCall(state, restOfCommand, game);
@@ -246,7 +322,7 @@ export async function handleDeviceCommand(
       return [{
         type: 'SHOW_MESSAGE',
         speaker: 'narrator',
-        content: `📱 Phone Commands:\n\n- CALL <number> - Dial a phone number\n- TAKE PICTURE OF <object> - Photograph something\n- READ SD CARD - View SD card content\n- CONTACTS - View stored contacts\n- PUT PHONE AWAY - Exit phone mode\n- CLOSE PHONE - Exit phone mode`
+        content: `📱 Phone Commands:\n\n- CHECK MESSAGES - Listen to voicemails\n- CHECK EMAILS - Read your emails\n- CALL <number> - Dial a phone number\n- TAKE PICTURE OF <object> - Photograph something\n- READ SD CARD - View SD card content\n- CONTACTS - View stored contacts\n- PUT PHONE AWAY - Exit phone mode\n- CLOSE PHONE - Exit phone mode`
       }];
     }
   }

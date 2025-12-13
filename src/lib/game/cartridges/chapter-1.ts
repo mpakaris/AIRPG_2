@@ -11,10 +11,11 @@ const items: Record<ItemId, Item> = {
     // Starting items given to player on chapter start
     'item_audio_message': {
         id: 'item_audio_message' as ItemId,
-        name: 'Audio Message',
+        name: 'Voice Message',
+        alternateNames: ['voice message', 'audio message', 'voicemail', 'message'],
         description: 'A voice message from your colleague about the Lili abduction case.',
-        capabilities: { takable: false, consumable: false, readable: false, inputtable: false },
-        startingLocation: 'player',
+        capabilities: { isTakable: false, isReadable: false, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+        revealMethod: 'MANUAL',
         media: {
             audio: {
                 url: '',
@@ -23,23 +24,26 @@ const items: Record<ItemId, Item> = {
         },
         handlers: {
             onExamine: {
-                message: 'An audio message from your colleague. Listen to it to hear the briefing about Lili\'s abduction.',
-                media: {
-                    url: '',
-                    description: 'Colleague briefing about Lili case',
-                    hint: 'audio message'
+                success: {
+                    message: 'Voice message from your colleague:\n\n"Hey, it\'s Martinez. Got the case file on the Lili Chen abduction. Sent it to your email - check your phone. Time-sensitive. Call me if you need anything."\n\nThe message mentions an email with the case file.',
+                    media: {
+                        url: '',
+                        description: 'Colleague briefing about Lili case',
+                        hint: 'audio message'
+                    }
                 }
             }
         },
-        version: { schema: '1.0.0', content: '1.0.0' }
+        version: { schema: '1.0.0', content: '2.0.0' }
     },
 
     'item_police_report': {
         id: 'item_police_report' as ItemId,
         name: 'Police Report',
+        alternateNames: ['police report', 'case file', 'report', 'pdf', 'case report'],
         description: 'Police report PDF about Lili\'s abduction. Received via email attachment.',
-        capabilities: { takable: false, consumable: false, readable: true, inputtable: false },
-        startingLocation: 'player',
+        capabilities: { isTakable: false, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+        revealMethod: 'MANUAL',
         media: {
             document: {
                 url: '',
@@ -48,19 +52,151 @@ const items: Record<ItemId, Item> = {
         },
         handlers: {
             onRead: {
-                message: 'POLICE REPORT - CASE #2025-0347\n\nVICTIM: Lili Chen, Age 8\nLAST SEEN: Corner of Elm Street and 5th Avenue, 3:45 PM\nWITNESSES: Bus driver reported seeing a gray van nearby\nVEHICLE DESCRIPTION: Gray panel van, no plates visible\nTIRE ANALYSIS: Forensics identified tire tread pattern\n  - Type: P225/60R16 (commercial grade)\n  - Tread depth: 8/32" (relatively new)\n  - Pattern: Diagonal crosshatch\nSTATUS: Active investigation, Amber Alert issued\n\nThe report contains witness statements and a timeline of events.\n\nNote: The tire type P225/60R16 suggests a mid-size commercial vehicle. The specific tread pattern indicates recent purchase.',
-                media: {
-                    url: '',
-                    description: 'Police report details',
-                    hint: 'official report'
+                success: {
+                    message: 'POLICE REPORT - CASE #2025-0347\n\nVICTIM: Lili Chen, Age 8\nLAST SEEN: Corner of Elm Street and 5th Avenue, 3:45 PM\nWITNESSES: Bus driver reported seeing a gray van nearby\nVEHICLE DESCRIPTION: Gray panel van, no plates visible\nTIRE ANALYSIS: Forensics identified tire tread pattern\n  - Type: P225/60R16 (commercial grade)\n  - Tread depth: 8/32" (relatively new)\n  - Pattern: Diagonal crosshatch\nSTATUS: Active investigation, Amber Alert issued\n\nThe report contains witness statements and a timeline of events.\n\nNote: The tire type P225/60R16 suggests a mid-size commercial vehicle. The specific tread pattern indicates recent purchase.',
+                    media: {
+                        url: '',
+                        description: 'Police report details',
+                        hint: 'official report'
+                    }
                 }
             },
             onExamine: {
-                message: 'A detailed police report in PDF format. The case file is marked urgent.',
-                media: undefined
+                success: {
+                    message: 'A detailed police report in PDF format. The case file is marked urgent.',
+                    media: undefined
+                }
             }
         },
-        version: { schema: '1.0.0', content: '1.0.0' }
+        version: { schema: '1.0.0', content: '2.0.0' }
+    },
+
+    'item_player_phone': {
+        id: 'item_player_phone' as ItemId,
+        name: 'Phone',
+        alternateNames: ['phone', 'smartphone', 'cell phone', 'mobile', 'fbi phone', 'my phone', 'fbi smartphone'],
+        archetype: 'Tool',
+        description: "Your standard-issue FBI smartphone. It has a camera, secure messaging, and a slot for external media.",
+        capabilities: { isTakable: false, isReadable: false, isUsable: true, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+        state: { currentStateId: 'default', readCount: 0 },
+        media: {
+            images: {
+                default: { url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762705398/Pulls_out_Phone_zrekhi.png', description: 'FBI-issue smartphone', hint: 'fbi phone' }
+            }
+        },
+        handlers: {
+            // EXAMINE - Visual inspection
+            onExamine: {
+                success: {
+                    message: "FBI-issue smartphone. Camera, secure messaging, media slot. Standard kit. Always in your pocket.\n\nYou can USE PHONE to enter phone mode and make calls or take photos."
+                }
+            },
+
+            // USE - Enter phone mode
+            onUse: {
+                success: {
+                    message: "You take out your FBI phone. The screen lights up.\n\nThe notification LED blinks - you have unread messages.",
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1762705398/Pulls_out_Phone_zrekhi.png',
+                        description: 'Pulling out FBI phone from jacket',
+                        hint: 'Taking out phone'
+                    },
+                    effects: [
+                        { type: 'SET_DEVICE_FOCUS', deviceId: 'item_player_phone' as ItemId },
+                        {
+                            type: 'SHOW_MESSAGE',
+                            speaker: 'system',
+                            content: 'Phone Mode Active\n\nType CHECK MESSAGES to see voicemails.\nType CHECK EMAILS to read emails.\nType CALL <number> to dial.\nType TAKE PHOTO of ITEM for pictures.\n\nType PUT PHONE AWAY or CLOSE PHONE when done.'
+                        }
+                    ]
+                }
+            },
+
+            // Call Handler - Dial phone numbers (only works in device focus mode)
+            onCall: [
+                {
+                    // Default fallback - wrong number (plays automated message)
+                    phoneNumber: '*',
+                    conditions: [],
+                    success: {
+                        message: "You dial the number.\n\n[Automated voice]: \"The number you have dialed is currently not available. Please check the number and try again.\"\n\nThe line goes dead.",
+                        media: {
+                            url: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1762705354/wrong_number_kazuze.mp3',
+                            description: 'Automated wrong number message',
+                            hint: 'Number not available'
+                        }
+                    }
+                }
+            ],
+
+            // Check Messages Handler
+            onCheckMessages: [
+                {
+                    // Already checked messages
+                    conditions: [
+                        { type: 'HAS_ITEM', itemId: 'item_audio_message' as ItemId }
+                    ],
+                    success: {
+                        message: "You've already listened to your voicemail. Martinez mentioned checking your email for the case file."
+                    }
+                },
+                {
+                    // First time checking - reveal voice message
+                    conditions: [],
+                    success: {
+                        message: "You tap the voicemail icon.\n\n**(1) New Voicemail**\n\nFrom: Martinez (FBI)\nReceived: Today, 8:47 AM\n\nYou play the message.",
+                        effects: [
+                            { type: 'ADD_ITEM', itemId: 'item_audio_message' as ItemId }
+                        ]
+                    }
+                }
+            ],
+
+            // Check Emails Handler
+            onCheckEmails: [
+                {
+                    // Already have police report
+                    conditions: [
+                        { type: 'HAS_ITEM', itemId: 'item_police_report' as ItemId }
+                    ],
+                    success: {
+                        message: "Your inbox shows the email from Martinez with the police report attachment. You've already downloaded it."
+                    }
+                },
+                {
+                    // Have voice message but not report - reveal report
+                    conditions: [
+                        { type: 'HAS_ITEM', itemId: 'item_audio_message' as ItemId }
+                    ],
+                    success: {
+                        message: "You open your email inbox.\n\n**From:** Martinez, D. (FBI Field Office)\n**Subject:** URGENT - Lili Chen Case File\n**Attachment:** case_2025-0347.pdf\n\nThe email body is brief: \"Case file attached. Read it. Call if questions.\"\n\nYou download the attachment.",
+                        effects: [
+                            { type: 'ADD_ITEM', itemId: 'item_police_report' as ItemId }
+                        ]
+                    }
+                },
+                {
+                    // No voice message yet - hint to check messages first
+                    conditions: [],
+                    success: {
+                        message: "You check your email. There's a new message from Martinez, but you notice the voicemail notification blinking. Maybe check your messages first?"
+                    }
+                }
+            ],
+
+            // Fallback
+            defaultFailMessage: "The phone's a tool. Try USING it ON something that needs it, or CALL a phone number."
+        },
+        hints: {
+            subtle: "Your FBI phone is a versatile tool. It can read media and take photos.",
+            medium: "Use your phone to read documents, take photos of objects, or make calls.",
+            direct: "Use phone to activate it, then take photos, read documents, or call phone numbers you find."
+        },
+        design: {
+            authorNotes: "Universal tool/key for media devices and locked objects throughout the game.",
+            tags: ['phone', 'device', 'tool', 'key']
+        },
+        version: { schema: "1.0", content: "3.0" }
     },
 
     'item_invoice': {
@@ -88,11 +224,17 @@ const items: Record<ItemId, Item> = {
         id: 'item_crowbar' as ItemId,
         name: 'Crowbar',
         description: 'A heavy steel crowbar. Rust-spotted but still solid. Good for prying things open.',
-        capabilities: { takable: true, consumable: false, readable: false, inputtable: false },
+        capabilities: { isTakable: true, isReadable: false, isUsable: true, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: true },
         startingLocation: 'loc_street' as LocationId,
         parentId: 'obj_tire_stack' as GameObjectId,
         revealMethod: 'REVEAL_FROM_PARENT',
         handlers: {
+            onTake: {
+                success: {
+                    message: 'You heft the crowbar. Cold steel. Three, maybe four pounds of rust-spotted persuasion.\n\nIt\'s yours now. For better or worse.\n\nIn this city, a crowbar\'s either a tool or a confession waiting to happen. You pocket it anyway. Because when you\'re hunting someone who hides things in tire stacks, you don\'t ask questions—you just take what you can get.\n\nBesides, it\'s not like the tires were using it.',
+                    media: undefined
+                }
+            },
             onExamine: {
                 success: {
                     message: 'Two feet of solid steel. A crowbar—the kind you find in toolboxes, garages, construction sites. One end curves into a claw for pulling nails. The other tapers to a flat wedge for prying.\n\nThe steel is rust-spotted, oxidation blooming in orange patches where the protective coating wore away. But underneath, it\'s still sound. Solid. You test it with your hand—no give, no flex. This thing could pry open a car door, lever up floorboards, shift heavy objects.\n\nIt\'s heavy. Maybe three, four pounds. You feel the weight in your hand, the cold metal warming slowly against your palm.\n\nSomeone hid this in the tire stack. Deliberately wedged it inside where it wouldn\'t be found unless you were looking.\n\nWhy hide a crowbar? What did they need it for?\n\nOr maybe the better question: what do you need it for?',

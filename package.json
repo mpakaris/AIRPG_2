@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "npm run db:seed && nodemon",
+    "dev": "npm run db:seed && rm -rf .next && nodemon",
     "dev:next": "next dev -p 9002",
     "dev:noseed": "nodemon",
     "genkit:dev": "genkit start -- tsx src/ai/dev.ts",

@@ -342,6 +342,8 @@ export type Handlers = {
   onEnter?: Rule;
   onExit?: Rule;
   onCall?: OnCallHandler[];  // Phone calling handler (for devices like phones)
+  onCheckMessages?: OnCallHandler[];  // Check voicemail/messages handler (for phones)
+  onCheckEmails?: OnCallHandler[];  // Check emails handler (for phones)
 
   // Fallback message if player tries an undefined verb
   defaultFailMessage?: string;

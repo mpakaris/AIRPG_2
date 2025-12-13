@@ -991,13 +991,6 @@ export async function processCommand(
             // Pass includeChildrenOfLocationObjects=true so AI sees ALL revealed entities (not just top-level)
             const { VisibilityResolver } = await import('@/lib/game/engine');
             const visibleEntities = VisibilityResolver.getVisibleEntities(currentState, game, true);
-
-            // DEBUG: Log visible entities
-            console.log('[DEBUG] Visible entities:', {
-                objects: visibleEntities.objects,
-                items: visibleEntities.items
-            });
-
             // Get names of all visible objects (including alternate names)
             let visibleEntityNames: string[] = [];
             for (const objectId of visibleEntities.objects) {
@@ -1010,9 +1003,6 @@ export async function processCommand(
                     }
                 }
             }
-
-            // DEBUG: Log entity names being sent to AI
-            console.log('[DEBUG] Visible entity names for AI:', visibleEntityNames);
 
             // Get names of all visible items (including inventory and alternate names)
             for (const itemId of visibleEntities.items) {
@@ -1040,7 +1030,6 @@ export async function processCommand(
             const aiInterpretationStartTime = Date.now();
 
             // PRE-FILTER: Detect help questions BEFORE AI (faster + more reliable)
-            console.log('[DEBUG PRE-FILTER] Checking input:', lowerInput);
             const isHelpQuestion =
                 lowerInput.startsWith('what should i do with') ||
                 lowerInput.startsWith('what should i do') ||
@@ -1052,7 +1041,6 @@ export async function processCommand(
                 lowerInput === "i'm confused" ||
                 lowerInput === "i'm lost" ||
                 lowerInput === "i don't know what to do";
-            console.log('[DEBUG PRE-FILTER] Is help question?', isHelpQuestion);
 
             // Skip AI interpretation for explicit /password commands OR help questions
             if (skipAIInterpretation) {
@@ -1224,7 +1212,6 @@ export async function processCommand(
             }
 
             const commandToExecute = safetyNetResult.commandToExecute.toLowerCase();
-            console.log('[DEBUG] Full command to execute:', commandToExecute);
 
             const verbMatch = commandToExecute.match(/^(\w+)\s*/);
             verb = verbMatch ? verbMatch[1] : commandToExecute;
@@ -1634,14 +1621,6 @@ export async function processCommand(
                     wasSuccessful: executionSuccess && (typeof safetyNetResult === 'undefined' || safetyNetResult?.commandToExecute !== 'invalid'),
                     wasUnclear: typeof safetyNetResult !== 'undefined' ? safetyNetResult.confidence < 0.6 : false,
                 };
-
-                // Debug: Log what we're about to save
-                console.log(`🔍 DEBUG: Saving consolidated entry with tokens:`, JSON.stringify(consolidatedEntry.tokens, null, 2));
-                console.log(`🔍 DEBUG: Saving consolidated entry with AI costs:`, JSON.stringify({
-                    primaryCost: consolidatedEntry.aiInterpretation?.primaryAI?.costUSD,
-                    safetyCost: consolidatedEntry.aiInterpretation?.safetyAI?.costUSD,
-                    totalCost: consolidatedEntry.aiInterpretation?.totalCostUSD
-                }, null, 2));
 
                 // Save ONLY the new consolidated entry to Firebase (subcollection handles multiple turns)
                 const saveResult = await logAndSave(userId, gameId, finalResult.newState, [consolidatedEntry as any]);
@@ -2290,13 +2269,16 @@ export async function applyDevCheckpoint(userId: string, checkpointId: string): 
         throw new Error('Dev checkpoints only available in development mode');
     }
 
-    const game = await getGameData(GAME_ID);
+    // Get the user's current game ID
+    const currentGameId = await getCurrentGameIdForUser(userId);
+
+    const game = await getGameData(currentGameId);
     if (!game) {
         throw new Error("Game data could not be loaded");
     }
 
     const { firestore } = initializeFirebase();
-    const stateRef = doc(firestore, 'player_states', `${userId}_${GAME_ID}`);
+    const stateRef = doc(firestore, 'player_states', `${userId}_${currentGameId}`);
     const stateSnap = await getDoc(stateRef);
 
     let currentState: PlayerState;
@@ -2308,6 +2290,26 @@ export async function applyDevCheckpoint(userId: string, checkpointId: string): 
 
     // Define checkpoints
     const checkpoints: Record<string, Effect[]> = {
+        'chapter_1_intro_complete': [
+            // Set player location to street
+            { type: 'MOVE_TO_LOCATION', toLocationId: 'loc_street' as LocationId },
+        ],
+        'side_alley_find_crowbar': [
+            // Set player location to street
+            { type: 'MOVE_TO_LOCATION', toLocationId: 'loc_street' as LocationId },
+            // Reveal the side alley itself
+            { type: 'REVEAL_ENTITY', entityId: 'obj_side_alley' as GameObjectId },
+            // Reveal all alley children
+            { type: 'REVEAL_ENTITY', entityId: 'obj_crates' as GameObjectId },
+            { type: 'REVEAL_ENTITY', entityId: 'obj_dumpster' as GameObjectId },
+            { type: 'REVEAL_ENTITY', entityId: 'obj_tire_stack' as GameObjectId },
+            { type: 'REVEAL_ENTITY', entityId: 'obj_tire_marks' as GameObjectId },
+            { type: 'REVEAL_ENTITY', entityId: 'obj_brick_walls' as GameObjectId },
+            // Set focus to tire stack
+            { type: 'SET_FOCUS', focusId: 'obj_tire_stack' as GameObjectId, focusType: 'object' },
+            // Reveal the crowbar (simulate the MOVE action)
+            { type: 'REVEAL_ENTITY', entityId: 'item_crowbar' as ItemId }
+        ],
         'metal_box_opened': [
             { type: 'SET_FLAG', flag: 'has_unlocked_notebook' as Flag, value: true },
             { type: 'SET_ENTITY_STATE', entityId: 'obj_brown_notebook' as GameObjectId, patch: { currentStateId: 'unlocked_but_closed' } }
@@ -2396,7 +2398,7 @@ export async function applyDevCheckpoint(userId: string, checkpointId: string): 
     await setDoc(stateRef, newState);
 
     // Load all messages
-    const allMessages = await getAllLogs(firestore, userId, GAME_ID);
+    const allMessages = await getAllLogs(firestore, userId, currentGameId);
 
     // Add checkpoint message
     const checkpointMessage = createMessage(
@@ -2406,7 +2408,7 @@ export async function applyDevCheckpoint(userId: string, checkpointId: string): 
     );
 
     const updatedMessages = [...allMessages, checkpointMessage];
-    await logAndSave(userId, GAME_ID, newState, [checkpointMessage]);
+    await logAndSave(userId, currentGameId, newState, [checkpointMessage]);
 
     return {
         newState,
