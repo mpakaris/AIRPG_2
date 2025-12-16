@@ -34,6 +34,7 @@ try {
 }
 
 const db = getFirestore();
+db.settings({ ignoreUndefinedProperties: true });
 
 // Function to load all baked cartridges
 function loadAllCartridges(): Game[] {

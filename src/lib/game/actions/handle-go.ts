@@ -114,6 +114,16 @@ export async function handleGo(state: PlayerState, targetName: string, game: Gam
     targetName = targetName.toLowerCase();
     const narratorName = game.narratorName || "Narrator";
 
+    // Check if player is inside dumpster and trying to navigate to something outside
+    const exitEffects: Effect[] = [];
+    const isDumpsterClimbed = GameStateManager.hasFlag(state, 'dumpster_climbed' as Flag);
+
+    // SPECIAL CASE: "go into dumpster" should work like "climb into dumpster"
+    if (targetName.match(/^(into|in)\s+(the\s+)?(dumpster|trash|garbage)/)) {
+        const { handleClimb } = await import('./handle-climb');
+        return handleClimb(state, 'dumpster', game);
+    }
+
     // Handle chapter progression
     if (targetName === 'next_chapter') {
         const isComplete = checkChapterCompletion(state, game);
@@ -125,6 +135,7 @@ export async function handleGo(state: PlayerState, targetName: string, game: Gam
                 const newLocation = game.locations[nextChapter.startLocationId];
 
                 return [
+                    ...exitEffects,
                     { type: 'MOVE_TO_LOCATION', locationId: nextChapter.startLocationId },
                     { type: 'END_CONVERSATION' },
                     { type: 'END_INTERACTION' },
@@ -133,11 +144,11 @@ export async function handleGo(state: PlayerState, targetName: string, game: Gam
                 ];
             } else {
                 const message = await MessageExpander.static(game.systemMessages.noNextChapter);
-                return [{ type: 'SHOW_MESSAGE', speaker: 'system', content: message }];
+                return [...exitEffects, { type: 'SHOW_MESSAGE', speaker: 'system', content: message }];
             }
         } else {
             const message = await MessageExpander.static(game.systemMessages.chapterIncomplete(chapter.goal, currentLocation.name));
-            return [{
+            return [...exitEffects, {
                 type: 'SHOW_MESSAGE',
                 speaker: 'narrator',
                 content: message
@@ -151,6 +162,7 @@ export async function handleGo(state: PlayerState, targetName: string, game: Gam
 
     if (targetLocation) {
         return [
+            ...exitEffects,
             { type: 'MOVE_TO_LOCATION', toLocationId: targetLocation.locationId },
             { type: 'END_CONVERSATION' },
             { type: 'END_INTERACTION' },
@@ -180,6 +192,26 @@ export async function handleGo(state: PlayerState, targetName: string, game: Gam
         // NEW: Check if target is a child of another object
         const parentId = findParentObject(entityId, game);
 
+        // DUMPSTER EXIT LOGIC: Only exit if navigating to something NOT a child of dumpster
+        if (isDumpsterClimbed) {
+            const isChildOfDumpster = (entityType === 'object' && game.gameObjects[entityId as GameObjectId]?.parentId === 'obj_dumpster') ||
+                                      (entityType === 'item' && game.items[entityId as ItemId]?.parentId === 'obj_dumpster');
+
+            // If navigating to something outside the dumpster, exit first
+            if (!isChildOfDumpster) {
+                const exitMessage = await MessageExpander.static(
+                    'You grip the dumpster\'s edge and haul yourself out. Your shoes are covered in garbage residue, your clothes smell like rot and chemicals.\n\nYou reach back and pull the heavy lid down. The hinges groan as it settles into place. The smell—that toxic mix of rot and bleach—is sealed away. A crime against humanity, contained.\n\nYou\'re out. Back in the alley. The fresh air—even this alley\'s stale, polluted air—feels like a blessing.'
+                );
+
+                exitEffects.push(
+                    { type: 'SET_FLAG', flag: 'dumpster_climbed' as Flag, value: false },
+                    { type: 'SET_ENTITY_STATE', entityId: 'obj_dumpster' as GameObjectId, patch: { isOpen: false } },
+                    { type: 'SHOW_MESSAGE', speaker: 'narrator', content: exitMessage }
+                );
+            }
+            // If navigating to a child of dumpster, don't exit - just focus on it
+        }
+
         // Find which location contains this entity (supports nested children)
         const locationWithEntity = findLocationContaining(entityId, entityType, game);
 
@@ -198,7 +230,10 @@ export async function handleGo(state: PlayerState, targetName: string, game: Gam
             });
 
             // SPRAWLING LOCATION LOGIC: Require step-by-step navigation through parent hierarchy
-            if (spatialMode === 'sprawling' && parentId) {
+            if (spatialMode === 'sprawling' && parentId && exitEffects.length === 0) {
+                // SKIP CHECK if we just exited the dumpster (exitEffects were added)
+                // After exiting, player is at location level and can navigate normally
+
                 // Player wants to navigate to a child object (e.g., tire_stack)
                 // In sprawling mode, they must be at the parent first (e.g., side_alley)
                 const currentFocus = state.currentFocusId || state.focus?.focusId;
@@ -259,10 +294,10 @@ export async function handleGo(state: PlayerState, targetName: string, game: Gam
                 }
             }
 
-            return effects;
+            return [...exitEffects, ...effects];
         }
     }
 
     const message = await MessageExpander.static(game.systemMessages.cannotGoThere);
-    return [{ type: 'SHOW_MESSAGE', speaker: 'system', content: message }];
+    return [...exitEffects, { type: 'SHOW_MESSAGE', speaker: 'system', content: message }];
 }

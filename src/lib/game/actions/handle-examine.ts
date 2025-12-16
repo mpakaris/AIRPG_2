@@ -71,13 +71,17 @@ export async function handleExamine(state: PlayerState, targetName: string, game
 
         // Skip sprawling check for personal equipment (phone, badge, etc.) - always accessible
         if (!obj?.personal) {
+            // SPECIAL CASE: If player is inside dumpster, they can examine all children of dumpster
+            const isInsideDumpster = GameStateManager.hasFlag(state, 'dumpster_climbed' as any);
+            const isChildOfDumpster = obj?.parentId === 'obj_dumpster';
+
             // Get current location's spatial mode
             const currentLocation = game.locations[state.currentLocationId];
             const spatialMode = currentLocation?.spatialMode || 'compact';
 
             // In sprawling mode, require focus on the object before examining
-            // This applies to ALL objects in the location (not just children of other objects)
-            if (spatialMode === 'sprawling' && state.currentFocusId !== objectId) {
+            // UNLESS the player is inside the dumpster and examining a child of the dumpster
+            if (spatialMode === 'sprawling' && state.currentFocusId !== objectId && !(isInsideDumpster && isChildOfDumpster)) {
                 const message = await MessageExpander.static(
                     `The ${obj?.name || 'object'} is too far away to examine in detail from here. You'll need to get closer to see it properly.`
                 );

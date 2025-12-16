@@ -9,6 +9,18 @@ export const AVAILABLE_COMMANDS = [
   'look around',
   'look behind <object>',
 
+  // Sensory Actions
+  'smell <object>',
+  'sniff <object>',
+  'climb <object>',
+  'climb in <object>',
+  'climb into <object>',
+  'climb onto <object>',
+  'touch <object>',
+  'feel <object>',
+  'press <object>',
+  'push <object>',
+
   // Interaction (Objects)
   'open <object>',
   'close <object>',
@@ -16,6 +28,8 @@ export const AVAILABLE_COMMANDS = [
   'search <object>',
   'break <object>',
   'smash <object>',
+  'pry <object>',
+  'pry <object> with <item>',
 
   // Interaction (Items)
   'take <item>',

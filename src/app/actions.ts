@@ -24,6 +24,8 @@ import { handleOpen } from '@/lib/game/actions/handle-open';
 import { handlePassword } from '@/lib/game/actions/handle-password';
 import { handleRead } from '@/lib/game/actions/handle-read';
 import { handleSearch } from '@/lib/game/actions/handle-search';
+import { handleSmell } from '@/lib/game/actions/handle-smell';
+import { handleClimb } from '@/lib/game/actions/handle-climb';
 import { handleTake } from '@/lib/game/actions/handle-take';
 import { handleTalk } from '@/lib/game/actions/handle-talk';
 import { handleUse } from '@/lib/game/actions/handle-use';
@@ -1335,6 +1337,41 @@ export async function processCommand(
                 case 'search':
                     // NEW: handleSearch returns Effect[]
                     effects = await handleSearch(currentState, restOfCommand.replace(/"/g, ''), game);
+                    break;
+                case 'smell':
+                case 'sniff':
+                    // NEW: handleSmell returns Effect[]
+                    effects = await handleSmell(currentState, restOfCommand.replace(/"/g, ''), game);
+                    break;
+                case 'climb':
+                    // NEW: handleClimb returns Effect[]
+                    effects = await handleClimb(currentState, restOfCommand.replace(/"/g, ''), game);
+                    break;
+                case 'touch':
+                case 'feel':
+                    // Touch and feel use examine for now (can be specialized later)
+                    effects = await handleExamine(currentState, restOfCommand.replace(/"/g, ''), game);
+                    break;
+                case 'press':
+                case 'push':
+                    // Press and push use move handler
+                    effects = await handleMove(currentState, restOfCommand.replace(/"/g, ''), game);
+                    break;
+                case 'pry':
+                    // Pry uses use handler (e.g., "pry locker with crowbar" → "use crowbar on locker")
+                    const pryMatch = restOfCommand.match(/^(.*?)\s+(with|using)\s+(.*)$/);
+                    if (pryMatch) {
+                        const target = pryMatch[1].trim().replace(/"/g, '');
+                        const tool = pryMatch[3].trim().replace(/"/g, '');
+                        effects = await handleUse(currentState, tool, target, game);
+                    } else {
+                        // "pry X" without tool - show message
+                        effects = [{
+                            type: 'SHOW_MESSAGE',
+                            speaker: 'narrator',
+                            content: 'What do you want to pry it with?'
+                        }];
+                    }
                     break;
                 case 'break':
                 case 'smash':
