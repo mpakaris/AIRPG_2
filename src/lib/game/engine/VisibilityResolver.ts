@@ -47,47 +47,49 @@ export class VisibilityResolver {
     }
 
     // =========================================================================
-    // 1. Get ALL objects and check visibility/accessibility
+    // 1. Get ALL accessible objects (recursively from location root)
     // =========================================================================
-    for (const objectId in game.gameObjects) {
-      const obj = game.gameObjects[objectId as any];
 
-      // Skip personal equipment (phone, badge, etc.) - they're never in scene listings
-      if (obj?.personal === true) {
-        continue;
-      }
+    // Helper to recursively collect all accessible objects
+    const collectAccessibleObjects = (rootObjectIds: string[]) => {
+      const visited = new Set<string>();
+      const queue = [...rootObjectIds];
 
-      // Check if object is in current location (initial placement)
-      const isInLocation = currentLocation.objects?.includes(objectId as any);
+      while (queue.length > 0) {
+        const objectId = queue.shift()!;
 
-      // Check if object has been revealed (via REVEAL_ENTITY or REVEAL_FROM_PARENT)
-      const entityState = GameStateManager.getEntityState(state, objectId);
-      const hasBeenRevealed = entityState.isVisible === true;
+        // Skip if already processed
+        if (visited.has(objectId)) continue;
+        visited.add(objectId);
 
-      // Object is ONLY visible if in current location (revealed status handled by children check)
-      if (isInLocation) {
+        const obj = game.gameObjects[objectId as any];
+
+        // Skip personal equipment (phone, badge, etc.) - they're never in scene listings
+        if (obj?.personal === true) {
+          continue;
+        }
+
         // Check if accessible (parent chain grants access)
         const isAccessible = GameStateManager.isAccessible(state, game, objectId);
 
         if (isAccessible) {
-          // Only add if not already in the array (prevent duplicates)
+          // Add this object to visible list
           if (!visibleObjects.includes(objectId)) {
             visibleObjects.push(objectId);
           }
 
-          // LEVEL-BASED VISIBILITY FIX:
-          // Only recursively get children if explicitly requested (for backward compatibility)
-          // For "look around" commands, this should be FALSE to respect hierarchy levels
+          // If includeChildrenOfLocationObjects is true, get children recursively
           if (includeChildrenOfLocationObjects) {
-            // OLD BEHAVIOR: Recursively get accessible children (breaks levels)
             const children = VisibilityResolver.getAccessibleChildren(objectId, state, game);
 
-            // Only add children that aren't already in the arrays (prevent duplicates)
+            // Add child objects to queue for further processing
             for (const childObj of children.objects) {
-              if (!visibleObjects.includes(childObj)) {
-                visibleObjects.push(childObj);
+              if (!visited.has(childObj)) {
+                queue.push(childObj);
               }
             }
+
+            // Add child items directly to visible items
             for (const childItem of children.items) {
               if (!visibleItems.includes(childItem)) {
                 visibleItems.push(childItem);
@@ -96,6 +98,11 @@ export class VisibilityResolver {
           }
         }
       }
+    };
+
+    // Start from location's top-level objects
+    if (currentLocation.objects) {
+      collectAccessibleObjects(currentLocation.objects as string[]);
     }
 
     // =========================================================================
@@ -197,7 +204,6 @@ export class VisibilityResolver {
     const accessibleObjects: string[] = [];
     const accessibleItems: string[] = [];
 
-
     // Check if parent grants access
     const grantsAccess = GameStateManager.parentGrantsAccess(state, game, parentId);
     if (!grantsAccess) {
@@ -231,7 +237,6 @@ export class VisibilityResolver {
         accessibleItems.push(...grandchildren.items);
       } else if (game.items[childId as any]) {
         accessibleItems.push(childId);
-      } else {
       }
     }
 

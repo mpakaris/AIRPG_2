@@ -2036,7 +2036,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             usable: false,
             combinable: false,
             passage: false,
-            takeable: false,  // Can't take it - must photograph!
+            takable: false,  // Can't take it - must photograph!
             camera: false,
             photographable: true  // NEW: Can be photographed
         },

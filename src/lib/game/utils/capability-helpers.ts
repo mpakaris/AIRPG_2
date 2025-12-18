@@ -68,12 +68,12 @@ export function supportsVerb(
   const caps = entity.capabilities;
   if (!caps) return false;
 
-  // Check if this is an Item (has isTakable) or GameObject (has takable)
+  // Check if this is an Item (has isTakable) or GameObject (has takeable)
   const isItem = 'isTakable' in caps;
 
   switch (verb) {
     case 'take':
-      return isItem ? (caps as any).isTakable === true : (caps as any).takable === true;
+      return isItem ? (caps as any).isTakable === true : (caps as any).takeable === true;
     case 'open':
     case 'close':
       return (caps as any).openable === true;

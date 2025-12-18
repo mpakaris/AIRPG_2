@@ -2,7 +2,7 @@
 'use server';
 
 import type { Game, PlayerState, Effect, GameObjectId, ItemId } from "@/lib/game/types";
-import { Validator, HandlerResolver, VisibilityResolver, FocusResolver, GameStateManager } from "@/lib/game/engine";
+import { Validator, HandlerResolver, VisibilityResolver, FocusResolver, GameStateManager, FocusManager } from "@/lib/game/engine";
 import { normalizeName } from "@/lib/utils";
 import { handleRead } from "@/lib/game/actions/handle-read";
 import { buildEffectsFromOutcome, resolveConditionalHandler, evaluateHandlerOutcome } from "@/lib/game/utils/outcome-helpers";
@@ -66,18 +66,23 @@ export async function handleOpen(state: PlayerState, targetName: string, game: G
             if (outcome) {
                 const effects: Effect[] = [];
 
-                // Only set focus if NOT personal equipment
-                if (targetObject.personal !== true) {
-                    effects.push({
-                        type: 'SET_FOCUS',
-                        focusId: targetObjectId,
-                        focusType: 'object',
-                        transitionMessage: FocusResolver.getTransitionNarration(targetObjectId, 'object', state, game) || undefined
-                    });
-                }
-
                 // Use helper to build effects with automatic media extraction
                 effects.push(...buildEffectsFromOutcome(outcome, targetObjectId, 'object', game, isFail));
+
+                // CENTRALIZED FOCUS LOGIC: Determine focus after action completes
+                const focusEffect = FocusManager.determineNextFocus({
+                    action: 'open',
+                    target: targetObjectId,
+                    targetType: 'object',
+                    actionSucceeded: !isFail,
+                    currentFocus: state.currentFocusId,
+                    state,
+                    game
+                });
+
+                if (focusEffect) {
+                    effects.push(focusEffect);
+                }
 
                 return effects;
             }
@@ -98,16 +103,6 @@ export async function handleOpen(state: PlayerState, targetName: string, game: G
             }];
         }
 
-        // Only set focus if NOT personal equipment
-        if (targetObject.personal !== true) {
-            effects.push({
-                type: 'SET_FOCUS',
-                focusId: targetObjectId,
-                focusType: 'object',
-                transitionMessage: FocusResolver.getTransitionNarration(targetObjectId, 'object', state, game) || undefined
-            });
-        }
-
         effects.push(
             {
                 type: 'SET_ENTITY_STATE',
@@ -120,6 +115,21 @@ export async function handleOpen(state: PlayerState, targetName: string, game: G
                 content: `You open the ${targetObject.name}.`
             }
         );
+
+        // CENTRALIZED FOCUS LOGIC: Determine focus after action completes
+        const focusEffect = FocusManager.determineNextFocus({
+            action: 'open',
+            target: targetObjectId,
+            targetType: 'object',
+            actionSucceeded: true,
+            currentFocus: state.currentFocusId,
+            state,
+            game
+        });
+
+        if (focusEffect) {
+            effects.push(focusEffect);
+        }
 
         return effects;
     }

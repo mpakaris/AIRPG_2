@@ -10,7 +10,45 @@ AIRPG_2 is a text-based adventure game (AI-powered RPG) built with Next.js 15, F
 
 ## 🚨 CRITICAL DEVELOPMENT PRINCIPLES
 
-**READ BEFORE EVERY CODE CHANGE**: See `DEVELOPMENT-PRINCIPLES.md` for detailed guidelines.
+**FULL DETAILS**: See `DEVELOPMENT-PRINCIPLES.md` for complete guidelines.
+
+### The Golden Rule
+
+> **"Will this solution work for 1000 games, or just this one object?"**
+
+If the answer is "just this one object," STOP. Find the global system that needs fixing.
+
+---
+
+### BEFORE Writing ANY Code - Check These First:
+
+#### 1. Valid Types (ALWAYS CHECK FIRST!)
+- **Valid Condition Types** (`src/lib/game/types.ts:242`):
+  - `FLAG`, `NO_FLAG`, `HAS_FLAG`
+  - `HAS_ITEM`, `STATE`, `LOCATION_IS`, `CHAPTER_IS`, `RANDOM_CHANCE`
+  - ❌ DO NOT invent new condition types!
+
+- **Valid Effect Types** (`src/lib/game/types.ts:66`):
+  - `ADD_ITEM`, `REMOVE_ITEM`, `SET_FLAG`, `REVEAL_FROM_PARENT`
+  - `SET_ENTITY_STATE`, `SET_STATE`, `SHOW_MESSAGE`
+  - ❌ DO NOT invent new effect types!
+
+#### 2. Handler Patterns (CHECK BEFORE WRITING HANDLERS!)
+Read `src/documentation/handler-resolution-and-media.md` for:
+- **Pattern 1 (Binary)**: Simple yes/no states → use `success/fail`
+- **Pattern 2 (Multi-State)**: Complex branching → use array of handlers
+- **Order matters**: Most specific conditions first, default (no conditions) last
+
+#### 3. Existing Documentation (READ BEFORE CODING!)
+
+| Making changes to... | Read this first |
+|---------------------|-----------------|
+| Handlers/conditions | `handler-resolution-and-media.md` |
+| Parent-child/reveals | `handler-resolution-and-media.md` |
+| Focus/navigation | `focus-and-zones.md` |
+| Any bug fix | `backlog.md` (check if already documented) |
+
+---
 
 ### Key Rules (Never Violate These)
 
@@ -20,7 +58,8 @@ AIRPG_2 is a text-based adventure game (AI-powered RPG) built with Next.js 15, F
    - Question: "Will this solution work for 1000 games or just this one object?"
 
 2. **Follow Documented Patterns**
-   - Check: `src/documentation/handler-resolution-and-media.md`
+   - Check valid types in `src/lib/game/types.ts` FIRST
+   - Check patterns in `src/documentation/handler-resolution-and-media.md`
    - Use Pattern 1 (Binary) for simple yes/no states
    - Use Pattern 2 (Multi-State) for complex branching logic
    - Order conditions: most specific → least specific
@@ -30,23 +69,26 @@ AIRPG_2 is a text-based adventure game (AI-powered RPG) built with Next.js 15, F
    - NEVER break `parentId` connections
    - Verify accessibility chain after changes
 
-4. **Update Documentation**
-   - Code changes → Documentation updates (required, not optional)
+4. **Update Documentation (NOT OPTIONAL!)**
+   - Code changes → Documentation updates (required)
    - New patterns → Add to `src/documentation/`
-   - Bug fixes → Update `src/documentation/backlog.md`
+   - Bug fixes → Update `src/documentation/backlog.md` (resolved section)
 
 5. **Maintain Architectural Consistency**
    - NPCs are NOT zones (see `src/documentation/focus-and-zones.md`)
    - Explicit media takes priority over entity-based (see handler-resolution-and-media.md)
    - Progressive discovery must be consistent (backlog.md #001)
 
-### Quick Validation Checklist
+---
+
+### Pre-Commit Validation Checklist
 
 Before committing:
 - [ ] Is this a global fix or local workaround? (Must be global)
-- [ ] Does it follow existing patterns? (Check documentation)
+- [ ] Did I check valid types in `src/lib/game/types.ts`?
+- [ ] Does it follow documented patterns in `handler-resolution-and-media.md`?
 - [ ] Are parent-child relationships intact?
-- [ ] Is documentation updated?
+- [ ] Is documentation updated (backlog.md if bug fix)?
 - [ ] Tested on multiple objects/entities?
 
 ---
@@ -84,6 +126,19 @@ npm run db:seed:game     # Bake + seed only game data (no user/state)
 ```
 
 **Important**: Always run `npm run db:bake` before `npm run db:seed` if you've modified `src/lib/game/cartridge.ts`. The seed scripts read from the generated `cartridge.json` file, not the TypeScript source.
+
+### Development checkpoints
+
+Use the **🧪 Dev Checkpoints** button in the bottom-right of the game UI to jump to specific game states for testing.
+
+**To add new checkpoints**:
+1. Add checkpoint definition to `src/app/actions.ts` in the `applyDevCheckpoint` function (as Effect array)
+2. Add UI entry to `src/components/game/DevControls.tsx` in the `allCheckpoints` object
+
+Current Chapter 1 checkpoints:
+- `chapter_1_intro_complete` - Chapter intro finished
+- `opened_trashbag` - Inside dumpster, trash bag torn open, ready to examine coat/pants/shoes
+- `side_alley_find_crowbar` - At tire pile, ready to take crowbar
 
 ### AI development
 ```bash

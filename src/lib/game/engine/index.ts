@@ -21,3 +21,5 @@ export { HandlerResolver } from './HandlerResolver';
 export type { EntityWithHandlers } from './HandlerResolver';
 export { FocusResolver } from './FocusResolver';
 export type { EntityMatch } from './FocusResolver';
+export { FocusManager } from './FocusManager';
+export type { ActionType, FocusContext } from './FocusManager';

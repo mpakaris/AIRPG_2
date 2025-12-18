@@ -10,7 +10,7 @@
 'use server';
 
 import type { Game, PlayerState, Effect, GameObjectId } from "@/lib/game/types";
-import { Validator, HandlerResolver, VisibilityResolver, FocusResolver } from "@/lib/game/engine";
+import { Validator, HandlerResolver, VisibilityResolver, FocusResolver, FocusManager } from "@/lib/game/engine";
 import { normalizeName } from "@/lib/utils";
 import { buildEffectsFromOutcome, evaluateHandlerOutcome } from "@/lib/game/utils/outcome-helpers";
 import { findBestMatch } from "@/lib/game/utils/name-matching";
@@ -53,23 +53,11 @@ export async function handleBreak(state: PlayerState, targetName: string, game: 
     }];
   }
 
-  // 2. FOCUS VALIDATION: Check if target is within current focus
-  if (state.currentFocusId && state.focusType === 'object') {
-    const entitiesInFocus = FocusResolver.getEntitiesInFocus(state, game);
+  // NOTE: Focus validation is handled by findBestMatch with requireFocus: true
+  // No need for redundant validation here - if findBestMatch returned a result,
+  // the object is accessible within the current focus
 
-    const isInFocus = targetObjectId === state.currentFocusId ||
-                     entitiesInFocus.objects.includes(targetObjectId);
-
-    if (!isInFocus) {
-      return [{
-        type: 'SHOW_MESSAGE',
-        speaker: 'narrator',
-        content: FocusResolver.getOutOfFocusMessage('break', targetObject.name, state.currentFocusId, game)
-      }];
-    }
-  }
-
-  // 3. Get effective handler (with stateMap composition)
+  // 2. Get effective handler (with stateMap composition)
   const handler = HandlerResolver.getEffectiveHandler(targetObject, 'break', state, game);
 
   if (!handler) {
@@ -92,7 +80,7 @@ export async function handleBreak(state: PlayerState, targetName: string, game: 
     }];
   }
 
-  // 4. Evaluate handler outcome
+  // 3. Evaluate handler outcome
   const { outcome, isFail } = evaluateHandlerOutcome(handler, state, game);
 
   if (!outcome) {
@@ -118,19 +106,26 @@ export async function handleBreak(state: PlayerState, targetName: string, game: 
     }];
   }
 
-  // 5. Build effects (with media support)
-  const effects: Effect[] = [
-    // Set focus on the object being broken
-    {
-      type: 'SET_FOCUS',
-      focusId: targetObjectId,
-      focusType: 'object',
-      transitionMessage: FocusResolver.getTransitionNarration(targetObjectId, 'object', state, game) || undefined
-    }
-  ];
+  // 4. Build effects (with media support)
+  const effects: Effect[] = [];
 
   // Use helper to build effects with automatic media extraction
   effects.push(...buildEffectsFromOutcome(outcome, targetObjectId, 'object', game, isFail));
+
+  // CENTRALIZED FOCUS LOGIC: Determine focus after action completes
+  const focusEffect = FocusManager.determineNextFocus({
+    action: 'break',
+    target: targetObjectId,
+    targetType: 'object',
+    actionSucceeded: !isFail,
+    currentFocus: state.currentFocusId,
+    state,
+    game
+  });
+
+  if (focusEffect) {
+    effects.push(focusEffect);
+  }
 
   return effects;
 }

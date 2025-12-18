@@ -9,7 +9,7 @@
 'use server';
 
 import type { Game, PlayerState, Effect, GameObjectId, ItemId } from "@/lib/game/types";
-import { Validator, HandlerResolver, VisibilityResolver, FocusResolver } from "@/lib/game/engine";
+import { Validator, HandlerResolver, VisibilityResolver, FocusResolver, GameStateManager, FocusManager } from "@/lib/game/engine";
 import { normalizeName } from "@/lib/utils";
 import { buildEffectsFromOutcome, evaluateHandlerOutcome } from "@/lib/game/utils/outcome-helpers";
 import { findBestMatch } from "@/lib/game/utils/name-matching";
@@ -58,20 +58,9 @@ export async function handleSearch(state: PlayerState, targetName: string, game:
   const targetItemId = bestMatch.category !== 'object' ? targetId : null;
 
   // 2. FOCUS VALIDATION: Check if target is within current focus
-  if (state.currentFocusId && state.focusType === 'object' && targetObjectId) {
-    const entitiesInFocus = FocusResolver.getEntitiesInFocus(state, game);
-
-    const isInFocus = targetObjectId === state.currentFocusId ||
-                     entitiesInFocus.objects.includes(targetObjectId);
-
-    if (!isInFocus) {
-      return [{
-        type: 'SHOW_MESSAGE',
-        speaker: 'narrator',
-        content: FocusResolver.getOutOfFocusMessage('search', target.name, state.currentFocusId, game)
-      }];
-    }
-  }
+  // NOTE: Focus validation is handled by findBestMatch with requireFocus: true
+  // No need for redundant validation here - if findBestMatch returned a result,
+  // the object is accessible within the current focus (including descendants)
 
   // 3. Get effective handler (with stateMap composition)
   const handler = HandlerResolver.getEffectiveHandler(target, 'search', state, game);
@@ -107,16 +96,6 @@ export async function handleSearch(state: PlayerState, targetName: string, game:
   // 5. Build effects (with media support)
   const effects: Effect[] = [];
 
-  // Set focus on the target being searched (if object)
-  if (targetObjectId) {
-    effects.push({
-      type: 'SET_FOCUS',
-      focusId: targetObjectId,
-      focusType: 'object',
-      transitionMessage: FocusResolver.getTransitionNarration(targetObjectId, 'object', state, game) || undefined
-    });
-  }
-
   // Use helper to build effects with automatic media extraction
   effects.push(...buildEffectsFromOutcome(
     outcome,
@@ -125,6 +104,21 @@ export async function handleSearch(state: PlayerState, targetName: string, game:
     game,
     isFail
   ));
+
+  // CENTRALIZED FOCUS LOGIC: Determine focus after action completes
+  const focusEffect = FocusManager.determineNextFocus({
+    action: 'search',
+    target: targetObjectId || targetItemId || targetId,
+    targetType: targetObjectId ? 'object' : 'item',
+    actionSucceeded: !isFail,
+    currentFocus: state.currentFocusId,
+    state,
+    game
+  });
+
+  if (focusEffect) {
+    effects.push(focusEffect);
+  }
 
   return effects;
 }

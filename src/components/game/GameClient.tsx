@@ -61,6 +61,7 @@ export const GameClient: FC<GameClientProps> = ({ game: initialGame, initialGame
   // This provides the correct player state and messages for the current chapter
   useEffect(() => {
     if (userState) {
+      console.log('[GameClient useEffect] userState changed, updating messages. Count:', userState.messages.length);
       setPlayerState(userState.playerState);
       setMessages(userState.messages);
     }
@@ -163,6 +164,11 @@ export const GameClient: FC<GameClientProps> = ({ game: initialGame, initialGame
   };
   
   const handleStateUpdate = (newState: PlayerState, newMessages?: Message[]) => {
+      console.log('[GameClient] handleStateUpdate called', {
+        hasNewMessages: !!newMessages,
+        messageCount: newMessages?.length,
+        lastMessage: newMessages?.[newMessages.length - 1]
+      });
       setPlayerState(newState);
       if (newMessages) {
         setMessages(newMessages);

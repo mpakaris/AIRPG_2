@@ -122,7 +122,7 @@ export async function handleTake(state: PlayerState, targetName: string, game: G
     }];
   }
 
-  // 4. Check if item is takable (if not, generate AI message)
+  // 4. Check if item is takeable (if not, generate AI message)
   if (item.capabilities && !item.capabilities.isTakable) {
     const failOutcome = item.handlers?.onTake?.fail;
     const failMedia = failOutcome?.media;

@@ -9,7 +9,7 @@
 'use server';
 
 import type { Game, PlayerState, Effect, GameObjectId } from "@/lib/game/types";
-import { Validator, HandlerResolver, VisibilityResolver, FocusResolver } from "@/lib/game/engine";
+import { Validator, HandlerResolver, VisibilityResolver, FocusResolver, FocusManager } from "@/lib/game/engine";
 import { normalizeName } from "@/lib/utils";
 import { buildEffectsFromOutcome, evaluateHandlerOutcome } from "@/lib/game/utils/outcome-helpers";
 import { findBestMatch } from "@/lib/game/utils/name-matching";
@@ -52,20 +52,9 @@ export async function handleClose(state: PlayerState, targetName: string, game: 
   }
 
   // 2. FOCUS VALIDATION: Check if target is within current focus
-  if (state.currentFocusId && state.focusType === 'object') {
-    const entitiesInFocus = FocusResolver.getEntitiesInFocus(state, game);
-
-    const isInFocus = targetObjectId === state.currentFocusId ||
-                     entitiesInFocus.objects.includes(targetObjectId);
-
-    if (!isInFocus) {
-      return [{
-        type: 'SHOW_MESSAGE',
-        speaker: 'narrator',
-        content: FocusResolver.getOutOfFocusMessage('close', targetObject.name, state.currentFocusId, game)
-      }];
-    }
-  }
+  // NOTE: Focus validation is handled by findBestMatch with requireFocus: true
+  // No need for redundant validation here - if findBestMatch returned a result,
+  // the object is accessible within the current focus (including descendants)
 
   // 3. Get effective handler (with stateMap composition)
   const handler = HandlerResolver.getEffectiveHandler(targetObject, 'close', state, game);
@@ -84,13 +73,7 @@ export async function handleClose(state: PlayerState, targetName: string, game: 
     }
 
     // Default: close it
-    return [
-      {
-        type: 'SET_FOCUS',
-        focusId: targetObjectId,
-        focusType: 'object',
-        transitionMessage: FocusResolver.getTransitionNarration(targetObjectId, 'object', state, game) || undefined
-      },
+    const effects: Effect[] = [
       {
         type: 'SET_ENTITY_STATE',
         entityId: targetObjectId,
@@ -102,6 +85,23 @@ export async function handleClose(state: PlayerState, targetName: string, game: 
         content: `You close the ${targetObject.name}.`
       }
     ];
+
+    // CENTRALIZED FOCUS LOGIC: Determine focus after action completes
+    const focusEffect = FocusManager.determineNextFocus({
+      action: 'close',
+      target: targetObjectId,
+      targetType: 'object',
+      actionSucceeded: true,
+      currentFocus: state.currentFocusId,
+      state,
+      game
+    });
+
+    if (focusEffect) {
+      effects.push(focusEffect);
+    }
+
+    return effects;
   }
 
   // 4. Evaluate handler outcome
@@ -123,18 +123,25 @@ export async function handleClose(state: PlayerState, targetName: string, game: 
   }
 
   // 5. Build effects (with media support)
-  const effects: Effect[] = [
-    // Set focus on the object being closed
-    {
-      type: 'SET_FOCUS',
-      focusId: targetObjectId,
-      focusType: 'object',
-      transitionMessage: FocusResolver.getTransitionNarration(targetObjectId, 'object', state, game) || undefined
-    }
-  ];
+  const effects: Effect[] = [];
 
   // Use helper to build effects with automatic media extraction
   effects.push(...buildEffectsFromOutcome(outcome, targetObjectId, 'object', game, isFail));
+
+  // CENTRALIZED FOCUS LOGIC: Determine focus after action completes
+  const focusEffect = FocusManager.determineNextFocus({
+    action: 'close',
+    target: targetObjectId,
+    targetType: 'object',
+    actionSucceeded: !isFail,
+    currentFocus: state.currentFocusId,
+    state,
+    game
+  });
+
+  if (focusEffect) {
+    effects.push(focusEffect);
+  }
 
   return effects;
 }

@@ -10,7 +10,7 @@
 'use server';
 
 import type { Game, PlayerState, Effect, GameObjectId, ItemId } from "@/lib/game/types";
-import { HandlerResolver, GameStateManager, VisibilityResolver, Validator, FocusResolver } from "@/lib/game/engine";
+import { HandlerResolver, GameStateManager, VisibilityResolver, Validator, FocusResolver, FocusManager } from "@/lib/game/engine";
 import { normalizeName } from "@/lib/utils";
 import { buildEffectsFromOutcome, resolveConditionalHandler, evaluateHandlerOutcome } from "@/lib/game/utils/outcome-helpers";
 import { findBestMatch } from "@/lib/game/utils/name-matching";
@@ -243,17 +243,25 @@ async function handleReadItemWithTarget(state: PlayerState, targetName: string, 
 
             if (outcome) {
                 const effects: Effect[] = [];
-                // Set focus on target if it's not personal equipment (objects only)
-                const isPersonalEquipment = targetMatch.category === 'object' && (target as any).personal === true;
-                if (targetMatch.category === 'object' && !isPersonalEquipment) {
-                    effects.push({
-                        type: 'SET_FOCUS',
-                        focusId: targetId as GameObjectId,
-                        focusType: 'object',
-                        transitionMessage: FocusResolver.getTransitionNarration(targetId as GameObjectId, 'object', state, game) || undefined
-                    });
-                }
+
+                // Use helper to build effects with automatic media extraction
                 effects.push(...buildEffectsFromOutcome(outcome, targetId as any, targetMatch.category === 'object' ? 'object' : 'item', game, isFail));
+
+                // CENTRALIZED FOCUS LOGIC: Determine focus after action completes
+                const focusEffect = FocusManager.determineNextFocus({
+                    action: 'read',
+                    target: targetId,
+                    targetType: targetMatch.category === 'object' ? 'object' : 'item',
+                    actionSucceeded: !isFail,
+                    currentFocus: state.currentFocusId,
+                    state,
+                    game
+                });
+
+                if (focusEffect) {
+                    effects.push(focusEffect);
+                }
+
                 return effects;
             }
         }

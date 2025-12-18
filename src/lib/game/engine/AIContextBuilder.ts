@@ -189,7 +189,7 @@ export class AIContextBuilder {
     if (capabilities.readable) formatted.push('can be read');
     if (capabilities.usable) formatted.push('can be used');
     if (capabilities.combinable) formatted.push('can be combined');
-    if (capabilities.takable) formatted.push('can be taken');
+    if (capabilities.takeable) formatted.push('can be taken');
     if (capabilities.passage) formatted.push('is a passage');
 
     return formatted;

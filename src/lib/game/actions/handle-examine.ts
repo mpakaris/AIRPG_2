@@ -8,7 +8,7 @@
 'use server';
 
 import type { Game, PlayerState, Effect, ItemId, GameObjectId } from "@/lib/game/types";
-import { HandlerResolver, GameStateManager, FocusResolver, Validator } from "@/lib/game/engine";
+import { HandlerResolver, GameStateManager, FocusResolver, Validator, FocusManager } from "@/lib/game/engine";
 import { normalizeName } from "@/lib/utils";
 import { handleRead } from "./handle-read";
 import { buildEffectsFromOutcome } from "@/lib/game/utils/outcome-helpers";
@@ -71,25 +71,36 @@ export async function handleExamine(state: PlayerState, targetName: string, game
 
         // Skip sprawling check for personal equipment (phone, badge, etc.) - always accessible
         if (!obj?.personal) {
-            // SPECIAL CASE: If player is inside dumpster, they can examine all children of dumpster
-            const isInsideDumpster = GameStateManager.hasFlag(state, 'dumpster_climbed' as any);
-            const isChildOfDumpster = obj?.parentId === 'obj_dumpster';
-
             // Get current location's spatial mode
             const currentLocation = game.locations[state.currentLocationId];
             const spatialMode = currentLocation?.spatialMode || 'compact';
 
             // In sprawling mode, require focus on the object before examining
-            // UNLESS the player is inside the dumpster and examining a child of the dumpster
-            if (spatialMode === 'sprawling' && state.currentFocusId !== objectId && !(isInsideDumpster && isChildOfDumpster)) {
-                const message = await MessageExpander.static(
-                    `The ${obj?.name || 'object'} is too far away to examine in detail from here. You'll need to get closer to see it properly.`
-                );
-                return [{
-                    type: 'SHOW_MESSAGE',
-                    speaker: 'narrator',
-                    content: message
-                }];
+            if (spatialMode === 'sprawling' && state.currentFocusId !== objectId) {
+                // EXCEPTION 1: If player is inside dumpster, they can examine children of dumpster
+                const isInsideDumpster = GameStateManager.hasFlag(state, 'dumpster_climbed' as any);
+                const isChildOfDumpster = obj?.parentId === 'obj_dumpster';
+
+                // EXCEPTION 2: Can examine children/descendants of current focus
+                const isChildOfCurrentFocus = state.currentFocusId && obj?.parentId === state.currentFocusId;
+                const isDescendantOfCurrentFocus = state.currentFocusId &&
+                    GameStateManager.getAncestors(state, objectId).includes(state.currentFocusId);
+
+                // Allow if any exception applies
+                const allowExamine = (isInsideDumpster && isChildOfDumpster) ||
+                                    isChildOfCurrentFocus ||
+                                    isDescendantOfCurrentFocus;
+
+                if (!allowExamine) {
+                    const message = await MessageExpander.static(
+                        `The ${obj?.name || 'object'} is too far away to examine in detail from here. You'll need to get closer to see it properly.`
+                    );
+                    return [{
+                        type: 'SHOW_MESSAGE',
+                        speaker: 'narrator',
+                        content: message
+                    }];
+                }
             }
         }
     }
@@ -137,22 +148,6 @@ export async function handleExamine(state: PlayerState, targetName: string, game
 
         const effects: Effect[] = [];
 
-        // FOCUS LOGIC: Only set focus if this item is NOT in inventory and NOT a child of the current focus
-        // Inventory items are always accessible and don't need focus/navigation
-        const entityState = GameStateManager.getEntityState(state, itemId);
-        const isChildOfCurrentFocus = state.currentFocusId && entityState.parentId === state.currentFocusId;
-        const isInInventory = state.inventory.includes(itemId);
-
-        if (!isInInventory && !isChildOfCurrentFocus) {
-            // Set focus on this item only if it's not in inventory and not a child of current focus
-            effects.push({
-                type: 'SET_FOCUS',
-                focusId: itemId,
-                focusType: 'item',
-                transitionMessage: FocusResolver.getTransitionNarration(itemId, 'item', state, game) || undefined
-            });
-        }
-
         // Build message with media support
         if (handler) {
             // CRITICAL: Evaluate handler conditions to determine success vs fail outcome
@@ -198,6 +193,21 @@ export async function handleExamine(state: PlayerState, targetName: string, game
             });
         }
 
+        // CENTRALIZED FOCUS LOGIC: Determine focus after action completes
+        const focusEffect = FocusManager.determineNextFocus({
+            action: 'examine',
+            target: itemId,
+            targetType: 'item',
+            actionSucceeded: true,
+            currentFocus: state.currentFocusId,
+            state,
+            game
+        });
+
+        if (focusEffect) {
+            effects.push(focusEffect);
+        }
+
         return effects;
     } else if (bestMatch?.category === 'visible-item') {
         const visibleItemId = bestMatch.id as ItemId;
@@ -225,21 +235,6 @@ export async function handleExamine(state: PlayerState, targetName: string, game
             }
 
             const effects: Effect[] = [];
-
-            // FOCUS LOGIC: Only set focus if this item is NOT a child of the current focus
-            // If examining a child item (e.g., newspaper inside notebook), keep focus on parent
-            const entityState = GameStateManager.getEntityState(state, visibleItemId);
-            const isChildOfCurrentFocus = state.currentFocusId && entityState.parentId === state.currentFocusId;
-
-            if (!isChildOfCurrentFocus) {
-                // Set focus on this item only if it's not a child of current focus
-                effects.push({
-                    type: 'SET_FOCUS',
-                    focusId: visibleItemId,
-                    focusType: 'item',
-                    transitionMessage: FocusResolver.getTransitionNarration(visibleItemId, 'item', state, game) || undefined
-                });
-            }
 
             // Build message with media support
             if (handler) {
@@ -286,6 +281,21 @@ export async function handleExamine(state: PlayerState, targetName: string, game
                 });
             }
 
+            // CENTRALIZED FOCUS LOGIC: Determine focus after action completes
+            const focusEffect = FocusManager.determineNextFocus({
+                action: 'examine',
+                target: visibleItemId,
+                targetType: 'item',
+                actionSucceeded: true,
+                currentFocus: state.currentFocusId,
+                state,
+                game
+            });
+
+            if (focusEffect) {
+                effects.push(focusEffect);
+            }
+
             return effects;
         }
     } else if (bestMatch?.category === 'object') {
@@ -327,21 +337,6 @@ export async function handleExamine(state: PlayerState, targetName: string, game
         }
 
         const effects: Effect[] = [];
-
-        // FOCUS LOGIC: Only set focus if this object is NOT a child of the current focus
-        // If examining a child object (e.g., SD card inside notebook), keep focus on parent
-        const entityState = GameStateManager.getEntityState(state, targetObjectId);
-        const isChildOfCurrentFocus = state.currentFocusId && entityState.parentId === state.currentFocusId;
-
-        if (!isChildOfCurrentFocus) {
-            // Set focus on this object only if it's not a child of current focus
-            effects.push({
-                type: 'SET_FOCUS',
-                focusId: targetObjectId,
-                focusType: 'object',
-                transitionMessage: FocusResolver.getTransitionNarration(targetObjectId, 'object', state, game) || undefined
-            });
-        }
 
         // Build message with media support
         if (handler) {
@@ -386,6 +381,21 @@ export async function handleExamine(state: PlayerState, targetName: string, game
                 flag,
                 value: true
             });
+        }
+
+        // CENTRALIZED FOCUS LOGIC: Determine focus after action completes
+        const focusEffect = FocusManager.determineNextFocus({
+            action: 'examine',
+            target: targetObjectId,
+            targetType: 'object',
+            actionSucceeded: true,
+            currentFocus: state.currentFocusId,
+            state,
+            game
+        });
+
+        if (focusEffect) {
+            effects.push(focusEffect);
         }
 
         return effects;
@@ -493,16 +503,24 @@ async function handleExamineItemOnTarget(state: PlayerState, itemName: string, t
 
             if (outcome) {
                 const effects: Effect[] = [];
-                // Only set focus if NOT personal equipment
-                if (targetObject.personal !== true) {
-                    effects.push({
-                        type: 'SET_FOCUS',
-                        focusId: targetObjectId,
-                        focusType: 'object',
-                        transitionMessage: FocusResolver.getTransitionNarration(targetObjectId, 'object', state, game) || undefined
-                    });
-                }
+
                 effects.push(...buildEffectsFromOutcome(outcome, targetObjectId, 'object', game, isFail));
+
+                // CENTRALIZED FOCUS LOGIC: Determine focus after action completes
+                const focusEffect = FocusManager.determineNextFocus({
+                    action: 'examine',
+                    target: targetObjectId,
+                    targetType: 'object',
+                    actionSucceeded: !isFail,
+                    currentFocus: state.currentFocusId,
+                    state,
+                    game
+                });
+
+                if (focusEffect) {
+                    effects.push(focusEffect);
+                }
+
                 return effects;
             }
         }
@@ -518,16 +536,24 @@ async function handleExamineItemOnTarget(state: PlayerState, itemName: string, t
 
             if (outcome) {
                 const effects: Effect[] = [];
-                // Only set focus if NOT personal equipment
-                if (targetObject.personal !== true) {
-                    effects.push({
-                        type: 'SET_FOCUS',
-                        focusId: targetObjectId,
-                        focusType: 'object',
-                        transitionMessage: FocusResolver.getTransitionNarration(targetObjectId, 'object', state, game) || undefined
-                    });
-                }
+
                 effects.push(...buildEffectsFromOutcome(outcome, targetObjectId, 'object', game, isFail));
+
+                // CENTRALIZED FOCUS LOGIC: Determine focus after action completes
+                const focusEffect = FocusManager.determineNextFocus({
+                    action: 'examine',
+                    target: targetObjectId,
+                    targetType: 'object',
+                    actionSucceeded: !isFail,
+                    currentFocus: state.currentFocusId,
+                    state,
+                    game
+                });
+
+                if (focusEffect) {
+                    effects.push(focusEffect);
+                }
+
                 return effects;
             }
         }
@@ -543,16 +569,24 @@ async function handleExamineItemOnTarget(state: PlayerState, itemName: string, t
 
             if (outcome) {
                 const effects: Effect[] = [];
-                // Only set focus if NOT personal equipment
-                if (targetObject.personal !== true) {
-                    effects.push({
-                        type: 'SET_FOCUS',
-                        focusId: targetObjectId,
-                        focusType: 'object',
-                        transitionMessage: FocusResolver.getTransitionNarration(targetObjectId, 'object', state, game) || undefined
-                    });
-                }
+
                 effects.push(...buildEffectsFromOutcome(outcome, targetObjectId, 'object', game, isFail));
+
+                // CENTRALIZED FOCUS LOGIC: Determine focus after action completes
+                const focusEffect = FocusManager.determineNextFocus({
+                    action: 'examine',
+                    target: targetObjectId,
+                    targetType: 'object',
+                    actionSucceeded: !isFail,
+                    currentFocus: state.currentFocusId,
+                    state,
+                    game
+                });
+
+                if (focusEffect) {
+                    effects.push(focusEffect);
+                }
+
                 return effects;
             }
         }

@@ -273,7 +273,7 @@ export class GameStateManager {
         // Movement
         // ============================================================================
         case 'MOVE_TO_LOCATION':
-          newState.currentLocationId = effect.locationId as any;
+          newState.currentLocationId = effect.toLocationId as any;
           break;
 
         case 'TELEPORT':
@@ -648,7 +648,7 @@ export class GameStateManager {
 
       // Breakable entities: children accessible if broken OR if other access granted
       // (e.g., coffee machine must be broken to reveal key inside)
-      if (caps.breakable && parentEntity.children?.items) {
+      if (caps.breakable && parentEntity.children?.items && parentEntity.children.items.length > 0) {
         // Exception: movable entities grant access when moved (chalkboard reveals pipe when moved)
         const isMovedAndGrantsAccess = caps.movable && parentState.isMoved === true;
 

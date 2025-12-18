@@ -254,19 +254,17 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
                                   toast({ title: 'Error', description: 'No user ID', variant: 'destructive' });
                                   return;
                                 }
-                                startTransition(async () => {
-                                  try {
-                                    const result = await applyDevCheckpoint(userId, checkpoint.id);
-                                    onStateUpdate(result.newState);
-                                    toast({ title: 'Checkpoint Applied', description: checkpoint.label });
-                                  } catch (error) {
-                                    toast({
-                                      title: 'Error',
-                                      description: error instanceof Error ? error.message : 'Failed to apply checkpoint',
-                                      variant: 'destructive'
-                                    });
-                                  }
-                                });
+                                try {
+                                  const result = await applyDevCheckpoint(userId, checkpoint.id);
+                                  onStateUpdate(result.newState, result.messages);
+                                  toast({ title: 'Checkpoint Applied', description: checkpoint.label });
+                                } catch (error) {
+                                  toast({
+                                    title: 'Error',
+                                    description: error instanceof Error ? error.message : 'Failed to apply checkpoint',
+                                    variant: 'destructive'
+                                  });
+                                }
                               }}
                               disabled={isPending}
                               className='text-xs justify-start'

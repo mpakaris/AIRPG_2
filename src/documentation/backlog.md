@@ -456,6 +456,162 @@ System: "You remember seeing the Reciprocating Saw at the Drawer.
 
 *When an issue is resolved, move it here with resolution details*
 
+### ✅ #010: Sibling Objects Inaccessible After Searching Child
+
+**Resolved**: 2025-12-17
+**Problem**: When searching a child object (e.g., coat inside trash bag), focus was unconditionally set to that child, making sibling objects (pants, shoes) inaccessible with "too far away" error.
+
+**User Flow That Broke**:
+1. Search trash bag → reveals coat, pants, shoes ✓
+2. Examine coat → focus stays on trash bag ✓
+3. **Search coat** → focus changed to coat ✗
+4. Examine pants → "Pants is too far away" ✗
+
+**Root Cause**: `handle-search.ts` unconditionally set focus on searched objects without checking if they were children of current focus. Meanwhile, `handle-examine.ts` already had the correct logic to preserve parent focus when examining children.
+
+**Solution**: Added parent focus check to `handle-search.ts` matching the pattern in `handle-examine.ts`:
+
+```typescript
+// FOCUS LOGIC: Only set focus if this object is NOT a child of the current focus
+if (targetObjectId) {
+  const entityState = GameStateManager.getEntityState(state, targetObjectId);
+  const isChildOfCurrentFocus = state.currentFocusId && entityState.parentId === state.currentFocusId;
+
+  if (!isChildOfCurrentFocus) {
+    // Set focus on this object only if it's not a child of current focus
+    effects.push({ type: 'SET_FOCUS', ... });
+  }
+}
+```
+
+**Files Changed**:
+- `src/lib/game/actions/handle-search.ts` (lines 99-115)
+
+**Impact**:
+- Fixes sibling accessibility globally for ALL parent-child relationships
+- Works for: trash bag items, counter/drawer, bookshelf/books, any container with multiple children
+- Maintains consistency between examine and search commands
+- No cartridge changes needed (engine fix only)
+
+**Pattern**: This follows the existing pattern in `handle-examine.ts` (lines 342-355), ensuring both commands behave consistently.
+
+**Why This Happened**: `handle-search.ts` was implemented without the parent focus check that `handle-examine.ts` already had. The two handlers should have been kept in sync.
+
+**Prevention**:
+1. When modifying focus logic in one handler, check all other handlers that set focus
+2. Commands that interact with entities (examine, search, use, etc.) should follow consistent focus patterns
+3. Reference `focus-and-zones.md` for focus system principles
+
+---
+
+### ✅ #009: Invalid `ITEM_IN_WORLD` Condition Breaking Search Handlers
+
+**Resolved**: 2025-12-17
+**Problem**: Multiple objects in chapter-1 used an invalid condition type `ITEM_IN_WORLD` that doesn't exist in the game engine's condition system. This caused search/examine handlers to always skip the first outcome (revealing items) and show "already found" messages instead.
+
+**Affected Objects**:
+- `obj_coat` - Coat with silver key
+- `obj_bench` - Bench with invoice
+- `obj_old_suitcase` - Suitcase with box cutter
+- `obj_tire_stack` - Tires with crowbar
+
+**Example of Bug**:
+```typescript
+// ❌ WRONG: ITEM_IN_WORLD is not a valid condition type
+onSearch: [
+  {
+    conditions: [{ type: 'ITEM_IN_WORLD', itemId: 'item_tiny_silver_key', inWorld: false }],
+    success: { message: "You find a key!", effects: [...] }
+  },
+  {
+    conditions: [],
+    success: { message: "Already found the key" }
+  }
+]
+```
+
+**Root Cause**: `ITEM_IN_WORLD` is not defined in `src/lib/game/types.ts` Condition type. Valid condition types are: `FLAG`, `NO_FLAG`, `HAS_FLAG`, `HAS_ITEM`, `STATE`, `LOCATION_IS`, `CHAPTER_IS`, `RANDOM_CHANCE`. Invalid conditions always evaluate to `false`, causing the first handler to be skipped.
+
+**Solution**: Replaced with proper Pattern 1 (Binary Success/Fail) from `handler-resolution-and-media.md`:
+
+```typescript
+// ✅ CORRECT: Using valid NO_FLAG condition
+onSearch: [
+  {
+    conditions: [{ type: 'NO_FLAG', flag: 'coat_searched' }],
+    success: {
+      message: "You find a key!",
+      effects: [
+        { type: 'REVEAL_FROM_PARENT', entityId: 'item_tiny_silver_key', parentId: 'obj_coat' },
+        { type: 'SET_FLAG', flag: 'coat_searched', value: true }
+      ]
+    }
+  },
+  {
+    conditions: [],
+    success: { message: "Already found the key" }
+  }
+]
+```
+
+**Flags Created**:
+- `coat_searched` - Set when coat is searched and key is revealed
+- `suitcase_searched` - Set when suitcase is searched and box cutter is revealed
+- `tires_moved` - Set when tires are moved and crowbar is revealed
+- Bench uses `STATE: 'isMoved'` check instead of flag
+
+**Additional Fixes**:
+- Added missing `REVEAL_FROM_PARENT` effect to bench's `onMove` handler (was only describing reveal in message, not actually revealing the invoice)
+
+**Files Changed**:
+- `src/lib/game/cartridges/chapter-1.ts` (lines 793-809, 843-851, 1439-1457, 1506-1536, 1922-2015)
+
+**Impact**: Fixes search/examine handlers globally for all affected objects. Pattern now matches documented approach in `handler-resolution-and-media.md`.
+
+**Why This Happened**: Invalid condition type was likely copied from a prototype or misunderstood condition API. Should have referenced `src/lib/game/types.ts` (line 242) for valid Condition types before creating handlers.
+
+**Prevention**:
+1. Always check `src/lib/game/types.ts` for valid condition types
+2. Reference `handler-resolution-and-media.md` for proper handler patterns
+3. Prefer documented Pattern 1 or Pattern 2 approaches
+4. Test handlers immediately after creation to catch invalid conditions
+
+---
+
+### ✅ #008: `messageFn is not a function` Error (JSON Serialization)
+
+**Resolved**: 2025-01-16
+**Problem**: `TypeError: messageFn is not a function` occurred when calling `MessageExpander` methods like `notVisible()`, `cantUseItem()`, etc. The error only appeared after baking cartridge to JSON, not in dev mode.
+
+**Root Cause**: `systemMessages` object contains functions (e.g., `notVisible: (itemName) => 'not_visible_entity'`) in TypeScript. When `scripts/bake.ts` runs `JSON.stringify()` to generate `cartridge.json`, these functions become `null` because functions cannot be serialized to JSON. In dev mode, the app loads from TypeScript directly so functions work. In production (or after seeding), functions are lost.
+
+**Solution**: Modified `message-expansion.ts` to handle deserialization:
+1. Updated `expandMessageWith()` and `expandMessageWith2()` to accept `null | undefined` for `messageFn` parameter
+2. Added `fallbackKeyword` parameter to both functions
+3. Added type check: `typeof messageFn === 'function' ? messageFn(param) : fallbackKeyword`
+4. Updated all `MessageExpander` helpers to pass fallback keywords:
+   - `cantUseItem` → `'cant_use_item'`
+   - `cantUseItemOnTarget` → `'cant_use_item_on_target'`
+   - `cantOpen` → `'cant_open_object'`
+   - `cantMoveObject` → `'cant_move_object'`
+   - `dontHaveItem` → `'dont_have_item'`
+   - `notVisible` → `'not_visible_entity'`
+   - `notReadable` → `'not_readable'`
+
+**Pattern Used**: This follows the same pattern documented in `handle-use.ts` (lines 179-184, 221-226) where functions are checked before calling.
+
+**Files Changed**:
+- `src/lib/game/utils/message-expansion.ts` (lines 90-208)
+
+**Impact**: Fixes all MessageExpander calls globally. Works in both dev mode (functions exist) and production mode (functions are null).
+
+**Why This Was Recurring**: Multiple developers encountered this because:
+1. Error only appears after baking/seeding, not in dev mode
+2. TypeScript doesn't catch it (functions exist at compile time)
+3. Easy to forget that JSON serialization strips functions
+
+**Prevention**: Always use `MessageExpander` helpers which now handle this automatically. If creating new system message functions, ensure fallback keywords are provided.
+
 ### ✅ #005: Items Revealed from Items Not Takeable
 
 **Resolved**: 2025-11-09

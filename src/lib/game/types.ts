@@ -408,7 +408,7 @@ export type Capabilities = {
   usable?: boolean;
   combinable?: boolean;
   passage?: boolean;
-  takable?: boolean;
+  takeable?: boolean;
   camera?: boolean;  // NEW: Device can take photos (e.g., phone, camera)
   photographable?: boolean;  // NEW: Object/NPC can be photographed
 };

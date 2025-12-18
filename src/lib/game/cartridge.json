@@ -3324,7 +3324,7 @@
         "usable": false,
         "combinable": false,
         "passage": false,
-        "takable": false,
+        "takeable": false,
         "camera": false,
         "photographable": true
       },

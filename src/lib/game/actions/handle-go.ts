@@ -8,7 +8,7 @@
 'use server';
 
 import type { Game, Location, PlayerState, ChapterId, Flag, Effect, GameObjectId, ItemId } from "@/lib/game/types";
-import { GameStateManager } from "@/lib/game/engine";
+import { GameStateManager, FocusManager } from "@/lib/game/engine";
 import { findBestMatch } from "@/lib/game/utils/name-matching";
 import { normalizeName } from "@/lib/utils";
 import { MessageExpander } from "@/lib/game/utils/message-expansion";
@@ -285,12 +285,24 @@ export async function handleGo(state: PlayerState, targetName: string, game: Gam
                     console.log('[DEBUG GOTO] Transition message:', transitionMessage);
                     console.log('[DEBUG GOTO] Spatial mode:', spatialMode);
 
-                    effects.push({
-                        type: 'SET_FOCUS',
-                        focusId: entityId as GameObjectId,
-                        focusType: 'object',
-                        transitionMessage: transitionMessage || undefined
+                    // CENTRALIZED FOCUS LOGIC: Determine focus after action completes
+                    const focusEffect = FocusManager.determineNextFocus({
+                        action: 'go',
+                        target: entityId as GameObjectId,
+                        targetType: 'object',
+                        actionSucceeded: true,
+                        currentFocus: state.currentFocusId,
+                        state,
+                        game
                     });
+
+                    if (focusEffect) {
+                        // Override transition message if needed
+                        if (transitionMessage) {
+                            focusEffect.transitionMessage = transitionMessage;
+                        }
+                        effects.push(focusEffect);
+                    }
                 }
             }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { applyDevCheckpoint } from '@/app/actions';
 import type { PlayerState, Message } from '@/lib/game/types';
 
@@ -12,7 +12,7 @@ interface DevControlsProps {
 
 export function DevControls({ userId, currentGameId, onStateUpdate }: DevControlsProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [isPending, startTransition] = useTransition();
+  const [isLoading, setIsLoading] = useState(false);
   const [isDev, setIsDev] = useState(false);
 
   // Check if we're in development mode (client-side only to avoid hydration mismatch)
@@ -25,28 +25,34 @@ export function DevControls({ userId, currentGameId, onStateUpdate }: DevControl
     return null;
   }
 
-  const applyCheckpoint = (checkpointId: string) => {
+  const applyCheckpoint = async (checkpointId: string) => {
     if (!userId) {
       alert('No user ID - cannot apply checkpoint');
       return;
     }
 
-    startTransition(async () => {
-      try {
-        const result = await applyDevCheckpoint(userId, checkpointId);
-        onStateUpdate(result.newState, result.messages);
-      } catch (error) {
-        console.error('Failed to apply checkpoint:', error);
-        alert('Failed to apply checkpoint: ' + (error instanceof Error ? error.message : 'Unknown error'));
-      }
-    });
+    setIsLoading(true);
+    try {
+      console.log('[DevControls] Applying checkpoint:', checkpointId);
+      const result = await applyDevCheckpoint(userId, checkpointId);
+      console.log('[DevControls] Checkpoint result:', {
+        messageCount: result.messages.length,
+        lastMessage: result.messages[result.messages.length - 1]
+      });
+      onStateUpdate(result.newState, result.messages);
+      console.log('[DevControls] onStateUpdate called');
+    } catch (error) {
+      console.error('Failed to apply checkpoint:', error);
+      alert('Failed to apply checkpoint: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Organize checkpoints by game/chapter
   const allCheckpoints: Record<string, Array<{ id: string; label: string; desc: string }>> = {
     'chapter-1-investigation': [
-      { id: 'chapter_1_intro_complete', label: 'Chapter 1 - Intro Complete', desc: 'Chapter 1 intro finished' },
-      { id: 'side_alley_find_crowbar', label: 'Side Alley | Find Crowbar', desc: 'At tire pile, ready to take crowbar' },
+      { id: 'opened_trashbag', label: 'Dumpster | Opened Trash Bag', desc: 'Inside dumpster, trash bag torn open, coat/pants/shoes visible' },
     ],
     'blood-on-brass': [
       { id: 'metal_box_opened', label: 'Opened Metal Box', desc: 'Metal box unlocked' },
@@ -92,7 +98,7 @@ export function DevControls({ userId, currentGameId, onStateUpdate }: DevControl
                   <button
                     key={checkpoint.id}
                     onClick={() => applyCheckpoint(checkpoint.id)}
-                    disabled={isPending}
+                    disabled={isLoading}
                     className="w-full px-3 py-2 text-left border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <div className="flex flex-col items-start w-full">

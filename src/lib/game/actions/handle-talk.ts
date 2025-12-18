@@ -14,6 +14,7 @@
 'use server';
 
 import type { NpcId, Game, PlayerState, Effect, GameObjectId } from "@/lib/game/types";
+import { FocusManager } from "@/lib/game/engine";
 import { normalizeName } from "@/lib/utils";
 import { matchesName } from "@/lib/game/utils/name-matching";
 
@@ -86,13 +87,6 @@ export async function handleTalk(state: PlayerState, npcName: string, game: Game
         content: transitionMessage
     });
 
-    // SHIFT FOCUS: Focus on the NPC directly
-    effects.push({
-        type: 'SET_FOCUS',
-        focusId: npc.id,
-        focusType: 'npc'
-    });
-
     // Increment interaction count
     effects.push({
         type: 'INCREMENT_NPC_INTERACTION',
@@ -135,6 +129,21 @@ export async function handleTalk(state: PlayerState, npcName: string, game: Game
         flag: `examined_${npc.id}` as any,
         value: true
     });
+
+    // CENTRALIZED FOCUS LOGIC: Determine focus after action completes
+    const focusEffect = FocusManager.determineNextFocus({
+        action: 'talk',
+        target: npc.id,
+        targetType: 'npc',
+        actionSucceeded: true,
+        currentFocus: state.currentFocusId,
+        state,
+        game
+    });
+
+    if (focusEffect) {
+        effects.push(focusEffect);
+    }
 
     return effects;
 }

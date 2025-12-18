@@ -2129,6 +2129,10 @@ export async function logAndSave(
         const turnNumber = (state.turnCount || 0) + 1;
         const updatedState = { ...state, turnCount: turnNumber };
 
+        console.log('[logAndSave] About to save state:');
+        console.log('  - Focus:', updatedState.currentFocusId);
+        console.log('  - World entities:', updatedState.world ? Object.keys(updatedState.world).length : 0);
+
         // Write 1: Update player state with new turnCount
         if (updatedState) {
           batch.set(stateRef, updatedState, { merge: false });
@@ -2318,35 +2322,47 @@ export async function applyDevCheckpoint(userId: string, checkpointId: string): 
     const stateRef = doc(firestore, 'player_states', `${userId}_${currentGameId}`);
     const stateSnap = await getDoc(stateRef);
 
-    let currentState: PlayerState;
-    if (stateSnap.exists()) {
-        currentState = stateSnap.data() as PlayerState;
-    } else {
-        currentState = getInitialState(game);
-    }
+    // Always start from fresh initial state for checkpoints
+    // This ensures world.entities is properly initialized
+    const currentState = getInitialState(game);
+
+    console.log('[applyDevCheckpoint] Initial state before effects:');
+    console.log('  - World entities count:', currentState.world ? Object.keys(currentState.world).length : 'NO WORLD');
 
     // Define checkpoints
     const checkpoints: Record<string, Effect[]> = {
-        'chapter_1_intro_complete': [
+        // ============================================================================
+        // CHAPTER 1 CHECKPOINTS
+        // ============================================================================
+        'opened_trashbag': [
             // Set player location to street
             { type: 'MOVE_TO_LOCATION', toLocationId: 'loc_street' as LocationId },
-        ],
-        'side_alley_find_crowbar': [
-            // Set player location to street
-            { type: 'MOVE_TO_LOCATION', toLocationId: 'loc_street' as LocationId },
-            // Reveal the side alley itself
+            // Reveal side alley and all its objects
             { type: 'REVEAL_ENTITY', entityId: 'obj_side_alley' as GameObjectId },
-            // Reveal all alley children
             { type: 'REVEAL_ENTITY', entityId: 'obj_crates' as GameObjectId },
             { type: 'REVEAL_ENTITY', entityId: 'obj_dumpster' as GameObjectId },
             { type: 'REVEAL_ENTITY', entityId: 'obj_tire_stack' as GameObjectId },
             { type: 'REVEAL_ENTITY', entityId: 'obj_tire_marks' as GameObjectId },
             { type: 'REVEAL_ENTITY', entityId: 'obj_brick_walls' as GameObjectId },
-            // Set focus to tire stack
-            { type: 'SET_FOCUS', focusId: 'obj_tire_stack' as GameObjectId, focusType: 'object' },
-            // Reveal the crowbar (simulate the MOVE action)
-            { type: 'REVEAL_ENTITY', entityId: 'item_crowbar' as ItemId }
+            // Open dumpster
+            { type: 'SET_ENTITY_STATE', entityId: 'obj_dumpster' as GameObjectId, patch: { isOpen: true } },
+            // Reveal dumpster contents
+            { type: 'REVEAL_FROM_PARENT', entityId: 'obj_old_suitcase' as GameObjectId, parentId: 'obj_dumpster' as GameObjectId },
+            { type: 'REVEAL_FROM_PARENT', entityId: 'obj_paper_carton' as GameObjectId, parentId: 'obj_dumpster' as GameObjectId },
+            { type: 'REVEAL_FROM_PARENT', entityId: 'obj_black_trash_bag' as GameObjectId, parentId: 'obj_dumpster' as GameObjectId },
+            // Open trash bag
+            { type: 'SET_ENTITY_STATE', entityId: 'obj_black_trash_bag' as GameObjectId, patch: { isOpen: true } },
+            // Reveal trash bag contents (coat, pants, shoes)
+            { type: 'REVEAL_FROM_PARENT', entityId: 'obj_pants' as GameObjectId, parentId: 'obj_black_trash_bag' as GameObjectId },
+            { type: 'REVEAL_FROM_PARENT', entityId: 'obj_shoes' as GameObjectId, parentId: 'obj_black_trash_bag' as GameObjectId },
+            { type: 'REVEAL_FROM_PARENT', entityId: 'obj_coat' as GameObjectId, parentId: 'obj_black_trash_bag' as GameObjectId },
+            // Set focus to dumpster (so trash bag is searchable)
+            { type: 'SET_FOCUS', focusId: 'obj_dumpster' as GameObjectId, focusType: 'object' }
         ],
+
+        // ============================================================================
+        // CHAPTER 0 (blood-on-brass) CHECKPOINTS - Keep these as-is
+        // ============================================================================
         'metal_box_opened': [
             { type: 'SET_FLAG', flag: 'has_unlocked_notebook' as Flag, value: true },
             { type: 'SET_ENTITY_STATE', entityId: 'obj_brown_notebook' as GameObjectId, patch: { currentStateId: 'unlocked_but_closed' } }
@@ -2431,8 +2447,15 @@ export async function applyDevCheckpoint(userId: string, checkpointId: string): 
     const result = await processEffects(currentState, effects, game);
     const newState = result.newState;
 
+    console.log('[applyDevCheckpoint] After processEffects:');
+    console.log('  - Location:', newState.currentLocationId);
+    console.log('  - Focus:', newState.currentFocusId);
+    console.log('  - World entities:', newState.world ? Object.keys(newState.world).length : 0);
+    console.log('  - Trash bag visible:', newState.world?.['obj_black_trash_bag']?.isVisible);
+
     // Save state
     await setDoc(stateRef, newState);
+    console.log('[applyDevCheckpoint] State saved with setDoc');
 
     // Load all messages
     const allMessages = await getAllLogs(firestore, userId, currentGameId);
@@ -2445,8 +2468,12 @@ export async function applyDevCheckpoint(userId: string, checkpointId: string): 
     );
 
     const updatedMessages = [...allMessages, checkpointMessage];
+    console.log('[applyDevCheckpoint] Total messages before save:', allMessages.length);
+    console.log('[applyDevCheckpoint] Adding checkpoint message, new total:', updatedMessages.length);
+
     await logAndSave(userId, currentGameId, newState, [checkpointMessage]);
 
+    console.log('[applyDevCheckpoint] Returning', updatedMessages.length, 'messages');
     return {
         newState,
         messages: normalizeTimestamps(updatedMessages)

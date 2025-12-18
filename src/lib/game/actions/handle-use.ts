@@ -9,7 +9,7 @@
 'use server';
 
 import type { Game, PlayerState, Effect, GameObjectId, ItemId } from "@/lib/game/types";
-import { Validator, VisibilityResolver, FocusResolver } from "@/lib/game/engine";
+import { Validator, VisibilityResolver, FocusResolver, GameStateManager, FocusManager } from "@/lib/game/engine";
 import { normalizeName } from "@/lib/utils";
 import { buildEffectsFromOutcome } from "@/lib/game/utils/outcome-helpers";
 import { findBestMatch } from "@/lib/game/utils/name-matching";
@@ -81,25 +81,9 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
       }
 
       // FOCUS VALIDATION: Check if target is within current focus
-      // Skip validation for personal equipment (phone, etc.) - they're always accessible
-      const isPersonalEquipment = targetObject.personal === true;
-
-      if (!isPersonalEquipment && state.currentFocusId && state.focusType === 'object') {
-        const entitiesInFocus = FocusResolver.getEntitiesInFocus(state, game);
-
-        // Check if target is the focused object itself or within it
-        const isInFocus = targetObjectId === state.currentFocusId ||
-                         entitiesInFocus.objects.includes(targetObjectId);
-
-        if (!isInFocus) {
-          // Target is out of focus - show helpful error
-          return [{
-            type: 'SHOW_MESSAGE',
-            speaker: 'narrator',
-            content: FocusResolver.getOutOfFocusMessage('use ' + itemToUse.name + ' on', targetObject.name, state.currentFocusId, game)
-          }];
-        }
-      }
+      // NOTE: Focus validation is handled by findBestMatch with requireFocus: true
+      // No need for redundant validation here - if findBestMatch returned a result,
+      // the object is accessible within the current focus (including descendants)
 
       // PHOTOGRAPHY SYSTEM: Check if using a camera device to photograph
       if (isCameraDevice(itemToUse)) {
@@ -148,18 +132,23 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
               // Build effects with media support
               const effects: Effect[] = [];
 
-              // Only set focus if NOT personal equipment (phone doesn't need focus - it's always with you)
-              if (!isPersonalEquipment) {
-                effects.push({
-                  type: 'SET_FOCUS',
-                  focusId: targetObjectId,
-                  focusType: 'object',
-                  transitionMessage: FocusResolver.getTransitionNarration(targetObjectId, 'object', state, game) || undefined
-                });
-              }
-
               // Use helper to build effects with automatic media extraction
               effects.push(...buildEffectsFromOutcome(outcome, targetObjectId, 'object', game, isFail));
+
+              // CENTRALIZED FOCUS LOGIC: Determine focus after action completes
+              const focusEffect = FocusManager.determineNextFocus({
+                action: 'use',
+                target: targetObjectId,
+                targetType: 'object',
+                actionSucceeded: !isFail,
+                currentFocus: state.currentFocusId,
+                state,
+                game
+              });
+
+              if (focusEffect) {
+                effects.push(focusEffect);
+              }
 
               return effects;
             }
@@ -176,11 +165,17 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
       }
 
       // No matching handler
-      const message = await MessageExpander.cantUseItemOnTarget(
-        game.systemMessages.cantUseOnTarget,
-        itemToUse.name,
-        targetObject.name
-      );
+      // Handle deserialization: systemMessages functions are lost after JSON serialization
+      const messageKey = typeof game.systemMessages.cantUseOnTarget === 'function'
+        ? game.systemMessages.cantUseOnTarget(itemToUse.name, targetObject.name)
+        : 'cant_use_item_on_target'; // Fallback keyword
+
+      const { expandSystemMessage } = await import('@/lib/game/utils/message-expansion');
+      const message = await expandSystemMessage(messageKey, {
+        itemName: itemToUse.name,
+        targetName: targetObject.name
+      });
+
       return [{
         type: 'SHOW_MESSAGE',
         speaker: 'narrator',
@@ -212,11 +207,17 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
 
     if (targetItemMatch) {
       // Item-on-item combination (not implemented yet)
-      const message = await MessageExpander.cantUseItemOnTarget(
-        game.systemMessages.cantUseOnTarget,
-        itemName,
-        targetName
-      );
+      // Handle deserialization: systemMessages functions are lost after JSON serialization
+      const messageKey = typeof game.systemMessages.cantUseOnTarget === 'function'
+        ? game.systemMessages.cantUseOnTarget(itemName, targetName)
+        : 'cant_use_item_on_target'; // Fallback keyword
+
+      const { expandSystemMessage } = await import('@/lib/game/utils/message-expansion');
+      const message = await expandSystemMessage(messageKey, {
+        itemName: itemName,
+        targetName: targetName
+      });
+
       return [{
         type: 'SHOW_MESSAGE',
         speaker: 'narrator',

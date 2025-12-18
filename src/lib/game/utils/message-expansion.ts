@@ -90,28 +90,44 @@ export async function expandSystemMessage(
 /**
  * Helper for expanding messages that take a single parameter
  * Most SystemMessages functions take one parameter (itemName, objectName, etc.)
+ *
+ * HANDLES DESERIALIZATION: After JSON.stringify() during baking, functions become null.
+ * If messageFn is not a function, uses fallbackKeyword instead.
  */
 export async function expandMessageWith(
-  messageFn: (param: string) => string,
+  messageFn: ((param: string) => string) | null | undefined,
   param: string,
-  contextKey: keyof MessageContext
+  contextKey: keyof MessageContext,
+  fallbackKeyword: string
 ): Promise<string> {
-  const message = messageFn(param);
+  // Handle deserialization: systemMessages functions are lost after JSON serialization
+  const message = typeof messageFn === 'function'
+    ? messageFn(param)
+    : fallbackKeyword;
+
   const context: MessageContext = { [contextKey]: param };
   return await expandSystemMessage(message, context);
 }
 
 /**
  * Helper for expanding messages with two parameters
+ *
+ * HANDLES DESERIALIZATION: After JSON.stringify() during baking, functions become null.
+ * If messageFn is not a function, uses fallbackKeyword instead.
  */
 export async function expandMessageWith2(
-  messageFn: (param1: string, param2: string) => string,
+  messageFn: ((param1: string, param2: string) => string) | null | undefined,
   param1: string,
   param2: string,
   contextKey1: keyof MessageContext,
-  contextKey2: keyof MessageContext
+  contextKey2: keyof MessageContext,
+  fallbackKeyword: string
 ): Promise<string> {
-  const message = messageFn(param1, param2);
+  // Handle deserialization: systemMessages functions are lost after JSON serialization
+  const message = typeof messageFn === 'function'
+    ? messageFn(param1, param2)
+    : fallbackKeyword;
+
   const context: MessageContext = {
     [contextKey1]: param1,
     [contextKey2]: param2
@@ -125,59 +141,62 @@ export async function expandMessageWith2(
 
 /**
  * Quick helpers for the most common SystemMessages patterns
+ *
+ * HANDLES DESERIALIZATION: All helpers now handle the case where systemMessages
+ * functions are lost after JSON serialization during baking.
  */
 export const MessageExpander = {
   /**
    * Expand a "can't use item" message
    */
-  cantUseItem: async (messageFn: (itemName: string) => string, itemName: string) => {
-    return expandMessageWith(messageFn, itemName, 'itemName');
+  cantUseItem: async (messageFn: ((itemName: string) => string) | null | undefined, itemName: string) => {
+    return expandMessageWith(messageFn, itemName, 'itemName', 'cant_use_item');
   },
 
   /**
    * Expand a "can't use item on target" message
    */
   cantUseItemOnTarget: async (
-    messageFn: (itemName: string, targetName: string) => string,
+    messageFn: ((itemName: string, targetName: string) => string) | null | undefined,
     itemName: string,
     targetName: string
   ) => {
-    return expandMessageWith2(messageFn, itemName, targetName, 'itemName', 'targetName');
+    return expandMessageWith2(messageFn, itemName, targetName, 'itemName', 'targetName', 'cant_use_item_on_target');
   },
 
   /**
    * Expand a "can't open object" message
    */
-  cantOpen: async (messageFn: (objectName: string) => string, objectName: string) => {
-    return expandMessageWith(messageFn, objectName, 'objectName');
+  cantOpen: async (messageFn: ((objectName: string) => string) | null | undefined, objectName: string) => {
+    return expandMessageWith(messageFn, objectName, 'objectName', 'cant_open_object');
   },
 
   /**
    * Expand a "can't move object" message
    */
-  cantMoveObject: async (messageFn: (objectName: string) => string, objectName: string) => {
-    return expandMessageWith(messageFn, objectName, 'objectName');
+  cantMoveObject: async (messageFn: ((objectName: string) => string) | null | undefined, objectName: string) => {
+    return expandMessageWith(messageFn, objectName, 'objectName', 'cant_move_object');
   },
 
   /**
    * Expand a "don't have item" message
    */
-  dontHaveItem: async (messageFn: (itemName: string) => string, itemName: string) => {
-    return expandMessageWith(messageFn, itemName, 'itemName');
+  dontHaveItem: async (messageFn: ((itemName: string) => string) | null | undefined, itemName: string) => {
+    return expandMessageWith(messageFn, itemName, 'itemName', 'dont_have_item');
   },
 
   /**
    * Expand a "not visible" message
    */
-  notVisible: async (messageFn: (itemName: string) => string, itemName: string) => {
-    return expandMessageWith(messageFn, itemName, 'itemName');
+  notVisible: async (messageFn: ((itemName: string) => string) | null | undefined, itemName: string) => {
+    return expandMessageWith(messageFn, itemName, 'itemName', 'not_visible_entity');
   },
 
   /**
    * Expand a "not readable" message
    */
-  notReadable: async (messageFn: (itemName: string) => string, itemName: string) => {
-    return expandMessageWith(messageFn, itemName, 'itemName');
+  notReadable: async (messageFn: ((itemName: string) => string) | null | undefined, itemName: string) => {
+    return expandMessageWith(messageFn, itemName, 'itemName', 'not_readable');
   },
 
   /**

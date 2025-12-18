@@ -148,6 +148,16 @@ const interpretPlayerCommandPrompt = ai.definePrompt({
     - "go to the bookshelf" → "go bookshelf" (object focus)
     - "move to the safe" → "go safe" (object focus)
     - "approach the counter" → "go counter" (object focus)
+
+  **IMPORTANT ENTER/CLIMB COMMANDS:**
+  - "enter [container/object]" → "climb [object]"
+  - "get into [container]" → "climb [object]"
+  - "get in [container]" → "climb [object]"
+  - "climb into [container]" → "climb [object]"
+  - Examples:
+    - "enter dumpster" → "climb dumpster" ✅
+    - "get into dumpster" → "climb dumpster" ✅
+    - "climb into dumpster" → "climb dumpster" ✅
   - Note: 'examine' and 'search' also set focus, so players don't need to explicitly navigate before interacting
 
   **IMPORTANT TAKE COMMAND VARIATIONS:**
@@ -170,6 +180,14 @@ const interpretPlayerCommandPrompt = ai.definePrompt({
     - "hit [object] with foot/fist/hand" → "break [object]"
     - "punch [object]" → "break [object]"
     - "slam [object]" → "break [object]"
+    - "rip [object]" → "break [object]" (NEVER use "open" for rip/tear)
+    - "rip [object] open" → "break [object]" (IMPORTANT: ignore the word "open")
+    - "tear [object]" → "break [object]" (NEVER use "open" for rip/tear)
+    - "tear [object] open" → "break [object]" (IMPORTANT: ignore the word "open")
+    - "tear [object] apart" → "break [object]"
+    - "slice [object]" → "break [object]"
+    - "slice [object] open" → "break [object]" (IMPORTANT: ignore the word "open")
+    - "cut [object] open" → "break [object]" (IMPORTANT: ignore the word "open")
     - "push [object]" → "move [object]" or "use [object]"
     - "pull [object]" → "move [object]" or "use [object]"
     - "touch [object]" → "examine [object]"
@@ -178,7 +196,14 @@ const interpretPlayerCommandPrompt = ai.definePrompt({
     - "hit box with my foot" → "break box" ✅
     - "punch the door" → "break door" ✅
     - "slam my fist on the table" → "break table" ✅
+    - "rip trash bag" → "break trash bag" ✅ (NOT "open trash bag" ❌)
+    - "rip the bag" → "break bag" ✅ (NOT "open bag" ❌)
+    - "rip the bag open" → "break bag" ✅
+    - "tear the bag" → "break bag" ✅ (NOT "open bag" ❌)
+    - "tear trash bag" → "break trash bag" ✅ (NOT "open trash bag" ❌)
+    - "slice the carton open" → "break carton" ✅
     - "push the bookshelf" → "move bookshelf" ✅
+  - CRITICAL: "rip" and "tear" are ALWAYS destructive actions (break), NEVER gentle actions (open)
   - NEVER respond with "You don't see foot/hand/fist here" - these are body parts, not game objects
 
   Output should be formatted as valid JSON.

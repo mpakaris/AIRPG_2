@@ -49,7 +49,7 @@ export class Validator {
       read: 'readable',
       use: 'usable',
       combine: 'combinable',
-      take: 'takable',
+      take: 'takeable',
     };
 
     const requiredCapability = capabilityMap[verb.toLowerCase()];
@@ -247,7 +247,7 @@ export class Validator {
       affordances.push('use');
     }
 
-    if (Validator.hasCapability(capabilities, 'takable') && !entityState.taken) {
+    if (Validator.hasCapability(capabilities, 'takeable') && !entityState.taken) {
       affordances.push('take');
     }
 
