@@ -270,6 +270,17 @@ export function getInitialState(game: Game): PlayerState {
   const startingInventory: ItemId[] = ['item_player_phone' as ItemId];
 
   // ============================================================================
+  // NEW: Get Default Zone for Starting Location
+  // ============================================================================
+  const startingLocation = game.locations[startChapter.startLocationId];
+  let currentZoneId: import('./game/types').ZoneId | undefined;
+
+  if (startingLocation && startingLocation.zones && startingLocation.zones.length > 0) {
+    const { ZoneManager } = require('./game/engine/ZoneManager');
+    currentZoneId = ZoneManager.getDefaultZone(startingLocation);
+  }
+
+  // ============================================================================
   // Return Complete PlayerState
   // ============================================================================
   const initialState: PlayerState = {
@@ -277,6 +288,9 @@ export function getInitialState(game: Game): PlayerState {
     currentChapterId: game.startChapterId,
     currentLocationId: startChapter.startLocationId,
     inventory: startingInventory,
+
+    // NEW: Zone System - set starting zone
+    currentZoneId,
 
     // NEW: Flags as Record<string, boolean>
     flags: {},

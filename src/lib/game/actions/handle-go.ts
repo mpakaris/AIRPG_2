@@ -1,94 +1,23 @@
 /**
- * handle-go - NEW ARCHITECTURE
+ * handle-go - NEW ZONE ARCHITECTURE
  *
- * Handles moving between locations.
- * Returns Effect[] instead of mutating state directly.
+ * Handles zone-based navigation within locations and movement between locations.
+ * Uses ZoneManager for access validation and spatial hierarchy enforcement.
  */
 
 'use server';
 
-import type { Game, Location, PlayerState, ChapterId, Flag, Effect, GameObjectId, ItemId } from "@/lib/game/types";
-import { GameStateManager, FocusManager } from "@/lib/game/engine";
+import type { Game, Location, PlayerState, ChapterId, Flag, Effect, GameObjectId, ItemId, ZoneId } from "@/lib/game/types";
+import { ZoneManager } from "@/lib/game/engine";
 import { findBestMatch } from "@/lib/game/utils/name-matching";
 import { normalizeName } from "@/lib/utils";
 import { MessageExpander } from "@/lib/game/utils/message-expansion";
+import { generateCantAccessMessage } from "@/ai";
 
 const chapterCompletionFlag = (chapterId: ChapterId) => `chapter_${chapterId}_complete` as Flag;
 
 /**
- * Helper to recursively check if an entity is a child (or nested child) of any object
- */
-function isChildOfAnyObject(entityId: GameObjectId | ItemId, searchObjects: GameObjectId[], game: Game): boolean {
-    for (const objectId of searchObjects) {
-        const obj = game.gameObjects[objectId];
-        if (!obj) continue;
-
-        // Check direct children
-        if (obj.children?.objects?.includes(entityId as GameObjectId) ||
-            obj.children?.items?.includes(entityId as ItemId)) {
-            return true;
-        }
-
-        // Recursively check nested children (e.g., tire_stack → alley → location)
-        if (obj.children?.objects && obj.children.objects.length > 0) {
-            if (isChildOfAnyObject(entityId, obj.children.objects, game)) {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-/**
- * Helper to find which location contains a specific object or item
- * Supports nested children (e.g., tire_stack inside side_alley inside loc_street)
- */
-function findLocationContaining(entityId: GameObjectId | ItemId, entityType: 'object' | 'item', game: Game): Location | undefined {
-    for (const location of Object.values(game.locations)) {
-        // Check direct children of location (existing behavior - preserves Cartridge 0)
-        if (entityType === 'object' && location.objects?.includes(entityId as GameObjectId)) {
-            return location;
-        }
-        if (entityType === 'item' && location.items?.includes(entityId as ItemId)) {
-            return location;
-        }
-
-        // NEW: Check nested children for Cartridge 1's reveal system
-        // (e.g., "go to pile of tires" when tires are children of side_alley)
-        if (location.objects && isChildOfAnyObject(entityId, location.objects, game)) {
-            return location;
-        }
-    }
-    return undefined;
-}
-
-/**
- * Helper to find parent object if entity is a child
- */
-function findParentObject(entityId: GameObjectId | ItemId, game: Game): GameObjectId | undefined {
-    for (const [parentId, parentObj] of Object.entries(game.gameObjects)) {
-        if (parentObj.children?.objects?.includes(entityId as GameObjectId) ||
-            parentObj.children?.items?.includes(entityId as ItemId)) {
-            return parentId as GameObjectId;
-        }
-    }
-    return undefined;
-}
-
-function checkChapterCompletion(state: PlayerState, game: Game): boolean {
-    const chapter = game.chapters[game.startChapterId];
-    const isAlreadyComplete = GameStateManager.hasFlag(state, chapterCompletionFlag(game.startChapterId));
-
-    if (isAlreadyComplete || !chapter.objectives || chapter.objectives.length === 0) {
-        return isAlreadyComplete;
-    }
-
-    const allObjectivesMet = chapter.objectives.every(obj => GameStateManager.hasFlag(state, obj.flag));
-    return allObjectivesMet;
-}
-
-/**
- * Helper to create a location message effect with optional scene image (cartridge-driven)
+ * Helper to create a location message effect with optional scene image
  */
 function createLocationMessage(location: Location): Effect {
   const effect: Effect = {
@@ -97,7 +26,6 @@ function createLocationMessage(location: Location): Effect {
     content: location.sceneDescription
   };
 
-  // Add location image if defined in cartridge
   if (location.sceneImage) {
     effect.messageType = 'image';
     effect.imageUrl = location.sceneImage.url;
@@ -108,208 +36,200 @@ function createLocationMessage(location: Location): Effect {
   return effect;
 }
 
+function checkChapterCompletion(state: PlayerState, game: Game): boolean {
+  const chapter = game.chapters[game.startChapterId];
+  const isAlreadyComplete = state.flags[chapterCompletionFlag(game.startChapterId)];
+
+  if (isAlreadyComplete || !chapter.objectives || chapter.objectives.length === 0) {
+    return isAlreadyComplete;
+  }
+
+  const allObjectivesMet = chapter.objectives.every(obj => state.flags[obj.flag]);
+  return allObjectivesMet;
+}
+
 export async function handleGo(state: PlayerState, targetName: string, game: Game): Promise<Effect[]> {
-    const chapter = game.chapters[game.startChapterId];
-    const currentLocation = game.locations[state.currentLocationId];
-    targetName = targetName.toLowerCase();
-    const narratorName = game.narratorName || "Narrator";
+  const chapter = game.chapters[game.startChapterId];
+  const currentLocation = game.locations[state.currentLocationId];
+  targetName = targetName.toLowerCase();
+  const narratorName = game.narratorName || "Narrator";
 
-    // Check if player is inside dumpster and trying to navigate to something outside
-    const exitEffects: Effect[] = [];
-    const isDumpsterClimbed = GameStateManager.hasFlag(state, 'dumpster_climbed' as Flag);
+  // ===========================================================================
+  // SPECIAL CASE: Chapter Progression
+  // ===========================================================================
+  if (targetName === 'next_chapter') {
+    const isComplete = checkChapterCompletion(state, game);
 
-    // SPECIAL CASE: "go into dumpster" should work like "climb into dumpster"
-    if (targetName.match(/^(into|in)\s+(the\s+)?(dumpster|trash|garbage)/)) {
-        const { handleClimb } = await import('./handle-climb');
-        return handleClimb(state, 'dumpster', game);
-    }
+    if (isComplete) {
+      const nextChapterId = chapter.nextChapter?.id;
+      if (nextChapterId && game.chapters[nextChapterId]) {
+        const nextChapter = game.chapters[nextChapterId];
+        const newLocation = game.locations[nextChapter.startLocationId];
 
-    // Handle chapter progression
-    if (targetName === 'next_chapter') {
-        const isComplete = checkChapterCompletion(state, game);
-
-        if (isComplete) {
-            const nextChapterId = chapter.nextChapter?.id;
-            if (nextChapterId && game.chapters[nextChapterId]) {
-                const nextChapter = game.chapters[nextChapterId];
-                const newLocation = game.locations[nextChapter.startLocationId];
-
-                return [
-                    ...exitEffects,
-                    { type: 'MOVE_TO_LOCATION', locationId: nextChapter.startLocationId },
-                    { type: 'END_CONVERSATION' },
-                    { type: 'END_INTERACTION' },
-                    { type: 'SHOW_MESSAGE', speaker: 'system', content: game.systemMessages.chapterTransition(nextChapter.title) },
-                    createLocationMessage(newLocation)
-                ];
-            } else {
-                const message = await MessageExpander.static(game.systemMessages.noNextChapter);
-                return [...exitEffects, { type: 'SHOW_MESSAGE', speaker: 'system', content: message }];
-            }
-        } else {
-            const message = await MessageExpander.static(game.systemMessages.chapterIncomplete(chapter.goal, currentLocation.name));
-            return [...exitEffects, {
-                type: 'SHOW_MESSAGE',
-                speaker: 'narrator',
-                content: message
-            }];
-        }
-    }
-
-    // Find target location by name
-    let targetLocation: Location | undefined;
-    targetLocation = Object.values(game.locations).find(loc => loc.name.toLowerCase() === targetName);
-
-    if (targetLocation) {
         return [
-            ...exitEffects,
-            { type: 'MOVE_TO_LOCATION', toLocationId: targetLocation.locationId },
-            { type: 'END_CONVERSATION' },
-            { type: 'END_INTERACTION' },
-            { type: 'SHOW_MESSAGE', speaker: 'system', content: game.systemMessages.locationTransition(targetLocation.name) },
-            createLocationMessage(targetLocation)
+          { type: 'MOVE_TO_LOCATION', toLocationId: nextChapter.startLocationId },
+          { type: 'END_CONVERSATION' },
+          { type: 'END_INTERACTION' },
+          { type: 'SHOW_MESSAGE', speaker: 'system', content: game.systemMessages.chapterTransition(nextChapter.title) },
+          createLocationMessage(newLocation)
         ];
+      } else {
+        const message = await MessageExpander.static(game.systemMessages.noNextChapter);
+        return [{ type: 'SHOW_MESSAGE', speaker: 'system', content: message }];
+      }
+    } else {
+      const message = await MessageExpander.static(game.systemMessages.chapterIncomplete(chapter.goal, currentLocation.name));
+      return [{ type: 'SHOW_MESSAGE', speaker: 'narrator', content: message }];
     }
+  }
 
-    // If not a location, try to find as an object or item
-    // Strip ALL quotes that AI might have added (both surrounding and embedded)
-    const cleanedTargetName = targetName.replace(/["']/g, '');
-    console.log('[DEBUG GOTO] Original target:', targetName, '→ Cleaned:', cleanedTargetName);
-    console.log('[DEBUG GOTO] Current focus:', { focusId: state.focus?.focusId, currentFocusId: state.currentFocusId });
-    const normalizedTargetName = normalizeName(cleanedTargetName);
-    const bestMatch = findBestMatch(normalizedTargetName, state, game, {
-        searchInventory: false,
-        searchVisibleItems: true,
-        searchObjects: true,
-        requireFocus: false  // Don't require focus for "go to" command
-    });
-    console.log('[DEBUG GOTO] findBestMatch result:', bestMatch);
+  // ===========================================================================
+  // CASE 1: Navigate to Another Location
+  // ===========================================================================
+  const cleanedTargetName = targetName.replace(/["']/g, '');
+  let targetLocation: Location | undefined;
+  targetLocation = Object.values(game.locations).find(loc => loc.name.toLowerCase() === cleanedTargetName);
 
-    if (bestMatch) {
-        let entityId = bestMatch.id as GameObjectId | ItemId;
-        let entityType: 'object' | 'item' = bestMatch.category === 'object' ? 'object' : 'item';
+  if (targetLocation) {
+    return [
+      { type: 'MOVE_TO_LOCATION', toLocationId: targetLocation.locationId },
+      { type: 'END_CONVERSATION' },
+      { type: 'END_INTERACTION' },
+      { type: 'SHOW_MESSAGE', speaker: 'system', content: game.systemMessages.locationTransition(targetLocation.name) },
+      createLocationMessage(targetLocation)
+    ];
+  }
 
-        // NEW: Check if target is a child of another object
-        const parentId = findParentObject(entityId, game);
+  // ===========================================================================
+  // CASE 2: Navigate to Object/Zone Within Current Location
+  // ===========================================================================
+  console.log('[DEBUG GOTO] Searching for object/zone:', cleanedTargetName);
+  const normalizedTargetName = normalizeName(cleanedTargetName);
+  const bestMatch = findBestMatch(normalizedTargetName, state, game, {
+    searchInventory: false,
+    searchVisibleItems: false,
+    searchObjects: true,
+    requireFocus: false
+  });
 
-        // DUMPSTER EXIT LOGIC: Only exit if navigating to something NOT a child of dumpster
-        if (isDumpsterClimbed) {
-            const isChildOfDumpster = (entityType === 'object' && game.gameObjects[entityId as GameObjectId]?.parentId === 'obj_dumpster') ||
-                                      (entityType === 'item' && game.items[entityId as ItemId]?.parentId === 'obj_dumpster');
-
-            // If navigating to something outside the dumpster, exit first
-            if (!isChildOfDumpster) {
-                const exitMessage = await MessageExpander.static(
-                    'You grip the dumpster\'s edge and haul yourself out. Your shoes are covered in garbage residue, your clothes smell like rot and chemicals.\n\nYou reach back and pull the heavy lid down. The hinges groan as it settles into place. The smell—that toxic mix of rot and bleach—is sealed away. A crime against humanity, contained.\n\nYou\'re out. Back in the alley. The fresh air—even this alley\'s stale, polluted air—feels like a blessing.'
-                );
-
-                exitEffects.push(
-                    { type: 'SET_FLAG', flag: 'dumpster_climbed' as Flag, value: false },
-                    { type: 'SET_ENTITY_STATE', entityId: 'obj_dumpster' as GameObjectId, patch: { isOpen: false } },
-                    { type: 'SHOW_MESSAGE', speaker: 'narrator', content: exitMessage }
-                );
-            }
-            // If navigating to a child of dumpster, don't exit - just focus on it
-        }
-
-        // Find which location contains this entity (supports nested children)
-        const locationWithEntity = findLocationContaining(entityId, entityType, game);
-
-        if (locationWithEntity) {
-            const effects: Effect[] = [];
-            const spatialMode = locationWithEntity.spatialMode || 'compact'; // Default to compact for backward compatibility
-
-            // DEBUG: Log spatial navigation check
-            console.log('[SPRAWLING DEBUG]', {
-                entityId,
-                parentId,
-                spatialMode,
-                currentFocus: state.focus?.focusId,
-                locationId: locationWithEntity.locationId,
-                checkResult: spatialMode === 'sprawling' && parentId && state.focus?.focusId !== parentId
-            });
-
-            // SPRAWLING LOCATION LOGIC: Require step-by-step navigation through parent hierarchy
-            if (spatialMode === 'sprawling' && parentId && exitEffects.length === 0) {
-                // SKIP CHECK if we just exited the dumpster (exitEffects were added)
-                // After exiting, player is at location level and can navigate normally
-
-                // Player wants to navigate to a child object (e.g., tire_stack)
-                // In sprawling mode, they must be at the parent first (e.g., side_alley)
-                const currentFocus = state.currentFocusId || state.focus?.focusId;
-
-                if (currentFocus !== parentId) {
-                    // Not at parent - redirect to parent first
-                    const parentObj = game.gameObjects[parentId];
-                    const message = await MessageExpander.static(
-                        `You need to get closer to the ${parentObj?.name || 'area'} first. Try: GO TO ${parentObj?.name?.toUpperCase() || 'PARENT'}`
-                    );
-                    return [{ type: 'SHOW_MESSAGE', speaker: 'system', content: message }];
-                }
-
-                // Player IS at parent - allow navigation to child
-                // Continue to focus logic below (don't redirect to parent)
-            }
-
-            // COMPACT LOCATION LOGIC (default - Cartridge 0): Allow direct navigation to children
-            // OR player is already at parent in sprawling mode - continue
-
-            // Only do location transition if moving to a DIFFERENT location
-            if (locationWithEntity.locationId !== state.currentLocationId) {
-                effects.push(
-                    { type: 'MOVE_TO_LOCATION', toLocationId: locationWithEntity.locationId },
-                    { type: 'END_CONVERSATION' },
-                    { type: 'END_INTERACTION' },
-                    { type: 'SHOW_MESSAGE', speaker: 'system', content: game.systemMessages.locationTransition(locationWithEntity.name) },
-                    createLocationMessage(locationWithEntity)
-                );
-            }
-
-            // If it's an object (not an item), set focus on it
-            if (entityType === 'object') {
-                const targetObject = game.gameObjects[entityId as GameObjectId];
-                if (targetObject) {
-                    // In sprawling mode, always use the object's transitionNarration (don't filter out children)
-                    // In compact mode, use FocusResolver which filters out children
-                    let transitionMessage: string | null = null;
-
-                    if (spatialMode === 'sprawling' && targetObject.transitionNarration) {
-                        // Sprawling: children ARE spatially distant, use their narration
-                        transitionMessage = targetObject.transitionNarration;
-                    } else {
-                        // Compact: use FocusResolver (filters out small items inside containers)
-                        const { FocusResolver } = await import('@/lib/game/engine/FocusResolver');
-                        transitionMessage = FocusResolver.getTransitionNarration(entityId as GameObjectId, 'object', state, game);
-                    }
-
-                    console.log('[DEBUG GOTO] Transition message:', transitionMessage);
-                    console.log('[DEBUG GOTO] Spatial mode:', spatialMode);
-
-                    // CENTRALIZED FOCUS LOGIC: Determine focus after action completes
-                    const focusEffect = FocusManager.determineNextFocus({
-                        action: 'go',
-                        target: entityId as GameObjectId,
-                        targetType: 'object',
-                        actionSucceeded: true,
-                        currentFocus: state.currentFocusId,
-                        state,
-                        game
-                    });
-
-                    if (focusEffect) {
-                        // Override transition message if needed
-                        if (transitionMessage) {
-                            focusEffect.transitionMessage = transitionMessage;
-                        }
-                        effects.push(focusEffect);
-                    }
-                }
-            }
-
-            return [...exitEffects, ...effects];
-        }
-    }
-
+  if (!bestMatch || bestMatch.category !== 'object') {
     const message = await MessageExpander.static(game.systemMessages.cannotGoThere);
-    return [...exitEffects, { type: 'SHOW_MESSAGE', speaker: 'system', content: message }];
+    return [{ type: 'SHOW_MESSAGE', speaker: 'system', content: message }];
+  }
+
+  const targetObject = game.gameObjects[bestMatch.id as GameObjectId];
+  if (!targetObject) {
+    const message = await MessageExpander.static(game.systemMessages.cannotGoThere);
+    return [{ type: 'SHOW_MESSAGE', speaker: 'system', content: message }];
+  }
+
+  // Get target's zone first
+  const targetZone = ZoneManager.getEntityZone(targetObject.id, 'object', game);
+
+  // Check if object is a child BUT has no zone - these are not navigable
+  // (e.g., suitcase inside dumpster - has parentId but no zone)
+  // Objects WITH zones are navigable even if they're children (e.g., dumpster in alley)
+  if (targetObject.parentId && (!targetZone || targetZone === 'personal')) {
+    let errorMessage: string;
+    try {
+      const aiResult = await generateCantAccessMessage({
+        targetName: targetObject.name,
+        action: 'go to',
+        locationName: currentLocation.name,
+        gameSetting: game.setting || 'Modern-day detective game'
+      });
+      errorMessage = aiResult.output.message;
+    } catch (error) {
+      console.error("AI generation failed for child object navigation:", error);
+      errorMessage = `You can't navigate to the ${targetObject.name}. Try examining or interacting with it instead.`;
+    }
+    return [{ type: 'SHOW_MESSAGE', speaker: 'narrator', content: errorMessage }];
+  }
+
+  // Check if no zone system
+  if (!targetZone || targetZone === 'personal') {
+    // No zone system or personal equipment - generate AI narrative
+    let errorMessage: string;
+    try {
+      const aiResult = await generateCantAccessMessage({
+        targetName: targetObject.name,
+        action: 'go to',
+        locationName: currentLocation.name,
+        gameSetting: game.setting || 'Modern-day detective game'
+      });
+      errorMessage = aiResult.output.message;
+    } catch (error) {
+      console.error("AI generation failed for no-zone object:", error);
+      errorMessage = `You can't navigate to the ${targetObject.name} right now.`;
+    }
+    return [{ type: 'SHOW_MESSAGE', speaker: 'narrator', content: errorMessage }];
+  }
+
+  // Check if player can navigate to this zone
+  const canNavigate = ZoneManager.canNavigateToZone(
+    targetZone as ZoneId,
+    state.currentZoneId || null,
+    currentLocation
+  );
+
+  if (!canNavigate.allowed) {
+    // Generate narrative failure message for zone navigation
+    let errorMessage: string;
+    try {
+      const aiResult = await generateCantAccessMessage({
+        targetName: targetObject.name,
+        action: 'go to',
+        locationName: currentLocation.name,
+        gameSetting: game.setting || 'Modern-day detective game'
+      });
+      errorMessage = aiResult.output.message;
+    } catch (error) {
+      console.error("AI generation failed for navigation failure:", error);
+      errorMessage = 'You cannot go there right now.';
+    }
+    return [{ type: 'SHOW_MESSAGE', speaker: 'narrator', content: errorMessage }];
+  }
+
+  // Find zone definition
+  const zone = currentLocation.zones?.find(z => z.id === targetZone);
+  if (!zone) {
+    const message = await MessageExpander.static(`You can't go to the ${targetObject.name}`);
+    return [{ type: 'SHOW_MESSAGE', speaker: 'system', content: message }];
+  }
+
+  // Check if zone requires special action (e.g., 'climb')
+  if (zone.requiresAction) {
+    // Simple, non-instructive message about the physical obstacle
+    // Focus on the barrier/challenge, not the solution
+    let errorMessage: string;
+
+    if (zone.requiresAction === 'climb') {
+      errorMessage = `You peer at the ${targetObject.name} from ground level. You're not going to reach what's inside from where you're standing. You'd need to get up there somehow.`;
+    } else {
+      errorMessage = `You can't just walk into the ${targetObject.name}. There's something you'll need to do first.`;
+    }
+
+    return [{ type: 'SHOW_MESSAGE', speaker: 'narrator', content: errorMessage }];
+  }
+
+  // Navigate to zone
+  const effects: Effect[] = [];
+
+  // Use zone's transition narration or object's transition narration
+  const transitionMessage = zone.transitionNarration || targetObject.transitionNarration || `You move to the ${targetObject.name}`;
+
+  effects.push({
+    type: 'SET_ZONE',
+    zoneId: targetZone as ZoneId,
+    transitionMessage: transitionMessage
+  });
+
+  // Optionally also update focus to the target object
+  effects.push({
+    type: 'SET_FOCUS',
+    focusId: targetObject.id,
+    focusType: 'object'
+  });
+
+  return effects;
 }

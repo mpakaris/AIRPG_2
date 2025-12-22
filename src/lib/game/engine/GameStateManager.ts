@@ -98,6 +98,28 @@ export class GameStateManager {
           break;
 
         // ============================================================================
+        // Zone System
+        // ============================================================================
+        case 'SET_ZONE':
+          // Check if zone is actually changing
+          const zoneChanging = newState.currentZoneId !== effect.zoneId;
+
+          // Add transition message if provided and zone is changing
+          if (zoneChanging && effect.transitionMessage) {
+            newMessages.push({
+              id: `zone-transition-${Date.now()}`,
+              sender: 'narrator',
+              senderName: 'Narrator',
+              type: 'text',
+              content: effect.transitionMessage,
+              timestamp: Date.now()
+            });
+          }
+
+          newState.currentZoneId = effect.zoneId;
+          break;
+
+        // ============================================================================
         // Device Focus System (phone, laptop, etc.)
         // ============================================================================
         case 'SET_DEVICE_FOCUS':
@@ -274,6 +296,20 @@ export class GameStateManager {
         // ============================================================================
         case 'MOVE_TO_LOCATION':
           newState.currentLocationId = effect.toLocationId as any;
+          // NEW: When moving to a new location, set zone to default zone
+          if (game) {
+            const { ZoneManager } = require('./ZoneManager');
+            const location = game.locations[effect.toLocationId];
+            if (location) {
+              const defaultZone = ZoneManager.getDefaultZone(location);
+              if (defaultZone) {
+                newState.currentZoneId = defaultZone;
+              } else {
+                // No zones defined - compatibility mode
+                newState.currentZoneId = undefined;
+              }
+            }
+          }
           break;
 
         case 'TELEPORT':

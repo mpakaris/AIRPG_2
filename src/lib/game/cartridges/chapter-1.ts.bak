@@ -1,4 +1,4 @@
-import type { Chapter, ChapterId, Flag, Game, GameId, GameObject, GameObjectId, Item, ItemId, Location, LocationId, NPC, NpcId, Portal, PortalId, Structure, StructureId, WorldId } from './types';
+import type { Chapter, ChapterId, Flag, Game, GameId, GameObject, GameObjectId, Item, ItemId, Location, LocationId, NPC, NpcId, Portal, PortalId, Structure, StructureId, WorldId, ZoneId } from './types';
 
 // --- Chapter 1: The Investigation Begins ---
 // The player starts at a street location investigating the abduction of Lili
@@ -14,6 +14,7 @@ const items: Record<ItemId, Item> = {
         name: 'Voice Message',
         alternateNames: ['voice message', 'audio message', 'voicemail', 'message'],
         description: 'A voice message from your colleague about the Lili abduction case.',
+        zone: 'personal', // Received via phone - always accessible
         capabilities: { isTakable: false, isReadable: false, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         revealMethod: 'MANUAL',
         media: {
@@ -42,6 +43,7 @@ const items: Record<ItemId, Item> = {
         name: 'Police Report',
         alternateNames: ['police report', 'case file', 'report', 'pdf', 'case report'],
         description: 'Police report PDF about Lili\'s abduction. Received via email attachment.',
+        zone: 'personal', // Received via phone email - always accessible
         capabilities: { isTakable: false, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         revealMethod: 'MANUAL',
         media: {
@@ -77,6 +79,7 @@ const items: Record<ItemId, Item> = {
         alternateNames: ['phone', 'smartphone', 'cell phone', 'mobile', 'fbi phone', 'my phone', 'fbi smartphone'],
         archetype: 'Tool',
         description: "Your standard-issue FBI smartphone. It has a camera, secure messaging, and a slot for external media.",
+        zone: 'personal', // Always accessible personal equipment
         capabilities: { isTakable: false, isReadable: false, isUsable: true, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         state: { currentStateId: 'default', readCount: 0 },
         media: {
@@ -203,7 +206,7 @@ const items: Record<ItemId, Item> = {
         id: 'item_invoice' as ItemId,
         name: 'Invoice',
         description: 'A crumpled invoice lying near the bus station bench.',
-        capabilities: { takable: true, consumable: false, readable: true, inputtable: false },
+        capabilities: { isTakable: true, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         startingLocation: 'loc_street' as LocationId,
         parentId: 'obj_bench' as GameObjectId,
         revealMethod: 'REVEAL_FROM_PARENT',
@@ -243,7 +246,7 @@ const items: Record<ItemId, Item> = {
             },
             onUse: {
                 fail: {
-                    message: 'The crowbar is a tool for leverage—prying, lifting, shifting heavy objects. You need a TARGET to use it on. Try: USE CROWBAR ON [object name].',
+                    message: 'The crowbar is a tool for leverage—prying, lifting, shifting heavy objects. You need a target to use it on.',
                     media: undefined
                 }
             },
@@ -261,7 +264,7 @@ const items: Record<ItemId, Item> = {
         id: 'item_crumpled_note' as ItemId,
         name: 'Crumpled Note',
         description: 'A handwritten note, crumpled and stained. Found in the dumpster.',
-        capabilities: { takable: true, consumable: false, readable: true, inputtable: false },
+        capabilities: { isTakable: true, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         startingLocation: 'loc_street' as LocationId,
         parentId: 'obj_dumpster' as GameObjectId,
         revealMethod: 'REVEAL_FROM_PARENT',
@@ -292,7 +295,7 @@ const items: Record<ItemId, Item> = {
         id: 'item_photo_tire_marks' as ItemId,
         name: 'Photo of Tire Marks',
         description: 'A photograph of tire marks left in the alley. Clear tread pattern visible.',
-        capabilities: { takable: false, consumable: false, readable: false, inputtable: false },
+        capabilities: { isTakable: false, isReadable: false, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         startingLocation: 'player',
         handlers: {
             onExamine: {
@@ -317,30 +320,38 @@ const items: Record<ItemId, Item> = {
         version: { schema: '1.0.0', content: '1.0.0' }
     },
 
-    'item_trash_bag_1': {
-        id: 'item_trash_bag_1' as ItemId,
-        name: 'Trash Bag (Rotting Food)',
-        description: 'A torn black trash bag filled with decomposing food waste.',
-        capabilities: { takable: false, consumable: false, readable: false, inputtable: false },
+    'item_box_cutter': {
+        id: 'item_box_cutter' as ItemId,
+        name: 'Box Cutter',
+        alternateNames: ['box cutter', 'utility knife', 'cutter', 'knife', 'blade'],
+        description: 'A small utility knife with an orange handle and retractable blade. Standard box cutter.',
+        capabilities: { isTakable: true, isReadable: false, isUsable: true, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         startingLocation: 'loc_street' as LocationId,
-        parentId: 'obj_dumpster' as GameObjectId,
+        parentId: 'obj_old_suitcase' as GameObjectId,
         revealMethod: 'REVEAL_FROM_PARENT',
+        tags: ['tool', 'sharp', 'blade'],
         handlers: {
             onExamine: {
                 success: {
-                    message: 'The first bag is torn at the top, spilling its contents like a wound leaking viscera.\n\nRotting food. The smell is overpowering—sweet and sour and wrong all at once. Banana peels turned black and slimy. Moldy bread, green and fuzzy. Coffee grounds clumped together in damp masses.\n\nJust garbage. Nothing unusual.\n\nWhoever filled this bag wasn\'t trying to hide anything. Just regular trash from someone\'s kitchen. Discarded meals. Forgotten leftovers.\n\nNothing here.',
+                    message: 'A standard utility knife. Orange plastic handle, cheap but functional. The kind you buy at hardware stores for a couple dollars.\n\nThe blade is retractable—currently extended about half an inch. Sharp edge, clean. No rust, no damage. Fresh blade, maybe.\n\nThere\'s a slider on the side to extend or retract the blade. Simple mechanism. Reliable.\n\nThe handle has no markings, no branding. Generic. Disposable. The kind of tool you use once and throw away.\n\nOr leave behind. In a cleaned-out suitcase. In a dumpster.\n\nWhy?',
                     media: undefined
                 }
             },
-            onOpen: {
-                success: {
-                    message: 'You tear the bag wider—more rotting food spills out. Nothing of interest. Just waste.',
+            onUse: {
+                fail: {
+                    message: 'You need to specify what you want to use the box cutter on.',
                     media: undefined
                 }
             },
             onTake: {
+                success: {
+                    message: 'You pick up the box cutter. Light. Compact. The orange handle fits comfortably in your palm.\n\nThe blade is sharp. Could be useful for cutting through tape, rope, cardboard. Opening sealed containers.\n\nYou pocket it.',
+                    media: undefined
+                }
+            },
+            onRead: {
                 fail: {
-                    message: 'You\'re not taking a bag of rotting food. You have standards. Low ones, maybe, but standards.',
+                    message: 'It\'s a tool, not text. No markings, no serial numbers. Generic utility knife. Nothing to read.',
                     media: undefined
                 }
             }
@@ -348,36 +359,92 @@ const items: Record<ItemId, Item> = {
         version: { schema: '1.0.0', content: '1.0.0' }
     },
 
-    'item_trash_bag_2': {
-        id: 'item_trash_bag_2' as ItemId,
-        name: 'Sealed Trash Bag',
-        description: 'A black trash bag sealed tight with duct tape. Something solid inside.',
-        capabilities: { takable: true, consumable: false, readable: false, inputtable: false },
+    'item_picture_frame': {
+        id: 'item_picture_frame' as ItemId,
+        name: 'Picture Frame',
+        alternateNames: ['picture frame', 'frame', 'empty frame', 'photo frame'],
+        description: 'An empty wooden picture frame. No photo inside.',
+        capabilities: { isTakable: true, isReadable: false, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         startingLocation: 'loc_street' as LocationId,
-        parentId: 'obj_dumpster' as GameObjectId,
+        parentId: 'obj_old_suitcase' as GameObjectId,
         revealMethod: 'REVEAL_FROM_PARENT',
-        children: {
-            items: ['item_cleaning_invoice' as ItemId]
-        },
+        tags: ['junk'],
         handlers: {
             onExamine: {
                 success: {
-                    message: 'The second bag is different. Heavier. Sealed tight with duct tape—wrapped around the top like someone wanted to make absolutely sure nothing got out. Or in.\n\nYou press against the plastic. Something solid inside. Hard edges. Not food. Not soft waste. Something deliberate.\n\nThe bag is clean. Too clean. No stains, no tears. It was placed here recently, not thrown away weeks ago with the rest of the garbage.\n\nSomeone went to effort. Sealed it. Hid it. Left it for someone to find—or hoped no one would.\n\nYou could take this bag. Examine it somewhere with better light and less flies.',
+                    message: 'A cheap wooden picture frame, the kind sold at dollar stores. No photo inside. Just an empty frame.',
                     media: undefined
-                }
-            },
-            onOpen: {
-                success: {
-                    message: 'You tear through the duct tape and rip the bag open.\n\nInside: newspapers. Old ones. Yellowed pages from weeks ago, maybe months. Crumpled up tight, stuffed into the bag like packing material.\n\nYou dig deeper. More newspapers. Then—\n\n—an invoice. Printed on thick paper, folded once. Clean. Deliberate.\n\nThis is what the newspapers were hiding.',
-                    media: undefined,
-                    effects: [
-                        { type: 'REVEAL_FROM_PARENT', entityId: 'item_cleaning_invoice', parentId: 'item_trash_bag_2' }
-                    ]
                 }
             },
             onTake: {
                 success: {
-                    message: 'You lift the bag out of the dumpster. Heavy. Awkward. But manageable.\n\nYou set it on the ground, ready to examine it properly.',
+                    message: 'You pick up the empty picture frame. Lightweight. Worthless.',
+                    media: undefined
+                }
+            }
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'item_candle': {
+        id: 'item_candle' as ItemId,
+        name: 'Decorative Candle',
+        alternateNames: ['candle', 'decorative candle', 'unused candle'],
+        description: 'An unused decorative candle. Still has the price sticker.',
+        capabilities: { isTakable: true, isReadable: false, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+        startingLocation: 'loc_street' as LocationId,
+        parentId: 'obj_old_suitcase' as GameObjectId,
+        revealMethod: 'REVEAL_FROM_PARENT',
+        tags: ['junk'],
+        handlers: {
+            onExamine: {
+                success: {
+                    message: 'A decorative candle, never lit. Still has the $2.99 price sticker on the bottom. Generic home decor.',
+                    media: undefined
+                }
+            },
+            onTake: {
+                success: {
+                    message: 'You take the candle. It smells faintly of vanilla. Completely useless.',
+                    media: undefined
+                }
+            }
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'item_tiny_silver_key': {
+        id: 'item_tiny_silver_key' as ItemId,
+        name: 'Tiny Silver Key',
+        alternateNames: ['tiny silver key', 'silver key', 'tiny key', 'small key', 'key'],
+        description: 'A small silver key, tarnished with age. No markings or labels. Delicate and precise.',
+        capabilities: { isTakable: true, isReadable: false, isUsable: true, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+        startingLocation: 'loc_street' as LocationId,
+        parentId: 'obj_coat' as GameObjectId,
+        revealMethod: 'REVEAL_FROM_PARENT',
+        tags: ['key', 'tool'],
+        handlers: {
+            onExamine: {
+                success: {
+                    message: 'A tiny silver key. Delicate. Precise. The kind used for small locks—jewelry boxes, luggage, filing cabinets.\n\nThe silver is tarnished, darkened with age. No manufacturer marks. No serial number. Just a key.\n\nSomeone hid this in a coat lining. Deliberately. Carefully.\n\nWhat does it open?',
+                    media: undefined
+                }
+            },
+            onUse: {
+                fail: {
+                    message: 'You need to specify what you want to use the key on.',
+                    media: undefined
+                }
+            },
+            onTake: {
+                success: {
+                    message: 'You pick up the tiny silver key. It\'s light, almost weightless. You slip it into your pocket.\n\nA key hidden in a coat, hidden in a trash bag, thrown in a dumpster.\n\nThe police overlooked this detail. But your instincts led you right here.',
+                    media: undefined
+                }
+            },
+            onRead: {
+                fail: {
+                    message: 'It\'s a key. Small. Silver. Tarnished. No writing, no markings, no serial numbers. Nothing to read.',
                     media: undefined
                 }
             }
@@ -394,7 +461,7 @@ const items: Record<ItemId, Item> = {
         name: 'Crowbar',
         archetype: 'Tool',
         description: 'A heavy iron crowbar, rust-flecked but solid.',
-        takeable: true,
+        capabilities: { isTakable: true, isReadable: false, isUsable: true, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         tags: ['tool', 'weapon'],
         handlers: {
             onExamine: {
@@ -411,22 +478,23 @@ const items: Record<ItemId, Item> = {
         version: { schema: "1.0", content: "1.0" }
     },
 
-    'item_sealed_bag': {
-        id: 'item_sealed_bag' as ItemId,
+    'obj_sealed_bag': {
+        id: 'obj_sealed_bag' as GameObjectId,
         name: 'Sealed Black Bag',
+        alternateNames: ['sealed black bag'],
         archetype: 'Container',
         description: 'A black trash bag, sealed tight with tape.',
-        takeable: true,
-        tags: ['container', 'evidence'],
-        capabilities: { openable: true, lockable: false, breakable: false },
-        state: { isOpen: false, isLocked: false, isBroken: false },
+        capabilities: { openable: true, lockable: false, breakable: false, movable: false, powerable: false, container: true, readable: false, inputtable: false },
+        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
+        inventory: { items: [], capacity: 3, allowTags: [], denyTags: [] },
         children: {
-            items: ['item_cleaning_invoice'] as ItemId[]
+            items: ['item_cleaning_invoice' as ItemId],
+            objects: []
         },
         handlers: {
             onExamine: [
                 {
-                    conditions: [{ type: 'STATE', entityId: 'item_sealed_bag', key: 'isOpen', equals: true }],
+                    conditions: [{ type: 'STATE', entityId: 'obj_sealed_bag', key: 'isOpen', equals: true }],
                     success: {
                         message: 'The bag is torn open. The invoice inside is visible.',
                         media: undefined
@@ -442,7 +510,7 @@ const items: Record<ItemId, Item> = {
             ],
             onOpen: [
                 {
-                    conditions: [{ type: 'STATE', entityId: 'item_sealed_bag', key: 'isOpen', equals: true }],
+                    conditions: [{ type: 'STATE', entityId: 'obj_sealed_bag', key: 'isOpen', equals: true }],
                     success: {
                         message: 'Already open.',
                         media: undefined
@@ -454,8 +522,8 @@ const items: Record<ItemId, Item> = {
                         message: 'You tear the tape off and rip the bag open.\n\nInside: a printed invoice from "Elite Cleaning Services." Address: 447 Elm Street. Timestamp: 11:47 PM.\n\nThat\'s after the supposed abduction time. Someone cleaned up after.',
                         media: undefined,
                         effects: [
-                            { type: 'SET_STATE', entityId: 'item_sealed_bag', key: 'isOpen', value: true },
-                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_cleaning_invoice', parentId: 'item_sealed_bag' }
+                            { type: 'SET_ENTITY_STATE', entityId: 'obj_sealed_bag', patch: { isOpen: true } },
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_cleaning_invoice', parentId: 'obj_sealed_bag' }
                         ]
                     }
                 }
@@ -473,7 +541,7 @@ const items: Record<ItemId, Item> = {
         name: 'Cleaning Invoice',
         archetype: 'Document',
         description: 'A printed invoice from Elite Cleaning Services.',
-        takeable: true,
+        capabilities: { isTakable: true, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         tags: ['document', 'evidence', 'clue'],
         handlers: {
             onExamine: {
@@ -496,24 +564,25 @@ const items: Record<ItemId, Item> = {
         version: { schema: "1.0", content: "1.0" }
     },
 
-    'item_cashbox': {
-        id: 'item_cashbox' as ItemId,
+    'obj_cashbox': {
+        id: 'obj_cashbox' as GameObjectId,
         name: 'Metal Cashbox',
+        alternateNames: ['metal cashbox', 'cashbox', 'cash box', 'metal box', 'box'],
         archetype: 'Container',
         description: 'A small locked metal cashbox, dented and scratched.',
-        takeable: true,
-        tags: ['container', 'locked'],
-        capabilities: { openable: false, lockable: true, breakable: true },
-        state: { isOpen: false, isLocked: true, isBroken: false },
+        capabilities: { openable: false, lockable: true, breakable: true, movable: false, powerable: false, container: true, readable: false, inputtable: false },
+        state: { isOpen: false, isLocked: true, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
+        inventory: { items: [], capacity: 3, allowTags: [], denyTags: [] },
         children: {
-            items: ['item_evidence_bag'] as ItemId[]
+            items: ['item_contact_sheet' as ItemId],
+            objects: []
         },
         handlers: {
             onExamine: [
                 {
-                    conditions: [{ type: 'STATE', entityId: 'item_cashbox', key: 'isBroken', equals: true }],
+                    conditions: [{ type: 'STATE', entityId: 'obj_cashbox', key: 'isBroken', equals: true }],
                     success: {
-                        message: 'The cashbox is smashed open, lid bent back. The evidence bag inside is exposed.',
+                        message: 'The cashbox is smashed open, lid bent back. A printed contact sheet is inside.',
                         media: undefined
                     }
                 },
@@ -527,7 +596,7 @@ const items: Record<ItemId, Item> = {
             ],
             onBreak: [
                 {
-                    conditions: [{ type: 'STATE', entityId: 'item_cashbox', key: 'isBroken', equals: true }],
+                    conditions: [{ type: 'STATE', entityId: 'obj_cashbox', key: 'isBroken', equals: true }],
                     success: {
                         message: 'Already smashed open.',
                         media: undefined
@@ -536,12 +605,13 @@ const items: Record<ItemId, Item> = {
                 {
                     conditions: [],
                     success: {
-                        message: 'You swing the crowbar down hard.\n\nCRUNCH. Metal buckles. The lid tears free.\n\nInside: a heat-sealed plastic evidence bag. Official-looking. Still sealed.',
+                        message: 'You swing the crowbar down hard.\n\nCRUNCH. Metal buckles. The lid tears free.\n\nInside: a printed contact sheet with phone numbers and codenames.',
                         media: undefined,
                         effects: [
-                            { type: 'SET_STATE', entityId: 'item_cashbox', key: 'isBroken', value: true },
-                            { type: 'SET_STATE', entityId: 'item_cashbox', key: 'isOpen', value: true },
-                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_evidence_bag', parentId: 'item_cashbox' }
+                            { type: 'SET_ENTITY_STATE', entityId: 'obj_cashbox', patch: { isBroken: true } },
+                            { type: 'SET_ENTITY_STATE', entityId: 'obj_cashbox', patch: { isOpen: true } },
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_contact_sheet', parentId: 'obj_cashbox' },
+                            { type: 'SET_FLAG', flag: 'found_contact_sheet', value: true }
                         ]
                     }
                 }
@@ -549,7 +619,7 @@ const items: Record<ItemId, Item> = {
             onUse: [
                 {
                     itemId: 'item_alley_crowbar',
-                    conditions: [{ type: 'STATE', entityId: 'item_cashbox', key: 'isBroken', equals: true }],
+                    conditions: [{ type: 'STATE', entityId: 'obj_cashbox', key: 'isBroken', equals: true }],
                     success: {
                         message: 'Already smashed.',
                         media: undefined
@@ -559,69 +629,12 @@ const items: Record<ItemId, Item> = {
                     itemId: 'item_alley_crowbar',
                     conditions: [],
                     success: {
-                        message: 'You wedge the crowbar under the lid and twist.\n\nSNAP. Metal rips. Lid tears off.\n\nInside: a sealed plastic evidence bag, heat-sealed at the top.',
+                        message: 'You wedge the crowbar under the lid and twist.\n\nSNAP. Metal rips. Lid tears off.\n\nInside: a printed contact sheet with phone numbers and codenames.',
                         media: undefined,
                         effects: [
-                            { type: 'SET_STATE', entityId: 'item_cashbox', key: 'isBroken', value: true },
-                            { type: 'SET_STATE', entityId: 'item_cashbox', key: 'isOpen', value: true },
-                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_evidence_bag', parentId: 'item_cashbox' }
-                        ]
-                    }
-                }
-            ]
-        },
-        design: {
-            authorNotes: "Onion layer 2. Found in locker. Must be broken with crowbar. Contains evidence bag.",
-            tags: ['container', 'breakable', 'onion-chain']
-        },
-        version: { schema: "1.0", content: "1.0" }
-    },
-
-    'item_evidence_bag': {
-        id: 'item_evidence_bag' as ItemId,
-        name: 'Evidence Bag',
-        archetype: 'Container',
-        description: 'A heat-sealed plastic evidence bag. Official police markings.',
-        takeable: true,
-        tags: ['container', 'evidence'],
-        capabilities: { openable: true, lockable: false, breakable: false },
-        state: { isOpen: false, isLocked: false, isBroken: false },
-        children: {
-            items: ['item_contact_sheet'] as ItemId[]
-        },
-        handlers: {
-            onExamine: [
-                {
-                    conditions: [{ type: 'STATE', entityId: 'item_evidence_bag', key: 'isOpen', equals: true }],
-                    success: {
-                        message: 'The bag is torn open. The contact sheet is inside.',
-                        media: undefined
-                    }
-                },
-                {
-                    conditions: [],
-                    success: {
-                        message: 'Plastic evidence bag, heat-sealed. Official police markings on the side, but the case number is smudged.\n\nSomething printed is inside. You can tear it open.',
-                        media: undefined
-                    }
-                }
-            ],
-            onOpen: [
-                {
-                    conditions: [{ type: 'STATE', entityId: 'item_evidence_bag', key: 'isOpen', equals: true }],
-                    success: {
-                        message: 'Already open.',
-                        media: undefined
-                    }
-                },
-                {
-                    conditions: [],
-                    success: {
-                        message: 'You tear the plastic seal.\n\nInside: a printed contact sheet. Phone numbers and codenames. One number matches the internal network ID you saw in the CCTV logs.\n\nThis stash ties the alley operation directly to the surveillance shutdown.',
-                        media: undefined,
-                        effects: [
-                            { type: 'SET_STATE', entityId: 'item_evidence_bag', key: 'isOpen', value: true },
-                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_contact_sheet', parentId: 'item_evidence_bag' },
+                            { type: 'SET_ENTITY_STATE', entityId: 'obj_cashbox', patch: { isBroken: true } },
+                            { type: 'SET_ENTITY_STATE', entityId: 'obj_cashbox', patch: { isOpen: true } },
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_contact_sheet', parentId: 'obj_cashbox' },
                             { type: 'SET_FLAG', flag: 'found_contact_sheet', value: true }
                         ]
                     }
@@ -629,8 +642,8 @@ const items: Record<ItemId, Item> = {
             ]
         },
         design: {
-            authorNotes: "Onion layer 3. Contains contact sheet linking alley to CCTV operation.",
-            tags: ['evidence', 'container', 'onion-chain']
+            authorNotes: "Onion layer 2. Found in locker. Must be broken with crowbar. Contains contact sheet.",
+            tags: ['container', 'breakable', 'onion-chain']
         },
         version: { schema: "1.0", content: "1.0" }
     },
@@ -640,7 +653,7 @@ const items: Record<ItemId, Item> = {
         name: 'Contact Sheet',
         archetype: 'Document',
         description: 'A printed sheet with phone numbers and codenames.',
-        takeable: true,
+        capabilities: { isTakable: true, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         tags: ['document', 'evidence', 'clue'],
         handlers: {
             onExamine: {
@@ -663,15 +676,14 @@ const items: Record<ItemId, Item> = {
         version: { schema: "1.0", content: "1.0" }
     },
 
-    'item_burner_phone': {
-        id: 'item_burner_phone' as ItemId,
+    'obj_burner_phone': {
+        id: 'obj_burner_phone' as GameObjectId,
         name: 'Burner Phone',
+        alternateNames: ['burner phone', 'phone', 'burner', 'prepaid phone', 'cheap phone'],
         archetype: 'Device',
         description: 'A cheap prepaid phone with a cracked screen.',
-        takeable: true,
-        tags: ['device', 'evidence'],
-        capabilities: { powerable: true },
-        state: { isPoweredOn: false },
+        capabilities: { openable: false, lockable: false, breakable: false, movable: false, powerable: true, container: false, readable: false, inputtable: false },
+        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
         handlers: {
             onExamine: {
                 success: {
@@ -692,7 +704,7 @@ const items: Record<ItemId, Item> = {
         name: 'Scene Script Sheet',
         archetype: 'Document',
         description: 'A printed scene script with blocking notes and codes.',
-        takeable: true,
+        capabilities: { isTakable: true, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         tags: ['document', 'evidence', 'clue'],
         handlers: {
             onExamine: {
@@ -778,8 +790,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                 {
                     // Before moving bench - invoice still hidden
                     conditions: [
-                        { type: 'NOT_HAS_ITEM', itemId: 'item_invoice' },
-                        { type: 'ITEM_IN_WORLD', itemId: 'item_invoice', inWorld: false }
+                        { type: 'STATE', entityId: 'obj_bench', key: 'isMoved', equals: false }
                     ],
                     success: {
                         message: 'The bench is simple—weathered wood bolted to a metal frame. Decades of rain and sun have turned the planks gray-brown, the grain raised like old scars. Names and initials carved into the surface speak of bored teenagers and restless waits.\n\nYou crouch down, examining the legs. One of them—the front-right—has something caught beneath it. A corner of paper, wedged between wood and concrete. The wind must have pushed it there, or maybe someone kicked it aside without noticing.\n\nIt looks like a receipt or invoice. Partially hidden, easy to miss unless you were looking for it.',
@@ -793,8 +804,8 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                 {
                     // After moving bench - invoice revealed but not taken
                     conditions: [
-                        { type: 'NOT_HAS_ITEM', itemId: 'item_invoice' },
-                        { type: 'ITEM_IN_WORLD', itemId: 'item_invoice', inWorld: true }
+                        { type: 'STATE', entityId: 'obj_bench', key: 'isMoved', equals: true },
+                        { type: 'NOT_HAS_ITEM', itemId: 'item_invoice' }
                     ],
                     success: {
                         message: 'The bench sits slightly askew from where you moved it. The invoice lies on the ground next to the bench leg, fully visible now—wrinkled and dirt-smudged but readable.',
@@ -834,7 +845,10 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                     url: '',
                     description: 'Bench moved, invoice on ground',
                     hint: 'receipt revealed'
-                }
+                },
+                effects: [
+                    { type: 'REVEAL_FROM_PARENT', entityId: 'item_invoice', parentId: 'obj_bench' }
+                ]
             },
             onSearch: {
                 message: 'You run your hands along the bench slats, checking for anything hidden or carved beneath the surface. Nothing. Just smooth wood, worn soft by countless hands. But when you check underneath, you spot it—that corner of paper wedged beneath the front-right leg.',
@@ -1027,6 +1041,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         alternateNames: ['side alley', 'alley', 'dark alley', 'narrow alley', 'side street'],
         archetype: 'Structure',
         description: 'A narrow side alley branching off Elm Street. The smell of decay hangs in the air, and shadows obscure the details.',
+        zone: 'zone_side_alley' as ZoneId,
         transitionNarration: 'You step into the side alley. The narrow passage is darker here, away from the street lights. Crates are stacked against one wall, and a rusted dumpster sits heavily in the shadows.',
         capabilities: { openable: false, lockable: false, breakable: false, movable: false, powerable: false, container: true, readable: false, inputtable: false },
         state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
@@ -1053,7 +1068,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                 }
             },
             onSearch: {
-                message: 'You scan the alley carefully. The crates—ordinary shipping crates, nothing special. The dumpster—heavy, full of trash. But wait... there\'s something odd about how the dumpster is positioned. It\'s not quite flush against the wall. Like it was moved recently.\n\nMaybe you should try moving it.',
+                message: 'You scan the alley carefully. The crates—ordinary shipping crates, nothing special. The dumpster—heavy, full of trash. But wait... there\'s something odd about how the dumpster is positioned. It\'s not quite flush against the wall. Like it was moved recently.',
                 media: undefined
             }
         },
@@ -1171,13 +1186,13 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             ],
             onTake: {
                 fail: {
-                    message: 'These aren\'t your standard cardboard moving boxes. Each crate is solid wood—probably three or four feet on a side—heavy enough that lifting even one would strain your back. The whole stack? Hundreds of pounds, easy. You can\'t take them with you. If you want to move them, you need LEVERAGE. Try: MOVE CRATES or USE [tool] ON CRATES.',
+                    message: 'These aren\'t your standard cardboard moving boxes. Each crate is solid wood—probably three or four feet on a side—heavy enough that lifting even one would strain your back. The whole stack? Hundreds of pounds, easy. You can\'t take them with you.',
                     media: undefined
                 }
             },
             onOpen: {
                 fail: {
-                    message: 'The crates aren\'t containers you can open. They\'re solid wooden shipping crates—nailed shut decades ago, the wood warped and splintered from moisture. Even if you could pry one open, it would be empty inside. These crates are obstacles, not treasure chests. If you want to see what\'s behind them, you should MOVE them or SEARCH around them.',
+                    message: 'The crates aren\'t containers you can open. They\'re solid wooden shipping crates—nailed shut decades ago, the wood warped and splintered from moisture. Even if you could pry one open, it would be empty inside. These crates are obstacles, not treasure chests.',
                     media: undefined
                 }
             }
@@ -1190,25 +1205,48 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         name: 'Dumpster',
         alternateNames: ['dumpster', 'trash bin', 'garbage bin', 'rusted dumpster', 'metal dumpster'],
         archetype: 'Container',
-        description: 'A large metal dumpster filled with trash bags and debris.',
+        description: 'A rusted industrial dumpster. Heavy steel corroded by time and neglect.',
+        zone: 'zone_at_dumpster' as ZoneId,
         isRevealed: false,
         transitionNarration: 'You approach the rusted dumpster in the alley. The smell hits you before you even get close.',
         capabilities: { openable: true, lockable: false, breakable: false, movable: true, powerable: false, container: true, readable: false, inputtable: false },
         state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
         inventory: { items: [], capacity: 10, allowTags: [], denyTags: [] },
+        parentId: 'obj_side_alley' as GameObjectId,
+        revealMethod: 'REVEAL_FROM_PARENT',
         children: {
-            items: ['item_crumpled_note' as ItemId, 'item_trash_bag_1' as ItemId, 'item_trash_bag_2' as ItemId],
-            objects: []
+            items: ['item_crumpled_note' as ItemId],
+            objects: ['obj_old_suitcase' as GameObjectId, 'obj_paper_carton' as GameObjectId, 'obj_black_trash_bag' as GameObjectId]
         },
         handlers: {
             onExamine: [
                 {
-                    // Before moving dumpster - door still hidden
+                    // State: Inside dumpster - examining from within
+                    conditions: [
+                        { type: 'FLAG', flag: 'dumpster_climbed', value: true }
+                    ],
+                    success: {
+                        message: 'You\'re standing in it. Ankle-deep in rot.\n\nThe garbage is layered. Decades, maybe. Old trash compacted under newer trash, creating strata of decay. Newspapers yellowed and pulped. Food containers crushed flat. Plastic bags melted together from heat and time.\n\nThe smell is suffocating. Rot, yes, but also chemicals—bleach, ammonia, solvents. Someone used this dumpster to dispose of more than just garbage.\n\nThe metal walls around you are corroded from the inside. Rust eating through steel. Liquid waste pooling in the corners, dark and viscous.\n\nIf you want to find anything specific, you\'ll need to search through this mess. Get your hands dirty.',
+                        media: undefined
+                    }
+                },
+                {
+                    // State: Lid open - examining interior (but player is outside)
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_dumpster', key: 'isOpen', equals: true }
+                    ],
+                    success: {
+                        message: 'The lid is up. Flies swarm around the opening, a black cloud of buzzing wings.\n\nFrom here, you can see the top layer of garbage—black trash bags, food containers, newspapers soaked in unidentifiable liquid. The smell hits you in waves: rot, mildew, something chemical underneath.\n\nBut you\'re still outside. Looking down into the darkness. You can\'t see the bottom, can\'t see what\'s hidden beneath the surface garbage.\n\nIf you want to find anything, you\'ll need to get in there. Search properly.',
+                        media: undefined
+                    }
+                },
+                {
+                    // State: Lid closed, door still hidden
                     conditions: [
                         { type: 'OBJECT_IN_WORLD', objectId: 'obj_courtyard_door', inWorld: false }
                     ],
                     success: {
-                        message: 'A rusted metal dumpster, heavy and imposing. The smell is overpowering—rotting food, mildew, decay. Black garbage bags are visible through gaps in the lid.\n\nThe dumpster is positioned oddly, not quite flush against the wall. There might be a gap behind it.',
+                        message: 'A dumpster. Industrial size. Heavy-gauge steel painted dark green—or it was, once, back when the city still cared about appearances. Now it\'s rust-brown, corroded, eaten away by years of exposure and neglect. The metal is pitted with holes where rust chewed through, weeping orange stains down the sides like old blood.\n\nThe smell hits you before you even get close. Rot. Decay. That sweet-sour stench of organic matter breaking down in the summer heat. Your throat tightens. Your stomach clenches. This is what Bloodhaven smells like now—garbage left to fester while everyone looks the other way.\n\nThe lid is closed. Heavy metal, sagging on its hinges from decades of weight. Someone welded reinforcement bars across the back—crude, functional, the kind of patch job you see everywhere in this city. Everything breaking down. Everything held together with duct tape and prayers.\n\nLike your career. Like your reputation. Like the case they\'re building against you.\n\nThe dumpster sits oddly. Not quite flush against the brick wall. A gap, maybe six inches. Shadows in that gap. Darkness. The kind of space where things get hidden. Where evidence disappears.\n\nWhere your life might be buried.',
                         media: {
                             url: '',
                             description: 'Rusted dumpster not flush against wall',
@@ -1217,7 +1255,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                     }
                 },
                 {
-                    // After moving dumpster - door revealed
+                    // State: Door revealed after moving
                     conditions: [
                         { type: 'OBJECT_IN_WORLD', objectId: 'obj_courtyard_door', inWorld: true }
                     ],
@@ -1244,7 +1282,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                 {
                     conditions: [],
                     success: {
-                        message: 'You lift the heavy lid. The stench hits you immediately—rotting food and something worse. Black garbage bags, food containers, newspapers.\n\nMostly garbage. But if you want to find something, you should search more carefully.',
+                        message: 'You lift the heavy lid. The stench hits you immediately—rotting food and something worse. Black garbage bags, food containers, newspapers.\n\nMostly garbage.',
                         media: undefined,
                         effects: [
                             { type: 'SET_ENTITY_STATE', entityId: 'obj_dumpster', patch: { isOpen: true } }
@@ -1258,6 +1296,27 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                     media: undefined
                 }
             },
+            onClose: [
+                {
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_dumpster', key: 'isOpen', equals: false }
+                    ],
+                    success: {
+                        message: 'The lid\'s already down. Heavy metal, sealed tight. The smell is contained—for now.',
+                        media: undefined
+                    }
+                },
+                {
+                    conditions: [],
+                    success: {
+                        message: 'You grip the lid and lower it down. The hinges groan, protesting under the weight. The heavy metal lid settles into place with a dull thud.\n\nThe smell—rot, chemicals, decay—is mercifully contained. Your lungs thank you. Your sinuses thank you. Every person within fifty feet thanks you.\n\nBut smart? For the case?\n\nMaybe not. Evidence doesn\'t get less rotten if you ignore it. It just gets harder to find.',
+                        media: undefined,
+                        effects: [
+                            { type: 'SET_ENTITY_STATE', entityId: 'obj_dumpster', patch: { isOpen: false } }
+                        ]
+                    }
+                }
+            ],
             onClimb: [
                 {
                     conditions: [
@@ -1283,7 +1342,8 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         message: 'You grip the rim and haul yourself up. One leg over. Then the other.\n\nYou drop inside.\n\nThe smell is worse in here. Oppressive. Flies scatter as you land, your shoes sinking into something soft and wet. You don\'t look down.\n\nYou\'re standing in trash now. Ankle-deep in garbage, flies buzzing around your head. The metal walls of the dumpster rise on all sides, trapping you in this confined space of rot and decay.\n\nIf you want to find something, you should search through the contents.',
                         media: undefined,
                         effects: [
-                            { type: 'SET_FLAG', flag: 'dumpster_climbed', value: true }
+                            { type: 'SET_FLAG', flag: 'dumpster_climbed', value: true },
+                            { type: 'SET_ZONE', zoneId: 'zone_inside_dumpster' as ZoneId }
                         ]
                     }
                 }
@@ -1321,12 +1381,13 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         { type: 'FLAG', flag: 'dumpster_climbed', value: true }
                     ],
                     success: {
-                        message: 'You\'re inside now. Might as well do this properly.\n\nYou start digging through the trash, pushing aside wet cardboard and food containers.\n\nThree black trash bags dominate the space. Big ones. Industrial-grade. They\'re arranged almost deliberately—lined up, not just tossed.\n\nBag 1: Closest to you. Torn at the top. You can see rotting food inside. Banana peels. Moldy bread. Coffee grounds.\n\nBag 2: Middle bag. Sealed tight with duct tape. Heavier than the others. Something solid inside.\n\nBag 3: Far corner. Half-open. More garbage—newspapers, empty bottles, takeout containers.\n\nSomeone put effort into this. Into hiding something, maybe.',
+                        message: 'You\'re inside now. Might as well do this properly.\n\nYou start digging through the trash, pushing aside wet cardboard and food containers. The smell is overwhelming—rot and chemicals mixing into something toxic.\n\nBut beneath the surface garbage, you find something.\n\nYou find the following:\n\n💼 Old Suitcase\n📦 Paper Carton\n🗑️ Black Trash Bag',
                         media: undefined,
                         effects: [
                             { type: 'SET_FLAG', flag: 'dumpster_searched', value: true },
-                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_trash_bag_1', parentId: 'obj_dumpster' },
-                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_trash_bag_2', parentId: 'obj_dumpster' }
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'obj_old_suitcase', parentId: 'obj_dumpster' },
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'obj_paper_carton', parentId: 'obj_dumpster' },
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'obj_black_trash_bag', parentId: 'obj_dumpster' }
                         ]
                     }
                 }
@@ -1353,6 +1414,480 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             onUse: {
                 fail: {
                     message: 'A dumpster isn\'t a tool. It\'s a container for waste. You can OPEN it, SEARCH it, or MOVE it if you need to shift it aside, but you can\'t use it.',
+                    media: undefined
+                }
+            }
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'obj_old_suitcase': {
+        id: 'obj_old_suitcase' as GameObjectId,
+        name: 'Old Suitcase',
+        alternateNames: ['old suitcase', 'suitcase', 'suit case', 'case', 'luggage', 'old case', 'leather suitcase'],
+        archetype: 'Container',
+        description: 'A battered leather suitcase, decades old. Scuffed corners, tarnished brass latches. The leather is cracked and water-stained.',
+        transitionNarration: 'You focus on the old suitcase. It looks like it\'s been here a while.',
+        capabilities: { openable: true, lockable: true, breakable: false, movable: false, powerable: false, container: true, readable: false, inputtable: false },
+        state: { isOpen: false, isLocked: true, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
+        inventory: { items: [], capacity: 5, allowTags: [], denyTags: [] },
+        parentId: 'obj_dumpster' as GameObjectId,
+        revealMethod: 'REVEAL_FROM_PARENT',
+        personal: false,
+        children: {
+            items: ['item_picture_frame' as ItemId, 'item_candle' as ItemId, 'item_box_cutter' as ItemId],
+            objects: []
+        },
+        handlers: {
+            onExamine: [
+                {
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_old_suitcase', key: 'isOpen', equals: true }
+                    ],
+                    success: {
+                        message: 'The old suitcase lies open, latches released. The interior is lined with faded silk, torn in places, stained dark in others.\n\nVarious items are packed inside.',
+                        media: undefined
+                    }
+                },
+                {
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_old_suitcase', key: 'isLocked', equals: true }
+                    ],
+                    success: {
+                        message: 'A battered leather suitcase, the kind people used before wheeled luggage became standard. The leather is dark brown, cracked along the seams, water-stained in uneven patches that suggest years of exposure.\n\nThe corners are scuffed down to bare wood underneath—old-school construction, wood frame covered in leather. The brass latches are tarnished green, corroded but still intact.\n\nBetween the two latches, there\'s a small keyhole. A lock mechanism. The suitcase is locked.\n\nIt\'s heavy. Feels solid. Not empty.\n\nBut here\'s what strikes you: it\'s too clean. Everything else in this dumpster is rotting, covered in grime and decay. This suitcase? Dirty, yes, but not decomposing. Not like it\'s been here long.',
+                        media: undefined
+                    }
+                },
+                {
+                    conditions: [],
+                    success: {
+                        message: 'A battered leather suitcase, the kind people used before wheeled luggage became standard. The leather is dark brown, cracked along the seams, water-stained in uneven patches that suggest years of exposure.\n\nThe corners are scuffed down to bare wood underneath—old-school construction, wood frame covered in leather. The brass latches are tarnished green, corroded but still intact.\n\nIt\'s heavy. Feels solid. Not empty.\n\nBut here\'s what strikes you: it\'s too clean. Everything else in this dumpster is rotting, covered in grime and decay. This suitcase? Dirty, yes, but not decomposing. Not like it\'s been here long.',
+                        media: undefined
+                    }
+                }
+            ],
+            onOpen: [
+                {
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_old_suitcase', key: 'isOpen', equals: true }
+                    ],
+                    success: {
+                        message: 'Already open. The latches are released, the lid lifted. You can see the home decor items packed inside.',
+                        media: undefined
+                    }
+                },
+                {
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_old_suitcase', key: 'isLocked', equals: true }
+                    ],
+                    success: {
+                        message: 'You press the brass latches, expecting them to click open.\n\nThey don\'t.\n\nYou press harder. Your thumbs dig into the tarnished metal, applying real pressure now, the kind that leaves dents in your skin.\n\nNothing. The latches are locked tight.\n\nYou pull at the lid anyway—because hope springs eternal, even when you\'re standing knee-deep in garbage—but the suitcase holds firm. The old leather creaks in protest, but the lock mechanism? Silent. Confident. Unmoved by your desperation.\n\nYou lean closer. Between the two latches, there\'s a small keyhole. Delicate. Precise. The kind that takes a tiny key—jewelry box size, luggage lock size. Something small enough to hide, easy enough to lose.\n\nOr easy enough to hide deliberately.\n\nThis suitcase isn\'t opening without that key.',
+                        media: undefined
+                    }
+                },
+                {
+                    conditions: [],
+                    success: {
+                        message: 'You grip the tarnished brass latches and press the releases. They click open with surprising ease—no rust, no resistance.\n\nYou lift the lid.\n\nThe interior is lined with faded silk, torn in places, stained dark in others. You can see various items packed inside.',
+                        media: undefined,
+                        effects: [
+                            { type: 'SET_ENTITY_STATE', entityId: 'obj_old_suitcase', patch: { isOpen: true } }
+                        ]
+                    }
+                }
+            ],
+            onSearch: [
+                {
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_old_suitcase', key: 'isOpen', equals: false }
+                    ],
+                    success: {
+                        message: 'You run your fingers along the exterior, checking the seams, the corners, the underside.\n\nNothing hidden on the outside.',
+                        media: undefined
+                    }
+                },
+                {
+                    conditions: [
+                        { type: 'NO_FLAG', flag: 'suitcase_searched' }
+                    ],
+                    success: {
+                        message: 'You search through the contents, checking each item:\n\n🖼️ Empty picture frame\n🕯️ Decorative candle (unused)\n🔪 Box cutter (orange handle)\n\nHome decor junk, mostly. But the box cutter—that could be useful.',
+                        media: undefined,
+                        effects: [
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_picture_frame', parentId: 'obj_old_suitcase' },
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_candle', parentId: 'obj_old_suitcase' },
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_box_cutter', parentId: 'obj_old_suitcase' },
+                            { type: 'SET_FLAG', flag: 'suitcase_searched', value: true }
+                        ]
+                    }
+                },
+                {
+                    conditions: [],
+                    success: {
+                        message: 'You already searched through everything. Just the picture frame, candle, and box cutter.',
+                        media: undefined
+                    }
+                }
+            ],
+            onTake: {
+                fail: {
+                    message: 'The suitcase is too large and awkward to carry while you\'re standing inside a dumpster surrounded by trash. If you needed it, you\'d have to climb out first.\n\nBut honestly? It\'s empty. Cleaned. No use taking it.',
+                    media: undefined
+                }
+            },
+            onUse: [
+                {
+                    itemId: 'item_tiny_silver_key',
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_old_suitcase', key: 'isLocked', equals: false }
+                    ],
+                    success: {
+                        message: 'The suitcase is already unlocked. No need for the key now.',
+                        media: undefined
+                    }
+                },
+                {
+                    itemId: 'item_tiny_silver_key',
+                    conditions: [],
+                    success: {
+                        message: 'You pull out the tiny silver key and slide it into the small keyhole between the latches.\n\nIt fits perfectly.\n\nYou turn it. The mechanism clicks—smooth, precise, well-maintained. The lock releases.\n\nThe latches are free now. You can open the suitcase.',
+                        media: undefined,
+                        effects: [
+                            { type: 'SET_ENTITY_STATE', entityId: 'obj_old_suitcase', patch: { isLocked: false } }
+                        ]
+                    }
+                }
+            ]
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'obj_paper_carton': {
+        id: 'obj_paper_carton' as GameObjectId,
+        name: 'Paper Carton',
+        alternateNames: ['paper carton', 'carton', 'cardboard box', 'box', 'paper box'],
+        archetype: 'Container',
+        description: 'A large paper carton, soggy and partially collapsed. The kind used for moving or storage.',
+        transitionNarration: 'You turn your attention to the soggy paper carton.',
+        capabilities: { openable: true, lockable: false, breakable: true, movable: false, powerable: false, container: true, readable: false, inputtable: false },
+        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
+        inventory: { items: [], capacity: 10, allowTags: [], denyTags: [] },
+        parentId: 'obj_dumpster' as GameObjectId,
+        revealMethod: 'REVEAL_FROM_PARENT',
+        personal: false,
+        children: {
+            items: [],
+            objects: []
+        },
+        handlers: {
+            onExamine: [
+                {
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_paper_carton', key: 'isOpen', equals: true }
+                    ],
+                    success: {
+                        message: 'The carton is open, flaps pulled apart. The cardboard is water-damaged, soft and weak.\n\nInside: shredded paper. Lots of it. White strips, densely packed. The kind of shredding you get from a cross-cut paper shredder—small confetti pieces, meant to be unreadable.\n\nSomeone didn\'t want these documents read.',
+                        media: undefined
+                    }
+                },
+                {
+                    conditions: [],
+                    success: {
+                        message: 'A brown paper carton, the kind you get from moving companies or office supply stores. Standard issue.\n\nThe cardboard is dark with moisture, sagging in the middle, partially collapsed. The flaps are sealed with packing tape—thick, industrial-grade, wrapped multiple times around the seams.\n\nWhite strips of paper poke out from gaps where the cardboard has split.',
+                        media: undefined
+                    }
+                }
+            ],
+            onOpen: {
+                success: {
+                    message: 'You reach for the flaps, ready to pull them apart like any ordinary box.\n\nBut your fingers meet resistance. Packing tape—thick, industrial-grade stuff, the kind movers use when they\'re paranoid about boxes bursting mid-transport. Someone wrapped this carton like they were sealing a tomb.\n\nYou tug. The cardboard underneath is soggy, weak, practically disintegrating under your grip. But the tape? The tape laughs at you. It stretches. It strains. It holds.\n\nYou pull harder. The wet cardboard starts to tear—long splits opening in the brown paper, the structural integrity collapsing. But the tape just digs deeper into the pulp, anchoring itself like roots in rot.\n\nYou stop. This whole thing\'s going to burst like a wet piñata.\n\nNo. This needs precision. A clean cut. Something sharp.',
+                    media: undefined
+                }
+            },
+            onBreak: {
+                success: {
+                    message: 'You consider brute force. Just rip the whole thing apart. Tear through cardboard and tape like some kind of rage-fueled garbage archaeologist.\n\nBut the cardboard\'s waterlogged. Soft. Weak. One good yank and it\'ll disintegrate into pulp, and the shredded paper inside will explode outward like confetti at the world\'s saddest parade. It\'ll mix with the trash, the rot, the dumpster sludge. Whatever\'s in there—evidence, clues, answers—will be contaminated. Unreadable. Lost.\n\nNo. You need surgical precision here. Cut the tape. Open it clean.',
+                    media: undefined
+                }
+            },
+            onUse: [
+                {
+                    itemId: 'item_box_cutter',
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_paper_carton', key: 'isOpen', equals: true }
+                    ],
+                    success: {
+                        message: 'The carton is already open. The tape has been cut away. No need for tools now.',
+                        media: undefined
+                    }
+                },
+                {
+                    itemId: 'item_box_cutter',
+                    conditions: [],
+                    success: {
+                        message: 'You pull out the box cutter and extend the blade. Sharp. Clean. Ready.\n\nYou press the blade against the packing tape and draw it along the seam. The tape parts cleanly—a surgical cut. No tearing, no mess.\n\nYou slice through the remaining layers. Three passes. Four. The tape falls away in strips.\n\nThe flaps are free now.',
+                        media: undefined,
+                        effects: [
+                            { type: 'SET_ENTITY_STATE', entityId: 'obj_paper_carton', patch: { isOpen: true } }
+                        ]
+                    }
+                },
+                {
+                    conditions: [],
+                    fail: {
+                        message: 'You need something sharp to cut through the packing tape. A box cutter or knife would work.',
+                        media: undefined
+                    }
+                }
+            ],
+            onSearch: [
+                {
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_paper_carton', key: 'isOpen', equals: false }
+                    ],
+                    success: {
+                        message: 'You check the exterior, running your hands over the soggy cardboard. Nothing written on the outside. No labels, no markings.',
+                        media: undefined
+                    }
+                },
+                {
+                    conditions: [],
+                    success: {
+                        message: 'You dig your hands into the shredded paper, sifting through the strips. It\'s slow work—the paper is wet, clumped together in dense, pulpy masses.\n\nMost of it is too shredded to read. Tiny fragments. Cross-cut confetti. Single letters. Bits of words.\n\nYou spend several minutes sorting through it, checking every piece.\n\nNothing. Nothing readable. Nothing useful.\n\nWhoever shredded these documents was thorough.',
+                        media: undefined
+                    }
+                }
+            ],
+            onTake: {
+                fail: {
+                    message: 'The carton is waterlogged and falling apart. If you tried to lift it, the bottom would tear out and shredded paper would spill everywhere.\n\nNot worth taking. But you could search through it here.',
+                    media: undefined
+                }
+            }
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'obj_black_trash_bag': {
+        id: 'obj_black_trash_bag' as GameObjectId,
+        name: 'Black Trash Bag',
+        alternateNames: ['black trash bag', 'trash bag', 'trashbag', 'garbage bag', 'black bag', 'bag'],
+        archetype: 'Container',
+        description: 'A heavy-duty black trash bag, sealed tight with duct tape. Something solid inside.',
+        isRevealed: false,
+        transitionNarration: 'You focus on the sealed black trash bag.',
+        capabilities: { openable: false, lockable: false, breakable: true, movable: false, powerable: false, container: true, readable: false, inputtable: false },
+        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
+        inventory: { items: [], capacity: 5, allowTags: [], denyTags: [] },
+        parentId: 'obj_dumpster' as GameObjectId,
+        revealMethod: 'REVEAL_FROM_PARENT',
+        personal: false,
+        children: {
+            items: [],
+            objects: ['obj_pants' as GameObjectId, 'obj_shoes' as GameObjectId, 'obj_coat' as GameObjectId]
+        },
+        handlers: {
+            onExamine: [
+                {
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_black_trash_bag', key: 'isOpen', equals: true }
+                    ],
+                    success: {
+                        message: 'The trash bag is torn open, duct tape ripped away. Inside: clothes. A pair of pants, shoes, and a coat—all soaked in bleach.\n\nThe fabric is stiff, discolored, chemical-damaged. Whatever stains were on these clothes, someone wanted them gone.',
+                        media: undefined
+                    }
+                },
+                {
+                    conditions: [],
+                    success: {
+                        message: 'A black trash bag—industrial strength, the thick kind contractors use. Not your standard kitchen garbage liner.\n\nIt\'s sealed tight. Duct tape wrapped around the top, layer after layer, securing it closed. Someone wanted to make sure nothing leaked out.\n\nThe bag is heavy. Full. You can feel the weight of solid objects shifting inside when you press on it.\n\nAnd the smell—even through the plastic and tape, you catch it. That sharp chemical scent. Bleach. Strong enough to burn your nostrils.\n\nThis isn\'t trash. This is evidence someone tried to destroy.',
+                        media: undefined
+                    }
+                }
+            ],
+            onBreak: [
+                {
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_black_trash_bag', key: 'isOpen', equals: true }
+                    ],
+                    success: {
+                        message: 'Already torn open. The duct tape is ripped away, the bag gaping. Bleach-soaked clothes visible inside.',
+                        media: undefined
+                    }
+                },
+                {
+                    conditions: [],
+                    success: {
+                        message: 'You grip the duct tape with both hands and pull. Hard.\n\nThe tape resists. Stretching. Straining. Your fingers dig into the layers, searching for purchase.\n\nThen—RRRRIP.\n\nThe tape gives way with a violent tearing sound. You don\'t stop. You drive your fingers into the plastic itself, feeling your nails penetrate the industrial-grade material. The bag splits under your hands.\n\nOne hand on each side. You tear it wider. The plastic gapes open.\n\nThe chemical smell hits you immediately—bleach, harsh and acrid. Strong enough to make your eyes water, your throat burn.',
+                        media: undefined,
+                        effects: [
+                            { type: 'SET_ENTITY_STATE', entityId: 'obj_black_trash_bag', patch: { isOpen: true } }
+                        ]
+                    }
+                }
+            ],
+            onSearch: [
+                {
+                    conditions: [
+                        { type: 'STATE', entityId: 'obj_black_trash_bag', key: 'isOpen', equals: false }
+                    ],
+                    success: {
+                        message: 'You press on the sealed bag, feeling the contents shift. Heavy. Solid. Fabric, maybe? Hard to tell through the plastic and tape.',
+                        media: undefined
+                    }
+                },
+                {
+                    conditions: [],
+                    success: {
+                        message: 'You search through the bleach-soaked clothes, pulling them out one by one:\n\n👖 A pair of pants\n👞 A pair of shoes\n🧥 A coat\n\nAll soaked in bleach. All deliberately disposed of.',
+                        media: undefined,
+                        effects: [
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'obj_pants', parentId: 'obj_black_trash_bag' },
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'obj_shoes', parentId: 'obj_black_trash_bag' },
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'obj_coat', parentId: 'obj_black_trash_bag' }
+                        ]
+                    }
+                }
+            ],
+            onTake: {
+                fail: {
+                    message: 'The bag is too heavy and soaked with bleach. If you tried to lift it, the plastic would tear and chemical-soaked clothes would spill everywhere.\n\nYou\'re standing in a dumpster. Not exactly equipped for evidence collection. But you could search through it here.',
+                    media: undefined
+                }
+            }
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'obj_pants': {
+        id: 'obj_pants' as GameObjectId,
+        name: 'Pants',
+        alternateNames: ['pants', 'trousers', 'slacks', 'pair of pants', 'dress pants', 'dark pants'],
+        archetype: 'Container',
+        description: 'A pair of dark dress pants, soaked in bleach. The fabric is stiff and discolored.',
+        transitionNarration: 'You examine the bleach-soaked pants.',
+        capabilities: { openable: false, lockable: false, breakable: false, movable: false, powerable: false, container: true, readable: false, inputtable: false },
+        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
+        inventory: { items: [], capacity: 3, allowTags: [], denyTags: [] },
+        parentId: 'obj_black_trash_bag' as GameObjectId,
+        revealMethod: 'REVEAL_FROM_PARENT',
+        personal: false,
+        children: {
+            items: [],
+            objects: []
+        },
+        handlers: {
+            onExamine: {
+                success: {
+                    message: 'Dark dress pants. Men\'s, size 34 waist. The fabric—once black or navy—is now mottled gray and white from bleach damage.\n\nThe material is stiff, chemical-soaked. The seams are intact, but the color is destroyed. Whatever these pants looked like originally, they\'re ruined now.\n\nTwo front pockets. Two back pockets. Belt loops.',
+                    media: undefined
+                }
+            },
+            onSearch: {
+                success: {
+                    message: 'You check the pockets methodically:\n\nFront left: Three quarters. Two dimes.\nFront right: A stick of chewing gum, wrapper torn.\nBack left: Empty.\nBack right: A lint ball.\n\nNothing useful. Just pocket debris. Whoever dumped these pants emptied them first—or almost did.',
+                    media: undefined
+                }
+            },
+            onTake: {
+                fail: {
+                    message: 'The pants are soaked with bleach and smell terrible. You\'re not taking those with you. If there\'s something in the pockets, you can search them here.',
+                    media: undefined
+                }
+            }
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'obj_shoes': {
+        id: 'obj_shoes' as GameObjectId,
+        name: 'Shoes',
+        alternateNames: ['shoes', 'pair of shoes', 'dress shoes', 'leather shoes', 'black shoes'],
+        archetype: 'Container',
+        description: 'A pair of leather dress shoes, scuffed and worn. Size 11½.',
+        transitionNarration: 'You examine the shoes.',
+        capabilities: { openable: false, lockable: false, breakable: false, movable: false, powerable: false, container: true, readable: false, inputtable: false },
+        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
+        inventory: { items: [], capacity: 2, allowTags: [], denyTags: [] },
+        parentId: 'obj_black_trash_bag' as GameObjectId,
+        revealMethod: 'REVEAL_FROM_PARENT',
+        personal: false,
+        children: {
+            items: [],
+            objects: []
+        },
+        handlers: {
+            onExamine: {
+                success: {
+                    message: 'Black leather dress shoes. Oxford style. Size 11½.\n\nThe leather is scuffed, worn at the heels. The soles are thin—worn down from walking. These shoes have miles on them.\n\nAnd the smell—god, the smell. Sweat. Mildew. Rot. Like they were worn hard, then thrown in the trash without being cleaned.\n\nThe laces are still tied. Whoever took these off didn\'t bother to unlace them. Just kicked them off and tossed them.',
+                    media: undefined
+                }
+            },
+            onSearch: {
+                success: {
+                    message: 'You check inside both shoes, running your fingers along the insoles, checking for hidden compartments or items.\n\nNothing.\n\nJust worn leather, sweat stains, and that terrible smell. If there was anything hidden here, it\'s long gone.',
+                    media: undefined
+                }
+            },
+            onTake: {
+                fail: {
+                    message: 'The shoes smell awful—sweat and mildew mixed with the bleach from the bag. You\'re not taking those with you. Leave them in the dumpster where they belong.',
+                    media: undefined
+                }
+            }
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'obj_coat': {
+        id: 'obj_coat' as GameObjectId,
+        name: 'Coat',
+        alternateNames: ['coat', 'jacket', 'suit jacket', 'blazer', 'suit coat'],
+        archetype: 'Container',
+        description: 'A dark suit jacket, stained and soaked in bleach. The fabric is damaged, but still recognizable.',
+        transitionNarration: 'You examine the bleach-damaged coat.',
+        capabilities: { openable: false, lockable: false, breakable: false, movable: false, powerable: false, container: true, readable: false, inputtable: false },
+        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
+        inventory: { items: [], capacity: 3, allowTags: [], denyTags: [] },
+        parentId: 'obj_black_trash_bag' as GameObjectId,
+        revealMethod: 'REVEAL_FROM_PARENT',
+        personal: false,
+        children: {
+            items: ['item_tiny_silver_key' as ItemId],
+            objects: []
+        },
+        handlers: {
+            onExamine: {
+                success: {
+                    message: 'A suit jacket. Dark fabric—navy or black, hard to tell now that the bleach has discolored it. The shoulders are structured, the cut is tailored. Expensive, once.\n\nNow? Ruined. The fabric is stiff with chemical damage. Dark stains—blood? oil?—still visible despite the bleach treatment. Whatever these stains were, someone wanted them gone badly enough to destroy the entire jacket.\n\nTwo side pockets. One inside breast pocket. All gaping open.',
+                    media: undefined
+                }
+            },
+            onSearch: [
+                {
+                    conditions: [
+                        { type: 'NO_FLAG', flag: 'coat_searched' }
+                    ],
+                    success: {
+                        message: 'You search the coat thoroughly, checking every pocket, every seam.\n\nThe outside pockets: empty.\nThe inside breast pocket: empty.\n\nBut wait—\n\nYou feel something in the lining. Not a pocket. Something sewn into the fabric itself.\n\nYou probe the area with your fingers. There\'s a small tear in the lining, deliberately cut. A hidden compartment.\n\nYou reach inside and feel something small. Metal. Cold.\n\nYou pull it out: a tiny silver key.',
+                        media: undefined,
+                        effects: [
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_tiny_silver_key', parentId: 'obj_coat' },
+                            { type: 'SET_FLAG', flag: 'coat_searched', value: true }
+                        ]
+                    }
+                },
+                {
+                    conditions: [],
+                    success: {
+                        message: 'You search the coat again, checking the pockets and the hidden compartment in the lining.\n\nNothing else. Just the key you already found.',
+                        media: undefined
+                    }
+                }
+            ],
+            onTake: {
+                fail: {
+                    message: 'The coat is soaked with bleach and reeks of chemicals. You\'re not taking it with you. If there\'s something hidden in it, you can search it here.',
                     media: undefined
                 }
             }
@@ -1388,10 +1923,10 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                 {
                     // State 2: REVEALED - Crowbar found but not taken yet
                     conditions: [
-                        { type: 'ITEM_IN_WORLD', itemId: 'item_crowbar', inWorld: true }
+                        { type: 'HAS_FLAG', flag: 'tires_moved' }
                     ],
                     success: {
-                        message: 'The tire pile sits slightly disturbed from your search. The crowbar you found is still here, lying where you pulled it out—two feet of rust-spotted steel wedged between the third and fourth tire.\n\nYou should take it. Could be useful.',
+                        message: 'The tire pile sits slightly disturbed from your search. The crowbar you found is still here, lying where you pulled it out—two feet of rust-spotted steel wedged between the third and fourth tire.',
                         media: undefined
                     }
                 },
@@ -1418,7 +1953,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                 {
                     // State 2: REVEALED - Crowbar found but not taken
                     conditions: [
-                        { type: 'ITEM_IN_WORLD', itemId: 'item_crowbar', inWorld: true }
+                        { type: 'HAS_FLAG', flag: 'tires_moved' }
                     ],
                     success: {
                         message: 'You already moved the tires apart. The crowbar is right there—you can see it lying between the rubber. Just take it if you need it.',
@@ -1448,7 +1983,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                 {
                     // State 2: REVEALED - Already moved, crowbar visible
                     conditions: [
-                        { type: 'ITEM_IN_WORLD', itemId: 'item_crowbar', inWorld: true }
+                        { type: 'HAS_FLAG', flag: 'tires_moved' }
                     ],
                     success: {
                         message: 'You already moved the tires apart. The crowbar is lying right there between the rubber. Take it if you need it.',
@@ -1462,7 +1997,8 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         message: 'You grip the top tire and roll it aside. Heavy. The rubber is slick with grime, waterlogged from years of exposure. It hits the ground with a dull thud.\n\nSecond tire. Roll it away.\n\nThird tire. You pause. This is the one. You felt something metal wedged against it.\n\nYou push it aside, and there it is—\n\nA crowbar.\n\nSteel, about two feet long. Rust-spotted but solid. The curved pry end catches the dim light. The kind of tool you use when you need leverage.\n\nSomeone hid this here. Deliberately. Tucked it between the tires where no casual passerby would find it.\n\nWhy?\n\nYou should take it. Could be useful.',
                         media: undefined,
                         effects: [
-                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_crowbar', parentId: 'obj_tire_stack' }
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_crowbar', parentId: 'obj_tire_stack' },
+                            { type: 'SET_FLAG', flag: 'tires_moved', value: true }
                         ]
                     }
                 }
@@ -1671,7 +2207,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             },
             onTake: {
                 fail: {
-                    message: 'It\'s a door. A heavy metal door bolted into a concrete frame. You can\'t take it with you any more than you could carry away a section of brick wall. It\'s architecture. If you want to get past it, you need to OPEN it or find the right code to UNLOCK it.',
+                    message: 'It\'s a door. A heavy metal door bolted into a concrete frame. You can\'t take it with you any more than you could carry away a section of brick wall. It\'s architecture.',
                     media: undefined
                 }
             },
@@ -1875,6 +2411,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         alternateNames: ['pile of old tires', 'tire pile', 'tires', 'old tires', 'pile of tires', 'tire stack'],
         archetype: 'Furniture',
         description: 'A haphazard stack of old tires, weathered and cracked.',
+        zone: 'zone_at_dumpster' as ZoneId,
         capabilities: { openable: false, lockable: false, breakable: false, movable: true, powerable: false, container: false, readable: false, inputtable: false },
         state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
         children: {
@@ -1926,8 +2463,8 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
         inventory: { items: [] as ItemId[], capacity: 10, allowTags: [], denyTags: [] },
         children: {
-            items: ['item_sealed_bag'] as ItemId[],
-            objects: []
+            items: [],
+            objects: ['obj_sealed_bag' as GameObjectId]
         },
         handlers: {
             onSmell: {
@@ -1951,7 +2488,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         media: undefined,
                         effects: [
                             { type: 'SET_FLAG', flag: 'dumpster_searched', value: true },
-                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_sealed_bag', parentId: 'obj_alley_dumpster' }
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'obj_sealed_bag', parentId: 'obj_alley_dumpster' }
                         ]
                     }
                 }
@@ -2076,7 +2613,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         message: 'You pull the handle. The door swings open with a pneumatic hiss.\n\nA small room beyond. Hidden. Secret.\n\nThis is where they operated.',
                         media: undefined,
                         effects: [
-                            { type: 'SET_STATE', entityId: 'obj_alley_metal_door', key: 'isOpen', value: true },
+                            { type: 'SET_ENTITY_STATE', entityId: 'obj_alley_metal_door', patch: { isOpen: true } },
                             { type: 'SET_FLAG', flag: 'hidden_room_discovered', value: true }
                         ]
                     }
@@ -2098,7 +2635,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                     message: 'The keypad beeps. Green light.\n\nClunk. The door unlocks.\n\n1984. Of course.',
                     media: undefined,
                     effects: [
-                        { type: 'SET_STATE', entityId: 'obj_alley_metal_door', key: 'isLocked', value: false }
+                        { type: 'SET_ENTITY_STATE', entityId: 'obj_alley_metal_door', patch: { isLocked: false } }
                     ]
                 }
             },
@@ -2124,10 +2661,10 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         description: 'An old metal locker, rusted and bent but still latched shut.',
         capabilities: { openable: true, lockable: false, breakable: false, movable: false, powerable: false, container: true, readable: false, inputtable: false },
         state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'locked' },
-        inventory: { items: ['item_cashbox'] as ItemId[], capacity: 1, allowTags: [], denyTags: [] },
+        inventory: { items: [], capacity: 1, allowTags: [], denyTags: [] },
         children: {
-            items: ['item_cashbox'] as ItemId[],
-            objects: []
+            items: [],
+            objects: ['obj_cashbox' as GameObjectId]
         },
         handlers: {
             onExamine: [
@@ -2178,8 +2715,8 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                         message: 'You wedge the crowbar into the gap and lever it hard.\n\nMetal screams. The latch tears free.\n\nInside: a locked metal cashbox. Small, dented, heavy.',
                         media: undefined,
                         effects: [
-                            { type: 'SET_STATE', entityId: 'obj_rusty_locker', key: 'isOpen', value: true },
-                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_cashbox', parentId: 'obj_rusty_locker' }
+                            { type: 'SET_ENTITY_STATE', entityId: 'obj_rusty_locker', patch: { isOpen: true } },
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'obj_cashbox', parentId: 'obj_rusty_locker' }
                         ]
                     }
                 }
@@ -2204,29 +2741,19 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         capabilities: { openable: false, lockable: false, breakable: false, movable: false, powerable: false, container: false, readable: false, inputtable: false },
         state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
         children: {
-            items: ['item_burner_phone'] as ItemId[],
-            objects: []
+            items: [],
+            objects: ['obj_burner_phone' as GameObjectId]
         },
         handlers: {
-            onExamine: [
-                {
-                    conditions: [{ type: 'HAS_ITEM', itemId: 'item_burner_phone' }],
-                    success: {
-                        message: 'The table is empty now. Just scratches and old stains.',
-                        media: undefined
-                    }
-                },
-                {
-                    conditions: [],
-                    success: {
-                        message: 'Metal table, bolted to the floor. Surface covered in scratches. Someone worked here.\n\nA cheap burner phone sits on top, screen dark.',
-                        media: undefined,
-                        effects: [
-                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_burner_phone', parentId: 'obj_hidden_table' }
-                        ]
-                    }
+            onExamine: {
+                success: {
+                    message: 'Metal table, bolted to the floor. Surface covered in scratches. Someone worked here.\n\nA cheap burner phone sits on top, screen dark.',
+                    media: undefined,
+                    effects: [
+                        { type: 'REVEAL_FROM_PARENT', entityId: 'obj_burner_phone', parentId: 'obj_hidden_table' }
+                    ]
                 }
-            ]
+            }
         },
         design: {
             authorNotes: "Holds burner phone, key evidence linking to the operation network.",
@@ -2477,28 +3004,62 @@ const locations: Record<LocationId, Location> = {
         ],
         zones: [
             {
-                title: 'Bus Station',
-                objectIds: ['obj_bus_stop' as GameObjectId, 'obj_bench' as GameObjectId, 'obj_info_board' as GameObjectId, 'obj_bus_sign' as GameObjectId]
+                id: 'zone_street_overview' as ZoneId,
+                isDefault: true,
+                title: 'Street Overview',
+                description: 'You stand on Elm Street, taking in the scene',
+                objectIds: [],
+                transitionNarration: 'You step back to get a wider view of the street'
             },
             {
-                title: 'Electrician Van',
-                objectIds: []
+                id: 'zone_bus_stop' as ZoneId,
+                parent: 'zone_street_overview' as ZoneId,
+                title: 'Bus Stop',
+                objectIds: ['obj_bus_stop' as GameObjectId, 'obj_bench' as GameObjectId, 'obj_info_board' as GameObjectId, 'obj_bus_sign' as GameObjectId],
+                transitionNarration: 'You walk over to the bus stop'
             },
             {
+                id: 'zone_gray_building' as ZoneId,
+                parent: 'zone_street_overview' as ZoneId,
                 title: 'Gray Building',
-                objectIds: ['obj_gray_building_door' as GameObjectId]
+                objectIds: ['obj_gray_building_door' as GameObjectId],
+                transitionNarration: 'You approach the gray building entrance'
             },
             {
-                title: 'Florist',
-                objectIds: ['obj_florist_shop' as GameObjectId]
+                id: 'zone_florist' as ZoneId,
+                parent: 'zone_street_overview' as ZoneId,
+                title: 'Florist Shop',
+                objectIds: ['obj_florist_shop' as GameObjectId],
+                transitionNarration: 'You walk toward the florist shop'
             },
             {
+                id: 'zone_kiosk' as ZoneId,
+                parent: 'zone_street_overview' as ZoneId,
                 title: 'Kiosk',
-                objectIds: ['obj_kiosk_counter' as GameObjectId]
+                objectIds: ['obj_kiosk_counter' as GameObjectId],
+                transitionNarration: 'You move to the kiosk counter'
             },
             {
+                id: 'zone_side_alley' as ZoneId,
+                parent: 'zone_street_overview' as ZoneId,
                 title: 'Side Alley',
-                objectIds: ['obj_side_alley' as GameObjectId]
+                objectIds: ['obj_side_alley' as GameObjectId],
+                transitionNarration: 'You turn into the narrow side alley'
+            },
+            {
+                id: 'zone_at_dumpster' as ZoneId,
+                parent: 'zone_side_alley' as ZoneId,
+                title: 'At the Dumpster',
+                objectIds: ['obj_dumpster' as GameObjectId, 'obj_tire_pile' as GameObjectId],
+                transitionNarration: 'You approach the large dumpster'
+            },
+            {
+                id: 'zone_inside_dumpster' as ZoneId,
+                parent: 'zone_at_dumpster' as ZoneId,
+                title: 'Inside the Dumpster',
+                objectIds: ['obj_old_suitcase' as GameObjectId, 'obj_paper_carton' as GameObjectId, 'obj_black_trash_bag' as GameObjectId],
+                requiresAction: 'climb',
+                transitionNarration: 'You climb into the dumpster, surrounded by garbage'
             }
         ],
         transitionTemplates: [

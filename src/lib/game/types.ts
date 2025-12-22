@@ -15,6 +15,7 @@ export type WorldId = string & { readonly __brand: 'WorldId' };
 export type CellId = string & { readonly __brand: 'CellId' };
 export type StructureId = string & { readonly __brand: 'StructureId' };
 export type PortalId = string & { readonly __brand: 'PortalId' };
+export type ZoneId = string & { readonly __brand: 'ZoneId' };
 
 // --- Entity Type Classifications (for Archetypes) ---
 
@@ -95,6 +96,7 @@ export type Effect =
   | { type: 'CLEAR_FOCUS' } // NEW: Clear player focus
   | { type: 'SET_DEVICE_FOCUS'; deviceId: GameObjectId | ItemId } // NEW: Enter device mode (phone, laptop, etc.)
   | { type: 'CLEAR_DEVICE_FOCUS' } // NEW: Exit device mode
+  | { type: 'SET_ZONE'; zoneId: ZoneId; transitionMessage?: string } // NEW: Set player zone within location
   | { type: 'MOVE_TO_CELL', toCellId: CellId }
   | { type: 'MOVE_TO_LOCATION'; toLocationId: LocationId } // NEW: Move player to location
   | { type: 'TELEPORT'; toLocationId: LocationId } // NEW: Teleport player
@@ -212,7 +214,10 @@ export type PlayerState = {
   currentLocationId: LocationId; // Can be a cell or a location
   inventory: ItemId[];
 
-  // Focus System: Track what the player is currently interacting with ("standing at")
+  // NEW: Zone System - Track WHERE the player physically is within a location
+  currentZoneId?: ZoneId; // Current zone within location (e.g., 'zone_at_dumpster')
+
+  // Focus System: Track WHAT the player is currently examining closely (optional attention layer)
   currentFocusId?: string; // ID of the focused object/item/NPC
   previousFocusId?: string; // Previous focus for transition messages
   focusType?: 'object' | 'item' | 'npc'; // Type of focused entity
@@ -473,6 +478,7 @@ export type GameObject = {
   archetype: GameObjectType;
 
   personal?: boolean; // Personal equipment (phone, badge, etc.) - always accessible, never in scene listings
+  zone?: ZoneId | 'personal'; // NEW: Which zone this object is in (or 'personal' for always-accessible equipment)
 
   capabilities: {
     openable: boolean;
@@ -618,6 +624,7 @@ export type Item = {
   description: string;
   alternateDescription?: string;
   i18nKey?: string;
+  zone?: ZoneId | 'personal'; // NEW: Which zone this item is in initially (or 'personal' for always-accessible equipment). Once taken, accessible from inventory regardless of zone.
   
   capabilities: {
     isTakable: boolean;
@@ -751,6 +758,7 @@ export type NPC = {
   name: string;
   description: string;
   image?: ImageDetails;
+  zone?: ZoneId; // NEW: Which zone this NPC is in (player must be in this zone to talk to them)
 
   // Type system for conversation handling
   npcType: 'type1' | 'type2';  // type1 = story-critical with canned answers, type2 = AI-generated flavor
@@ -916,6 +924,26 @@ export type Structure = {
     onBreach?: Handler;
 };
 
+/**
+ * Zone - Spatial position within a Location
+ *
+ * Zones define WHERE the player physically is within a location.
+ * Players must navigate between zones using "go to" commands.
+ *
+ * Special zone values:
+ * - 'personal' = Always accessible personal equipment (phone, badge)
+ */
+export type Zone = {
+  id: ZoneId;                     // Unique zone ID (e.g., 'zone_street_overview', 'zone_inside_dumpster')
+  isDefault?: boolean;            // Starting zone when player enters location
+  parent?: ZoneId;                // Parent zone (must be in parent to access this zone)
+  title: string;                  // Display name (e.g., "At the dumpster")
+  description?: string;           // Optional description of the zone
+  objectIds: GameObjectId[];      // Objects located in this zone
+  transitionNarration?: string;   // Message shown when player enters this zone
+  requiresAction?: string;        // Special action required to enter (e.g., 'climb', 'unlock')
+};
+
 export type Location = {
   locationId: LocationId;
   name:string;
@@ -932,9 +960,9 @@ export type Location = {
   npcs: NpcId[];
   onEnterLocation?: Handler;
   onExitLocation?: Handler;
-  zones?: { title: string, objectIds: GameObjectId[] }[];
+  zones?: Zone[]; // NEW: Explicit zone definitions for spatial navigation (required for sprawling locations)
   transitionTemplates?: string[]; // Location-specific atmospheric transitions. Use {entity} placeholder for object/NPC name.
-  spatialMode?: 'compact' | 'sprawling'; // 'compact' = all objects within reach (default, Cartridge 0), 'sprawling' = requires navigation between children (Cartridge 1+)
+  spatialMode?: 'compact' | 'sprawling'; // 'compact' = all objects within reach (default, Cartridge 0), 'sprawling' = requires navigation between zones (Cartridge 1+)
 };
 
 export type Portal = {

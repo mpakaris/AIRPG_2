@@ -2,11 +2,18 @@
  * FocusManager - Centralized Focus Logic
  *
  * Determines where player focus should be AFTER an action completes.
- * This replaces scattered focus logic across individual handlers.
+ * Focus = WHAT the player is examining closely (attention layer)
+ * Zone = WHERE the player is physically (spatial position)
+ *
+ * Focus is optional and separate from zones:
+ * - You can be in zone_at_dumpster and focus on obj_trash_bag
+ * - Focus allows detailed examination of specific entities
+ * - Zone controls physical accessibility
  */
 
 import type { PlayerState, Game, Effect, GameObjectId, ItemId, NpcId } from '../types';
 import { GameStateManager } from './GameStateManager';
+import { ZoneManager } from './ZoneManager';
 
 export type ActionType = 'search' | 'examine' | 'use' | 'take' | 'open' | 'close' | 'break' | 'talk' | 'move' | 'go' | 'climb' | 'read';
 

@@ -16,6 +16,7 @@ import { findBestMatch } from "@/lib/game/utils/name-matching";
 import { MessageExpander } from "@/lib/game/utils/message-expansion";
 import { logEntityDebug } from "@/lib/game/utils/debug-helpers";
 import { getSmartNotFoundMessage } from "@/lib/game/utils/smart-messages";
+import { generateCantAccessMessage } from "@/ai";
 
 const examinedObjectFlag = (id: string) => `examined_${id}`;
 
@@ -64,44 +65,46 @@ export async function handleExamine(state: PlayerState, targetName: string, game
         requireFocus: false  // Allow examining objects outside current focus
     });
 
-    // SPRAWLING MODE: Check spatial distance for objects
-    if (bestMatch?.category === 'object') {
-        const objectId = bestMatch.id as GameObjectId;
-        const obj = game.gameObjects[objectId];
+    // NEW ZONE ARCHITECTURE: Check zone access for objects and items
+    if (bestMatch && (bestMatch.category === 'object' || bestMatch.category === 'item')) {
+        const { ZoneManager } = await import('@/lib/game/engine');
+        const targetType = bestMatch.category === 'object' ? 'object' : 'item';
+        const accessCheck = ZoneManager.canAccess(
+            bestMatch.id as GameObjectId | ItemId,
+            targetType,
+            state,
+            game
+        );
 
-        // Skip sprawling check for personal equipment (phone, badge, etc.) - always accessible
-        if (!obj?.personal) {
-            // Get current location's spatial mode
-            const currentLocation = game.locations[state.currentLocationId];
-            const spatialMode = currentLocation?.spatialMode || 'compact';
+        if (!accessCheck.allowed) {
+            // Generate AI-powered narrative failure message
+            let errorMessage: string;
 
-            // In sprawling mode, require focus on the object before examining
-            if (spatialMode === 'sprawling' && state.currentFocusId !== objectId) {
-                // EXCEPTION 1: If player is inside dumpster, they can examine children of dumpster
-                const isInsideDumpster = GameStateManager.hasFlag(state, 'dumpster_climbed' as any);
-                const isChildOfDumpster = obj?.parentId === 'obj_dumpster';
-
-                // EXCEPTION 2: Can examine children/descendants of current focus
-                const isChildOfCurrentFocus = state.currentFocusId && obj?.parentId === state.currentFocusId;
-                const isDescendantOfCurrentFocus = state.currentFocusId &&
-                    GameStateManager.getAncestors(state, objectId).includes(state.currentFocusId);
-
-                // Allow if any exception applies
-                const allowExamine = (isInsideDumpster && isChildOfDumpster) ||
-                                    isChildOfCurrentFocus ||
-                                    isDescendantOfCurrentFocus;
-
-                if (!allowExamine) {
-                    const message = await MessageExpander.static(
-                        `The ${obj?.name || 'object'} is too far away to examine in detail from here. You'll need to get closer to see it properly.`
-                    );
-                    return [{
-                        type: 'SHOW_MESSAGE',
-                        speaker: 'narrator',
-                        content: message
-                    }];
+            if (accessCheck.reason === 'out_of_zone') {
+                try {
+                    const location = game.locations[state.currentLocationId];
+                    const aiResult = await generateCantAccessMessage({
+                        targetName: accessCheck.targetName || targetName,
+                        action: 'examine',
+                        locationName: location?.name || 'Unknown',
+                        gameSetting: game.setting || 'Modern-day detective game'
+                    });
+                    errorMessage = aiResult.output.message;
+                } catch (error) {
+                    console.error("AI generation failed for cant-access message:", error);
+                    errorMessage = `You can't examine that from here.`;
                 }
+            } else if (accessCheck.reason === 'container_closed') {
+                errorMessage = `You'll need to open the container first before you can examine what's inside.`;
+            } else {
+                errorMessage = 'You cannot examine that from here';
             }
+
+            return [{
+                type: 'SHOW_MESSAGE',
+                speaker: 'narrator',
+                content: errorMessage
+            }];
         }
     }
 

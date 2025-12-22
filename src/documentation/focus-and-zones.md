@@ -1,11 +1,38 @@
 # Focus and Zone System
 
-**Last Updated**: 2025-11-07
+**Last Updated**: 2025-12-18
 **Critical Architectural Documentation**
+
+> **⚠️ MAJOR UPDATE (2025-12-18):** This system has been completely redesigned. Zone and Focus are now **two separate, complementary systems**. See `zone-architecture.md` for full details.
 
 ## Overview
 
-The AIRPG_2 game uses a **focus system** (also called "island system") to manage player attention and interaction scope. When a player focuses on an entity, their commands are scoped to that entity and its children.
+The AIRPG_2 game uses a **two-layer positioning system**:
+
+1. **Zone System** (NEW) - WHERE the player physically is (spatial position)
+2. **Focus System** (EXISTING) - WHAT the player is examining closely (attention layer)
+
+These systems work together but serve different purposes:
+- **Zone** controls **accessibility** (can you reach this?)
+- **Focus** controls **attention** (what are you looking at closely?)
+
+**📖 For comprehensive zone documentation, see:** `zone-architecture.md`
+
+---
+
+## Quick Comparison: Zone vs Focus
+
+| Aspect | Zone System (NEW) | Focus System (EXISTING) |
+|--------|------------------|------------------------|
+| **Purpose** | Physical position (WHERE) | Attention/examination (WHAT) |
+| **Controls** | Accessibility to entities | Detailed examination scope |
+| **Mandatory?** | Yes (for sprawling locations) | No (optional) |
+| **State Property** | `state.currentZoneId` | `state.currentFocusId` |
+| **Commands** | `GO TO`, `CLIMB` | `EXAMINE`, `SEARCH` |
+| **Example** | `zone_inside_dumpster` | `obj_trash_bag` |
+| **Changes How?** | Via zone navigation | Via examination/interaction |
+
+**Example:** Player can be in `zone_at_dumpster` (WHERE) while focusing on `obj_tire_pile` (WHAT).
 
 ---
 

@@ -15,7 +15,7 @@ import { buildEffectsFromOutcome } from "@/lib/game/utils/outcome-helpers";
 import { findBestMatch } from "@/lib/game/utils/name-matching";
 import { getSmartNotFoundMessage } from "@/lib/game/utils/smart-messages";
 import { MessageExpander } from "@/lib/game/utils/message-expansion";
-import { generateCantTakeMessage } from "@/ai";
+import { generateCantTakeMessage, generateCantAccessMessage } from "@/ai";
 
 export async function handleTake(state: PlayerState, targetName: string, game: Game): Promise<Effect[]> {
   const normalizedTarget = normalizeName(targetName);
@@ -115,6 +115,45 @@ export async function handleTake(state: PlayerState, targetName: string, game: G
       type: 'SHOW_MESSAGE',
       speaker: 'system',
       content: message,
+      messageType: 'image',
+      imageUrl: game.systemMedia?.take?.failure?.url,
+      imageDescription: game.systemMedia?.take?.failure?.description,
+      imageHint: game.systemMedia?.take?.failure?.hint
+    }];
+  }
+
+  // NEW ZONE ARCHITECTURE: Check zone access for items
+  const { ZoneManager } = await import('@/lib/game/engine');
+  const accessCheck = ZoneManager.canAccess(itemId, 'item', state, game);
+
+  if (!accessCheck.allowed) {
+    // Generate AI-powered narrative failure message
+    let errorMessage: string;
+
+    if (accessCheck.reason === 'out_of_zone') {
+      try {
+        const location = game.locations[state.currentLocationId];
+        const aiResult = await generateCantAccessMessage({
+          targetName: accessCheck.targetName || targetName,
+          action: 'take',
+          locationName: location?.name || 'Unknown',
+          gameSetting: game.setting || 'Modern-day detective game'
+        });
+        errorMessage = aiResult.output.message;
+      } catch (error) {
+        console.error("AI generation failed for cant-access message:", error);
+        errorMessage = `You can't reach that from here.`;
+      }
+    } else if (accessCheck.reason === 'container_closed') {
+      errorMessage = `You'll need to open the container first before you can take what's inside.`;
+    } else {
+      errorMessage = 'You cannot reach that from here';
+    }
+
+    return [{
+      type: 'SHOW_MESSAGE',
+      speaker: 'narrator',
+      content: errorMessage,
       messageType: 'image',
       imageUrl: game.systemMedia?.take?.failure?.url,
       imageDescription: game.systemMedia?.take?.failure?.description,

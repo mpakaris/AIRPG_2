@@ -23,3 +23,5 @@ export { FocusResolver } from './FocusResolver';
 export type { EntityMatch } from './FocusResolver';
 export { FocusManager } from './FocusManager';
 export type { ActionType, FocusContext } from './FocusManager';
+export { ZoneManager } from './ZoneManager';
+export type { AccessResult } from './ZoneManager';
