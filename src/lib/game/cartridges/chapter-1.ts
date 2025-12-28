@@ -1090,13 +1090,23 @@ const gameObjects: Record<GameObjectId, GameObject> = {
     'obj_crates': {
         id: 'obj_crates' as GameObjectId,
         name: 'Crates',
-        alternateNames: ['crates', 'wooden crates', 'boxes', 'stacked crates', 'shipping crates'],
+        alternateNames: ['crates', 'wooden crates', 'boxes', 'stacked crates', 'shipping crates', 'panel', 'hidden panel', 'lever', 'mechanism'],
         archetype: 'Container',
         description: 'Stacked wooden crates in the alley. They look abandoned.',
+        zone: 'zone_side_alley' as ZoneId,
         isRevealed: false,
         transitionNarration: 'You move closer to the stacked crates, examining their weathered surfaces.',
         capabilities: { openable: false, lockable: false, breakable: false, movable: true, powerable: false, container: false, readable: false, inputtable: false },
-        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
+        state: {
+            isOpen: false,
+            isLocked: false,
+            isBroken: false,
+            isPoweredOn: false,
+            currentStateId: 'default',
+            panelDiscovered: false,
+            panelOpened: false,
+            leverPulled: false
+        },
         handlers: {
             onExamine: [
                 {
@@ -1118,6 +1128,151 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                     conditions: [],
                     success: {
                         message: 'The crates sit where you moved them, shifted several feet to the side. The hidden door behind them is now fully visible—old, rusted, with that keypad on the frame.',
+                        media: undefined
+                    }
+                }
+            ],
+            onPeek: [
+                {
+                    // Panel not discovered yet
+                    conditions: [
+                        { type: 'OBJECT_STATE', objectId: 'obj_crates', statePath: 'panelDiscovered', value: false }
+                    ],
+                    success: {
+                        message: 'You crouch down, peering around the sides of the crate stack. Looking for gaps. Spaces. Anything hidden.\n\nMost of the crates are flush against the wall. But on the right side, near the bottom, you spot something.\n\nA wooden panel. Smaller than the crates. Different wood grain. It\'s been fitted into the stack—deliberately placed, not part of the original crates.\n\nSomeone built this. Someone hid something here.',
+                        media: undefined,
+                        effects: [
+                            { type: 'SET_ENTITY_STATE', entityId: 'obj_crates', key: 'panelDiscovered', value: true }
+                        ]
+                    }
+                },
+                {
+                    // Panel discovered but not opened
+                    conditions: [
+                        { type: 'OBJECT_STATE', objectId: 'obj_crates', statePath: 'panelDiscovered', value: true },
+                        { type: 'OBJECT_STATE', objectId: 'obj_crates', statePath: 'panelOpened', value: false }
+                    ],
+                    success: {
+                        message: 'The hidden panel is still there, fitted into the right side of the crate stack. You can see the seams now—someone carefully cut and installed this panel.\n\nIt\'s not nailed shut. It looks like you could pry it open.',
+                        media: undefined
+                    }
+                },
+                {
+                    // Panel opened
+                    conditions: [],
+                    success: {
+                        message: 'The panel hangs open, revealing the mechanical lever inside. Old. Rusted. Functional.',
+                        media: undefined
+                    }
+                }
+            ],
+            onKnock: [
+                {
+                    // Before panel discovered
+                    conditions: [
+                        { type: 'OBJECT_STATE', objectId: 'obj_crates', statePath: 'panelDiscovered', value: false }
+                    ],
+                    success: {
+                        message: 'You knock on the crates. Solid wood. Thunk thunk thunk. Nothing unusual.',
+                        media: undefined
+                    }
+                },
+                {
+                    // After panel discovered but not opened
+                    conditions: [
+                        { type: 'OBJECT_STATE', objectId: 'obj_crates', statePath: 'panelDiscovered', value: true },
+                        { type: 'OBJECT_STATE', objectId: 'obj_crates', statePath: 'panelOpened', value: false }
+                    ],
+                    success: {
+                        message: 'You tap your knuckles on the hidden panel. Different sound. Lighter. Hollow.\n\nThere\'s a space behind this panel. Something hidden inside.',
+                        media: undefined
+                    }
+                },
+                {
+                    // Panel opened
+                    conditions: [],
+                    success: {
+                        message: 'The panel is already open. No need to knock.',
+                        media: undefined
+                    }
+                }
+            ],
+            onPry: [
+                {
+                    // Panel not discovered yet
+                    conditions: [
+                        { type: 'OBJECT_STATE', objectId: 'obj_crates', statePath: 'panelDiscovered', value: false }
+                    ],
+                    success: {
+                        message: 'You try prying at the crate edges. They\'re solid, waterlogged, heavy. Nothing budges.\n\nMaybe look around the crates more carefully first.',
+                        media: undefined
+                    }
+                },
+                {
+                    // Panel discovered, has crowbar
+                    conditions: [
+                        { type: 'OBJECT_STATE', objectId: 'obj_crates', statePath: 'panelDiscovered', value: true },
+                        { type: 'OBJECT_STATE', objectId: 'obj_crates', statePath: 'panelOpened', value: false },
+                        { type: 'HAS_ITEM', itemId: 'item_crowbar' }
+                    ],
+                    success: {
+                        message: 'You wedge the crowbar tip into the seam of the hidden panel. Leverage. You pull.\n\nThe panel pops free with a crack of splintering wood. Behind it: a small cavity. And inside that cavity, a mechanical lever. Old. Rusted. But functional.\n\nSomeone installed this. Someone hid a lever mechanism inside the crate stack.\n\nWhat does it do?',
+                        media: undefined,
+                        effects: [
+                            { type: 'SET_ENTITY_STATE', entityId: 'obj_crates', key: 'panelOpened', value: true }
+                        ]
+                    }
+                },
+                {
+                    // Panel discovered, no crowbar
+                    conditions: [
+                        { type: 'OBJECT_STATE', objectId: 'obj_crates', statePath: 'panelDiscovered', value: true },
+                        { type: 'OBJECT_STATE', objectId: 'obj_crates', statePath: 'panelOpened', value: false }
+                    ],
+                    success: {
+                        message: 'You try to pry the panel open with your fingers. It won\'t budge. Fitted tight. Nailed or glued in place.\n\nYou\'d need a tool. Something to leverage it open.',
+                        media: undefined
+                    }
+                },
+                {
+                    // Panel already opened
+                    conditions: [],
+                    success: {
+                        message: 'The panel is already pried open. The lever mechanism is visible inside.',
+                        media: undefined
+                    }
+                }
+            ],
+            onPull: [
+                {
+                    // Panel not opened yet
+                    conditions: [
+                        { type: 'OBJECT_STATE', objectId: 'obj_crates', statePath: 'panelOpened', value: false }
+                    ],
+                    success: {
+                        message: 'Pull what? The crates are too heavy to move by hand. If you mean something else, you\'ll need to find it first.',
+                        media: undefined
+                    }
+                },
+                {
+                    // Lever not pulled yet
+                    conditions: [
+                        { type: 'OBJECT_STATE', objectId: 'obj_crates', statePath: 'panelOpened', value: true },
+                        { type: 'OBJECT_STATE', objectId: 'obj_crates', statePath: 'leverPulled', value: false }
+                    ],
+                    success: {
+                        message: 'You grip the rusted lever. Cold metal. Rough with corrosion.\n\nYou pull.\n\nThe lever resists at first—decades of rust and disuse. Then it gives. Slowly. Smoothly. You hear a mechanical sound from inside the wall behind the crates. A series of clicks. Metal sliding against metal.\n\nSomething unlocked. Something disengaged.\n\nBut the crates haven\'t moved. The lever mechanism isn\'t for moving the crates—it\'s for something behind them.\n\nYou\'ll still need the crowbar to shift the crates themselves.',
+                        media: undefined,
+                        effects: [
+                            { type: 'SET_ENTITY_STATE', entityId: 'obj_crates', key: 'leverPulled', value: true }
+                        ]
+                    }
+                },
+                {
+                    // Lever already pulled
+                    conditions: [],
+                    success: {
+                        message: 'You already pulled the lever. It won\'t move again—it\'s locked in the down position. Whatever it unlocked is done.',
                         media: undefined
                     }
                 }
@@ -1144,20 +1299,23 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             ],
             onSearch: [
                 {
-                    // State 1: UNTOUCHED - Nothing hidden
+                    // Panel not discovered yet
                     conditions: [
-                        { type: 'OBJECT_IN_WORLD', objectId: 'obj_courtyard_door', inWorld: false }
+                        { type: 'OBJECT_STATE', objectId: 'obj_crates', statePath: 'panelDiscovered', value: false }
                     ],
                     success: {
-                        message: 'You check between the crates, looking for anything hidden in the gaps. Nothing. Empty spaces, cobwebs, dust.',
-                        media: undefined
+                        message: 'You check between the crates, looking for anything hidden in the gaps. Mostly empty spaces, cobwebs, dust.\n\nWait. On the right side, near the bottom—is that a panel? Different wood. Fitted into the stack. Not part of the original crates.',
+                        media: undefined,
+                        effects: [
+                            { type: 'SET_ENTITY_STATE', entityId: 'obj_crates', key: 'panelDiscovered', value: true }
+                        ]
                     }
                 },
                 {
-                    // State 2: REVEALED - Already searched
+                    // Panel discovered
                     conditions: [],
                     success: {
-                        message: 'You already moved the crates and revealed the door. Nothing else here.',
+                        message: 'You already found the hidden panel on the right side of the crate stack. It looks like you could pry it open if you had the right tool.',
                         media: undefined
                     }
                 }
@@ -1979,12 +2137,20 @@ const gameObjects: Record<GameObjectId, GameObject> = {
     'obj_tire_stack': {
         id: 'obj_tire_stack' as GameObjectId,
         name: 'Tire Stack',
-        alternateNames: ['tire stack', 'tires', 'old tires', 'stacked tires', 'car tires', 'pile of tires'],
+        alternateNames: ['tire stack', 'tires', 'old tires', 'stacked tires', 'car tires', 'pile of tires', 'tire pile', 'third tire', 'top tire', 'bottom tire'],
         archetype: 'Container',
         description: 'A pile of old car tires stacked haphazardly in the corner. Cracked rubber, weeds growing through the centers.',
+        zone: 'zone_side_alley' as ZoneId,
         transitionNarration: 'You move closer to the pile of old tires. They smell like burnt rubber and decay.',
         capabilities: { openable: false, lockable: false, breakable: false, movable: true, powerable: false, container: true, readable: false, inputtable: false },
-        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
+        state: {
+            isOpen: false,
+            isLocked: false,
+            isBroken: false,
+            isPoweredOn: false,
+            currentStateId: 'default',
+            tiresRemoved: 0  // Track how many tires player has lifted/removed
+        },
         children: {
             items: ['item_crowbar' as ItemId],
             objects: []
@@ -2016,6 +2182,179 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                     conditions: [],
                     success: {
                         message: 'Five or six old car tires, stacked haphazardly against the brick wall like someone tossed them there and forgot. The rubber is cracked, dry-rotted from years of exposure. Deep fissures run along the treads where the material split and separated. Black flakes dust your fingers when you touch them.\n\nWeeds have colonized the centers—dandelions gone to seed, scraggly grass pushing through the holes. Nature reclaiming what was abandoned.\n\nThe smell is distinct: burnt rubber mixed with decay, that chemical petroleum stench that never fully fades. It clings to the back of your throat.\n\nThey\'re heavier than they look. Decades of moisture absorbed into the rubber, making them dense, waterlogged. Someone would need to roll them aside one by one if they wanted to move them.\n\nBut why would anyone? They\'re just trash. Forgotten debris in a forgotten alley.\n\nUnless they\'re hiding something.',
+                        media: undefined
+                    }
+                }
+            ],
+            onKick: [
+                {
+                    // Already moved/taken
+                    conditions: [
+                        { type: 'HAS_ITEM', itemId: 'item_crowbar' }
+                    ],
+                    success: {
+                        message: 'You kick the scattered tires. They shift a few inches. Nothing new to discover—you already got the crowbar.',
+                        media: undefined
+                    }
+                },
+                {
+                    // Before first kick
+                    conditions: [
+                        { type: 'NO_FLAG', flag: 'kicked_tires' }
+                    ],
+                    success: {
+                        message: 'You kick the bottom tire. Not hard—just enough to test the stack\'s stability.\n\nThe whole pile wobbles. The tires shift against each other, rubber scraping, settling back with a dull thud.\n\nAnd then you hear it.\n\nFaint. Metallic. A clink. Like metal tapping against metal, muffled by rubber.\n\nSomething inside the stack. Something hard. Hidden.',
+                        media: undefined,
+                        effects: [
+                            { type: 'SET_FLAG', flag: 'kicked_tires', value: true }
+                        ]
+                    }
+                },
+                {
+                    // After kicking once
+                    conditions: [],
+                    success: {
+                        message: 'You kick the pile again. Same wobble. Same scraping sound. You already know there\'s metal hidden inside.\n\nKicking it more won\'t help. You need to figure out which tire it\'s in.',
+                        media: undefined
+                    }
+                }
+            ],
+            onListen: [
+                {
+                    // Before kicking
+                    conditions: [
+                        { type: 'NO_FLAG', flag: 'kicked_tires' }
+                    ],
+                    success: {
+                        message: 'You press your ear against the rubber. Silence. Just the distant hum of traffic from Elm Street, wind whistling through the alley.\n\nThe tires themselves are quiet. Inert. Dead rubber sitting in a forgotten corner.\n\nMaybe disturb them first. See if they make any sounds.',
+                        media: undefined
+                    }
+                },
+                {
+                    // After kicking
+                    conditions: [
+                        { type: 'HAS_FLAG', flag: 'kicked_tires' }
+                    ],
+                    success: {
+                        message: 'You press your ear against different tires, listening for the source of that metallic clink you heard.\n\nTop tire: nothing. Just hollow rubber.\n\nSecond tire: nothing.\n\nThird tire: wait. You tap it gently. A faint rattle. Metallic. Something hard inside, wedged against the rim.\n\nThat\'s the one. The third tire from the top. Something metal is lodged inside it or pressed against it.',
+                        media: undefined,
+                        effects: [
+                            { type: 'SET_FLAG', flag: 'identified_third_tire', value: true }
+                        ]
+                    }
+                }
+            ],
+            onTilt: [
+                {
+                    // Before identifying third tire
+                    conditions: [
+                        { type: 'NO_FLAG', flag: 'identified_third_tire' }
+                    ],
+                    success: {
+                        message: 'You try tilting the tire stack. They\'re heavy, waterlogged. You manage to shift them a few degrees, but they settle back.\n\nIf you\'re looking for something specific, maybe listen first. Figure out where the sound is coming from.',
+                        media: undefined
+                    }
+                },
+                {
+                    // After identifying, before removing enough tires
+                    conditions: [
+                        { type: 'HAS_FLAG', flag: 'identified_third_tire' },
+                        { type: 'OBJECT_STATE', objectId: 'obj_tire_stack', statePath: 'tiresRemoved', lessThan: 2 }
+                    ],
+                    success: {
+                        message: 'You try to tilt the third tire to see what\'s inside. Can\'t. The tires above it are too heavy, pinning it down.\n\nYou\'d need to lift the top tires off first. Remove them one by one.',
+                        media: undefined
+                    }
+                },
+                {
+                    // After removing enough tires
+                    conditions: [],
+                    success: {
+                        message: 'The third tire is accessible now. You tilt it slightly, peering at the edges.\n\nThere—wedged between this tire and the one below it. Metal. Steel. A crowbar, you realize.\n\nYou should be able to pull it out now.',
+                        media: undefined
+                    }
+                }
+            ],
+            onShake: [
+                {
+                    // Before identifying third tire
+                    conditions: [
+                        { type: 'NO_FLAG', flag: 'identified_third_tire' }
+                    ],
+                    success: {
+                        message: 'You try shaking the tire stack. Too heavy. They barely move. Waterlogged rubber is dead weight.\n\nMaybe listen first. Figure out which tire has something inside.',
+                        media: undefined
+                    }
+                },
+                {
+                    // After identifying third tire
+                    conditions: [
+                        { type: 'HAS_FLAG', flag: 'identified_third_tire' }
+                    ],
+                    success: {
+                        message: 'You grip the third tire and try to shake it. Heavy. The rubber gives slightly under your hands—decades of rot making it soft—but the weight prevents real movement.\n\nYou hear that rattle again. Definite. Metal against rubber.\n\nWhatever\'s in there, you\'ll need to lift the tires above it first. Clear the weight.',
+                        media: undefined
+                    }
+                }
+            ],
+            onLift: [
+                {
+                    // Haven't kicked yet
+                    conditions: [
+                        { type: 'NO_FLAG', flag: 'kicked_tires' },
+                        { type: 'OBJECT_STATE', objectId: 'obj_tire_stack', statePath: 'tiresRemoved', equals: 0 }
+                    ],
+                    success: {
+                        message: 'You could lift these tires one by one, sure. But why? They\'re just old rubber. Trash.\n\nUnless you have a reason to think something\'s hidden underneath...',
+                        media: undefined
+                    }
+                },
+                {
+                    // First tire - removing top one
+                    conditions: [
+                        { type: 'OBJECT_STATE', objectId: 'obj_tire_stack', statePath: 'tiresRemoved', equals: 0 }
+                    ],
+                    success: {
+                        message: 'You grip the top tire with both hands. Heavier than expected. Waterlogged rubber, dense and unwieldy.\n\nYou lift. The tire comes free with a wet sucking sound, rubber peeling away from rubber. You set it aside.\n\nOne down. The stack is shorter now. You can see the second tire clearly.',
+                        media: undefined,
+                        effects: [
+                            { type: 'SET_ENTITY_STATE', entityId: 'obj_tire_stack', key: 'tiresRemoved', value: 1 }
+                        ]
+                    }
+                },
+                {
+                    // Second tire - almost there
+                    conditions: [
+                        { type: 'OBJECT_STATE', objectId: 'obj_tire_stack', statePath: 'tiresRemoved', equals: 1 }
+                    ],
+                    success: {
+                        message: 'Second tire. Same process. Grip. Lift. The rubber is slick with grime and moisture. You set it aside next to the first one.\n\nTwo tires removed. The third tire is now the top of the stack.\n\nThis is the one. The one that rattled. The one with metal inside.',
+                        media: undefined,
+                        effects: [
+                            { type: 'SET_ENTITY_STATE', entityId: 'obj_tire_stack', key: 'tiresRemoved', value: 2 }
+                        ]
+                    }
+                },
+                {
+                    // Third tire - revealing the crowbar
+                    conditions: [
+                        { type: 'OBJECT_STATE', objectId: 'obj_tire_stack', statePath: 'tiresRemoved', equals: 2 }
+                    ],
+                    success: {
+                        message: 'You grip the third tire. The one that made the sound.\n\nYou lift.\n\nAs the tire comes away, you see it—wedged in the gap between the third and fourth tire, hidden all along:\n\nA crowbar.\n\nSteel. About two feet long. Rust-spotted but solid. The curved pry end catches the dim alley light.\n\nSomeone hid this here. Deliberately. Stashed it between tires where nobody would look unless they were methodical. Patient. Determined.\n\nThe kind of tool you use when you need leverage.\n\nIt\'s yours now.',
+                        media: undefined,
+                        effects: [
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_crowbar', parentId: 'obj_tire_stack' },
+                            { type: 'SET_FLAG', flag: 'tires_moved', value: true },
+                            { type: 'SET_ENTITY_STATE', entityId: 'obj_tire_stack', key: 'tiresRemoved', value: 3 }
+                        ]
+                    }
+                },
+                {
+                    // After crowbar revealed
+                    conditions: [],
+                    success: {
+                        message: 'You already lifted enough tires. The crowbar is revealed. Just take it.',
                         media: undefined
                     }
                 }
@@ -2072,7 +2411,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                     }
                 },
                 {
-                    // State 1: UNTOUCHED - Moving reveals the crowbar
+                    // State 1: UNTOUCHED - Moving reveals the crowbar (quick path)
                     conditions: [],
                     success: {
                         message: 'You grip the top tire and roll it aside. Heavy. The rubber is slick with grime, waterlogged from years of exposure. It hits the ground with a dull thud.\n\nSecond tire. Roll it away.\n\nThird tire. You pause. This is the one. You felt something metal wedged against it.\n\nYou push it aside, and there it is—\n\nA crowbar.\n\nSteel, about two feet long. Rust-spotted but solid. The curved pry end catches the dim light. The kind of tool you use when you need leverage.\n\nSomeone hid this here. Deliberately. Tucked it between the tires where no casual passerby would find it.\n\nWhy?\n\nYou should take it. Could be useful.',
@@ -2172,11 +2511,12 @@ const gameObjects: Record<GameObjectId, GameObject> = {
     'obj_brick_walls': {
         id: 'obj_brick_walls' as GameObjectId,
         name: 'Brick Walls',
-        alternateNames: ['brick walls', 'walls', 'brick wall', 'bricks', 'wall', 'graffiti'],
+        alternateNames: ['brick walls', 'walls', 'brick wall', 'bricks', 'wall', 'graffiti', 'rose', 'justice', 'number', '1973'],
         archetype: 'Decoration',
         description: 'Tall brick walls on both sides of the alley. Stained black with decades of city grime.',
+        zone: 'zone_side_alley' as ZoneId,
         transitionNarration: 'You step closer to the brick wall, running your hand along its rough surface.',
-        capabilities: { openable: false, lockable: false, breakable: false, movable: false, powerable: false, container: false, readable: false, inputtable: false },
+        capabilities: { openable: false, lockable: false, breakable: false, movable: false, powerable: false, container: false, readable: true, inputtable: false },
         state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
         handlers: {
             onExamine: {
@@ -2188,6 +2528,30 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             onSearch: {
                 success: {
                     message: 'You run your hands along the bricks, checking for loose ones, hidden compartments, anything that might conceal evidence. Detective work 101: assume nothing is what it seems.\n\nYou press bricks around the rose graffiti. Pull on them. Check the mortar gaps near the "JUSTICE" tag. Trace your fingers around the "1973" stencil, looking for a hidden switch, a loose brick, anything.\n\nNothing.\n\nSolid wall. Crumbling in places, yes, but just age and weather. No secret passages. No hidden safes. No loose brick revealing a key taped inside.\n\nJust a wall. Old. Dirty. Forgotten.\n\nThe graffiti stares back at you—the rose, the word, the number. Beautiful. Angry. Meaningless.\n\nSometimes a wall is just a wall.',
+                    media: undefined
+                }
+            },
+            onRead: {
+                success: {
+                    message: 'You read the graffiti aloud, letting the words sit in the cold alley air.\n\n"JUSTICE."\n\nThe word is spray-painted in aggressive, dripping letters. Black over red, the paint still vivid despite years of weather. Someone was angry when they wrote this. Someone wanted to be heard.\n\nBelow it, stenciled in white: "1973."\n\nA year? A date? A code?\n\nAnd above both, the rose—red and black petals, thorny stems spiraling outward. Beautiful. Deliberate. Defiant.\n\nYou stand there, waiting for meaning to crystallize. Waiting for the pieces to click into place.\n\nNothing clicks.\n\nMaybe it means something. Maybe it\'s just art. Street anger. A memorial. A warning.\n\nOr maybe it\'s nothing at all.',
+                    media: undefined
+                }
+            },
+            onPeek: {
+                success: {
+                    message: 'You lean in close to the graffiti, squinting at the details. Looking for hidden layers. Patterns. Messages within messages.\n\nThe rose: each petal is carefully outlined, shaded. The thorns are sharp, deliberate. You can see where the artist lifted the spray can nozzle between strokes, varying the pressure to create depth. This wasn\'t vandalism. This was art.\n\n"JUSTICE": the letters drip downward, paint running like blood. Or tears. Intentional? Or just gravity doing its work?\n\n"1973": stenciled, not sprayed freehand. Someone made a template. Cut it out. Held it against the wall and painted through it. Precise. Planned.\n\nYou look closer at the paint itself. Faded. Weathered. These markings are old. Years old. Maybe decades.\n\nBut you find nothing else. No hidden symbols. No coded messages. Just graffiti.',
+                    media: undefined
+                }
+            },
+            onKnock: {
+                success: {
+                    message: 'You rap your knuckles against the bricks around the graffiti. Tap tap tap. Listening for hollow spaces. Secret chambers. Hidden compartments behind the wall.\n\nSolid brick. Dense. No echo. No hollow sound.\n\nYou knock around the rose. Solid.\n\nYou knock around "JUSTICE." Solid.\n\nYou knock around "1973." Solid.\n\nIt\'s just a wall. Brick and mortar. Decades old. No hidden spaces. No secret doors.\n\nThe graffiti might mean something, but the wall beneath it is exactly what it appears to be: a wall.',
+                    media: undefined
+                }
+            },
+            onListen: {
+                success: {
+                    message: 'You press your ear against the cold brick, listening. Straining to hear anything beyond the normal city sounds.\n\nTraffic hum from Elm Street. Distant sirens. Wind whistling through the alley entrance.\n\nYou move to the graffiti. Press your ear against the rose. Listen.\n\nNothing.\n\nAgainst "JUSTICE." Nothing.\n\nAgainst "1973." Nothing.\n\nNo mechanical sounds. No hidden machinery. No whispers or movement behind the wall.\n\nJust brick. Cold. Silent. Dead.\n\nWhatever the graffiti means—if it means anything at all—there\'s nothing hidden behind it.',
                     media: undefined
                 }
             },
@@ -2210,18 +2574,30 @@ const gameObjects: Record<GameObjectId, GameObject> = {
     'obj_courtyard_door': {
         id: 'obj_courtyard_door' as GameObjectId,
         name: 'Courtyard Door',
-        alternateNames: ['courtyard door', 'door', 'hidden door', 'metal door', 'rusted door', 'old door'],
+        alternateNames: ['courtyard door', 'door', 'hidden door', 'metal door', 'rusted door', 'old door', 'hinges', 'rust'],
         archetype: 'Door',
         description: 'A hidden rusted metal door behind the dumpster. Old, locked, deliberately concealed.',
+        zone: 'zone_side_alley' as ZoneId,
         isRevealed: false,
         transitionNarration: 'You step closer to the hidden door. Rust flakes off at your touch. This door hasn\'t been opened in years.',
-        capabilities: { openable: true, lockable: true, breakable: false, movable: false, powerable: false, container: false, readable: false, inputtable: true },
+        capabilities: { openable: true, lockable: true, breakable: true, movable: false, powerable: false, container: false, readable: false, inputtable: true },
         state: { isOpen: false, isLocked: true, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
         leadsToLocationId: 'loc_courtyard' as LocationId,
         handlers: {
             onExamine: [
                 {
-                    // Door is locked
+                    // Door is locked, lever pulled (hinges compromised)
+                    conditions: [
+                        { type: 'OBJECT_STATE', objectId: 'obj_courtyard_door', statePath: 'isLocked', value: true },
+                        { type: 'OBJECT_STATE', objectId: 'obj_crates', statePath: 'leverPulled', value: true }
+                    ],
+                    success: {
+                        message: 'A heavy metal door, hidden behind the crates. The paint is peeling in long strips, revealing layers of rust beneath. No handle—just a numeric keypad mounted on the frame.\n\nYou study the hinges on the right edge. Rusted. Badly rusted. The metal is corroded, brittle, flaking apart in places. When you pulled that lever, something disengaged inside the wall—you can see the effects now. The hinge pins have shifted slightly, no longer seated properly.\n\nThe door is still locked by the keypad mechanism, but those hinges... they look weak. Compromised. Maybe you could force it.',
+                        media: undefined
+                    }
+                },
+                {
+                    // Door is locked (normal state)
                     conditions: [
                         { type: 'OBJECT_STATE', objectId: 'obj_courtyard_door', statePath: 'isLocked', value: true }
                     ],
@@ -2243,6 +2619,32 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                     }
                 }
             ],
+            onListen: [
+                {
+                    // Lever pulled, hinges compromised
+                    conditions: [
+                        { type: 'OBJECT_STATE', objectId: 'obj_crates', statePath: 'leverPulled', value: true }
+                    ],
+                    success: {
+                        message: 'You press your ear against the cold metal. Listen.\n\nA faint sound. Mechanical. Inside the wall behind the door, something shifts. A slow creaking—metal under stress. The hinges, you realize. They\'re no longer properly supported.\n\nWhen you pulled that lever, it disengaged something structural. The hinge mechanisms. They\'re loose now. Unstable.\n\nThe door might still be locked, but it\'s weak.',
+                        media: undefined
+                    }
+                },
+                {
+                    // Normal state
+                    conditions: [],
+                    success: {
+                        message: 'You press your ear against the metal door. Silence. Just the faint hum of the city beyond—traffic, sirens, wind.\n\nNothing mechanical. Nothing moving inside. The door is solid, sealed, waiting.',
+                        media: undefined
+                    }
+                }
+            ],
+            onKnock: {
+                success: {
+                    message: 'You rap your knuckles against the metal. A hollow, ringing sound echoes back.\n\nHeavy gauge steel, but hollow-core construction. The door is industrial, meant to secure a space, not withstand a serious assault.\n\nIf you had the right leverage, the right tool, you might be able to force it. But brute force alone won\'t work.',
+                    media: undefined
+                }
+            },
             onOpen: [
                 {
                     // Door is locked - can't open
@@ -2286,6 +2688,90 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                     media: undefined
                 }
             },
+            onPry: [
+                {
+                    // Lever pulled, has crowbar, door still locked - CAN FORCE IT OPEN
+                    conditions: [
+                        { type: 'OBJECT_STATE', objectId: 'obj_crates', statePath: 'leverPulled', value: true },
+                        { type: 'HAS_ITEM', itemId: 'item_crowbar' },
+                        { type: 'OBJECT_STATE', objectId: 'obj_courtyard_door', statePath: 'isLocked', value: true }
+                    ],
+                    success: {
+                        message: 'You wedge the crowbar into the gap between the door and the frame, right at the hinges. The rusted metal gives slightly—those hinge pins are loose, compromised by whatever mechanism that lever controlled.\n\nYou pull. Hard.\n\nThe hinges scream. Metal tears. Rust flakes rain down like red snow.\n\nYou pull harder.\n\nCRACK.\n\nThe top hinge shears off completely, bolts ripping through corroded metal. The door sags, held now only by the bottom hinge and the keypad lock.\n\nOne more pull.\n\nCRRRRACK.\n\nThe bottom hinge tears free. The door swings inward violently, still attached to the frame by the electronic lock mechanism, but the path is open—a gap wide enough to slip through.\n\nYou\'re in.\n\nBeyond the broken door: a small courtyard. Neglected. Overgrown. Forgotten. Three garage doors line the far wall—blue, red, green.\n\nThis is it. This is where the trail leads.',
+                        media: {
+                            url: '',
+                            description: 'Broken door revealing courtyard with garages',
+                            hint: 'forced entry courtyard'
+                        },
+                        effects: [
+                            { type: 'SET_OBJECT_STATE', objectId: 'obj_courtyard_door', statePath: 'isBroken', value: true },
+                            { type: 'SET_OBJECT_STATE', objectId: 'obj_courtyard_door', statePath: 'isLocked', value: false },
+                            { type: 'REVEAL_LOCATION', locationId: 'loc_courtyard' }
+                        ]
+                    }
+                },
+                {
+                    // Lever NOT pulled - hinges too strong
+                    conditions: [
+                        { type: 'HAS_ITEM', itemId: 'item_crowbar' },
+                        { type: 'OBJECT_STATE', objectId: 'obj_courtyard_door', statePath: 'isLocked', value: true }
+                    ],
+                    success: {
+                        message: 'You try wedging the crowbar into the door frame, looking for leverage. The hinges are rusted, sure, but they\'re still seated properly. Industrial bolts. Heavy duty.\n\nYou pull. The crowbar bends slightly under the strain, but the door doesn\'t budge. The hinges hold.\n\nYou\'d need those hinges compromised first—loosened, disengaged, weakened somehow—before you could pry this door open.',
+                        media: undefined
+                    }
+                },
+                {
+                    // No crowbar
+                    conditions: [],
+                    success: {
+                        message: 'You try to pry the door with your bare hands. It doesn\'t move. You\'d need a tool—something with leverage.',
+                        media: undefined
+                    }
+                }
+            ],
+            onKick: [
+                {
+                    // Lever pulled - hinges weak, but still need crowbar
+                    conditions: [
+                        { type: 'OBJECT_STATE', objectId: 'obj_crates', statePath: 'leverPulled', value: true },
+                        { type: 'OBJECT_STATE', objectId: 'obj_courtyard_door', statePath: 'isLocked', value: true }
+                    ],
+                    success: {
+                        message: 'You step back and kick the door hard. Your foot connects with a metallic BANG.\n\nThe door shudders. The hinges rattle—you can hear the looseness, the give in the mechanism. But it doesn\'t break.\n\nYou kick again. Harder.\n\nThe top hinge shifts, scraping metal against metal, but holds.\n\nYou could damage it further with enough kicks, but you\'d risk injury. A crowbar would be smarter—leverage the weak hinges, pry them apart instead of battering them.',
+                        media: undefined
+                    }
+                },
+                {
+                    // Normal state
+                    conditions: [],
+                    success: {
+                        message: 'You kick the door. Your foot bounces off solid metal. The door doesn\'t budge.\n\nThis isn\'t a cheap interior door. It\'s industrial steel. Kicking it is just going to hurt your foot.',
+                        media: undefined
+                    }
+                }
+            ],
+            onBreak: [
+                {
+                    // Lever pulled, has crowbar - suggest PRY instead
+                    conditions: [
+                        { type: 'OBJECT_STATE', objectId: 'obj_crates', statePath: 'leverPulled', value: true },
+                        { type: 'HAS_ITEM', itemId: 'item_crowbar' }
+                    ],
+                    success: {
+                        message: 'The hinges are compromised—you can see that. Rusted, loose, barely holding. If you\'re going to break this door, you should PRY it open with the crowbar. Leverage the weak hinges. That\'s the smart way.',
+                        media: undefined
+                    }
+                },
+                {
+                    // Normal state
+                    conditions: [],
+                    fail: {
+                        message: 'You consider trying to break down the door. Kick it in. Shoulder it. Force it open.\n\nBut this isn\'t some hollow-core apartment door. It\'s solid metal. Industrial grade. Even if you had a battering ram, you\'d make noise loud enough to wake the whole neighborhood.\n\nYou\'re a detective, not a demolition crew. Find the code. That\'s the smart way in.',
+                        media: undefined
+                    }
+                }
+            ],
             onTake: {
                 fail: {
                     message: 'It\'s a door. A heavy metal door bolted into a concrete frame. You can\'t take it with you any more than you could carry away a section of brick wall. It\'s architecture.',
@@ -2295,12 +2781,6 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             onUse: {
                 fail: {
                     message: 'A door isn\'t a tool—it\'s a barrier, a passage. If it\'s locked, you need the right code for the keypad. If it\'s unlocked, you can OPEN it. You can\'t use it.',
-                    media: undefined
-                }
-            },
-            onBreak: {
-                fail: {
-                    message: 'You consider trying to break down the door. Kick it in. Shoulder it. Force it open.\n\nBut this isn\'t some hollow-core apartment door. It\'s solid metal. Industrial grade. Even if you had a battering ram, you\'d make noise loud enough to wake the whole neighborhood.\n\nYou\'re a detective, not a demolition crew. Find the code. That\'s the smart way in.',
                     media: undefined
                 }
             }
