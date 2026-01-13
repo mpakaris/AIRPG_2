@@ -1,82 +1,23 @@
-import type { Chapter, ChapterId, Flag, Game, GameId, GameObject, GameObjectId, Item, ItemId, Location, LocationId, NPC, NpcId, Portal, PortalId, Structure, StructureId, WorldId, ZoneId } from './types';
+import type { Chapter, ChapterId, Flag, Game, GameId, GameObject, GameObjectId, Item, ItemId, Location, LocationId, NPC, NpcId, Portal, PortalId } from '../types';
 
-// --- Chapter 1: The Investigation Begins ---
-// The player starts at a street location investigating the abduction of Lili
+// =====================================
+// CHAPTER 1: ELM STREET INVESTIGATION
+// =====================================
+// Goal: Find 3 of 4 evidence pieces proving the abduction was staged
+// Location: Elm Street, Bloodhaven
+// Estimated Playtime: 90-120 minutes
 
 // =====================================
 // ITEMS
 // =====================================
 
 const items: Record<ItemId, Item> = {
-    // Starting items given to player on chapter start
-    'item_audio_message': {
-        id: 'item_audio_message' as ItemId,
-        name: 'Voice Message',
-        alternateNames: ['voice message', 'audio message', 'voicemail', 'message'],
-        description: 'A voice message from your colleague about the Lili abduction case.',
-        zone: 'personal', // Received via phone - always accessible
-        capabilities: { isTakable: false, isReadable: false, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
-        revealMethod: 'MANUAL',
-        media: {
-            audio: {
-                url: '',
-                description: 'Colleague briefing about Lili case'
-            }
-        },
-        handlers: {
-            onExamine: {
-                success: {
-                    message: 'Voice message from your colleague:\n\n"Hey, it\'s Martinez. Got the case file on the Lili Chen abduction. Sent it to your email - check your phone. Time-sensitive. Call me if you need anything."\n\nThe message mentions an email with the case file.',
-                    media: {
-                        url: '',
-                        description: 'Colleague briefing about Lili case',
-                        hint: 'audio message'
-                    }
-                }
-            }
-        },
-        version: { schema: '1.0.0', content: '2.0.0' }
-    },
-
-    'item_police_report': {
-        id: 'item_police_report' as ItemId,
-        name: 'Police Report',
-        alternateNames: ['police report', 'case file', 'report', 'pdf', 'case report'],
-        description: 'Police report PDF about Lili\'s abduction. Received via email attachment.',
-        zone: 'personal', // Received via phone email - always accessible
-        capabilities: { isTakable: false, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
-        revealMethod: 'MANUAL',
-        media: {
-            document: {
-                url: '',
-                description: 'Official police report on Lili abduction case'
-            }
-        },
-        handlers: {
-            onRead: {
-                success: {
-                    message: 'POLICE REPORT - CASE #2025-0347\n\nVICTIM: Lili Chen, Age 8\nLAST SEEN: Corner of Elm Street and 5th Avenue, 3:45 PM\nWITNESSES: Bus driver reported seeing a gray van nearby\nVEHICLE DESCRIPTION: Gray panel van, no plates visible\nTIRE ANALYSIS: Forensics identified tire tread pattern\n  - Type: P225/60R16 (commercial grade)\n  - Tread depth: 8/32" (relatively new)\n  - Pattern: Diagonal crosshatch\nSTATUS: Active investigation, Amber Alert issued\n\nThe report contains witness statements and a timeline of events.\n\nNote: The tire type P225/60R16 suggests a mid-size commercial vehicle. The specific tread pattern indicates recent purchase.',
-                    media: {
-                        url: '',
-                        description: 'Police report details',
-                        hint: 'official report'
-                    }
-                }
-            },
-            onExamine: {
-                success: {
-                    message: 'A detailed police report in PDF format. The case file is marked urgent.',
-                    media: undefined
-                }
-            }
-        },
-        version: { schema: '1.0.0', content: '2.0.0' }
-    },
+    // ===== STARTING ITEMS (Player receives these at chapter start) =====
 
     'item_player_phone': {
         id: 'item_player_phone' as ItemId,
         name: 'Phone',
-        alternateNames: ['phone', 'smartphone', 'cell phone', 'mobile', 'fbi phone', 'my phone', 'fbi smartphone'],
+        alternateNames: ['smartphone', 'cell phone', 'mobile', 'fbi phone', 'my phone', 'fbi smartphone', 'cell', 'mobile phone'],
         archetype: 'Tool',
         description: "Your standard-issue FBI smartphone. It has a camera, secure messaging, and a slot for external media.",
         zone: 'personal', // Always accessible personal equipment
@@ -140,14 +81,14 @@ const items: Record<ItemId, Item> = {
                         { type: 'HAS_ITEM', itemId: 'item_audio_message' as ItemId }
                     ],
                     success: {
-                        message: "You've already listened to your voicemail. Martinez mentioned checking your email for the case file."
+                        message: "You've already listened to your voicemail. Sarah mentioned checking Elm Street for the gray van."
                     }
                 },
                 {
                     // First time checking - reveal voice message
                     conditions: [],
                     success: {
-                        message: "You tap the voicemail icon.\n\n**(1) New Voicemail**\n\nFrom: Martinez (FBI)\nReceived: Today, 8:47 AM\n\nYou play the message.",
+                        message: "You tap the voicemail icon.\n\n**(1) New Voicemail**\n\nFrom: Sarah Chen (Partner)\nReceived: Today, 8:47 AM\n\nYou play the message.",
                         effects: [
                             { type: 'ADD_ITEM', itemId: 'item_audio_message' as ItemId }
                         ]
@@ -158,31 +99,10 @@ const items: Record<ItemId, Item> = {
             // Check Emails Handler
             onCheckEmails: [
                 {
-                    // Already have police report
-                    conditions: [
-                        { type: 'HAS_ITEM', itemId: 'item_police_report' as ItemId }
-                    ],
-                    success: {
-                        message: "Your inbox shows the email from Martinez with the police report attachment. You've already downloaded it."
-                    }
-                },
-                {
-                    // Have voice message but not report - reveal report
-                    conditions: [
-                        { type: 'HAS_ITEM', itemId: 'item_audio_message' as ItemId }
-                    ],
-                    success: {
-                        message: "You open your email inbox.\n\n**From:** Martinez, D. (FBI Field Office)\n**Subject:** URGENT - Lili Chen Case File\n**Attachment:** case_2025-0347.pdf\n\nThe email body is brief: \"Case file attached. Read it. Call if questions.\"\n\nYou download the attachment.",
-                        effects: [
-                            { type: 'ADD_ITEM', itemId: 'item_police_report' as ItemId }
-                        ]
-                    }
-                },
-                {
-                    // No voice message yet - hint to check messages first
+                    // Default - no emails
                     conditions: [],
                     success: {
-                        message: "You check your email. There's a new message from Martinez, but you notice the voicemail notification blinking. Maybe check your messages first?"
+                        message: "You check your email inbox. Mostly spam and routine FBI updates. Nothing urgent.\n\nYou should focus on the voice message from Sarah about the gray van on Elm Street."
                     }
                 }
             ],
@@ -202,1167 +122,803 @@ const items: Record<ItemId, Item> = {
         version: { schema: "1.0", content: "3.0" }
     },
 
-    'item_invoice': {
-        id: 'item_invoice' as ItemId,
-        name: 'Invoice',
-        description: 'A crumpled invoice lying near the bus station bench.',
-        capabilities: { isTakable: true, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
-        startingLocation: 'loc_street' as LocationId,
-        parentId: 'obj_bench' as GameObjectId,
-        revealMethod: 'REVEAL_FROM_PARENT',
-        handlers: {
-            onRead: {
-                message: 'INVOICE #8847\nFlorist Express - Fresh Bouquets Daily\n47 Elm Street\nDelivery: 3:30 PM\nRecipient: [Smudged]\n\nThe invoice is dated today. Someone ordered flowers delivered to this street around the time Lili disappeared.',
-                media: undefined
-            },
-            onExamine: {
-                message: 'A crumpled piece of paper. It looks like a florist\'s invoice.',
-                media: undefined
+    'item_audio_message': {
+        id: 'item_audio_message' as ItemId,
+        name: 'Voice Message',
+        alternateNames: ['voice message', 'audio message', 'voicemail', 'message', 'sarah message', 'sarah voice message'],
+        description: 'A voice message from Sarah Chen about the gray van sighting.',
+        zone: 'personal', // Received via phone - always accessible
+        capabilities: { isTakable: false, isReadable: false, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+        revealMethod: 'MANUAL',
+        media: {
+            audio: {
+                url: '',
+                description: 'Sarah Chen briefing about gray van sighting'
             }
+        },
+        handlers: {
+            onExamine: {
+                success: {
+                    message: 'Voice message from Sarah Chen:\n\n"Burt, I tried pulling CCTV from the bus station that night. Cameras were offline. All of them.\n\nI did find something though - a gray van shows up on Elm Street traffic cams. Repeatedly. For weeks before April 15th.\n\nMight be worth checking out. Be careful."\n\nThe message points you to Elm Street to investigate the gray van.',
+                    media: {
+                        url: '',
+                        description: 'Sarah Chen briefing about gray van sighting',
+                        hint: 'audio message'
+                    }
+                }
+            }
+        },
+        version: { schema: '1.0.0', content: '3.0.0' }
+    },
+
+    'item_lili_photo': {
+        id: 'item_lili_photo' as ItemId,
+        name: 'Photo of Lili',
+        alternateNames: ['lili photo', 'photo', 'lili picture', 'picture of lili', 'photograph'],
+        archetype: 'Evidence',
+        description: 'A recent photo of Lili sent by Sarah Chen. Shows Lili\'s face clearly - useful for showing to witnesses.',
+        zone: 'personal', // Received via phone from Sarah - always accessible
+        capabilities: { isTakable: false, isReadable: false, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+        revealMethod: 'MANUAL',
+        tags: ['evidence', 'photo'],
+        media: {
+            images: {
+                default: {
+                    url: '',
+                    description: 'Recent photo of Lili',
+                    hint: 'photo of Lili'
+                }
+            }
+        },
+        handlers: {
+            onExamine: {
+                success: {
+                    message: 'A recent photo of Lili that Sarah sent to your phone. Clear facial details, good for showing to potential witnesses.\n\nYou can SHOW this photo TO people you meet to see if they recognize her.',
+                    media: {
+                        url: '',
+                        description: 'Recent photo of Lili',
+                        hint: 'photo of Lili'
+                    }
+                }
+            },
+            onUse: {
+                fail: {
+                    message: 'This photo is for showing to witnesses. Try: SHOW PHOTO TO <person name>',
+                    media: undefined
+                }
+            }
+        },
+        design: {
+            authorNotes: "Starting evidence item. Player uses this to trigger Margaret Chen witness statement by showing photo to her. Part of Evidence 3 puzzle.",
+            tags: ['starting-item', 'witness-trigger', 'evidence']
         },
         version: { schema: '1.0.0', content: '1.0.0' }
     },
+
+    // ===== EVIDENCE ITEMS (4 total - player needs 3 to complete chapter) =====
+
+    'item_cctv_screenshot': {
+        id: 'item_cctv_screenshot' as ItemId,
+        name: 'CCTV Screenshot',
+        alternateNames: ['screenshot', 'cctv photo', 'printed screenshot', 'photo', 'evidence photo'],
+        archetype: 'Evidence',
+        description: 'Printed screenshot from CCTV footage showing gray van with license plate LKJ-9472 on Elm Street, April 15, 6:15 PM.',
+        zone: 'personal',
+        parentId: 'obj_cctv_monitor_station' as GameObjectId,
+        capabilities: { isTakable: true, isReadable: false, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: true },
+        revealMethod: 'REVEAL_FROM_PARENT',
+        tags: ['evidence', 'photo', 'cctv'],
+        media: {
+            images: {
+                default: {
+                    url: '',
+                    description: 'CCTV screenshot showing gray van, plate LKJ-9472',
+                    hint: 'Evidence 1 - Van identification'
+                }
+            }
+        },
+        handlers: {
+            onExamine: {
+                success: {
+                    message: 'A printed CCTV screenshot. Date stamp: April 15, 2026 - 6:15 PM. Location: Elm Street.\n\nThe image shows a gray cargo van parked on Elm Street. The license plate is clearly visible: **LKJ-9472**.\n\nThis is concrete proof that a gray van was operating on Elm Street at the exact time Lili claims you abducted her. But this isn\'t your vehicle.\n\nThe numeric portion of the plate - 9472 - might be useful. Security systems often use license plate numbers as access codes.',
+                    media: {
+                        url: '',
+                        description: 'CCTV screenshot showing gray van, plate LKJ-9472',
+                        hint: 'Evidence 1'
+                    }
+                }
+            },
+            onTake: {
+                success: {
+                    message: 'You take the printed CCTV screenshot. This is Evidence 1.\n\nLicense plate LKJ-9472 clearly visible. This proves a gray van was on Elm Street during the alleged abduction.',
+                    media: undefined,
+                    effects: [
+                        { type: 'SET_FLAG', flag: 'found_evidence_1' as Flag }
+                    ]
+                }
+            }
+        },
+        design: {
+            authorNotes: "EVIDENCE 1 (EASY) - Found at CCTV Control Building. Provides license plate LKJ-9472. Numeric portion '9472' is PIN for Garage #3 (Evidence 2 location).",
+            tags: ['evidence-1', 'cctv', 'pin-source']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'item_van_registration': {
+        id: 'item_van_registration' as ItemId,
+        name: 'Van Registration Card',
+        alternateNames: ['registration', 'registration card', 'van registration', 'vehicle registration'],
+        archetype: 'Evidence',
+        description: 'Vehicle registration card for gray van (plate LKJ-9472). Owner: Jeremy Miller, 447 Willow Lane, Bloodhaven.',
+        zone: 'personal',
+        capabilities: { isTakable: true, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: true },
+        revealMethod: 'MANUAL',
+        tags: ['evidence', 'document', 'registration'],
+        media: {
+            images: {
+                default: {
+                    url: '',
+                    description: 'Vehicle registration card',
+                    hint: 'Evidence 2 - Owner identification'
+                }
+            }
+        },
+        handlers: {
+            onExamine: {
+                success: {
+                    message: 'Vehicle registration card. Official state document.\n\n**Vehicle**: 2024 Chevrolet Express Cargo Van\n**Color**: Gray\n**License Plate**: LKJ-9472\n**VIN**: 1GCWGAFG8K1234567\n\n**Registered Owner**:\nJeremy Miller\n447 Willow Lane\nBloodhaven, USA\n\nThis registration proves who owns the van that was operating on Elm Street during Lili\'s alleged abduction.\n\nJeremy Miller. 447 Willow Lane. That address sounds familiar... you\'ll need to investigate it.',
+                    media: {
+                        url: '',
+                        description: 'Vehicle registration card',
+                        hint: 'Evidence 2'
+                    }
+                }
+            },
+            onRead: {
+                success: {
+                    message: 'You read the registration card:\n\n**VEHICLE REGISTRATION**\nState Registration #: VR-2024-847392\n\nVehicle: 2024 Chevrolet Express Cargo Van (Gray)\nPlate: LKJ-9472\nVIN: 1GCWGAFG8K1234567\n\nOwner: Jeremy Miller\nAddress: 447 Willow Lane, Bloodhaven\n\nIssued: March 12, 2024\nExpires: March 12, 2026\n\nThis identifies the van owner and provides a lead: 447 Willow Lane.',
+                    media: undefined
+                }
+            },
+            onTake: {
+                success: {
+                    message: 'You take the vehicle registration card. This is Evidence 2.\n\nOwner: Jeremy Miller, 447 Willow Lane. This gives you a suspect name and address to investigate.',
+                    media: undefined,
+                    effects: [
+                        { type: 'SET_FLAG', flag: 'found_evidence_2' as Flag }
+                    ]
+                }
+            }
+        },
+        design: {
+            authorNotes: "EVIDENCE 2 (HARD) - Found in Garage #3 glove compartment. Requires solving Alley secret door + using PIN 9472 from Evidence 1. Provides suspect name (Jeremy Miller) and address (447 Willow Lane) for future chapters.",
+            tags: ['evidence-2', 'registration', 'suspect-identification']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'item_witness_statement_audio': {
+        id: 'item_witness_statement_audio' as ItemId,
+        name: 'Recorded Witness Statement',
+        alternateNames: ['witness statement', 'audio recording', 'recording', 'margaret statement', 'statement'],
+        archetype: 'Evidence',
+        description: 'Audio recording of Margaret Chen\'s witness statement about seeing Lili with an obsessed young man.',
+        zone: 'personal',
+        capabilities: { isTakable: false, isReadable: false, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+        revealMethod: 'MANUAL',
+        tags: ['evidence', 'audio', 'witness'],
+        media: {
+            audio: {
+                url: '',
+                description: 'Margaret Chen witness statement recording'
+            }
+        },
+        handlers: {
+            onExamine: {
+                success: {
+                    message: 'You review the audio recording on your phone.\n\n**Witness Statement - Margaret Chen**\nRecorded: Today\nLocation: Petal & Stem Florist, Elm Street\n\n[PLAY RECORDING]\n\nMargaret Chen: "My name is Margaret Chen, owner of Petal & Stem Florist on Elm Street. I\'ve seen the woman in this photo - Lili - multiple times over the past two months. She always came with a young man who appeared obsessively devoted to her. She seemed detached, calculating even, but he would do anything she asked. The way he looked at her... it was obsession."\n\n[END RECORDING]\n\nThis statement proves Lili had a relationship with a young man who was obsessed with her. Evidence of collaboration, not abduction.',
+                    media: {
+                        url: '',
+                        description: 'Margaret Chen witness statement',
+                        hint: 'Evidence 3'
+                    }
+                }
+            }
+        },
+        design: {
+            authorNotes: "EVIDENCE 3 (MEDIUM) - Obtained by showing Lili's photo to Margaret Chen at Florist Shop. Proves Lili had relationship with obsessed young man, suggesting collaboration not abduction.",
+            tags: ['evidence-3', 'witness', 'audio', 'relationship-proof']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'item_hardware_receipt': {
+        id: 'item_hardware_receipt' as ItemId,
+        name: 'Hardware Store Receipt',
+        alternateNames: ['receipt', 'hardware receipt', 'store receipt', 'paper receipt'],
+        archetype: 'Evidence',
+        description: 'Receipt from hardware store dated April 10, 2026. Purchased by J. Miller: zip ties, duct tape, drop cloth.',
+        zone: 'personal',
+        parentId: 'obj_electrician_toolbox' as GameObjectId,
+        capabilities: { isTakable: true, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: true },
+        revealMethod: 'REVEAL_FROM_PARENT',
+        tags: ['evidence', 'document', 'receipt'],
+        media: {
+            images: {
+                default: {
+                    url: '',
+                    description: 'Hardware store receipt',
+                    hint: 'Evidence 4 - Premeditation proof'
+                }
+            }
+        },
+        handlers: {
+            onExamine: {
+                success: {
+                    message: 'A crumpled hardware store receipt. You smooth it out and read the details.\n\n**ACE HARDWARE - BLOODHAVEN**\nReceipt #: 84729\nDate: April 10, 2026 - 3:42 PM\n\n**Items Purchased**:\n- Zip Ties (Heavy Duty, 50-pack) ... $12.99\n- Duct Tape (Industrial, 2-pack) ... $8.49\n- Drop Cloth (Plastic, 9x12) ... $6.99\n\n**Subtotal**: $28.47\n**Tax**: $2.28\n**Total**: $30.75\n\n**Payment**: Credit Card ending in 4429\n**Cardholder**: J. Miller\n\nThis receipt is dated April 10th - five days before Lili\'s alleged abduction on April 15th.\n\nSomeone named "J. Miller" bought abduction supplies in advance. This proves premeditation. And if the registration card is correct, J. Miller is Jeremy Miller - the van owner.',
+                    media: {
+                        url: '',
+                        description: 'Hardware store receipt',
+                        hint: 'Evidence 4'
+                    }
+                }
+            },
+            onRead: {
+                success: {
+                    message: 'You read the receipt carefully:\n\n**ACE HARDWARE**\nApril 10, 2026\n\nZip Ties (Heavy Duty) - $12.99\nDuct Tape (Industrial) - $8.49\nDrop Cloth (Plastic) - $6.99\n\nTotal: $30.75\nCard: J. Miller (ending 4429)\n\nAbduction supplies bought 5 days before the incident. Proof of premeditation.',
+                    media: undefined
+                }
+            },
+            onTake: {
+                success: {
+                    message: 'You take the hardware store receipt. This is Evidence 4.\n\nPurchased by J. Miller on April 10th - 5 days before the alleged abduction. Clear proof of premeditation.',
+                    media: undefined,
+                    effects: [
+                        { type: 'SET_FLAG', flag: 'found_evidence_4' as Flag }
+                    ]
+                }
+            }
+        },
+        design: {
+            authorNotes: "EVIDENCE 4 (MEDIUM) - Found in Electrician's truck toolbox (requires distraction puzzle). Date is April 10 (5 days before incident). Name 'J. Miller' matches van registration owner (Jeremy Miller), proving connection.",
+            tags: ['evidence-4', 'receipt', 'premeditation-proof']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    // ===== TOOL ITEMS (Collectible tools for puzzles and access) =====
 
     'item_crowbar': {
         id: 'item_crowbar' as ItemId,
         name: 'Crowbar',
-        description: 'A heavy steel crowbar. Rust-spotted but still solid. Good for prying things open.',
-        capabilities: { isTakable: true, isReadable: false, isUsable: true, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: true },
-        startingLocation: 'loc_street' as LocationId,
-        parentId: 'obj_tire_stack' as GameObjectId,
-        revealMethod: 'REVEAL_FROM_PARENT',
-        handlers: {
-            onTake: {
-                success: {
-                    message: 'You heft the crowbar. Cold steel. Three, maybe four pounds of rust-spotted persuasion.\n\nIt\'s yours now. For better or worse.\n\nIn this city, a crowbar\'s either a tool or a confession waiting to happen. You pocket it anyway. Because when you\'re hunting someone who hides things in tire stacks, you don\'t ask questions—you just take what you can get.\n\nBesides, it\'s not like the tires were using it.',
-                    media: undefined
-                }
-            },
-            onExamine: {
-                success: {
-                    message: 'Two feet of solid steel. A crowbar—the kind you find in toolboxes, garages, construction sites. One end curves into a claw for pulling nails. The other tapers to a flat wedge for prying.\n\nThe steel is rust-spotted, oxidation blooming in orange patches where the protective coating wore away. But underneath, it\'s still sound. Solid. You test it with your hand—no give, no flex. This thing could pry open a car door, lever up floorboards, shift heavy objects.\n\nIt\'s heavy. Maybe three, four pounds. You feel the weight in your hand, the cold metal warming slowly against your palm.\n\nSomeone hid this in the tire stack. Deliberately wedged it inside where it wouldn\'t be found unless you were looking.\n\nWhy hide a crowbar? What did they need it for?\n\nOr maybe the better question: what do you need it for?',
-                    media: undefined
-                }
-            },
-            onUse: {
-                fail: {
-                    message: 'The crowbar is a tool for leverage—prying, lifting, shifting heavy objects. You need a target to use it on.',
-                    media: undefined
-                }
-            },
-            onRead: {
-                fail: {
-                    message: 'It\'s a crowbar. Steel. No text. No markings. Just a tool. If you want to know more about it, try EXAMINING it.',
-                    media: undefined
-                }
-            }
-        },
-        version: { schema: '1.0.0', content: '1.0.0' }
-    },
-
-    'item_crumpled_note': {
-        id: 'item_crumpled_note' as ItemId,
-        name: 'Crumpled Note',
-        description: 'A handwritten note, crumpled and stained. Found in the dumpster.',
-        capabilities: { isTakable: true, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
-        startingLocation: 'loc_street' as LocationId,
-        parentId: 'obj_dumpster' as GameObjectId,
-        revealMethod: 'REVEAL_FROM_PARENT',
-        handlers: {
-            onRead: {
-                success: {
-                    message: 'You smooth out the crumpled paper and read the handwriting. Blue ink, hurried strokes. Someone wrote this fast, under pressure maybe.\n\n"Check where the van was parked. The answer\'s in the tracks."\n\nThat\'s it. Just one sentence. Direct. Specific.\n\nBut below the text, someone scratched out a number. Heavy pen strokes, back and forth, obliterating whatever was written there. You can barely make it out through the scribbles:\n\n~~1940~~\n\nSomeone didn\'t want that number readable. Deliberately obscured it. But why write it down in the first place if you\'re just going to cross it out?\n\nThe message about the van tracks is clear though. Whoever wrote this note knew something. Knew the van left evidence. Knew where to look.\n\nAnd now you know too.',
-                    media: undefined
-                }
-            },
-            onExamine: {
-                success: {
-                    message: 'A piece of lined notebook paper, the kind you buy in cheap spiral notebooks at convenience stores. The edges are torn—ripped out hastily, not carefully removed along the perforations.\n\nIt\'s crumpled. Someone balled it up and threw it away. The creases are sharp, permanent. When you try to flatten it, it springs back into wrinkles.\n\nDirt stains the surface—coffee maybe, or just grime from being in the dumpster. The paper feels slightly damp, like it\'s been exposed to moisture.\n\nThere\'s handwriting on it. Blue ballpoint pen, the cheap kind. The writing is hurried, slanted, pressing hard into the paper. You can feel the indentations on the back where the pen dug in.\n\nWhoever wrote this was in a hurry. Or stressed. Or both.',
-                    media: undefined
-                }
-            },
-            onUse: {
-                fail: {
-                    message: 'It\'s a note. Information. Not a tool. If you want to know what it says, try READING it.',
-                    media: undefined
-                }
-            }
-        },
-        version: { schema: '1.0.0', content: '1.0.0' }
-    },
-
-    'item_photo_tire_marks': {
-        id: 'item_photo_tire_marks' as ItemId,
-        name: 'Photo of Tire Marks',
-        description: 'A photograph of tire marks left in the alley. Clear tread pattern visible.',
-        capabilities: { isTakable: false, isReadable: false, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
-        startingLocation: 'player',
-        handlers: {
-            onExamine: {
-                success: {
-                    message: 'You pull up the photo on your phone, zooming in to examine the details.\n\nThe tire marks are captured clearly. Two parallel tracks, tread pattern visible in sharp relief against the dirt. The diagonal crosshatch design stands out—commercial-grade tires, heavy-duty.\n\nYou zoom in further. The grooves are deep—you can see the depth even in the photo, shadows cast by the ridges. New rubber. Barely worn.\n\nThis is forensic-quality documentation. Clear enough to match against manufacturer specifications. Clear enough to identify the tire model.\n\nThe police report mentioned tire analysis. They cataloged the van\'s tire type—P225/60R16, forensics identified the tread pattern.\n\nYou should compare this photo to that specification. Match the pattern. Extract the numbers.\n\nThe code is in the tires. You just need to see it.',
-                    media: undefined
-                }
-            },
-            onRead: {
-                fail: {
-                    message: 'It\'s a photograph, not text. There\'s nothing to READ. Try EXAMINING it to analyze the tire tread pattern.',
-                    media: undefined
-                }
-            },
-            onUse: {
-                fail: {
-                    message: 'A photograph is evidence, not a tool. You can\'t USE it. You can EXAMINE it to analyze the details, or compare it to the police report\'s tire specifications.',
-                    media: undefined
-                }
-            }
-        },
-        version: { schema: '1.0.0', content: '1.0.0' }
-    },
-
-    'item_box_cutter': {
-        id: 'item_box_cutter' as ItemId,
-        name: 'Box Cutter',
-        alternateNames: ['box cutter', 'utility knife', 'cutter', 'knife', 'blade'],
-        description: 'A small utility knife with an orange handle and retractable blade. Standard box cutter.',
-        capabilities: { isTakable: true, isReadable: false, isUsable: true, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
-        startingLocation: 'loc_street' as LocationId,
-        parentId: 'obj_old_suitcase' as GameObjectId,
-        revealMethod: 'REVEAL_FROM_PARENT',
-        tags: ['tool', 'sharp', 'blade'],
-        handlers: {
-            onExamine: {
-                success: {
-                    message: 'A standard utility knife. Orange plastic handle, cheap but functional. The kind you buy at hardware stores for a couple dollars.\n\nThe blade is retractable—currently extended about half an inch. Sharp edge, clean. No rust, no damage. Fresh blade, maybe.\n\nThere\'s a slider on the side to extend or retract the blade. Simple mechanism. Reliable.\n\nThe handle has no markings, no branding. Generic. Disposable. The kind of tool you use once and throw away.\n\nOr leave behind. In a cleaned-out suitcase. In a dumpster.\n\nWhy?',
-                    media: undefined
-                }
-            },
-            onUse: {
-                fail: {
-                    message: 'You need to specify what you want to use the box cutter on.',
-                    media: undefined
-                }
-            },
-            onTake: {
-                success: {
-                    message: 'You pick up the box cutter. Light. Compact. The orange handle fits comfortably in your palm.\n\nThe blade is sharp. Could be useful for cutting through tape, rope, cardboard. Opening sealed containers.\n\nYou pocket it.',
-                    media: undefined
-                }
-            },
-            onRead: {
-                fail: {
-                    message: 'It\'s a tool, not text. No markings, no serial numbers. Generic utility knife. Nothing to read.',
-                    media: undefined
-                }
-            }
-        },
-        version: { schema: '1.0.0', content: '1.0.0' }
-    },
-
-    'item_picture_frame': {
-        id: 'item_picture_frame' as ItemId,
-        name: 'Picture Frame',
-        alternateNames: ['picture frame', 'frame', 'empty frame', 'photo frame'],
-        description: 'An empty wooden picture frame. No photo inside.',
-        capabilities: { isTakable: true, isReadable: false, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
-        startingLocation: 'loc_street' as LocationId,
-        parentId: 'obj_old_suitcase' as GameObjectId,
-        revealMethod: 'REVEAL_FROM_PARENT',
-        tags: ['junk'],
-        handlers: {
-            onExamine: {
-                success: {
-                    message: 'A cheap wooden picture frame, the kind you see stacked in dollar store clearance bins. Thin wood, painted dark brown to mimic walnut or mahogany. The paint is chipping at the corners, exposing lighter wood underneath.\n\nThe frame is about 5x7 inches. Standard photo size. Mass-produced. Generic.\n\nBut here\'s what\'s strange: there\'s no photo inside.\n\nNo glass either. The frame is empty. Just the backing board, held in place by small metal tabs bent inward.\n\nWhy pack an empty picture frame in a suitcase? Why throw it away in a dumpster?\n\nIt\'s worthless. Decorative junk. The kind of thing you buy to fill space on a shelf.\n\nUnless it wasn\'t always empty.',
-                    media: undefined
-                }
-            },
-            onSearch: {
-                success: {
-                    message: 'You turn the frame over in your hands, examining every angle.\n\nThe backing is cardboard, thin and flimsy. You pry at the metal tabs holding it in place. They bend easily—too easily. Someone\'s opened this before. Recently.\n\nYou pull the backing free and check behind it.\n\nNothing.\n\nNo hidden photo. No secret compartment. No note tucked away.\n\nJust an empty frame. Hollow. Meaningless.\n\nOr maybe that\'s the point. Remove the photo. Destroy the evidence. Leave the frame behind as a shell—proof that something was here, once, but now it\'s gone.',
-                    media: undefined
-                }
-            },
-            onTake: {
-                success: {
-                    message: 'You pick up the empty picture frame. Lightweight. Worthless.\n\nBut you take it anyway. Sometimes the absence of something is more important than its presence.',
-                    media: undefined
-                }
-            }
-        },
-        version: { schema: '1.0.0', content: '1.0.0' }
-    },
-
-    'item_candle': {
-        id: 'item_candle' as ItemId,
-        name: 'Decorative Candle',
-        alternateNames: ['candle', 'decorative candle', 'unused candle'],
-        description: 'An unused decorative candle. Still has the price sticker.',
-        capabilities: { isTakable: true, isReadable: false, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
-        startingLocation: 'loc_street' as LocationId,
-        parentId: 'obj_old_suitcase' as GameObjectId,
-        revealMethod: 'REVEAL_FROM_PARENT',
-        tags: ['junk'],
-        handlers: {
-            onExamine: {
-                success: {
-                    message: 'A decorative candle. Pillar style, about four inches tall, two inches wide. The wax is cream-colored, molded to look like it\'s been hand-dipped—those little ridges and imperfections that mass-produced candles use to fake artisanal charm.\n\nIt\'s never been lit. The wick is pristine, white cotton, perfectly centered. No burn marks. No melted wax. Not even dust on the surface.\n\nYou turn it over. There\'s a price sticker on the bottom: $2.99. The kind of generic home decor you buy at discount stores to fill empty shelves. Make a space look lived-in. Cozy. Normal.\n\nBut it smells wrong.\n\nNot the wax itself—that\'s vanilla, artificial but pleasant. It\'s the smell underneath. Faint. Chemical. Sharp.\n\nBleach.\n\nThe candle absorbed it. Sitting in this suitcase, packed next to whatever else was in here, soaking up the fumes.',
-                    media: undefined
-                }
-            },
-            onSearch: {
-                success: {
-                    message: 'You roll the candle between your palms, checking the surface for seams, hidden compartments, anything unusual.\n\nNothing.\n\nSolid wax all the way through. You press your thumbnail into the side—it dents easily. Cheap paraffin wax. No hollow core. No hidden objects inside.\n\nYou check the wick. It\'s just cotton, unburned, standard issue.\n\nThe bottom is flat, smooth. Just the price sticker and a barcode. Generic product. Mass-produced.\n\nIt\'s exactly what it looks like: worthless home decor. Filler. The kind of item you pack when you\'re trying to make a suitcase look normal. Innocent.\n\nBecause who hides evidence in a suitcase full of cheap candles and picture frames?\n\nSomeone who wants you to think there\'s nothing worth finding.',
-                    media: undefined
-                }
-            },
-            onTake: {
-                success: {
-                    message: 'You pick up the candle. Light. Waxy. The vanilla scent clings to your fingers.\n\nCompletely useless as evidence. But maybe that\'s exactly why it\'s here.',
-                    media: undefined
-                }
-            }
-        },
-        version: { schema: '1.0.0', content: '1.0.0' }
-    },
-
-    'item_tiny_silver_key': {
-        id: 'item_tiny_silver_key' as ItemId,
-        name: 'Tiny Silver Key',
-        alternateNames: ['tiny silver key', 'silver key', 'tiny key', 'small key', 'key'],
-        description: 'A small silver key, tarnished with age. No markings or labels. Delicate and precise.',
-        capabilities: { isTakable: true, isReadable: false, isUsable: true, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
-        startingLocation: 'loc_street' as LocationId,
-        parentId: 'obj_pocket' as GameObjectId,
-        revealMethod: 'REVEAL_FROM_PARENT',
-        tags: ['key', 'tool'],
-        handlers: {
-            onExamine: {
-                success: {
-                    message: 'A tiny silver key. Delicate. Precise. The kind used for small locks—jewelry boxes, luggage, filing cabinets.\n\nThe silver is tarnished, darkened with age. No manufacturer marks. No serial number. Just a key.\n\nSomeone hid this in a coat lining. Deliberately. Carefully.\n\nWhat does it open?',
-                    media: undefined
-                }
-            },
-            onUse: {
-                fail: {
-                    message: 'You need to specify what you want to use the key on.',
-                    media: undefined
-                }
-            },
-            onTake: {
-                success: {
-                    message: 'You pick up the tiny silver key. It\'s light, almost weightless. You slip it into your pocket.\n\nA key hidden in a coat, hidden in a backpack, thrown in a dumpster.\n\nThe police overlooked this detail. But your instincts led you right here.',
-                    media: undefined
-                }
-            },
-            onRead: {
-                fail: {
-                    message: 'It\'s a key. Small. Silver. Tarnished. No writing, no markings, no serial numbers. Nothing to read.',
-                    media: undefined
-                }
-            }
-        },
-        version: { schema: '1.0.0', content: '1.0.0' }
-    },
-
-    // ============================================
-    // DARK ALLEY ITEMS
-    // ============================================
-
-    'item_alley_crowbar': {
-        id: 'item_alley_crowbar' as ItemId,
-        name: 'Crowbar',
+        alternateNames: ['pry bar', 'steel crowbar', 'bar'],
         archetype: 'Tool',
-        description: 'A heavy iron crowbar, rust-flecked but solid.',
+        description: 'A heavy steel crowbar. Rust-spotted but still solid. Good for prying things open.',
+        zone: 'personal',
+        parentId: 'obj_electrician_toolbox' as GameObjectId,
+        capabilities: { isTakable: true, isReadable: false, isUsable: true, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: true },
+        revealMethod: 'REVEAL_FROM_PARENT',
+        attributes: {
+            force: 5,
+            prying: 5,
+            reusable: true
+        },
+        tags: ['tool', 'prying'],
+        handlers: {
+            onExamine: {
+                success: {
+                    message: 'Two feet of solid steel. A crowbar - the kind you find in toolboxes, garages, construction sites. One end curves into a claw for pulling nails. The other tapers to a flat wedge for prying.\n\nThe steel is rust-spotted, oxidation blooming in orange patches where the protective coating wore away. But underneath, it\'s still sound. Solid. This thing could pry open a door, lever up floorboards, shift heavy objects.\n\nIt\'s heavy. Maybe three, four pounds. The cold metal warms slowly in your hand.\n\nUseful for forcing open locked doors, containers, or anything that needs leverage.',
+                    media: undefined
+                }
+            },
+            onUse: {
+                fail: {
+                    message: 'The crowbar is a tool for leverage - prying, lifting, shifting heavy objects. You need to specify what to use it on.',
+                    media: undefined
+                }
+            },
+            onTake: {
+                success: {
+                    message: 'You take the crowbar. Cold steel. Three, maybe four pounds of rust-spotted persuasion.\n\nIt\'s yours now. A tool for when finesse fails and force is required.',
+                    media: undefined
+                }
+            }
+        },
+        design: {
+            authorNotes: "Found in Electrician's truck toolbox. Use to pry open locked containers, filing cabinets, doors. Alternative to lock pick set for some puzzles.",
+            tags: ['tool', 'prying', 'force']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'item_wire_cutters': {
+        id: 'item_wire_cutters' as ItemId,
+        name: 'Wire Cutters',
+        alternateNames: ['cutters', 'pliers', 'wire pliers'],
+        archetype: 'Tool',
+        description: 'Professional-grade wire cutters with rubber grips. Sharp blades for cutting cables and wires.',
+        zone: 'personal',
+        parentId: 'obj_electrician_toolbox' as GameObjectId,
         capabilities: { isTakable: true, isReadable: false, isUsable: true, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
-        tags: ['tool', 'weapon'],
+        revealMethod: 'REVEAL_FROM_PARENT',
+        attributes: {
+            cutting: 3,
+            reusable: true
+        },
+        tags: ['tool', 'cutting'],
         handlers: {
             onExamine: {
                 success: {
-                    message: 'Heavy iron crowbar. Weathered but still plenty strong. Good for prying things open.',
-                    media: undefined
-                }
-            }
-        },
-        design: {
-            authorNotes: "Tool for prying open the rusty locker. Found in tire pile. Can be used for other puzzles later.",
-            tags: ['tool', 'multi-use']
-        },
-        version: { schema: "1.0", content: "1.0" }
-    },
-
-    'obj_sealed_bag': {
-        id: 'obj_sealed_bag' as GameObjectId,
-        name: 'Sealed Black Bag',
-        alternateNames: ['sealed backpack'],
-        archetype: 'Container',
-        description: 'A backpack, sealed tight with tape.',
-        capabilities: { openable: true, lockable: false, breakable: false, movable: false, powerable: false, container: true, readable: false, inputtable: false },
-        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        inventory: { items: [], capacity: 3, allowTags: [], denyTags: [] },
-        children: {
-            items: ['item_cleaning_invoice' as ItemId],
-            objects: []
-        },
-        handlers: {
-            onExamine: [
-                {
-                    conditions: [{ type: 'STATE', entityId: 'obj_sealed_bag', key: 'isOpen', equals: true }],
-                    success: {
-                        message: 'The bag is torn open. The invoice inside is visible.',
-                        media: undefined
-                    }
-                },
-                {
-                    conditions: [],
-                    success: {
-                        message: 'Black plastic bag, sealed with packing tape. Something\'s inside—feels like paper.',
-                        media: undefined
-                    }
-                }
-            ],
-            onOpen: [
-                {
-                    conditions: [{ type: 'STATE', entityId: 'obj_sealed_bag', key: 'isOpen', equals: true }],
-                    success: {
-                        message: 'Already open.',
-                        media: undefined
-                    }
-                },
-                {
-                    conditions: [],
-                    success: {
-                        message: 'You tear the tape off and rip the bag open.\n\nInside: a printed invoice from "Elite Cleaning Services." Address: 447 Elm Street. Timestamp: 11:47 PM.\n\nThat\'s after the supposed abduction time. Someone cleaned up after.',
-                        media: undefined,
-                        effects: [
-                            { type: 'SET_ENTITY_STATE', entityId: 'obj_sealed_bag', patch: { isOpen: true } },
-                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_cleaning_invoice', parentId: 'obj_sealed_bag' }
-                        ]
-                    }
-                }
-            ]
-        },
-        design: {
-            authorNotes: "Found in dumpster after climbing in. Contains cleaning invoice showing post-crime cleanup.",
-            tags: ['evidence', 'container']
-        },
-        version: { schema: "1.0", content: "1.0" }
-    },
-
-    'item_cleaning_invoice': {
-        id: 'item_cleaning_invoice' as ItemId,
-        name: 'Cleaning Invoice',
-        archetype: 'Document',
-        description: 'A printed invoice from Elite Cleaning Services.',
-        capabilities: { isTakable: true, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
-        tags: ['document', 'evidence', 'clue'],
-        handlers: {
-            onExamine: {
-                success: {
-                    message: 'Elite Cleaning Services\n447 Elm Street\nService Date: [REDACTED]\nTime: 11:47 PM\n\nServices Rendered:\n- Deep sterilization\n- Biohazard disposal\n- Surface decontamination\n\nTotal: $2,400 (PAID)\n\nThis was professional. Thorough. Someone wanted that scene clean.',
+                    message: 'Professional wire cutters. Red rubber grips. Sharp hardened steel blades designed for cutting electrical cables, wires, and thin metal.\n\nThe kind electricians carry. Compact, functional, reliable.\n\nUseful for cutting through wiring, opening electrical panels, or bypassing wire-based locks.',
                     media: undefined
                 }
             },
-            onRead: {
-                success: {
-                    message: 'The invoice shows a cleaning crew was at 447 Elm Street at 11:47 PM. That\'s after the abduction supposedly happened at 11:30 PM.\n\nThey weren\'t cleaning a crime scene. They were erasing evidence of staging.',
-                    media: undefined
-                }
-            }
-        },
-        design: {
-            authorNotes: "Key evidence showing the scene was cleaned after the staged crime. Timestamp is crucial.",
-            tags: ['evidence', 'timeline']
-        },
-        version: { schema: "1.0", content: "1.0" }
-    },
-
-    'obj_cashbox': {
-        id: 'obj_cashbox' as GameObjectId,
-        name: 'Metal Cashbox',
-        alternateNames: ['metal cashbox', 'cashbox', 'cash box', 'metal box', 'box'],
-        archetype: 'Container',
-        description: 'A small locked metal cashbox, dented and scratched.',
-        capabilities: { openable: false, lockable: true, breakable: true, movable: false, powerable: false, container: true, readable: false, inputtable: false },
-        state: { isOpen: false, isLocked: true, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        inventory: { items: [], capacity: 3, allowTags: [], denyTags: [] },
-        children: {
-            items: ['item_contact_sheet' as ItemId],
-            objects: []
-        },
-        handlers: {
-            onExamine: [
-                {
-                    conditions: [{ type: 'STATE', entityId: 'obj_cashbox', key: 'isBroken', equals: true }],
-                    success: {
-                        message: 'The cashbox is smashed open, lid bent back. A printed contact sheet is inside.',
-                        media: undefined
-                    }
-                },
-                {
-                    conditions: [],
-                    success: {
-                        message: 'Small metal cashbox. Locked tight. No keyhole—just a cheap combination latch that\'s rusted shut.\n\nYou could break it open.',
-                        media: undefined
-                    }
-                }
-            ],
-            onBreak: [
-                {
-                    conditions: [{ type: 'STATE', entityId: 'obj_cashbox', key: 'isBroken', equals: true }],
-                    success: {
-                        message: 'Already smashed open.',
-                        media: undefined
-                    }
-                },
-                {
-                    conditions: [],
-                    success: {
-                        message: 'You swing the crowbar down hard.\n\nCRUNCH. Metal buckles. The lid tears free.\n\nInside: a printed contact sheet with phone numbers and codenames.',
-                        media: undefined,
-                        effects: [
-                            { type: 'SET_ENTITY_STATE', entityId: 'obj_cashbox', patch: { isBroken: true } },
-                            { type: 'SET_ENTITY_STATE', entityId: 'obj_cashbox', patch: { isOpen: true } },
-                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_contact_sheet', parentId: 'obj_cashbox' },
-                            { type: 'SET_FLAG', flag: 'found_contact_sheet', value: true }
-                        ]
-                    }
-                }
-            ],
-            onUse: [
-                {
-                    itemId: 'item_alley_crowbar',
-                    conditions: [{ type: 'STATE', entityId: 'obj_cashbox', key: 'isBroken', equals: true }],
-                    success: {
-                        message: 'Already smashed.',
-                        media: undefined
-                    }
-                },
-                {
-                    itemId: 'item_alley_crowbar',
-                    conditions: [],
-                    success: {
-                        message: 'You wedge the crowbar under the lid and twist.\n\nSNAP. Metal rips. Lid tears off.\n\nInside: a printed contact sheet with phone numbers and codenames.',
-                        media: undefined,
-                        effects: [
-                            { type: 'SET_ENTITY_STATE', entityId: 'obj_cashbox', patch: { isBroken: true } },
-                            { type: 'SET_ENTITY_STATE', entityId: 'obj_cashbox', patch: { isOpen: true } },
-                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_contact_sheet', parentId: 'obj_cashbox' },
-                            { type: 'SET_FLAG', flag: 'found_contact_sheet', value: true }
-                        ]
-                    }
-                }
-            ]
-        },
-        design: {
-            authorNotes: "Onion layer 2. Found in locker. Must be broken with crowbar. Contains contact sheet.",
-            tags: ['container', 'breakable', 'onion-chain']
-        },
-        version: { schema: "1.0", content: "1.0" }
-    },
-
-    'item_contact_sheet': {
-        id: 'item_contact_sheet' as ItemId,
-        name: 'Contact Sheet',
-        archetype: 'Document',
-        description: 'A printed sheet with phone numbers and codenames.',
-        capabilities: { isTakable: true, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
-        tags: ['document', 'evidence', 'clue'],
-        handlers: {
-            onExamine: {
-                success: {
-                    message: 'Contact Sheet - Internal Network\n\n"Florist" - (555) 0147\n"Cleaner" - (555) 0891\n"Watcher" - (555) 0234\n"Stage Hand" - (555) 0412\n\nOne of these numbers—"Watcher"—matches the network ID from the CCTV system logs. The same people who shut down the cameras also had a stash in this alley.\n\nThis wasn\'t random. It was coordinated.',
+            onUse: {
+                fail: {
+                    message: 'Wire cutters are for cutting cables and wires. You need to specify what to cut.',
                     media: undefined
                 }
             },
-            onRead: {
+            onTake: {
                 success: {
-                    message: 'Four codenames. Four numbers. "Watcher" is the one that matters—it ties directly to the surveillance logs.\n\nThe operation had multiple roles. Florist. Cleaner. Watcher. Stage Hand.\n\nYou\'re looking at an organized team.',
+                    message: 'You take the wire cutters. Professional-grade tool. Could be useful for electrical panels or wire-based locks.',
                     media: undefined
                 }
             }
         },
         design: {
-            authorNotes: "Final onion layer. Cross-references CCTV logs. Proves coordination between alley operation and camera shutdown.",
-            tags: ['evidence', 'cross-reference', 'endgame']
+            authorNotes: "Found in Electrician's truck. Required for Alley electrical panel puzzle (secret door to garages).",
+            tags: ['tool', 'wire-cutting', 'electrical']
         },
-        version: { schema: "1.0", content: "1.0" }
+        version: { schema: '1.0.0', content: '1.0.0' }
     },
 
-    'obj_burner_phone': {
-        id: 'obj_burner_phone' as GameObjectId,
-        name: 'Burner Phone',
-        alternateNames: ['burner phone', 'phone', 'burner', 'prepaid phone', 'cheap phone'],
-        archetype: 'Device',
-        description: 'A cheap prepaid phone with a cracked screen.',
-        capabilities: { openable: false, lockable: false, breakable: false, movable: false, powerable: true, container: false, readable: false, inputtable: false },
-        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
+    'item_lock_pick_set': {
+        id: 'item_lock_pick_set' as ItemId,
+        name: 'Lock Pick Set',
+        alternateNames: ['lock picks', 'picks', 'lockpick set', 'pick set'],
+        archetype: 'Tool',
+        description: 'Professional lock picking set in a leather case. Contains various picks and tension wrenches.',
+        zone: 'personal',
+        parentId: 'obj_electrician_toolbox' as GameObjectId,
+        capabilities: { isTakable: true, isReadable: false, isUsable: true, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+        revealMethod: 'REVEAL_FROM_PARENT',
+        attributes: {
+            unlocking: 5,
+            reusable: true
+        },
+        tags: ['tool', 'lockpicking', 'permanent'],
         handlers: {
             onExamine: {
                 success: {
-                    message: 'Cheap burner phone. Screen cracked. No SIM card visible.\n\nIt might still have call logs or messages if you can power it on.',
-                    media: undefined
-                }
-            }
-        },
-        design: {
-            authorNotes: "TODO: Add power-on handler to reveal call logs linking to contact sheet numbers.",
-            tags: ['evidence', 'device', 'TODO']
-        },
-        version: { schema: "1.0", content: "1.0" }
-    },
-
-    'item_script_sheet': {
-        id: 'item_script_sheet' as ItemId,
-        name: 'Scene Script Sheet',
-        archetype: 'Document',
-        description: 'A printed scene script with blocking notes and codes.',
-        capabilities: { isTakable: true, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
-        tags: ['document', 'evidence', 'clue'],
-        handlers: {
-            onExamine: {
-                success: {
-                    message: 'SCENE BREAKDOWN - CAFE ABDUCTION\n\nACT 1: Setup\n- Victim enters @ 11:15 PM\n- Barista on shift (paid)\n- Manager off-site (confirmed)\n\nACT 2: Event\n- Staged struggle 11:30 PM\n- CCTV offline 11:28-11:45 PM\n- Witness cued @ 11:32 PM\n\nACT 3: Cleanup\n- Cleaning crew @ 11:47 PM\n- Evidence planted by 12:00 AM\n\nNOTES:\n- Backdoor code = SB year\n- Confirm all props removed\n\nThis is a script. The whole thing was theater.',
+                    message: 'A professional lock picking set. Black leather case containing an array of stainless steel picks:\n\n- Hook picks (various angles)\n- Rake picks (for speed picking)\n- Diamond picks (for precision)\n- Tension wrenches (multiple sizes)\n\nFBI standard issue for field agents. You\'ve been trained to use these.\n\nUseful for opening mechanical locks, padlocks, door locks, filing cabinets - any standard pin tumbler lock.',
                     media: undefined
                 }
             },
-            onRead: {
+            onUse: {
+                fail: {
+                    message: 'Lock picks require a target. Specify what lock you want to pick.',
+                    media: undefined
+                }
+            },
+            onTake: {
                 success: {
-                    message: 'You read the script carefully.\n\nEvery detail was planned. The timing. The witness. The cleanup.\n\nAnd there—"Backdoor code = SB year."\n\nYou saw "SB 1984" spray-painted in the alley. That\'s the code.\n\n1984.',
+                    message: 'You take the lock pick set. FBI standard issue. You\'ve used these countless times.\n\nA permanent tool for opening mechanical locks throughout your investigation.',
+                    media: undefined
+                }
+            }
+        },
+        design: {
+            authorNotes: "PERMANENT TOOL - Found in Electrician's truck. Opens mechanical locks via minigame. Used throughout game for padlocks, doors, filing cabinets, etc.",
+            tags: ['tool', 'permanent', 'lockpicking']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'item_bolt_cutters': {
+        id: 'item_bolt_cutters' as ItemId,
+        name: 'Bolt Cutters',
+        alternateNames: ['cutters', 'heavy cutters', 'chain cutters'],
+        archetype: 'Tool',
+        description: 'Heavy-duty bolt cutters with long handles. Designed for cutting chains and heavy padlocks.',
+        zone: 'personal',
+        capabilities: { isTakable: true, isReadable: false, isUsable: true, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+        revealMethod: 'MANUAL',
+        attributes: {
+            force: 8,
+            cutting: 8,
+            reusable: true
+        },
+        tags: ['tool', 'heavy', 'cutting'],
+        handlers: {
+            onExamine: {
+                success: {
+                    message: 'Heavy-duty bolt cutters. Three-foot handles provide massive leverage. Hardened steel blades designed to cut through chains, padlocks, metal bars, fencing.\n\nThe kind of tool that doesn\'t ask permission - it just takes what it wants.\n\nUseful for cutting chains, breaking padlocks, or getting through chain-link fences.',
+                    media: undefined
+                }
+            },
+            onUse: {
+                fail: {
+                    message: 'Bolt cutters are for cutting heavy metal - chains, padlocks, fences. Specify what you want to cut.',
+                    media: undefined
+                }
+            },
+            onTake: {
+                success: {
+                    message: 'You take the bolt cutters. Heavy. Solid. The kind of tool that solves problems through sheer force.\n\nUseful for chains, padlocks, and anything else that needs cutting.',
+                    media: undefined
+                }
+            }
+        },
+        design: {
+            authorNotes: "Found at Butcher Shop (Klaus gives freely). Use to cut chains at Hidden Garages, CCTV fence, or as alternative to other lock methods.",
+            tags: ['tool', 'force', 'chain-cutting']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'item_hard_hat': {
+        id: 'item_hard_hat' as ItemId,
+        name: 'Hard Hat',
+        alternateNames: ['hardhat', 'helmet', 'construction hat', 'safety helmet'],
+        archetype: 'Tool',
+        description: 'Yellow hard hat with adjustment straps. Required for construction site access.',
+        zone: 'personal',
+        parentId: 'obj_construction_tool_shed' as GameObjectId,
+        capabilities: { isTakable: true, isReadable: false, isUsable: true, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+        revealMethod: 'REVEAL_FROM_PARENT',
+        attributes: {
+            protective: true,
+            reusable: true
+        },
+        tags: ['safety', 'wearable'],
+        handlers: {
+            onExamine: {
+                success: {
+                    message: 'A bright yellow hard hat. Standard construction safety equipment. Plastic shell with foam padding inside. Adjustment straps for fitting.\n\nSticker on the side reads: "SAFETY FIRST - NO HAT, NO ENTRY"\n\nRequired for entering active construction sites.',
+                    media: undefined
+                }
+            },
+            onUse: {
+                success: {
+                    message: 'You put on the hard hat. It fits snugly.\n\nYou look like you belong on a construction site now.',
                     media: undefined,
                     effects: [
-                        { type: 'SET_FLAG', flag: 'knows_backdoor_code', value: true }
+                        { type: 'SET_FLAG', flag: 'wearing_hard_hat' as Flag }
+                    ]
+                }
+            },
+            onTake: {
+                success: {
+                    message: 'You take the hard hat. Might be useful for accessing construction areas.',
+                    media: undefined
+                }
+            }
+        },
+        design: {
+            authorNotes: "Found in Construction tool shed OR Alley dumpster. Required (with safety vest) for Construction site access. Wear to satisfy foreman Tony Greco.",
+            tags: ['safety', 'construction', 'access']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'item_safety_vest': {
+        id: 'item_safety_vest' as ItemId,
+        name: 'Safety Vest',
+        alternateNames: ['vest', 'reflective vest', 'high vis vest', 'safety jacket'],
+        archetype: 'Tool',
+        description: 'Bright orange reflective safety vest. Required for construction site access.',
+        zone: 'personal',
+        parentId: 'obj_construction_tool_shed' as GameObjectId,
+        capabilities: { isTakable: true, isReadable: false, isUsable: true, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+        revealMethod: 'REVEAL_FROM_PARENT',
+        attributes: {
+            protective: true,
+            reusable: true
+        },
+        tags: ['safety', 'wearable'],
+        handlers: {
+            onExamine: {
+                success: {
+                    message: 'A bright orange safety vest with reflective silver stripes. Standard construction site gear. Velcro straps at the sides for adjustment.\n\nLabel reads: "HIGH VISIBILITY SAFETY APPAREL - CLASS 2"\n\nRequired for entering active construction sites.',
+                    media: undefined
+                }
+            },
+            onUse: {
+                success: {
+                    message: 'You put on the safety vest. The reflective stripes catch the light.\n\nYou look official now. Ready for construction zones.',
+                    media: undefined,
+                    effects: [
+                        { type: 'SET_FLAG', flag: 'wearing_safety_vest' as Flag }
+                    ]
+                }
+            },
+            onTake: {
+                success: {
+                    message: 'You take the safety vest. Bright orange. Highly visible. Might help you blend in at construction sites.',
+                    media: undefined
+                }
+            }
+        },
+        design: {
+            authorNotes: "Found in Construction tool shed. Required (with hard hat) for Construction site access.",
+            tags: ['safety', 'construction', 'access']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    // ===== MULTI-PART DRILL (3 parts must be combined) =====
+
+    'item_drill_body': {
+        id: 'item_drill_body' as ItemId,
+        name: 'Drill Body',
+        alternateNames: ['drill', 'power drill body', 'drill frame'],
+        archetype: 'Tool',
+        description: 'Cordless drill body (Part 1/3). Missing battery and drill bit.',
+        zone: 'personal',
+        parentId: 'obj_electrician_toolbox' as GameObjectId,
+        capabilities: { isTakable: true, isReadable: false, isUsable: false, isCombinable: true, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+        revealMethod: 'REVEAL_FROM_PARENT',
+        tags: ['tool', 'incomplete', 'drill-part'],
+        handlers: {
+            onExamine: {
+                success: {
+                    message: 'A cordless drill body. Black plastic housing with trigger and speed control. Brand: DeWalt.\n\nBut it\'s incomplete:\n- Battery slot is empty (needs battery pack)\n- Chuck is empty (needs drill bit)\n\nYou need to find the battery and drill bit to make this functional.\n\nOnce assembled, this drill could bore through locks, metal plates, or wood barriers.',
+                    media: undefined
+                }
+            },
+            onTake: {
+                success: {
+                    message: 'You take the drill body. Part 1 of 3. Still need battery and drill bit.',
+                    media: undefined
+                }
+            }
+        },
+        design: {
+            authorNotes: "PART 1/3 - Found in Electrician's truck. Combine with battery (Construction) and bit (Construction office) to make functional drill. Use on Garage #3 lock as alternative to PIN.",
+            tags: ['drill-part', 'combinable']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'item_drill_battery': {
+        id: 'item_drill_battery' as ItemId,
+        name: 'Drill Battery',
+        alternateNames: ['battery', 'battery pack', 'power battery', 'drill battery pack'],
+        archetype: 'Tool',
+        description: 'Rechargeable battery pack for cordless drill (Part 2/3).',
+        zone: 'personal',
+        parentId: 'obj_construction_tool_shed' as GameObjectId,
+        capabilities: { isTakable: true, isReadable: false, isUsable: false, isCombinable: true, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+        revealMethod: 'REVEAL_FROM_PARENT',
+        tags: ['tool', 'incomplete', 'drill-part'],
+        handlers: {
+            onExamine: {
+                success: {
+                    message: 'A rechargeable lithium-ion battery pack. DeWalt 20V MAX.\n\nFour green LEDs indicate full charge. This would power a cordless drill.\n\nBut you still need the drill body and a drill bit to make it useful.',
+                    media: undefined
+                }
+            },
+            onTake: {
+                success: {
+                    message: 'You take the drill battery. Part 2 of 3. Fully charged and ready.',
+                    media: undefined
+                }
+            }
+        },
+        design: {
+            authorNotes: "PART 2/3 - Found in Construction tool shed (requires code 1987 from street sign). Combine with drill body and bit.",
+            tags: ['drill-part', 'combinable']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'item_drill_bit': {
+        id: 'item_drill_bit' as ItemId,
+        name: 'Drill Bit',
+        alternateNames: ['bit', 'metal bit', 'drill attachment'],
+        archetype: 'Tool',
+        description: 'Heavy-duty metal drill bit (Part 3/3). For drilling through locks or metal.',
+        zone: 'personal',
+        parentId: 'obj_construction_office_trailer' as GameObjectId,
+        capabilities: { isTakable: true, isReadable: false, isUsable: false, isCombinable: true, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+        revealMethod: 'REVEAL_FROM_PARENT',
+        tags: ['tool', 'incomplete', 'drill-part'],
+        handlers: {
+            onExamine: {
+                success: {
+                    message: 'A heavy-duty drill bit. Hardened steel. Designed for drilling through metal locks, hinges, or plates.\n\nThe cutting edges are sharp and intact. This bit could bore through a padlock shackle or door hinge.\n\nBut you need the drill body and battery to use it.',
+                    media: undefined
+                }
+            },
+            onTake: {
+                success: {
+                    message: 'You take the drill bit. Part 3 of 3. Sharp and ready for metal drilling.',
+                    media: undefined
+                }
+            }
+        },
+        design: {
+            authorNotes: "PART 3/3 - Found in Construction office trailer. Combine all 3 parts (body + battery + bit) to create functional drill. Use drill on Garage #3 as alternative unlock method.",
+            tags: ['drill-part', 'combinable']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    // ===== BUS STOP PUZZLE ITEMS =====
+
+    'item_bus_ticket': {
+        id: 'item_bus_ticket' as ItemId,
+        name: 'Bus Ticket',
+        alternateNames: ['ticket', 'old ticket', 'bus pass', 'transit ticket'],
+        archetype: 'Evidence',
+        description: 'An old bus ticket with a long serial number printed on it.',
+        zone: 'personal',
+        parentId: 'obj_bus_trash_bin' as GameObjectId,
+        capabilities: { isTakable: true, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: true },
+        revealMethod: 'REVEAL_FROM_PARENT',
+        tags: ['puzzle', 'bus-stop', 'payphone-code'],
+        media: {
+            images: {
+                default: {
+                    url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1/bus-ticket-activation-code',
+                    description: 'Old bus ticket with activation code serial number',
+                    hint: 'Payphone activation code'
+                }
+            }
+        },
+        handlers: {
+            onExamine: {
+                success: {
+                    message: 'An old bus ticket, crumpled and stained. Route 47 - dated weeks ago.\n\nAcross the bottom, a long serial number is printed:\n\n**SERIAL: A-B-C-D-A-C-B-D**\n\n8 characters. All letters A through D.',
+                    media: undefined
+                }
+            },
+            onRead: {
+                success: {
+                    message: 'You examine the bus ticket closely.\n\n**BLOODHAVEN TRANSIT AUTHORITY**\nRoute 47 - Downtown\nDate: March 28, 2026\nFare: $2.75\n\n**SERIAL NUMBER:**\n**A-B-C-D-A-C-B-D**',
+                    media: {
+                        url: 'https://res.cloudinary.com/dg912bwcc/image/upload/v1/bus-ticket-activation-code',
+                        description: 'Bus ticket showing serial number: A-B-C-D-A-C-B-D'
+                    }
+                }
+            },
+            onTake: {
+                success: {
+                    message: 'You take the bus ticket.',
+                    media: undefined,
+                    effects: [
+                        { type: 'SET_FLAG', flag: 'found_payphone_activation_code' as Flag, value: true }
                     ]
                 }
             }
         },
         design: {
-            authorNotes: "Provides the backdoor code hint (SB year = 1984). Cross-references with graffiti in alley.",
-            tags: ['clue', 'puzzle', 'cross-reference']
+            authorNotes: "Payphone puzzle item 1/2. Found in bus stop trash bin. Contains activation sequence A-B-C-D-A-C-B-D which must be translated via bus schedule (colors) and keypad (numbers).",
+            tags: ['payphone-puzzle', 'cipher', 'bus-stop']
         },
-        version: { schema: "1.0", content: "1.0" }
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'item_quarter': {
+        id: 'item_quarter' as ItemId,
+        name: 'Quarter',
+        alternateNames: ['coin', '25 cents', 'change', 'quarter dollar'],
+        archetype: 'Currency',
+        description: 'A dirty quarter. Twenty-five cents. Enough for one payphone call.',
+        zone: 'personal',
+        parentId: 'obj_bus_bench' as GameObjectId,
+        capabilities: { isTakable: true, isReadable: false, isUsable: true, isCombinable: false, isConsumable: true, isScannable: false, isAnalyzable: false, isPhotographable: false },
+        revealMethod: 'REVEAL_FROM_PARENT',
+        tags: ['currency', 'consumable', 'payphone'],
+        handlers: {
+            onExamine: {
+                success: {
+                    message: 'A quarter. 1998 issue. George Washington\'s profile worn smooth from years of circulation.\n\nTwenty-five cents. The price of a payphone call, back when payphones still existed.',
+                    media: undefined
+                }
+            },
+            onTake: {
+                success: {
+                    message: 'You take the quarter. Clean and functional. One payphone call\'s worth of currency.',
+                    media: undefined,
+                    effects: [
+                        { type: 'SET_FLAG', flag: 'has_payphone_quarter' as Flag, value: true }
+                    ]
+                }
+            }
+        },
+        design: {
+            authorNotes: "Payphone puzzle item 2/2. Required to make calls from payphone after activation. Hidden under bench leg - player must move bench to reveal.",
+            tags: ['payphone-puzzle', 'currency', 'consumable']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'item_soda_can': {
+        id: 'item_soda_can' as ItemId,
+        name: 'Soda Can',
+        alternateNames: ['can', 'cola can', 'empty can', 'crushed can'],
+        archetype: 'Junk',
+        description: 'A crushed aluminum can. Generic brand cola. Empty.',
+        zone: 'personal',
+        parentId: 'obj_bus_trash_bin' as GameObjectId,
+        capabilities: { isTakable: true, isReadable: false, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+        revealMethod: 'REVEAL_FROM_PARENT',
+        tags: ['junk', 'red-herring'],
+        handlers: {
+            onExamine: {
+                success: {
+                    message: 'Generic brand cola. The aluminum is crushed flat. Someone stepped on it.\n\nSticky residue on the rim. No fingerprints - too degraded. Just trash.',
+                    media: undefined
+                }
+            },
+            onTake: {
+                success: {
+                    message: 'You take the crushed soda can. Not sure why. Force of habit - investigating everything.',
+                    media: undefined
+                }
+            }
+        },
+        design: {
+            authorNotes: "Red herring item. Makes trash bin feel more realistic and adds clutter to item list. No puzzle value.",
+            tags: ['red-herring', 'trash', 'bus-stop']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'item_food_wrapper': {
+        id: 'item_food_wrapper' as ItemId,
+        name: 'Food Wrapper',
+        alternateNames: ['wrapper', 'candy wrapper', 'chip bag', 'snack wrapper'],
+        archetype: 'Junk',
+        description: 'A greasy food wrapper. Chips, maybe. Crumpled and stained.',
+        zone: 'personal',
+        parentId: 'obj_bus_trash_bin' as GameObjectId,
+        capabilities: { isTakable: true, isReadable: false, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+        revealMethod: 'REVEAL_FROM_PARENT',
+        tags: ['junk', 'red-herring'],
+        handlers: {
+            onExamine: {
+                success: {
+                    message: 'Greasy wrapper. Potato chips - "BBQ Blast" flavor. The bag is torn open, crumbs stuck to the inside.\n\nSmells like artificial smoke flavoring and regret. Just trash.',
+                    media: undefined
+                }
+            },
+            onTake: {
+                success: {
+                    message: 'You take the food wrapper. Your hands are now slightly greasy. Great.',
+                    media: undefined
+                }
+            }
+        },
+        design: {
+            authorNotes: "Red herring item. Adds realism to trash bin contents and creates decision fatigue. No puzzle value.",
+            tags: ['red-herring', 'trash', 'bus-stop']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
     }
 };
 
-// =====================================
-// GAME OBJECTS
-// =====================================
-
+// ===== GAME OBJECTS =====
 const gameObjects: Record<GameObjectId, GameObject> = {
-    // ZONE 1: Bus Station - Main Structure
-    'obj_bus_stop': {
-        id: 'obj_bus_stop' as GameObjectId,
-        name: 'Bus Stop',
-        alternateNames: ['bus stop', 'bus station', 'stop', 'shelter', 'bus shelter'],
-        archetype: 'Structure',
-        description: 'The bus stop where Lili Chen was last seen. A weathered shelter with an old bench, a trash bin, and a timetable board.',
-        transitionNarration: 'You approach the bus stop. The rusted shelter looms ahead—the last place Lili Chen was seen before she vanished.',
-        capabilities: { openable: false, lockable: false, breakable: false, movable: false, powerable: false, container: true, readable: false, inputtable: false },
-        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        children: {
-            items: [],
-            objects: ['obj_bench' as GameObjectId, 'obj_info_board' as GameObjectId, 'obj_bus_sign' as GameObjectId]
-        },
-        handlers: {
-            onExamine: {
-                message: 'The bus stop stands under a rusted metal shelter. Paint peels from the frame in long, pale strips. An old wooden bench occupies most of the space, its surface stained dark from decades of use. A trash bin leans against one support beam, overflowing with discarded wrappers and newspapers. The information board—scratched plexiglass over faded paper—displays bus routes and a missing person poster.\n\nThis is where it happened. Where an eight-year-old girl vanished in broad daylight. The ordinary becomes sinister when you know what occurred here. Every detail—bench, bin, timetable—takes on weight, significance. One of these elements holds a clue. You just have to find it.',
-                media: {
-                    url: '',
-                    description: 'Bus stop with bench, bin, and information board',
-                    hint: 'crime scene location'
-                },
-                effects: [
-                    { type: 'REVEAL_FROM_PARENT', entityId: 'obj_bench', parentId: 'obj_bus_stop' },
-                    { type: 'REVEAL_FROM_PARENT', entityId: 'obj_info_board', parentId: 'obj_bus_stop' },
-                    { type: 'REVEAL_FROM_PARENT', entityId: 'obj_bus_sign', parentId: 'obj_bus_stop' }
-                ]
-            },
-            onSearch: {
-                message: 'You methodically scan the bus stop, detective instincts sharp. The trash bin—nothing unusual, just refuse. The shelter frame—weathered but unremarkable. The information board catches your eye briefly, but it\'s the bench that draws your attention.\n\nAccording to the police report, witnesses mentioned seeing Lili sitting on the bench moments before she disappeared. The florist\'s delivery was at 3:30 PM—the same time as the abduction. Something about that timing feels deliberate. Too precise to be coincidence.\n\nThe bench. Check the bench closer.',
-                media: undefined
-            }
-        },
-        version: { schema: '1.0.0', content: '1.0.0' }
-    },
+    // ===== ZONE 0: ELM STREET (Hub - Flavor Objects) =====
 
-    'obj_bench': {
-        id: 'obj_bench' as GameObjectId,
-        name: 'Bench',
-        alternateNames: ['bench', 'wooden bench', 'weathered bench', 'seat', 'bus bench'],
-        archetype: 'Furniture',
-        description: 'A weathered wooden bench at the bus station, its surface darkened by years of use and weather.',
-        transitionNarration: 'You move closer to the bench. This is where Lili sat moments before she disappeared.',
-        capabilities: { openable: false, lockable: false, breakable: false, movable: true, powerable: false, container: false, readable: false, inputtable: false },
-        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        children: {
-            items: ['item_invoice' as ItemId],
-            objects: []
-        },
-        handlers: {
-            onExamine: [
-                {
-                    // Before moving bench - invoice still hidden
-                    conditions: [
-                        { type: 'STATE', entityId: 'obj_bench', key: 'isMoved', equals: false }
-                    ],
-                    success: {
-                        message: 'The bench is simple—weathered wood bolted to a metal frame. Decades of rain and sun have turned the planks gray-brown, the grain raised like old scars. Names and initials carved into the surface speak of bored teenagers and restless waits.\n\nYou crouch down, examining the legs. One of them—the front-right—has something caught beneath it. A corner of paper, wedged between wood and concrete. The wind must have pushed it there, or maybe someone kicked it aside without noticing.\n\nIt looks like a receipt or invoice. Partially hidden, easy to miss unless you were looking for it.',
-                        media: {
-                            url: '',
-                            description: 'Wooden bench with paper visible under leg',
-                            hint: 'receipt partially hidden under bench leg'
-                        }
-                    }
-                },
-                {
-                    // After moving bench - invoice revealed but not taken
-                    conditions: [
-                        { type: 'STATE', entityId: 'obj_bench', key: 'isMoved', equals: true },
-                        { type: 'NOT_HAS_ITEM', itemId: 'item_invoice' }
-                    ],
-                    success: {
-                        message: 'The bench sits slightly askew from where you moved it. The invoice lies on the ground next to the bench leg, fully visible now—wrinkled and dirt-smudged but readable.',
-                        media: {
-                            url: '',
-                            description: 'Bench with invoice lying on ground',
-                            hint: 'receipt on ground next to bench'
-                        }
-                    }
-                },
-                {
-                    // After taking invoice
-                    conditions: [
-                        { type: 'HAS_ITEM', itemId: 'item_invoice' }
-                    ],
-                    success: {
-                        message: 'The bench sits where you moved it, slightly off-center. The spot where the invoice was is now just bare concrete, a faint dust outline marking where it lay.',
-                        media: {
-                            url: '',
-                            description: 'Bench with empty ground beneath',
-                            hint: 'invoice taken, nothing underneath'
-                        }
-                    }
-                },
-                {
-                    // Default fallback
-                    conditions: [],
-                    success: {
-                        message: 'The bench is worn and weathered, its wood darkened by years of exposure.',
-                        media: undefined
-                    }
-                }
-            ],
-            onMove: {
-                message: 'You grip the bench and shift it to the side. The metal legs scrape against concrete with a harsh sound. The invoice slides free, now fully visible on the ground—crumpled, dirt-stained, but readable.\n\nFlorist Express. Delivery timestamp: 3:30 PM. The same time Lili vanished.',
-                media: {
-                    url: '',
-                    description: 'Bench moved, invoice on ground',
-                    hint: 'receipt revealed'
-                },
-                effects: [
-                    { type: 'REVEAL_FROM_PARENT', entityId: 'item_invoice', parentId: 'obj_bench' }
-                ]
-            },
-            onSearch: {
-                message: 'You run your hands along the bench slats, checking for anything hidden or carved beneath the surface. Nothing. Just smooth wood, worn soft by countless hands. But when you check underneath, you spot it—that corner of paper wedged beneath the front-right leg.',
-                media: undefined
-            },
-            onUse: {
-                message: 'You sit down on the bench, the wood hard and slightly uneven beneath you. Not comfortable, but not unbearable either. How many people have sat here? Thousands, probably. Tens of thousands over the decades.\n\nOrdinary people waiting for ordinary buses. Families. Workers. Students. But also—statistically speaking—criminals. Thieves. Maybe even murderers. This bench has held them all, made no distinction. Wood doesn\'t judge.\n\nYou imagine Lili sitting here, eight years old, backpack on her lap. Waiting. Trusting. And then—what? Someone approached. Said something. Offered something. And she went with them. Just like that.\n\nThe ordinariness of it haunts you. Evil doesn\'t announce itself. It wears a familiar face, speaks in calm tones, moves through the world undetected. Until it\'s too late.',
-                media: undefined
-            }
-        },
-        version: { schema: '1.0.0', content: '1.0.0' }
-    },
-
-    'obj_info_board': {
-        id: 'obj_info_board' as GameObjectId,
-        name: 'Info Board',
-        alternateNames: ['info board', 'information board', 'board', 'schedule board', 'bus schedule'],
-        archetype: 'Readable',
-        description: 'A plastic-covered information board displaying bus schedules and a missing person poster.',
-        transitionNarration: 'You step up to the information board. Bus schedules and a missing person poster stare back at you through scratched plexiglass.',
-        capabilities: { openable: false, lockable: false, breakable: false, movable: false, powerable: false, container: true, readable: true, inputtable: false },
-        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        children: {
-            items: [],
-            objects: ['obj_missing_poster' as GameObjectId]
-        },
-        handlers: {
-            onExamine: {
-                message: 'The information board is scratched and yellowed, protected by a sheet of cloudy plexiglass. Behind the plastic: bus route maps, timetables, and—prominently displayed—a missing person poster. Lili Chen\'s face stares out from the poster, her school photo recent enough that the resemblance is sharp.',
-                media: {
-                    url: '',
-                    description: 'Bus stop information board with schedules and missing poster',
-                    hint: 'information board with timetables'
-                }
-            },
-            onRead: {
-                message: 'BUS SCHEDULE - ROUTE 42\nMonday - Friday: Every 30 minutes\n3:00 PM - Elm & 5th (This Stop)\n3:30 PM - Oak & 3rd\n4:00 PM - Maple & 7th\n\nWeekends: Every 45 minutes\n\nThe 3:30 PM bus would have arrived here right around the time Lili disappeared. Did the abductor time it deliberately? Use the crowd, the movement, the distraction of people boarding and departing?',
-                media: undefined
-            }
-        },
-        version: { schema: '1.0.0', content: '1.0.0' }
-    },
-
-    'obj_missing_poster': {
-        id: 'obj_missing_poster' as GameObjectId,
-        name: 'Missing Poster',
-        archetype: 'Readable',
-        description: 'A freshly printed missing person poster for Lili Chen.',
-        capabilities: { openable: false, lockable: false, breakable: false, movable: false, powerable: false, container: false, readable: true, inputtable: false },
-        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        parentId: 'obj_info_board' as GameObjectId,
-        revealMethod: 'REVEAL_FROM_PARENT',
-        handlers: {
-            onExamine: {
-                message: 'MISSING: LILI CHEN, Age 8\n\nThe poster is crisp, recently printed. Lili\'s school photo shows a young girl with dark hair pulled into pigtails, a cautious smile. The text below lists her height, weight, last known clothing. A phone number for tips.\n\n"Last seen: Elm Street & 5th Avenue, 3:45 PM"\n\nBut something about the poster feels... off. The photo is slightly overexposed, washed out. The family\'s plea—"Please help us find our daughter"—reads flat, mechanical. Like it was written by someone going through motions rather than feeling desperation.\n\nWeird. You\'ve seen hundreds of these posters. This one looks cold. Professional, but cold.',
-                media: {
-                    url: '',
-                    description: 'Missing person poster for Lili Chen',
-                    hint: 'missing child poster'
-                }
-            },
-            onRead: {
-                message: 'You read the details carefully:\n\nMISSING CHILD\nName: Lili Chen\nAge: 8 years old\nHeight: 4\'2"\nLast Seen: 3:45 PM, corner of Elm & 5th\nClothing: Blue backpack, pink jacket, jeans\n\nContact: (555) 0147\n\nThe timestamp bothers you. 3:45 PM. The florist delivery was at 3:30 PM. Fifteen minutes. A narrow window. Everything about this abduction feels choreographed.',
-                media: undefined
-            }
-        },
-        version: { schema: '1.0.0', content: '1.0.0' }
-    },
-
-    'obj_bus_sign': {
-        id: 'obj_bus_sign' as GameObjectId,
-        name: 'Bus Sign',
-        archetype: 'Decoration',
-        description: 'A simple metal sign marking the bus stop.',
-        transitionNarration: 'You approach the bus sign. Simple, direct—BUS. Nothing more.',
-        capabilities: { openable: false, lockable: false, breakable: false, movable: false, powerable: false, container: false, readable: false, inputtable: false },
-        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        handlers: {
-            onExamine: {
-                message: 'A simple metal sign bolted to the shelter post. White letters on blue background: BUS.\n\nThat\'s it. No route numbers, no additional information. Just BUS.\n\nSomehow, the blunt simplicity of it feels appropriate. This is a bus stop. People wait here. Sometimes they never arrive at their destinations.',
-                media: {
-                    url: '',
-                    description: 'Blue metal sign reading BUS',
-                    hint: 'simple bus stop sign'
-                }
-            }
-        },
-        version: { schema: '1.0.0', content: '1.0.0' }
-    },
-
-    // ZONE 3: Gray Building
-    'obj_gray_building_door': {
-        id: 'obj_gray_building_door' as GameObjectId,
-        name: 'Locked Door',
-        alternateNames: ['locked door', 'door', 'gray building', 'gray building door', 'grey building', 'steel door', 'metal door'],
-        archetype: 'Door',
-        description: 'A heavy metal door on the gray building. It\'s locked tight.',
-        transitionNarration: 'You walk over to the gray building. The steel door stands imposing, locked tight. No nameplate, no signage.',
-        capabilities: { openable: true, lockable: true, breakable: false, movable: false, powerable: false, container: false, readable: false, inputtable: false },
-        state: { isOpen: false, isLocked: true, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        handlers: {
-            onExamine: {
-                message: 'A solid steel door painted gray. There\'s no nameplate or signage. The lock looks industrial-grade.',
-                media: undefined
-            },
-            onOpen: {
-                message: 'The door is locked. You\'ll need a key or another way to get inside.',
-                media: undefined
-            }
-        },
-        version: { schema: '1.0.0', content: '1.0.0' }
-    },
-
-    // ZONE 4: Florist
-    'obj_florist_shop': {
-        id: 'obj_florist_shop' as GameObjectId,
-        name: 'Florist Shop',
-        alternateNames: ['florist shop', 'florist', 'flower shop', 'shop', 'flower store', 'florist store'],
-        archetype: 'Structure',
-        description: 'A small flower shop with a colorful awning. Fresh bouquets line the windows.',
-        transitionNarration: 'You move toward the florist shop. The bright colors and fresh flowers contrast sharply with the grim nature of your investigation.',
-        capabilities: { openable: false, lockable: false, breakable: false, movable: false, powerable: false, container: false, readable: false, inputtable: false },
-        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        handlers: {
-            onExamine: {
-                message: 'The shop is bright and cheerful. Roses, lilies, and daisies fill the window display. A florist tends to the flowers inside.',
-                media: undefined
-            }
-        },
-        version: { schema: '1.0.0', content: '1.0.0' }
-    },
-
-    // ZONE 5: Kiosk - Parent Container
-    'obj_kiosk_counter': {
-        id: 'obj_kiosk_counter' as GameObjectId,
-        name: 'Kiosk',
-        alternateNames: ['kiosk', 'counter', 'kiosk counter', 'news stand', 'newsstand', 'vendor stand', 'vendor'],
-        archetype: 'Furniture',
-        description: 'A small street kiosk with a cluttered counter. The elderly vendor watches you from behind the counter.',
-        transitionNarration: 'You approach the kiosk. The elderly vendor looks up from behind his counter cluttered with newspapers and snacks.',
-        capabilities: { openable: false, lockable: false, breakable: false, movable: false, powerable: false, container: true, readable: false, inputtable: false },
-        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        children: {
-            items: [],
-            objects: ['obj_kiosk_drawer' as GameObjectId]
-        },
-        handlers: {
-            onExamine: {
-                message: 'The kiosk counter is cluttered with candy bars, lottery tickets, and today\'s newspapers. A cash register sits at one end. Behind the counter, you notice a small wooden drawer—the kind vendors use for receipts and small items.',
-                media: {
-                    url: '',
-                    description: 'Street kiosk with cluttered counter and elderly vendor',
-                    hint: 'kiosk counter'
-                },
-                effects: [
-                    { type: 'REVEAL_FROM_PARENT', entityId: 'obj_kiosk_drawer', parentId: 'obj_kiosk_counter' }
-                ]
-            }
-        },
-        version: { schema: '1.0.0', content: '1.0.0' }
-    },
-
-    'obj_kiosk_drawer': {
-        id: 'obj_kiosk_drawer' as GameObjectId,
-        name: 'Drawer',
-        archetype: 'Container',
-        description: 'A small drawer behind the kiosk counter.',
-        isRevealed: false,
-        transitionNarration: 'You lean in closer to inspect the drawer behind the counter.',
-        capabilities: { openable: true, lockable: false, breakable: false, movable: false, powerable: false, container: true, readable: false, inputtable: false },
-        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        inventory: { items: [], capacity: 5, allowTags: [], denyTags: [] },
-        handlers: {
-            onExamine: {
-                message: 'A simple wooden drawer. The kiosk vendor keeps receipts and papers in here.',
-                media: undefined
-            },
-            onOpen: {
-                message: 'You pull open the drawer. It\'s mostly empty—just some old receipts and a rubber band.',
-                media: undefined
-            }
-        },
-        version: { schema: '1.0.0', content: '1.0.0' }
-    },
-
-    // ZONE 6: Side Alley - Main Parent Structure
-    'obj_side_alley': {
-        id: 'obj_side_alley' as GameObjectId,
-        name: 'Side Alley',
-        alternateNames: ['side alley', 'alley', 'dark alley', 'narrow alley', 'side street'],
-        archetype: 'Structure',
-        description: 'A narrow side alley branching off Elm Street. The smell of decay hangs in the air, and shadows obscure the details.',
-        zone: 'zone_side_alley' as ZoneId,
-        transitionNarration: 'You step into the side alley. The narrow passage is darker here, away from the street lights. Crates are stacked against one wall, and a rusted dumpster sits heavily in the shadows.',
-        capabilities: { openable: false, lockable: false, breakable: false, movable: false, powerable: false, container: true, readable: false, inputtable: false },
-        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        children: {
-            items: [],
-            objects: ['obj_crates' as GameObjectId, 'obj_dumpster' as GameObjectId, 'obj_tire_stack' as GameObjectId, 'obj_tire_marks' as GameObjectId, 'obj_brick_walls' as GameObjectId, 'obj_courtyard_door' as GameObjectId]
-        },
+    'obj_streetlight': {
+        id: 'obj_streetlight' as GameObjectId,
+        name: 'Streetlight',
+        alternateNames: ['light', 'lamp', 'street lamp', 'lamppost'],
+        description: 'A tall streetlight casting orange sodium glow across the sidewalk. Flickering. The bulb needs replacing.',
+        locationId: 'loc_elm_street' as LocationId,
+        archetype: 'LightSource',
+        state: { currentStateId: 'default' },
+        capabilities: { container: false, lockable: false, movable: false, breakable: false },
+        revealMethod: 'AUTO',
         handlers: {
             onExamine: {
                 success: {
-                    message: 'You step into the alley and the smell hits you first—rotting food, stale piss, something sweet and chemical you can\'t quite place. Your shoes stick slightly to the concrete.\n\nYou don\'t want to know what that is.\n\nThe alley is narrow, maybe eight feet across. Brick walls on both sides, stained black with decades of city grime and rain runoff.\n\nOld wooden crates are stacked haphazardly against the left wall, their labels long faded. On the right, a rusted dumpster sits like a sleeping giant, its green paint peeling in long strips. In the corner, a pile of old car tires leans against the wall. And on the ground—fresh tire marks pressed into the grime.\n\nThis is the kind of place people walk past without looking. The kind of place where deals go down, where evidence gets dumped, where someone could disappear and no one would ask questions.\n\nIf you were planning something terrible and needed a place where no one would look, this is exactly where you would circle on the map.\n\nYour gut tells you something is off. This alley is not just neglected—it is forgotten. And in your line of work, forgotten places have a habit of hiding secrets.\n\nYou see:\n📦 Wooden crates\n🗑️ Rusted dumpster\n🛞 Pile of old tires\n🚗 Tire marks on ground\n🧱 Brick walls',
-                    media: {
-                        url: '',
-                        description: 'Dark narrow alley with crates and dumpster',
-                        hint: 'side alley with crates'
-                    },
-                    effects: [
-                        { type: 'REVEAL_FROM_PARENT', entityId: 'obj_crates', parentId: 'obj_side_alley' },
-                        { type: 'REVEAL_FROM_PARENT', entityId: 'obj_dumpster', parentId: 'obj_side_alley' },
-                        { type: 'REVEAL_FROM_PARENT', entityId: 'obj_tire_stack', parentId: 'obj_side_alley' },
-                        { type: 'REVEAL_FROM_PARENT', entityId: 'obj_tire_marks', parentId: 'obj_side_alley' },
-                        { type: 'REVEAL_FROM_PARENT', entityId: 'obj_brick_walls', parentId: 'obj_side_alley' }
-                    ]
-                }
-            },
-            onSearch: {
-                message: 'You scan the alley carefully. The crates—ordinary shipping crates, nothing special. The dumpster—heavy, full of trash. But wait... there\'s something odd about how the dumpster is positioned. It\'s not quite flush against the wall. Like it was moved recently.',
-                media: undefined
-            }
-        },
-        version: { schema: '1.0.0', content: '1.0.0' }
-    },
-
-    'obj_crates': {
-        id: 'obj_crates' as GameObjectId,
-        name: 'Crates',
-        alternateNames: ['crates', 'wooden crates', 'boxes', 'stacked crates', 'shipping crates', 'panel', 'hidden panel', 'lever', 'mechanism'],
-        archetype: 'Container',
-        description: 'Stacked wooden crates in the alley. They look abandoned.',
-        zone: 'zone_side_alley' as ZoneId,
-        isRevealed: false,
-        transitionNarration: 'You move closer to the stacked crates, examining their weathered surfaces.',
-        capabilities: { openable: false, lockable: false, breakable: false, movable: true, powerable: false, container: false, readable: false, inputtable: false },
-        state: {
-            isOpen: false,
-            isLocked: false,
-            isBroken: false,
-            isPoweredOn: false,
-            currentStateId: 'default',
-            panelDiscovered: false,
-            panelOpened: false,
-            leverPulled: false
-        },
-        handlers: {
-            onExamine: [
-                {
-                    // State 1: UNTOUCHED - Door not revealed yet
-                    conditions: [
-                        { type: 'OBJECT_IN_WORLD', objectId: 'obj_courtyard_door', inWorld: false }
-                    ],
-                    success: {
-                        message: 'Old wooden crates stacked haphazardly. Some are marked with faded shipping labels—delivery companies from decades ago. The wood is splintered and warped from moisture and age.\n\nThey\'re stacked against the wall, heavy and solid. Too heavy to move by hand. You\'d need leverage—a crowbar, maybe—to shift them.',
-                        media: {
-                            url: '',
-                            description: 'Weathered wooden crates',
-                            hint: 'old shipping crates'
-                        }
-                    }
-                },
-                {
-                    // State 2: REVEALED - Door revealed, crates moved
-                    conditions: [],
-                    success: {
-                        message: 'The crates sit where you moved them, shifted several feet to the side. The hidden door behind them is now fully visible—old, rusted, with that keypad on the frame.',
-                        media: undefined
-                    }
-                }
-            ],
-            onPeek: [
-                {
-                    // Panel not discovered yet
-                    conditions: [
-                        { type: 'OBJECT_STATE', objectId: 'obj_crates', statePath: 'panelDiscovered', value: false }
-                    ],
-                    success: {
-                        message: 'You crouch down, peering around the sides of the crate stack. Looking for gaps. Spaces. Anything hidden.\n\nMost of the crates are flush against the wall. But on the right side, near the bottom, you spot something.\n\nA wooden panel. Smaller than the crates. Different wood grain. It\'s been fitted into the stack—deliberately placed, not part of the original crates.\n\nSomeone built this. Someone hid something here.',
-                        media: undefined,
-                        effects: [
-                            { type: 'SET_ENTITY_STATE', entityId: 'obj_crates', key: 'panelDiscovered', value: true }
-                        ]
-                    }
-                },
-                {
-                    // Panel discovered but not opened
-                    conditions: [
-                        { type: 'OBJECT_STATE', objectId: 'obj_crates', statePath: 'panelDiscovered', value: true },
-                        { type: 'OBJECT_STATE', objectId: 'obj_crates', statePath: 'panelOpened', value: false }
-                    ],
-                    success: {
-                        message: 'The hidden panel is still there, fitted into the right side of the crate stack. You can see the seams now—someone carefully cut and installed this panel.\n\nIt\'s not nailed shut. It looks like you could pry it open.',
-                        media: undefined
-                    }
-                },
-                {
-                    // Panel opened
-                    conditions: [],
-                    success: {
-                        message: 'The panel hangs open, revealing the mechanical lever inside. Old. Rusted. Functional.',
-                        media: undefined
-                    }
-                }
-            ],
-            onKnock: [
-                {
-                    // Before panel discovered
-                    conditions: [
-                        { type: 'OBJECT_STATE', objectId: 'obj_crates', statePath: 'panelDiscovered', value: false }
-                    ],
-                    success: {
-                        message: 'You knock on the crates. Solid wood. Thunk thunk thunk. Nothing unusual.',
-                        media: undefined
-                    }
-                },
-                {
-                    // After panel discovered but not opened
-                    conditions: [
-                        { type: 'OBJECT_STATE', objectId: 'obj_crates', statePath: 'panelDiscovered', value: true },
-                        { type: 'OBJECT_STATE', objectId: 'obj_crates', statePath: 'panelOpened', value: false }
-                    ],
-                    success: {
-                        message: 'You tap your knuckles on the hidden panel. Different sound. Lighter. Hollow.\n\nThere\'s a space behind this panel. Something hidden inside.',
-                        media: undefined
-                    }
-                },
-                {
-                    // Panel opened
-                    conditions: [],
-                    success: {
-                        message: 'The panel is already open. No need to knock.',
-                        media: undefined
-                    }
-                }
-            ],
-            onPry: [
-                {
-                    // Panel not discovered yet
-                    conditions: [
-                        { type: 'OBJECT_STATE', objectId: 'obj_crates', statePath: 'panelDiscovered', value: false }
-                    ],
-                    success: {
-                        message: 'You try prying at the crate edges. They\'re solid, waterlogged, heavy. Nothing budges.\n\nMaybe look around the crates more carefully first.',
-                        media: undefined
-                    }
-                },
-                {
-                    // Panel discovered, has crowbar
-                    conditions: [
-                        { type: 'OBJECT_STATE', objectId: 'obj_crates', statePath: 'panelDiscovered', value: true },
-                        { type: 'OBJECT_STATE', objectId: 'obj_crates', statePath: 'panelOpened', value: false },
-                        { type: 'HAS_ITEM', itemId: 'item_crowbar' }
-                    ],
-                    success: {
-                        message: 'You wedge the crowbar tip into the seam of the hidden panel. Leverage. You pull.\n\nThe panel pops free with a crack of splintering wood. Behind it: a small cavity. And inside that cavity, a mechanical lever. Old. Rusted. But functional.\n\nSomeone installed this. Someone hid a lever mechanism inside the crate stack.\n\nWhat does it do?',
-                        media: undefined,
-                        effects: [
-                            { type: 'SET_ENTITY_STATE', entityId: 'obj_crates', key: 'panelOpened', value: true }
-                        ]
-                    }
-                },
-                {
-                    // Panel discovered, no crowbar
-                    conditions: [
-                        { type: 'OBJECT_STATE', objectId: 'obj_crates', statePath: 'panelDiscovered', value: true },
-                        { type: 'OBJECT_STATE', objectId: 'obj_crates', statePath: 'panelOpened', value: false }
-                    ],
-                    success: {
-                        message: 'You try to pry the panel open with your fingers. It won\'t budge. Fitted tight. Nailed or glued in place.\n\nYou\'d need a tool. Something to leverage it open.',
-                        media: undefined
-                    }
-                },
-                {
-                    // Panel already opened
-                    conditions: [],
-                    success: {
-                        message: 'The panel is already pried open. The lever mechanism is visible inside.',
-                        media: undefined
-                    }
-                }
-            ],
-            onPull: [
-                {
-                    // Panel not opened yet
-                    conditions: [
-                        { type: 'OBJECT_STATE', objectId: 'obj_crates', statePath: 'panelOpened', value: false }
-                    ],
-                    success: {
-                        message: 'Pull what? The crates are too heavy to move by hand. If you mean something else, you\'ll need to find it first.',
-                        media: undefined
-                    }
-                },
-                {
-                    // Lever not pulled yet
-                    conditions: [
-                        { type: 'OBJECT_STATE', objectId: 'obj_crates', statePath: 'panelOpened', value: true },
-                        { type: 'OBJECT_STATE', objectId: 'obj_crates', statePath: 'leverPulled', value: false }
-                    ],
-                    success: {
-                        message: 'You grip the rusted lever. Cold metal. Rough with corrosion.\n\nYou pull.\n\nThe lever resists at first—decades of rust and disuse. Then it gives. Slowly. Smoothly. You hear a mechanical sound from inside the wall behind the crates. A series of clicks. Metal sliding against metal.\n\nSomething unlocked. Something disengaged.\n\nBut the crates haven\'t moved. The lever mechanism isn\'t for moving the crates—it\'s for something behind them.\n\nYou\'ll still need the crowbar to shift the crates themselves.',
-                        media: undefined,
-                        effects: [
-                            { type: 'SET_ENTITY_STATE', entityId: 'obj_crates', key: 'leverPulled', value: true }
-                        ]
-                    }
-                },
-                {
-                    // Lever already pulled
-                    conditions: [],
-                    success: {
-                        message: 'You already pulled the lever. It won\'t move again—it\'s locked in the down position. Whatever it unlocked is done.',
-                        media: undefined
-                    }
-                }
-            ],
-            onMove: [
-                {
-                    // State 1: UNTOUCHED - Trying without crowbar
-                    conditions: [
-                        { type: 'OBJECT_IN_WORLD', objectId: 'obj_courtyard_door', inWorld: false }
-                    ],
-                    success: {
-                        message: 'You try to shove the crates aside. They don\'t budge. Too heavy. Decades of moisture have made the wood waterlogged, dense.\n\nYou need leverage. Something to pry them loose.',
-                        media: undefined
-                    }
-                },
-                {
-                    // State 2: REVEALED - Already moved
-                    conditions: [],
-                    success: {
-                        message: 'The crates are already moved. The door is visible behind them.',
-                        media: undefined
-                    }
-                }
-            ],
-            onSearch: [
-                {
-                    // Panel not discovered yet
-                    conditions: [
-                        { type: 'OBJECT_STATE', objectId: 'obj_crates', statePath: 'panelDiscovered', value: false }
-                    ],
-                    success: {
-                        message: 'You check between the crates, looking for anything hidden in the gaps. Mostly empty spaces, cobwebs, dust.\n\nWait. On the right side, near the bottom—is that a panel? Different wood. Fitted into the stack. Not part of the original crates.',
-                        media: undefined,
-                        effects: [
-                            { type: 'SET_ENTITY_STATE', entityId: 'obj_crates', key: 'panelDiscovered', value: true }
-                        ]
-                    }
-                },
-                {
-                    // Panel discovered
-                    conditions: [],
-                    success: {
-                        message: 'You already found the hidden panel on the right side of the crate stack. It looks like you could pry it open if you had the right tool.',
-                        media: undefined
-                    }
-                }
-            ],
-            onUse: [
-                {
-                    // Using crowbar on crates
-                    conditions: [
-                        { type: 'HAS_ITEM', itemId: 'item_crowbar' },
-                        { type: 'OBJECT_IN_WORLD', objectId: 'obj_courtyard_door', inWorld: false }
-                    ],
-                    success: {
-                        message: 'You wedge the crowbar between the wall and the crate stack. Leverage. Physics. You pull.\n\nThe crates groan, wood scraping against brick. You pull harder.\n\nThey shift. Inch by inch, the whole stack slides to the side.\n\nAnd there it is.\n\nBehind the crates, hidden for years: a metal door. Old, rusted, paint peeling. No handle, just a keypad mounted on the frame. Someone deliberately stacked those crates to hide this door.\n\nWhy?',
-                        media: undefined,
-                        effects: [
-                            { type: 'REVEAL_FROM_PARENT', entityId: 'obj_courtyard_door', parentId: 'obj_side_alley' }
-                        ]
-                    }
-                },
-                {
-                    // Already revealed door
-                    conditions: [
-                        { type: 'OBJECT_IN_WORLD', objectId: 'obj_courtyard_door', inWorld: true }
-                    ],
-                    success: {
-                        message: 'The crates are already moved. The hidden door is visible behind them.',
-                        media: undefined
-                    }
-                },
-                {
-                    // No crowbar
-                    conditions: [],
-                    success: {
-                        message: 'You need something to pry these crates loose. They\'re too heavy to move by hand.',
-                        media: undefined
-                    }
-                }
-            ],
-            onTake: {
-                fail: {
-                    message: 'These aren\'t your standard cardboard moving boxes. Each crate is solid wood—probably three or four feet on a side—heavy enough that lifting even one would strain your back. The whole stack? Hundreds of pounds, easy. You can\'t take them with you.',
-                    media: undefined
-                }
-            },
-            onOpen: {
-                fail: {
-                    message: 'The crates aren\'t containers you can open. They\'re solid wooden shipping crates—nailed shut decades ago, the wood warped and splintered from moisture. Even if you could pry one open, it would be empty inside. These crates are obstacles, not treasure chests.',
+                    message: "Old sodium lamp. Orange glow, the kind that turns everything sickly. Flickers every few seconds. The city hasn't replaced these in years. Cheaper to let them die slow.\n\nThe bulb buzzes. Ticking down to darkness.",
                     media: undefined
                 }
             }
@@ -1370,2676 +926,2727 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         version: { schema: '1.0.0', content: '1.0.0' }
     },
 
-    'obj_dumpster': {
-        id: 'obj_dumpster' as GameObjectId,
-        name: 'Dumpster',
-        alternateNames: ['dumpster', 'trash bin', 'garbage bin', 'rusted dumpster', 'metal dumpster'],
-        archetype: 'Container',
-        description: 'A rusted industrial dumpster. Heavy steel corroded by time and neglect.',
-        zone: 'zone_at_dumpster' as ZoneId,
-        isRevealed: false,
-        transitionNarration: 'You approach the rusted dumpster in the alley. The smell hits you before you even get close.',
-        capabilities: { openable: true, lockable: false, breakable: false, movable: true, powerable: false, container: true, readable: false, inputtable: false },
-        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        inventory: { items: [], capacity: 10, allowTags: [], denyTags: [] },
-        parentId: 'obj_side_alley' as GameObjectId,
-        revealMethod: 'REVEAL_FROM_PARENT',
-        children: {
-            items: ['item_crumpled_note' as ItemId],
-            objects: ['obj_old_suitcase' as GameObjectId, 'obj_paper_carton' as GameObjectId, 'obj_backpack' as GameObjectId]
+    'obj_sidewalk': {
+        id: 'obj_sidewalk' as GameObjectId,
+        name: 'Sidewalk',
+        alternateNames: ['pavement', 'concrete', 'ground', 'walkway'],
+        description: 'Cracked concrete. Gum stains and old graffiti tags.',
+        locationId: 'loc_elm_street' as LocationId,
+        archetype: 'Surface',
+        state: { currentStateId: 'default' },
+        capabilities: { container: false, lockable: false, movable: false, breakable: false },
+        revealMethod: 'AUTO',
+        handlers: {
+            onExamine: {
+                success: {
+                    message: "Concrete worn smooth by years of foot traffic. Cracks spider-web across the surface. Weeds push through, stubborn.\n\nGum stains. Spray paint tags - gang symbols, phone numbers, crude drawings. The usual urban archaeology.",
+                    media: undefined
+                }
+            }
         },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'obj_street_sign': {
+        id: 'obj_street_sign' as GameObjectId,
+        name: 'Street Sign',
+        alternateNames: ['sign', 'elm street sign', 'street marker'],
+        description: 'Green metal sign: "ELM STREET - EST. 1987"',
+        locationId: 'loc_elm_street' as LocationId,
+        archetype: 'Signage',
+        state: { currentStateId: 'default' },
+        capabilities: { container: false, lockable: false, movable: false, breakable: false },
+        revealMethod: 'AUTO',
+        handlers: {
+            onExamine: {
+                success: {
+                    message: "Green metal sign bolted to the lamppost.\n\n**ELM STREET**\nEst. 1987\n\nThe establishment year stands out. 1987. Four digits. The kind of number people use for combination locks.\n\nYou make a mental note.",
+                    media: undefined
+                }
+            }
+        },
+        design: {
+            authorNotes: "Provides hint for Construction tool shed combination lock (code: 1987)",
+            tags: ['puzzle-hint', 'combination-code']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'obj_florist_door': {
+        id: 'obj_florist_door' as GameObjectId,
+        name: 'Florist Shop Door',
+        alternateNames: ['florist door', 'flower shop door', 'glass door', 'door', 'chen\'s door'],
+        description: 'Glass door with gold lettering: "Chen\'s Flowers". Wind chimes hang above.',
+        locationId: 'loc_florist_exterior' as LocationId,
+        archetype: 'Portal',
+        state: { currentStateId: 'closed' },
+        capabilities: { container: false, lockable: false, movable: false, breakable: false },
+        revealMethod: 'AUTO',
         handlers: {
             onExamine: [
                 {
-                    // State: Inside dumpster - examining from within
-                    conditions: [
-                        { type: 'FLAG', flag: 'dumpster_climbed', value: true }
-                    ],
+                    // Door is open
+                    conditions: [{ type: 'FLAG', flag: 'florist_door_open' as Flag }],
                     success: {
-                        message: 'You\'re standing in it. Ankle-deep in rot.\n\nThe garbage is layered. Decades, maybe. Old trash compacted under newer trash, creating strata of decay. Newspapers yellowed and pulped. Food containers crushed flat. Plastic bags melted together from heat and time.\n\nThe smell is suffocating. Rot, yes, but also chemicals—bleach, ammonia, solvents. Someone used this dumpster to dispose of more than just garbage.\n\nThe metal walls around you are corroded from the inside. Rust eating through steel. Liquid waste pooling in the corners, dark and viscous.\n\nIf you want to find anything specific, you\'ll need to search through this mess. Get your hands dirty.',
+                        message: "The glass door stands open. Wind chimes sway gently in the breeze. The scent of roses drifts out onto the street.\n\nThrough the doorway you can see Margaret Chen arranging flowers inside.",
                         media: undefined
                     }
                 },
                 {
-                    // State: Lid open - examining interior (but player is outside)
-                    conditions: [
-                        { type: 'STATE', entityId: 'obj_dumpster', key: 'isOpen', equals: true }
-                    ],
+                    // Door is closed (default)
+                    conditions: [],
                     success: {
-                        message: 'The lid is up. Flies swarm around the opening, a black cloud of buzzing wings.\n\nFrom here, you can see the top layer of garbage—backpacks, food containers, newspapers soaked in unidentifiable liquid. The smell hits you in waves: rot, mildew, something chemical underneath.\n\nBut you\'re still outside. Looking down into the darkness. You can\'t see the bottom, can\'t see what\'s hidden beneath the surface garbage.\n\nIf you want to find anything, you\'ll need to get in there. Search properly.',
+                        message: "A glass door with gold lettering reading 'Chen's Flowers - Est. 2003'. Small wind chimes hang from the frame, glinting in the streetlight.\n\nThrough the window you can see colorful flower arrangements inside - roses, lilies, vibrant bunches of color.\n\nThe door appears to be closed but unlocked. You can OPEN it.",
                         media: undefined
-                    }
-                },
-                {
-                    // State: Lid closed, door still hidden
-                    conditions: [
-                        { type: 'OBJECT_IN_WORLD', objectId: 'obj_courtyard_door', inWorld: false }
-                    ],
-                    success: {
-                        message: 'A dumpster. Industrial size. Heavy-gauge steel painted dark green—or it was, once, back when the city still cared about appearances. Now it\'s rust-brown, corroded, eaten away by years of exposure and neglect. The metal is pitted with holes where rust chewed through, weeping orange stains down the sides like old blood.\n\nThe smell hits you before you even get close. Rot. Decay. That sweet-sour stench of organic matter breaking down in the summer heat. Your throat tightens. Your stomach clenches. This is what Bloodhaven smells like now—garbage left to fester while everyone looks the other way.\n\nThe lid is closed. Heavy metal, sagging on its hinges from decades of weight. Someone welded reinforcement bars across the back—crude, functional, the kind of patch job you see everywhere in this city. Everything breaking down. Everything held together with duct tape and prayers.\n\nLike your career. Like your reputation. Like the case they\'re building against you.\n\nThe dumpster sits oddly. Not quite flush against the brick wall. A gap, maybe six inches. Shadows in that gap. Darkness. The kind of space where things get hidden. Where evidence disappears.\n\nWhere your life might be buried.',
-                        media: {
-                            url: '',
-                            description: 'Rusted dumpster not flush against wall',
-                            hint: 'dumpster hiding something'
-                        }
-                    }
-                },
-                {
-                    // State: Door revealed after moving
-                    conditions: [
-                        { type: 'OBJECT_IN_WORLD', objectId: 'obj_courtyard_door', inWorld: true }
-                    ],
-                    success: {
-                        message: 'The dumpster sits where you pushed it, several feet from the wall. The old door behind it is now fully visible—rusted metal, peeling paint, locked tight.',
-                        media: {
-                            url: '',
-                            description: 'Dumpster moved aside, door revealed',
-                            hint: 'hidden door exposed'
-                        }
                     }
                 }
             ],
             onOpen: [
                 {
-                    conditions: [
-                        { type: 'STATE', entityId: 'obj_dumpster', key: 'isOpen', equals: true }
-                    ],
+                    // Already open
+                    conditions: [{ type: 'FLAG', flag: 'florist_door_open' as Flag }],
                     success: {
-                        message: 'The lid\'s already up. Flies buzz around the opening. The smell hasn\'t improved.',
+                        message: "The door is already open. The wind chimes tinkle softly overhead.",
                         media: undefined
                     }
                 },
                 {
+                    // Open the door (default)
                     conditions: [],
                     success: {
-                        message: 'You lift the heavy lid. The stench hits you immediately—rotting food and something worse. Black backpacks, food containers, newspapers.\n\nMostly garbage.',
+                        message: "You push the door open. The wind chimes jingle overhead - a cheerful, tinkling sound. The scent of fresh roses wafts out, sweet and earthy.\n\nThe door swings wide. You can now GO INSIDE or ENTER to step into the shop.",
                         media: undefined,
                         effects: [
-                            { type: 'SET_ENTITY_STATE', entityId: 'obj_dumpster', patch: { isOpen: true } }
+                            { type: 'SET_FLAG', flag: 'florist_door_open' as Flag },
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'portal_florist_exterior_to_interior', parentId: 'obj_florist_door' }
                         ]
                     }
                 }
             ],
-            onSmell: {
-                success: {
-                    message: 'You lean closer and inhale—carefully, through your mouth, because you\'re not an idiot.\n\nBut even filtered through shallow breaths, the smell hits you like a slap. Rot, yes. Decomposing food, mildew, decay—all the usual garbage perfume.\n\nBut underneath it? Something sharper. Chemical. Astringent.\n\nChlorine. Or maybe ammonia. The kind of harsh, industrial-strength smell you get from cleaning supplies. Bleach, maybe.\n\nWrong. Very wrong. Nobody throws cleaning chemicals in a dumpster like this. Not unless they were scrubbing something clean. Something they didn\'t want found.',
-                    media: undefined
-                }
-            },
             onClose: [
                 {
-                    conditions: [
-                        { type: 'STATE', entityId: 'obj_dumpster', key: 'isOpen', equals: false }
-                    ],
+                    // Door is already closed
+                    conditions: [{ type: 'NO_FLAG', flag: 'florist_door_open' as Flag }],
                     success: {
-                        message: 'The lid\'s already down. Heavy metal, sealed tight. The smell is contained—for now.',
+                        message: "The door is already closed.",
                         media: undefined
                     }
                 },
                 {
+                    // Close the door
+                    conditions: [{ type: 'FLAG', flag: 'florist_door_open' as Flag }],
+                    success: {
+                        message: "You close the door. The wind chimes tinkle softly as it swings shut.",
+                        media: undefined,
+                        effects: [
+                            { type: 'SET_FLAG', flag: 'florist_door_open' as Flag, value: false }
+                        ]
+                    }
+                }
+            ]
+        },
+        design: {
+            authorNotes: "Door to florist shop. Opening reveals portal to interior. Uses REVEAL_FROM_PARENT pattern for realistic entry mechanics.",
+            tags: ['door', 'portal-reveal', 'wind-chimes']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'obj_butcher_door': {
+        id: 'obj_butcher_door' as GameObjectId,
+        name: 'Butcher Shop Door',
+        alternateNames: ['butcher door', 'meat shop door', 'wooden door', 'door', 'richter\'s door', 'red door'],
+        description: 'Heavy wooden door with faded red paint. A metal sign reads: "Richter\'s Meats".',
+        locationId: 'loc_butcher_exterior' as LocationId,
+        archetype: 'Portal',
+        state: { currentStateId: 'closed' },
+        capabilities: { container: false, lockable: false, movable: false, breakable: false },
+        revealMethod: 'AUTO',
+        handlers: {
+            onExamine: [
+                {
+                    // Door is open
+                    conditions: [{ type: 'FLAG', flag: 'butcher_door_open' as Flag }],
+                    success: {
+                        message: "The heavy door stands open. Cold air flows out from the refrigerated interior, carrying the metallic scent of fresh meat.\n\nThrough the doorway you can see Klaus Richter at the counter, cleaver in hand.",
+                        media: undefined
+                    }
+                },
+                {
+                    // Door is closed (default)
                     conditions: [],
                     success: {
-                        message: 'You grip the lid and lower it down. The hinges groan, protesting under the weight. The heavy metal lid settles into place with a dull thud.\n\nThe smell—rot, chemicals, decay—is mercifully contained. Your lungs thank you. Your sinuses thank you. Every person within fifty feet thanks you.\n\nBut smart? For the case?\n\nMaybe not. Evidence doesn\'t get less rotten if you ignore it. It just gets harder to find.',
-                        media: undefined,
-                        effects: [
-                            { type: 'SET_ENTITY_STATE', entityId: 'obj_dumpster', patch: { isOpen: false } }
-                        ]
+                        message: "A thick wooden door with faded red paint, worn from years of use. A metal sign bolted to the frame reads 'Richter's Meats - Family Owned Since 1952'.\n\nThrough the small window you can see meat hooks hanging from the ceiling inside. The door appears to be closed but unlocked. You can OPEN it.",
+                        media: undefined
                     }
                 }
             ],
-            onClimb: [
+            onOpen: [
                 {
-                    conditions: [
-                        { type: 'STATE', entityId: 'obj_dumpster', key: 'isOpen', equals: false }
-                    ],
+                    // Already open
+                    conditions: [{ type: 'FLAG', flag: 'butcher_door_open' as Flag }],
                     success: {
-                        message: 'You reach for the rim of the dumpster, ready to haul yourself over—\n\n—but the lid\'s down. Heavy metal, latched tight.\n\nYou\'re athletic, sure, but you\'re not vaulting over a closed dumpster lid. Not without looking like an idiot, anyway.\n\nIt seems the dumpster\'s lid is closed. Maybe crack it open first.',
+                        message: "The door is already open. Cold air continues to flow out from the shop's interior.",
                         media: undefined
                     }
                 },
                 {
-                    conditions: [
-                        { type: 'FLAG', flag: 'dumpster_climbed', value: true }
-                    ],
-                    success: {
-                        message: 'You\'ve already taken the plunge—literally. Once was enough. The bags are still there, waiting. You don\'t need to climb back in.',
-                        media: undefined
-                    }
-                },
-                {
+                    // Open the door (default)
                     conditions: [],
                     success: {
-                        message: 'You grip the rim and haul yourself up. One leg over. Then the other.\n\nYou drop inside.\n\nThe smell is worse in here. Oppressive. Flies scatter as you land, your shoes sinking into something soft and wet. You don\'t look down.\n\nYou\'re standing in trash now. Ankle-deep in garbage, flies buzzing around your head. The metal walls of the dumpster rise on all sides, trapping you in this confined space of rot and decay.\n\nIf you want to find something, you should search through the contents.',
+                        message: "You push the heavy door inward. It swings open with a deep creak - old hinges, well-worn wood. A wave of cold air hits you, carrying the metallic scent of fresh meat mixed with sawdust.\n\nThe door stands open. You can now GO INSIDE or ENTER to step into the shop.",
                         media: undefined,
                         effects: [
-                            { type: 'SET_FLAG', flag: 'dumpster_climbed', value: true },
-                            { type: 'SET_ZONE', zoneId: 'zone_inside_dumpster' as ZoneId }
+                            { type: 'SET_FLAG', flag: 'butcher_door_open' as Flag },
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'portal_butcher_exterior_to_interior', parentId: 'obj_butcher_door' }
                         ]
                     }
                 }
             ],
-            onSearch: [
+            onClose: [
                 {
-                    conditions: [
-                        { type: 'STATE', entityId: 'obj_dumpster', key: 'isOpen', equals: false }
-                    ],
+                    // Door is already closed
+                    conditions: [{ type: 'NO_FLAG', flag: 'butcher_door_open' as Flag }],
                     success: {
-                        message: 'You lean over the edge of the dumpster, peering at the closed lid.\n\nNothing to see here. Just rusted metal and the faint reek of garbage seeping through the seams.\n\nIt seems the dumpster\'s lid is shut tight. You could try opening it, or maybe climbing in if you\'re feeling bold.',
+                        message: "The door is already closed.",
                         media: undefined
                     }
                 },
                 {
-                    conditions: [
-                        { type: 'FLAG', flag: 'dumpster_searched', value: true }
-                    ],
+                    // Close the door
+                    conditions: [{ type: 'FLAG', flag: 'butcher_door_open' as Flag }],
                     success: {
-                        message: 'You already sorted through the garbage. Three bags. You know what\'s here.',
-                        media: undefined
-                    }
-                },
-                {
-                    conditions: [
-                        { type: 'FLAG', flag: 'dumpster_climbed', value: false }
-                    ],
-                    success: {
-                        message: 'You lean over the open dumpster, scanning the contents from above.\n\nBlack bags. Flies. Rot.\n\nBut from up here, you can\'t see much detail. The shadows inside are too deep, the smell too overwhelming to linger.\n\nYou can\'t search a dumpster from the outside. Not properly. If you want to find something, you\'ll need to get in there. Climb in.',
-                        media: undefined
-                    }
-                },
-                {
-                    conditions: [
-                        { type: 'FLAG', flag: 'dumpster_climbed', value: true }
-                    ],
-                    success: {
-                        message: 'You\'re inside now. Might as well do this properly.\n\nYou start digging through the trash, pushing aside wet cardboard and food containers. The smell is overwhelming—rot and chemicals mixing into something toxic.\n\nBut beneath the surface garbage, you find something.\n\nYou find the following:\n\n💼 Old Suitcase\n📦 Paper Carton\n🎒 Backpack',
+                        message: "You push the heavy door closed. It shuts with a solid thunk, the old wood settling into the frame. The cold air stops flowing.",
                         media: undefined,
                         effects: [
-                            { type: 'SET_FLAG', flag: 'dumpster_searched', value: true },
-                            { type: 'REVEAL_FROM_PARENT', entityId: 'obj_old_suitcase', parentId: 'obj_dumpster' },
-                            { type: 'REVEAL_FROM_PARENT', entityId: 'obj_paper_carton', parentId: 'obj_dumpster' },
-                            { type: 'REVEAL_FROM_PARENT', entityId: 'obj_backpack', parentId: 'obj_dumpster' }
+                            { type: 'SET_FLAG', flag: 'butcher_door_open' as Flag, value: false }
                         ]
                     }
                 }
-            ],
-            onMove: {
+            ]
+        },
+        design: {
+            authorNotes: "Door to butcher shop. Opening reveals portal to interior. Heavy wooden door with atmospheric cold air and meat scent.",
+            tags: ['door', 'portal-reveal', 'atmospheric']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    // ===== ZONE 1: BUS STOP (Flavor Zone - Type 1) =====
+
+    'obj_bus_shelter': {
+        id: 'obj_bus_shelter' as GameObjectId,
+        name: 'Bus Shelter',
+        alternateNames: ['shelter', 'bus stop structure', 'waiting area', 'glass', 'plexiglass', 'glass panel'],
+        description: 'Weathered bus shelter with cracked plexiglass walls. Rain-streaked and tagged with graffiti.',
+        locationId: 'loc_bus_stop' as LocationId,
+        archetype: 'Structure',
+        state: { currentStateId: 'default' },
+        capabilities: { container: false, lockable: false, movable: false, breakable: false },
+        revealMethod: 'AUTO',
+        handlers: {
+            onExamine: {
                 success: {
-                    message: 'You grip the dumpster\'s edge and push. It\'s heavy—really heavy—full of trash and years of rust. The metal scrapes against concrete, a harsh grinding sound echoing in the alley.\n\nYou push harder. Inch by inch, it slides away from the wall.\n\nAnd there it is. Behind the dumpster, hidden for who knows how long: an old metal door. Rusted, peeling paint, no handle—just a keyhole. Someone wanted this door hidden.\n\nWhy?',
-                    media: {
-                        url: '',
-                        description: 'Dumpster moved aside revealing hidden door',
-                        hint: 'secret door revealed'
+                    message: "Metal frame, plexiglass walls. The plastic is cracked - someone's boot, probably. Or a thrown bottle. Rain streaks run vertical down the panels.\n\nGraffiti covers the glass:\n- Gang tags (\"BK\", \"WESTSIDE 13\")\n- Crude hearts with initials\n- \"BLOODHAVEN LOVES NO ONE\" (spraypainted in black)\n- \"555-0147\" (carved deep into the glass)\n- \"555-8891\" (marker, faded)\n- \"FOR A GOOD TIME CALL 555-6969\" (scratched, half-illegible)\n- Profanity\n- Drawings",
+                    media: undefined
+                }
+            }
+        },
+        design: {
+            authorNotes: "Payphone puzzle - displays the phone number to call after payphone is activated. The number 555-0147 is the correct number that triggers the audio message reward.",
+            tags: ['payphone-puzzle', 'clue', 'bus-stop']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'obj_bus_bench': {
+        id: 'obj_bus_bench' as GameObjectId,
+        name: 'Bench',
+        alternateNames: ['wooden bench', 'bus bench', 'seat'],
+        description: 'Old wooden bench carved with graffiti. "TC + MR 1998" among others.',
+        locationId: 'loc_bus_stop' as LocationId,
+        archetype: 'Furniture',
+        state: { currentStateId: 'unmoved' },
+        stateMap: {
+            unmoved: {
+                overrides: {
+                    onExamine: {
+                        success: {
+                            message: "Wooden slats worn smooth by thousands of waiting bodies. The wood is dark where hands gripped, lighter where rain bleached it.\n\nCarvings cover the surface - names, dates, gang tags, crude drawings. People marking their existence.\n\nBut something feels off. The bench wobbles when you sit. One leg is shorter than the others - uneven. Maybe something underneath?",
+                            media: undefined
+                        }
                     },
-                    effects: [
-                        { type: 'REVEAL_FROM_PARENT', entityId: 'obj_courtyard_door', parentId: 'obj_side_alley' }
-                    ]
-                }
-            },
-            onTake: {
-                fail: {
-                    message: 'The dumpster is a massive metal container, probably weighing several hundred pounds even when empty. Full of trash like it is now? Half a ton, easy. You can\'t take it with you. You can MOVE it, OPEN it, or SEARCH through it, but you can\'t carry it away.',
-                    media: undefined
-                }
-            },
-            onUse: {
-                fail: {
-                    message: 'A dumpster isn\'t a tool. It\'s a container for waste. You can OPEN it, SEARCH it, or MOVE it if you need to shift it aside, but you can\'t use it.',
-                    media: undefined
-                }
-            }
-        },
-        version: { schema: '1.0.0', content: '1.0.0' }
-    },
-
-    'obj_old_suitcase': {
-        id: 'obj_old_suitcase' as GameObjectId,
-        name: 'Old Suitcase',
-        alternateNames: ['old suitcase', 'suitcase', 'suit case', 'case', 'luggage', 'old case', 'leather suitcase'],
-        archetype: 'Container',
-        description: 'A battered leather suitcase, decades old. Scuffed corners, tarnished brass latches. The leather is cracked and water-stained.',
-        transitionNarration: 'You focus on the old suitcase. It looks like it\'s been here a while.',
-        capabilities: { openable: true, lockable: true, breakable: false, movable: false, powerable: false, container: true, readable: false, inputtable: false },
-        state: { isOpen: false, isLocked: true, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        inventory: { items: [], capacity: 5, allowTags: [], denyTags: [] },
-        parentId: 'obj_dumpster' as GameObjectId,
-        revealMethod: 'REVEAL_FROM_PARENT',
-        personal: false,
-        children: {
-            items: ['item_picture_frame' as ItemId, 'item_candle' as ItemId, 'item_box_cutter' as ItemId],
-            objects: []
-        },
-        handlers: {
-            onExamine: [
-                {
-                    conditions: [
-                        { type: 'STATE', entityId: 'obj_old_suitcase', key: 'isOpen', equals: true }
-                    ],
-                    success: {
-                        message: 'The old suitcase lies open, latches released. The interior is lined with faded silk, torn in places, stained dark in others.\n\nVarious items are packed inside.',
-                        media: undefined
-                    }
-                },
-                {
-                    conditions: [
-                        { type: 'STATE', entityId: 'obj_old_suitcase', key: 'isLocked', equals: true }
-                    ],
-                    success: {
-                        message: 'A battered leather suitcase, the kind people used before wheeled luggage became standard. The leather is dark brown, cracked along the seams, water-stained in uneven patches that suggest years of exposure.\n\nThe corners are scuffed down to bare wood underneath—old-school construction, wood frame covered in leather. The brass latches are tarnished green, corroded but still intact.\n\nBetween the two latches, there\'s a small keyhole. A lock mechanism. The suitcase is locked.\n\nIt\'s heavy. Feels solid. Not empty.\n\nBut here\'s what strikes you: it\'s too clean. Everything else in this dumpster is rotting, covered in grime and decay. This suitcase? Dirty, yes, but not decomposing. Not like it\'s been here long.',
-                        media: undefined
-                    }
-                },
-                {
-                    conditions: [],
-                    success: {
-                        message: 'A battered leather suitcase, the kind people used before wheeled luggage became standard. The leather is dark brown, cracked along the seams, water-stained in uneven patches that suggest years of exposure.\n\nThe corners are scuffed down to bare wood underneath—old-school construction, wood frame covered in leather. The brass latches are tarnished green, corroded but still intact.\n\nIt\'s heavy. Feels solid. Not empty.\n\nBut here\'s what strikes you: it\'s too clean. Everything else in this dumpster is rotting, covered in grime and decay. This suitcase? Dirty, yes, but not decomposing. Not like it\'s been here long.',
-                        media: undefined
-                    }
-                }
-            ],
-            onOpen: [
-                {
-                    conditions: [
-                        { type: 'STATE', entityId: 'obj_old_suitcase', key: 'isOpen', equals: true }
-                    ],
-                    success: {
-                        message: 'Already open. The latches are released, the lid lifted. You can see the home decor items packed inside.',
-                        media: undefined
-                    }
-                },
-                {
-                    conditions: [
-                        { type: 'STATE', entityId: 'obj_old_suitcase', key: 'isLocked', equals: true }
-                    ],
-                    success: {
-                        message: 'You press the brass latches, expecting them to click open.\n\nThey don\'t.\n\nYou press harder. Your thumbs dig into the tarnished metal, applying real pressure now, the kind that leaves dents in your skin.\n\nNothing. The latches are locked tight.\n\nYou pull at the lid anyway—because hope springs eternal, even when you\'re standing knee-deep in garbage—but the suitcase holds firm. The old leather creaks in protest, but the lock mechanism? Silent. Confident. Unmoved by your desperation.\n\nYou lean closer. Between the two latches, there\'s a small keyhole. Delicate. Precise. The kind that takes a tiny key—jewelry box size, luggage lock size. Something small enough to hide, easy enough to lose.\n\nOr easy enough to hide deliberately.\n\nThis suitcase isn\'t opening without that key.',
-                        media: undefined
-                    }
-                },
-                {
-                    conditions: [],
-                    success: {
-                        message: 'You grip the tarnished brass latches and press the releases. They click open with surprising ease—no rust, no resistance.\n\nYou lift the lid.\n\nThe interior is lined with faded silk, torn in places, stained dark in others. You can see various items packed inside.',
-                        media: undefined,
-                        effects: [
-                            { type: 'SET_ENTITY_STATE', entityId: 'obj_old_suitcase', patch: { isOpen: true } }
-                        ]
-                    }
-                }
-            ],
-            onSearch: [
-                {
-                    conditions: [
-                        { type: 'STATE', entityId: 'obj_old_suitcase', key: 'isOpen', equals: false }
-                    ],
-                    success: {
-                        message: 'You run your fingers along the exterior, checking the seams, the corners, the underside.\n\nNothing hidden on the outside.',
-                        media: undefined
-                    }
-                },
-                {
-                    conditions: [
-                        { type: 'NO_FLAG', flag: 'suitcase_searched' }
-                    ],
-                    success: {
-                        message: 'You search through the contents, checking each item:\n\n🖼️ Empty picture frame\n🕯️ Decorative candle (unused)\n🔪 Box cutter (orange handle)\n\nHome decor junk, mostly. But the box cutter—that could be useful.',
-                        media: undefined,
-                        effects: [
-                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_picture_frame', parentId: 'obj_old_suitcase' },
-                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_candle', parentId: 'obj_old_suitcase' },
-                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_box_cutter', parentId: 'obj_old_suitcase' },
-                            { type: 'SET_FLAG', flag: 'suitcase_searched', value: true }
-                        ]
-                    }
-                },
-                {
-                    conditions: [],
-                    success: {
-                        message: 'You already searched through everything. Just the picture frame, candle, and box cutter.',
-                        media: undefined
-                    }
-                }
-            ],
-            onTake: {
-                fail: {
-                    message: 'The suitcase is too large and awkward to carry while you\'re standing inside a dumpster surrounded by trash. If you needed it, you\'d have to climb out first.\n\nBut honestly? It\'s empty. Cleaned. No use taking it.',
-                    media: undefined
-                }
-            },
-            onUse: [
-                {
-                    itemId: 'item_tiny_silver_key',
-                    conditions: [
-                        { type: 'STATE', entityId: 'obj_old_suitcase', key: 'isLocked', equals: false }
-                    ],
-                    success: {
-                        message: 'The suitcase is already unlocked. No need for the key now.',
-                        media: undefined
-                    }
-                },
-                {
-                    itemId: 'item_tiny_silver_key',
-                    conditions: [],
-                    success: {
-                        message: 'You pull out the tiny silver key and slide it into the small keyhole between the latches.\n\nIt fits perfectly.\n\nYou turn it. The mechanism clicks—smooth, precise, well-maintained. The lock releases.\n\nThe latches are free now. You can open the suitcase.',
-                        media: undefined,
-                        effects: [
-                            { type: 'SET_ENTITY_STATE', entityId: 'obj_old_suitcase', patch: { isLocked: false } }
-                        ]
-                    }
-                }
-            ]
-        },
-        version: { schema: '1.0.0', content: '1.0.0' }
-    },
-
-    'obj_paper_carton': {
-        id: 'obj_paper_carton' as GameObjectId,
-        name: 'Paper Carton',
-        alternateNames: ['paper carton', 'carton', 'cardboard box', 'box', 'paper box'],
-        archetype: 'Container',
-        description: 'A large paper carton, soggy and partially collapsed. The kind used for moving or storage.',
-        transitionNarration: 'You turn your attention to the soggy paper carton.',
-        capabilities: { openable: true, lockable: false, breakable: true, movable: false, powerable: false, container: true, readable: false, inputtable: false },
-        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        inventory: { items: [], capacity: 10, allowTags: [], denyTags: [] },
-        parentId: 'obj_dumpster' as GameObjectId,
-        revealMethod: 'REVEAL_FROM_PARENT',
-        personal: false,
-        children: {
-            items: [],
-            objects: []
-        },
-        handlers: {
-            onExamine: [
-                {
-                    conditions: [
-                        { type: 'STATE', entityId: 'obj_paper_carton', key: 'isOpen', equals: true }
-                    ],
-                    success: {
-                        message: 'The carton is open, flaps pulled apart. The cardboard is water-damaged, soft and weak.\n\nInside: shredded paper. Lots of it. White strips, densely packed. The kind of shredding you get from a cross-cut paper shredder—small confetti pieces, meant to be unreadable.\n\nSomeone didn\'t want these documents read.',
-                        media: undefined
-                    }
-                },
-                {
-                    conditions: [],
-                    success: {
-                        message: 'A brown paper carton, the kind you get from moving companies or office supply stores. Standard issue.\n\nThe cardboard is dark with moisture, sagging in the middle, partially collapsed. The flaps are sealed with packing tape—thick, industrial-grade, wrapped multiple times around the seams.\n\nWhite strips of paper poke out from gaps where the cardboard has split.',
-                        media: undefined
-                    }
-                }
-            ],
-            onOpen: {
-                success: {
-                    message: 'You reach for the flaps, ready to pull them apart like any ordinary box.\n\nBut your fingers meet resistance. Packing tape—thick, industrial-grade stuff, the kind movers use when they\'re paranoid about boxes bursting mid-transport. Someone wrapped this carton like they were sealing a tomb.\n\nYou tug. The cardboard underneath is soggy, weak, practically disintegrating under your grip. But the tape? The tape laughs at you. It stretches. It strains. It holds.\n\nYou pull harder. The wet cardboard starts to tear—long splits opening in the brown paper, the structural integrity collapsing. But the tape just digs deeper into the pulp, anchoring itself like roots in rot.\n\nYou stop. This whole thing\'s going to burst like a wet piñata.\n\nNo. This needs precision. A clean cut. Something sharp.',
-                    media: undefined
-                }
-            },
-            onBreak: {
-                success: {
-                    message: 'You consider brute force. Just rip the whole thing apart. Tear through cardboard and tape like some kind of rage-fueled garbage archaeologist.\n\nBut the cardboard\'s waterlogged. Soft. Weak. One good yank and it\'ll disintegrate into pulp, and the shredded paper inside will explode outward like confetti at the world\'s saddest parade. It\'ll mix with the trash, the rot, the dumpster sludge. Whatever\'s in there—evidence, clues, answers—will be contaminated. Unreadable. Lost.\n\nNo. You need surgical precision here. Cut the tape. Open it clean.',
-                    media: undefined
-                }
-            },
-            onUse: [
-                {
-                    itemId: 'item_box_cutter',
-                    conditions: [
-                        { type: 'STATE', entityId: 'obj_paper_carton', key: 'isOpen', equals: true }
-                    ],
-                    success: {
-                        message: 'The carton is already open. The tape has been cut away. No need for tools now.',
-                        media: undefined
-                    }
-                },
-                {
-                    itemId: 'item_box_cutter',
-                    conditions: [],
-                    success: {
-                        message: 'You pull out the box cutter and extend the blade. Sharp. Clean. Ready.\n\nYou press the blade against the packing tape and draw it along the seam. The tape parts cleanly—a surgical cut. No tearing, no mess.\n\nYou slice through the remaining layers. Three passes. Four. The tape falls away in strips.\n\nThe flaps are free now.',
-                        media: undefined,
-                        effects: [
-                            { type: 'SET_ENTITY_STATE', entityId: 'obj_paper_carton', patch: { isOpen: true } }
-                        ]
-                    }
-                },
-                {
-                    conditions: [],
-                    fail: {
-                        message: 'You need something sharp to cut through the packing tape. A box cutter or knife would work.',
-                        media: undefined
-                    }
-                }
-            ],
-            onSearch: [
-                {
-                    conditions: [
-                        { type: 'STATE', entityId: 'obj_paper_carton', key: 'isOpen', equals: false }
-                    ],
-                    success: {
-                        message: 'You check the exterior, running your hands over the soggy cardboard. Nothing written on the outside. No labels, no markings.',
-                        media: undefined
-                    }
-                },
-                {
-                    conditions: [],
-                    success: {
-                        message: 'You dig your hands into the shredded paper, sifting through the strips. It\'s slow work—the paper is wet, clumped together in dense, pulpy masses.\n\nMost of it is too shredded to read. Tiny fragments. Cross-cut confetti. Single letters. Bits of words.\n\nYou spend several minutes sorting through it, checking every piece.\n\nNothing. Nothing readable. Nothing useful.\n\nWhoever shredded these documents was thorough.',
-                        media: undefined
-                    }
-                }
-            ],
-            onTake: {
-                fail: {
-                    message: 'The carton is waterlogged and falling apart. If you tried to lift it, the bottom would tear out and shredded paper would spill everywhere.\n\nNot worth taking. But you could search through it here.',
-                    media: undefined
-                }
-            }
-        },
-        version: { schema: '1.0.0', content: '1.0.0' }
-    },
-
-    'obj_backpack': {
-        id: 'obj_backpack' as GameObjectId,
-        name: 'Backpack',
-        alternateNames: ['backpack', 'back pack', 'bag', 'black backpack', 'torn backpack', 'damaged backpack'],
-        archetype: 'Container',
-        description: 'A black canvas backpack with a broken zipper. Canvas torn in places. Something bulky stuffed inside.',
-        isRevealed: false,
-        transitionNarration: 'You focus on the damaged backpack.',
-        capabilities: { openable: false, lockable: false, breakable: true, movable: false, powerable: false, container: true, readable: false, inputtable: false },
-        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        inventory: { items: [], capacity: 5, allowTags: [], denyTags: [] },
-        parentId: 'obj_dumpster' as GameObjectId,
-        revealMethod: 'REVEAL_FROM_PARENT',
-        personal: false,
-        children: {
-            items: [],
-            objects: ['obj_pants' as GameObjectId, 'obj_shoes' as GameObjectId, 'obj_coat' as GameObjectId]
-        },
-        handlers: {
-            onExamine: [
-                {
-                    conditions: [
-                        { type: 'STATE', entityId: 'obj_backpack', key: 'isOpen', equals: true }
-                    ],
-                    success: {
-                        message: 'The backpack lies torn open, canvas ripped apart at the seams. The zipper—already broken—dangles uselessly from one side.\n\nThe chemical smell—bleach—hangs in the air, acrid and harsh. Inside: clothes. Pants, shoes, a coat—all soaked in bleach.',
-                        media: undefined
-                    }
-                },
-                {
-                    conditions: [],
-                    success: {
-                        message: 'A black canvas backpack, the kind students or commuters use. Standard issue. Nothing special about it—except it\'s been through hell.\n\nThe zipper is broken. Not stuck—broken. The slider is bent at an angle, teeth separated, the metal warped like someone forced it past its limit and it gave up entirely.\n\nThe canvas is torn in several places—long rips along the seams, frayed edges where the fabric has been stressed beyond its capacity. Water damage has stiffened the material.\n\nBut it\'s bulging. Packed full. You can see the outline of something bundled inside—fabric, clothes maybe. And there\'s a smell. Faint, chemical. Sharp. Bleach.',
-                        media: undefined
-                    }
-                }
-            ],
-            onOpen: [
-                {
-                    conditions: [
-                        { type: 'STATE', entityId: 'obj_backpack', key: 'isOpen', equals: true }
-                    ],
-                    success: {
-                        message: 'The backpack is already torn open, canvas ripped apart at the seams. The contents are exposed—you can see the bleach-soaked clothes inside.\n\nNo need to open it again. It\'s accessible.',
-                        media: undefined
-                    }
-                },
-                {
-                    conditions: [],
-                    fail: {
-                        message: 'You reach for the zipper out of instinct.\n\nIt doesn\'t budge. The metal slider is bent, warped, teeth separated. Someone forced this thing and broke it—deliberately or in desperation, you can\'t tell.\n\nThe zipper\'s not opening. Not now, not ever. If you want to see what\'s inside, you\'ll need to tear the bag open.',
-                        media: undefined
-                    }
-                }
-            ],
-            onBreak: [
-                {
-                    conditions: [
-                        { type: 'STATE', entityId: 'obj_backpack', key: 'isOpen', equals: true }
-                    ],
-                    success: {
-                        message: 'Already torn open. The canvas is ripped apart, the broken zipper hanging loose. Bleach-soaked clothes visible inside.',
-                        media: undefined
-                    }
-                },
-                {
-                    conditions: [],
-                    success: {
-                        message: 'You grip the torn canvas with both hands, fingers digging into the frayed edges.\n\nYou pull. Hard.\n\nThe fabric resists for a moment—water damage has made it stiff, stubborn—but then it gives. The tear widens with a harsh ripping sound, canvas splitting along the seams.\n\nYou don\'t stop. You drive your hands into the opening and tear it wider, feeling the fabric give way under your grip. The backpack splits open like a wound.\n\nThe chemical smell hits you immediately—bleach, harsh and acrid. Strong enough to make your eyes water, your throat burn.\n\nThe backpack is open. Whatever\'s inside, you can reach it now.',
-                        media: undefined,
-                        effects: [
-                            { type: 'SET_ENTITY_STATE', entityId: 'obj_backpack', patch: { isOpen: true } }
-                        ]
-                    }
-                }
-            ],
-            onSearch: [
-                {
-                    conditions: [
-                        { type: 'STATE', entityId: 'obj_backpack', key: 'isOpen', equals: false }
-                    ],
-                    success: {
-                        message: 'You press on the damaged backpack, feeling the contents shift through the torn canvas. Heavy. Solid. Fabric, maybe? Hard to tell without opening it first.',
-                        media: undefined
-                    }
-                },
-                {
-                    conditions: [],
-                    success: {
-                        message: 'You search through the bleach-soaked contents, pulling them out one by one:\n\n👖 A pair of pants\n👞 A pair of shoes\n🧥 A coat\n\nAll soaked in bleach. All deliberately hidden in this backpack.',
-                        media: undefined,
-                        effects: [
-                            { type: 'REVEAL_FROM_PARENT', entityId: 'obj_pants', parentId: 'obj_backpack' },
-                            { type: 'REVEAL_FROM_PARENT', entityId: 'obj_shoes', parentId: 'obj_backpack' },
-                            { type: 'REVEAL_FROM_PARENT', entityId: 'obj_coat', parentId: 'obj_backpack' }
-                        ]
-                    }
-                }
-            ],
-            onTake: {
-                fail: {
-                    message: 'The backpack is soaked with bleach and torn apart. If you tried to lift it, the whole thing would fall apart and chemical-soaked clothes would spill everywhere.\n\nYou\'re standing in a dumpster. Not exactly equipped for evidence collection. But you could search through it here.',
-                    media: undefined
-                }
-            }
-        },
-        version: { schema: '1.0.0', content: '1.0.0' }
-    },
-
-    'obj_pants': {
-        id: 'obj_pants' as GameObjectId,
-        name: 'Pants',
-        alternateNames: ['pants', 'trousers', 'slacks', 'pair of pants', 'dress pants', 'dark pants'],
-        archetype: 'Container',
-        description: 'A pair of dark dress pants, soaked in bleach. The fabric is stiff and discolored.',
-        transitionNarration: 'You examine the bleach-soaked pants.',
-        capabilities: { openable: false, lockable: false, breakable: false, movable: false, powerable: false, container: true, readable: false, inputtable: false },
-        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        inventory: { items: [], capacity: 3, allowTags: [], denyTags: [] },
-        parentId: 'obj_backpack' as GameObjectId,
-        revealMethod: 'REVEAL_FROM_PARENT',
-        personal: false,
-        children: {
-            items: [],
-            objects: []
-        },
-        handlers: {
-            onExamine: {
-                success: {
-                    message: 'Dark dress pants. Men\'s, size 34 waist. The fabric—once black or navy—is now mottled gray and white from bleach damage.\n\nThe material is stiff, chemical-soaked. The seams are intact, but the color is destroyed. Whatever these pants looked like originally, they\'re ruined now.\n\nTwo front pockets. Two back pockets. Belt loops.',
-                    media: undefined
-                }
-            },
-            onSearch: {
-                success: {
-                    message: 'You check the pockets methodically:\n\nFront left: Three quarters. Two dimes.\nFront right: A stick of chewing gum, wrapper torn.\nBack left: Empty.\nBack right: A lint ball.\n\nNothing useful. Just pocket debris. Whoever dumped these pants emptied them first—or almost did.',
-                    media: undefined
-                }
-            },
-            onTake: {
-                fail: {
-                    message: 'The pants are soaked with bleach and smell terrible. You\'re not taking those with you. If there\'s something in the pockets, you can search them here.',
-                    media: undefined
-                }
-            }
-        },
-        version: { schema: '1.0.0', content: '1.0.0' }
-    },
-
-    'obj_shoes': {
-        id: 'obj_shoes' as GameObjectId,
-        name: 'Shoes',
-        alternateNames: ['shoes', 'pair of shoes', 'dress shoes', 'leather shoes', 'black shoes'],
-        archetype: 'Container',
-        description: 'A pair of leather dress shoes, scuffed and worn. Size 11½.',
-        transitionNarration: 'You examine the shoes.',
-        capabilities: { openable: false, lockable: false, breakable: false, movable: false, powerable: false, container: true, readable: false, inputtable: false },
-        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        inventory: { items: [], capacity: 2, allowTags: [], denyTags: [] },
-        parentId: 'obj_backpack' as GameObjectId,
-        revealMethod: 'REVEAL_FROM_PARENT',
-        personal: false,
-        children: {
-            items: [],
-            objects: []
-        },
-        handlers: {
-            onExamine: {
-                success: {
-                    message: 'Black leather dress shoes. Oxford style. Size 11½.\n\nThe leather is scuffed, worn at the heels. The soles are thin—worn down from walking. These shoes have miles on them.\n\nAnd the smell—god, the smell. Sweat. Mildew. Rot. Like they were worn hard, then thrown in the trash without being cleaned.\n\nThe laces are still tied. Whoever took these off didn\'t bother to unlace them. Just kicked them off and tossed them.',
-                    media: undefined
-                }
-            },
-            onSearch: {
-                success: {
-                    message: 'You check inside both shoes, running your fingers along the insoles, checking for hidden compartments or items.\n\nNothing.\n\nJust worn leather, sweat stains, and that terrible smell. If there was anything hidden here, it\'s long gone.',
-                    media: undefined
-                }
-            },
-            onTake: {
-                fail: {
-                    message: 'The shoes smell awful—sweat and mildew mixed with the bleach from the bag. You\'re not taking those with you. Leave them in the dumpster where they belong.',
-                    media: undefined
-                }
-            }
-        },
-        version: { schema: '1.0.0', content: '1.0.0' }
-    },
-
-    'obj_coat': {
-        id: 'obj_coat' as GameObjectId,
-        name: 'Coat',
-        alternateNames: ['coat', 'jacket', 'suit jacket', 'blazer', 'suit coat'],
-        archetype: 'Container',
-        description: 'A dark suit jacket, stained and soaked in bleach. The fabric is damaged, but still recognizable.',
-        transitionNarration: 'You examine the bleach-damaged coat.',
-        capabilities: { openable: false, lockable: false, breakable: false, movable: false, powerable: false, container: true, readable: false, inputtable: false },
-        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        inventory: { items: [], capacity: 3, allowTags: [], denyTags: [] },
-        parentId: 'obj_backpack' as GameObjectId,
-        revealMethod: 'REVEAL_FROM_PARENT',
-        personal: false,
-        children: {
-            items: [],
-            objects: ['obj_pocket' as GameObjectId]
-        },
-        handlers: {
-            onExamine: {
-                success: {
-                    message: 'A suit jacket. Dark fabric—navy or black, hard to tell now that the bleach has discolored it. The shoulders are structured, the cut is tailored. Expensive, once.\n\nNow? Ruined. The fabric is stiff with chemical damage. Dark stains—blood? oil?—still visible despite the bleach treatment. Whatever these stains were, someone wanted them gone badly enough to destroy the entire jacket.\n\nYou can see the lining through the torn fabric.',
-                    media: undefined
-                }
-            },
-            onSearch: [
-                {
-                    conditions: [
-                        { type: 'NO_FLAG', flag: 'coat_searched' }
-                    ],
-                    success: {
-                        message: 'You run your hands over the coat, checking methodically.\n\nThe fabric is stiff from bleach, chemical-damaged. The shoulders are structured, tailored. Quality construction, once.\n\nYou check the lining—and there. Hidden inside. A concealed pocket.\n\nSomeone went to effort to hide this.',
-                        media: undefined,
-                        effects: [
-                            { type: 'REVEAL_FROM_PARENT', entityId: 'obj_pocket', parentId: 'obj_coat' },
-                            { type: 'SET_FLAG', flag: 'coat_searched', value: true }
-                        ]
-                    }
-                },
-                {
-                    conditions: [],
-                    success: {
-                        message: 'You check the coat again. The hidden pocket is still there—you can search it if you want.',
-                        media: undefined
-                    }
-                }
-            ],
-            onTake: {
-                fail: {
-                    message: 'The coat is soaked with bleach and reeks of chemicals. You\'re not taking it with you. If there\'s something hidden in it, you can search it here.',
-                    media: undefined
-                }
-            }
-        },
-        version: { schema: '1.0.0', content: '1.0.0' }
-    },
-
-    'obj_pocket': {
-        id: 'obj_pocket' as GameObjectId,
-        name: 'Pocket',
-        alternateNames: ['pocket', 'coat pocket', 'jacket pocket', 'inside pocket', 'inner pocket'],
-        archetype: 'Container',
-        description: 'A hidden pocket inside the coat lining.',
-        isRevealed: false,
-        transitionNarration: 'You examine the pocket closely.',
-        capabilities: { openable: false, lockable: false, breakable: false, movable: false, powerable: false, container: true, readable: false, inputtable: false },
-        state: { isOpen: true, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        inventory: { items: ['item_tiny_silver_key' as ItemId], capacity: 2, allowTags: [], denyTags: [] },
-        parentId: 'obj_coat' as GameObjectId,
-        revealMethod: 'REVEAL_FROM_PARENT',
-        personal: false,
-        children: {
-            items: ['item_tiny_silver_key' as ItemId],
-            objects: []
-        },
-        handlers: {
-            onExamine: {
-                success: {
-                    message: 'A hidden pocket sewn into the coat\'s lining. Deeper than you\'d expect. Someone put effort into concealing this.\n\nYou can feel something inside—something small, hard, metallic.',
-                    media: undefined
-                }
-            },
-            onSearch: [
-                {
-                    conditions: [
-                        { type: 'NO_FLAG', flag: 'pocket_searched' }
-                    ],
-                    success: {
-                        message: 'You slide your hand into the hidden pocket, fingers probing carefully.\n\nThe pocket is deep. Your fingers brush against silk lining, smooth and cool.\n\nThen—there. At the bottom. Something small. Metal.\n\nYou pinch it between two fingers and pull it out:\n\nA tiny silver key.\n\nDelicate. Precise. Tarnished with age. No markings, no labels.\n\nThe kind of key that opens something small. Something locked. Something hidden.',
-                        media: undefined,
-                        effects: [
-                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_tiny_silver_key', parentId: 'obj_pocket' },
-                            { type: 'SET_FLAG', flag: 'pocket_searched', value: true }
-                        ]
-                    }
-                },
-                {
-                    conditions: [],
-                    success: {
-                        message: 'You check the pocket again, running your fingers along the silk lining.\n\nNothing else. Just the key you already found.',
-                        media: undefined
-                    }
-                }
-            ]
-        },
-        version: { schema: '1.0.0', content: '1.0.0' }
-    },
-
-    'obj_tire_stack': {
-        id: 'obj_tire_stack' as GameObjectId,
-        name: 'Tire Stack',
-        alternateNames: ['tire stack', 'tires', 'old tires', 'stacked tires', 'car tires', 'pile of tires', 'tire pile', 'third tire', 'top tire', 'bottom tire'],
-        archetype: 'Container',
-        description: 'A pile of old car tires stacked haphazardly in the corner. Cracked rubber, weeds growing through the centers.',
-        zone: 'zone_side_alley' as ZoneId,
-        transitionNarration: 'You move closer to the pile of old tires. They smell like burnt rubber and decay.',
-        capabilities: { openable: false, lockable: false, breakable: false, movable: true, powerable: false, container: true, readable: false, inputtable: false },
-        state: {
-            isOpen: false,
-            isLocked: false,
-            isBroken: false,
-            isPoweredOn: false,
-            currentStateId: 'default',
-            tiresRemoved: 0  // Track how many tires player has lifted/removed
-        },
-        children: {
-            items: ['item_crowbar' as ItemId],
-            objects: []
-        },
-        handlers: {
-            onExamine: [
-                {
-                    // State 3: TAKEN - After taking crowbar
-                    conditions: [
-                        { type: 'HAS_ITEM', itemId: 'item_crowbar' }
-                    ],
-                    success: {
-                        message: 'The tire pile sits where you left it, slightly disturbed from your search. The crowbar is gone—you took it. Just old rubber remains, cracked and weathered, weeds growing through the centers.\n\nNothing else hidden here. You checked.',
-                        media: undefined
-                    }
-                },
-                {
-                    // State 2: REVEALED - Crowbar found but not taken yet
-                    conditions: [
-                        { type: 'HAS_FLAG', flag: 'tires_moved' }
-                    ],
-                    success: {
-                        message: 'The tire pile sits slightly disturbed from your search. The crowbar you found is still here, lying where you pulled it out—two feet of rust-spotted steel wedged between the third and fourth tire.',
-                        media: undefined
-                    }
-                },
-                {
-                    // State 1: UNTOUCHED - Before finding crowbar (fallback/default)
-                    conditions: [],
-                    success: {
-                        message: 'Five or six old car tires, stacked haphazardly against the brick wall like someone tossed them there and forgot. The rubber is cracked, dry-rotted from years of exposure. Deep fissures run along the treads where the material split and separated. Black flakes dust your fingers when you touch them.\n\nWeeds have colonized the centers—dandelions gone to seed, scraggly grass pushing through the holes. Nature reclaiming what was abandoned.\n\nThe smell is distinct: burnt rubber mixed with decay, that chemical petroleum stench that never fully fades. It clings to the back of your throat.\n\nThey\'re heavier than they look. Decades of moisture absorbed into the rubber, making them dense, waterlogged. Someone would need to roll them aside one by one if they wanted to move them.\n\nBut why would anyone? They\'re just trash. Forgotten debris in a forgotten alley.\n\nUnless they\'re hiding something.',
-                        media: undefined
-                    }
-                }
-            ],
-            onKick: [
-                {
-                    // Already moved/taken
-                    conditions: [
-                        { type: 'HAS_ITEM', itemId: 'item_crowbar' }
-                    ],
-                    success: {
-                        message: 'You kick the scattered tires. They shift a few inches. Nothing new to discover—you already got the crowbar.',
-                        media: undefined
-                    }
-                },
-                {
-                    // Before first kick
-                    conditions: [
-                        { type: 'NO_FLAG', flag: 'kicked_tires' }
-                    ],
-                    success: {
-                        message: 'You kick the bottom tire. Not hard—just enough to test the stack\'s stability.\n\nThe whole pile wobbles. The tires shift against each other, rubber scraping, settling back with a dull thud.\n\nAnd then you hear it.\n\nFaint. Metallic. A clink. Like metal tapping against metal, muffled by rubber.\n\nSomething inside the stack. Something hard. Hidden.',
-                        media: undefined,
-                        effects: [
-                            { type: 'SET_FLAG', flag: 'kicked_tires', value: true }
-                        ]
-                    }
-                },
-                {
-                    // After kicking once
-                    conditions: [],
-                    success: {
-                        message: 'You kick the pile again. Same wobble. Same scraping sound. You already know there\'s metal hidden inside.\n\nKicking it more won\'t help. You need to figure out which tire it\'s in.',
-                        media: undefined
-                    }
-                }
-            ],
-            onListen: [
-                {
-                    // Before kicking
-                    conditions: [
-                        { type: 'NO_FLAG', flag: 'kicked_tires' }
-                    ],
-                    success: {
-                        message: 'You press your ear against the rubber. Silence. Just the distant hum of traffic from Elm Street, wind whistling through the alley.\n\nThe tires themselves are quiet. Inert. Dead rubber sitting in a forgotten corner.\n\nMaybe disturb them first. See if they make any sounds.',
-                        media: undefined
-                    }
-                },
-                {
-                    // After kicking
-                    conditions: [
-                        { type: 'HAS_FLAG', flag: 'kicked_tires' }
-                    ],
-                    success: {
-                        message: 'You press your ear against different tires, listening for the source of that metallic clink you heard.\n\nTop tire: nothing. Just hollow rubber.\n\nSecond tire: nothing.\n\nThird tire: wait. You tap it gently. A faint rattle. Metallic. Something hard inside, wedged against the rim.\n\nThat\'s the one. The third tire from the top. Something metal is lodged inside it or pressed against it.',
-                        media: undefined,
-                        effects: [
-                            { type: 'SET_FLAG', flag: 'identified_third_tire', value: true }
-                        ]
-                    }
-                }
-            ],
-            onTilt: [
-                {
-                    // Before identifying third tire
-                    conditions: [
-                        { type: 'NO_FLAG', flag: 'identified_third_tire' }
-                    ],
-                    success: {
-                        message: 'You try tilting the tire stack. They\'re heavy, waterlogged. You manage to shift them a few degrees, but they settle back.\n\nIf you\'re looking for something specific, maybe listen first. Figure out where the sound is coming from.',
-                        media: undefined
-                    }
-                },
-                {
-                    // After identifying, before removing enough tires
-                    conditions: [
-                        { type: 'HAS_FLAG', flag: 'identified_third_tire' },
-                        { type: 'OBJECT_STATE', objectId: 'obj_tire_stack', statePath: 'tiresRemoved', lessThan: 2 }
-                    ],
-                    success: {
-                        message: 'You try to tilt the third tire to see what\'s inside. Can\'t. The tires above it are too heavy, pinning it down.\n\nYou\'d need to lift the top tires off first. Remove them one by one.',
-                        media: undefined
-                    }
-                },
-                {
-                    // After removing enough tires
-                    conditions: [],
-                    success: {
-                        message: 'The third tire is accessible now. You tilt it slightly, peering at the edges.\n\nThere—wedged between this tire and the one below it. Metal. Steel. A crowbar, you realize.\n\nYou should be able to pull it out now.',
-                        media: undefined
-                    }
-                }
-            ],
-            onShake: [
-                {
-                    // Before identifying third tire
-                    conditions: [
-                        { type: 'NO_FLAG', flag: 'identified_third_tire' }
-                    ],
-                    success: {
-                        message: 'You try shaking the tire stack. Too heavy. They barely move. Waterlogged rubber is dead weight.\n\nMaybe listen first. Figure out which tire has something inside.',
-                        media: undefined
-                    }
-                },
-                {
-                    // After identifying third tire
-                    conditions: [
-                        { type: 'HAS_FLAG', flag: 'identified_third_tire' }
-                    ],
-                    success: {
-                        message: 'You grip the third tire and try to shake it. Heavy. The rubber gives slightly under your hands—decades of rot making it soft—but the weight prevents real movement.\n\nYou hear that rattle again. Definite. Metal against rubber.\n\nWhatever\'s in there, you\'ll need to lift the tires above it first. Clear the weight.',
-                        media: undefined
-                    }
-                }
-            ],
-            onLift: [
-                {
-                    // Haven't kicked yet
-                    conditions: [
-                        { type: 'NO_FLAG', flag: 'kicked_tires' },
-                        { type: 'OBJECT_STATE', objectId: 'obj_tire_stack', statePath: 'tiresRemoved', equals: 0 }
-                    ],
-                    success: {
-                        message: 'You could lift these tires one by one, sure. But why? They\'re just old rubber. Trash.\n\nUnless you have a reason to think something\'s hidden underneath...',
-                        media: undefined
-                    }
-                },
-                {
-                    // First tire - removing top one
-                    conditions: [
-                        { type: 'OBJECT_STATE', objectId: 'obj_tire_stack', statePath: 'tiresRemoved', equals: 0 }
-                    ],
-                    success: {
-                        message: 'You grip the top tire with both hands. Heavier than expected. Waterlogged rubber, dense and unwieldy.\n\nYou lift. The tire comes free with a wet sucking sound, rubber peeling away from rubber. You set it aside.\n\nOne down. The stack is shorter now. You can see the second tire clearly.',
-                        media: undefined,
-                        effects: [
-                            { type: 'SET_ENTITY_STATE', entityId: 'obj_tire_stack', key: 'tiresRemoved', value: 1 }
-                        ]
-                    }
-                },
-                {
-                    // Second tire - almost there
-                    conditions: [
-                        { type: 'OBJECT_STATE', objectId: 'obj_tire_stack', statePath: 'tiresRemoved', equals: 1 }
-                    ],
-                    success: {
-                        message: 'Second tire. Same process. Grip. Lift. The rubber is slick with grime and moisture. You set it aside next to the first one.\n\nTwo tires removed. The third tire is now the top of the stack.\n\nThis is the one. The one that rattled. The one with metal inside.',
-                        media: undefined,
-                        effects: [
-                            { type: 'SET_ENTITY_STATE', entityId: 'obj_tire_stack', key: 'tiresRemoved', value: 2 }
-                        ]
-                    }
-                },
-                {
-                    // Third tire - revealing the crowbar
-                    conditions: [
-                        { type: 'OBJECT_STATE', objectId: 'obj_tire_stack', statePath: 'tiresRemoved', equals: 2 }
-                    ],
-                    success: {
-                        message: 'You grip the third tire. The one that made the sound.\n\nYou lift.\n\nAs the tire comes away, you see it—wedged in the gap between the third and fourth tire, hidden all along:\n\nA crowbar.\n\nSteel. About two feet long. Rust-spotted but solid. The curved pry end catches the dim alley light.\n\nSomeone hid this here. Deliberately. Stashed it between tires where nobody would look unless they were methodical. Patient. Determined.\n\nThe kind of tool you use when you need leverage.\n\nIt\'s yours now.',
-                        media: undefined,
-                        effects: [
-                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_crowbar', parentId: 'obj_tire_stack' },
-                            { type: 'SET_FLAG', flag: 'tires_moved', value: true },
-                            { type: 'SET_ENTITY_STATE', entityId: 'obj_tire_stack', key: 'tiresRemoved', value: 3 }
-                        ]
-                    }
-                },
-                {
-                    // After crowbar revealed
-                    conditions: [],
-                    success: {
-                        message: 'You already lifted enough tires. The crowbar is revealed. Just take it.',
-                        media: undefined
-                    }
-                }
-            ],
-            onSearch: [
-                {
-                    // State 3: TAKEN - Already found and taken
-                    conditions: [
-                        { type: 'HAS_ITEM', itemId: 'item_crowbar' }
-                    ],
-                    success: {
-                        message: 'You\'ve already searched the tires. The crowbar is gone—you took it. Nothing else here but rubber and weeds.',
-                        media: undefined
-                    }
-                },
-                {
-                    // State 2: REVEALED - Crowbar found but not taken
-                    conditions: [
-                        { type: 'HAS_FLAG', flag: 'tires_moved' }
-                    ],
-                    success: {
-                        message: 'You already moved the tires apart. The crowbar is right there—you can see it lying between the rubber. Just take it if you need it.',
-                        media: undefined
-                    }
-                },
-                {
-                    // State 1: UNTOUCHED - Hint only, don't reveal yet
-                    conditions: [],
-                    success: {
-                        message: 'You crouch down and reach between the tires, fingers probing the gaps. Most are empty—just dead leaves, dirt compacted into paste, spider webs.\n\nBut wait.\n\nYour fingers brush something. Cold. Hard. Metal.\n\nIt\'s wedged tight between the third and fourth tire, deep in the gap. You can feel the shape—long, narrow, maybe two feet. A rod? A pipe?\n\nYou try to pull it out. Can\'t. Stuck. The tires are too heavy, pinning it in place.\n\nYou need to MOVE the tires apart if you want to get at whatever this is.',
-                        media: undefined
-                    }
-                }
-            ],
-            onMove: [
-                {
-                    // State 3: TAKEN - Already moved and taken
-                    conditions: [
-                        { type: 'HAS_ITEM', itemId: 'item_crowbar' }
-                    ],
-                    success: {
-                        message: 'You already moved the tires. The crowbar is gone—you took it. Nothing else here.',
-                        media: undefined
-                    }
-                },
-                {
-                    // State 2: REVEALED - Already moved, crowbar visible
-                    conditions: [
-                        { type: 'HAS_FLAG', flag: 'tires_moved' }
-                    ],
-                    success: {
-                        message: 'You already moved the tires apart. The crowbar is lying right there between the rubber. Take it if you need it.',
-                        media: undefined
-                    }
-                },
-                {
-                    // State 1: UNTOUCHED - Moving reveals the crowbar (quick path)
-                    conditions: [],
-                    success: {
-                        message: 'You grip the top tire and roll it aside. Heavy. The rubber is slick with grime, waterlogged from years of exposure. It hits the ground with a dull thud.\n\nSecond tire. Roll it away.\n\nThird tire. You pause. This is the one. You felt something metal wedged against it.\n\nYou push it aside, and there it is—\n\nA crowbar.\n\nSteel, about two feet long. Rust-spotted but solid. The curved pry end catches the dim light. The kind of tool you use when you need leverage.\n\nSomeone hid this here. Deliberately. Tucked it between the tires where no casual passerby would find it.\n\nWhy?\n\nYou should take it. Could be useful.',
-                        media: undefined,
-                        effects: [
-                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_crowbar', parentId: 'obj_tire_stack' },
-                            { type: 'SET_FLAG', flag: 'tires_moved', value: true }
-                        ]
-                    }
-                }
-            ],
-            onTake: {
-                fail: {
-                    message: 'The tires are too heavy and awkward to carry. Besides, what would you do with a pile of old rubber? Leave them here.\n\nIf you think something\'s hidden inside them, try SEARCHING first, then MOVE the tires apart to get at it.',
-                    media: undefined
-                }
-            }
-        },
-        version: { schema: '1.0.0', content: '1.0.0' }
-    },
-
-    'obj_tire_marks': {
-        id: 'obj_tire_marks' as GameObjectId,
-        name: 'Tire Marks',
-        alternateNames: ['tire marks', 'tire tracks', 'tracks', 'skid marks', 'tread marks', 'van tracks'],
-        archetype: 'Evidence',
-        description: 'Fresh tire marks on the cracked concrete. Someone drove through here recently.',
-        transitionNarration: 'You crouch down to examine the tire marks more closely.',
-        capabilities: { openable: false, lockable: false, breakable: false, movable: false, powerable: false, container: false, readable: false, inputtable: false },
-        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        handlers: {
-            onExamine: [
-                {
-                    // After photographing
-                    conditions: [
-                        { type: 'HAS_ITEM', itemId: 'item_photo_tire_marks' }
-                    ],
-                    success: {
-                        message: 'The tire marks remain pressed into the grime—two parallel tracks with that distinctive diagonal crosshatch tread. You\'ve already photographed them. The pattern\'s documented in your phone.\n\nNow you just need to match it to the police report.',
-                        media: undefined
-                    }
-                },
-                {
-                    // Before photographing (fallback/default)
-                    conditions: [],
-                    success: {
-                        message: 'You crouch down, knees cracking, and study the marks.\n\nTwo parallel tracks pressed into the layer of dirt and grime coating the alley concrete. The treads are distinct—deep grooves cut in a diagonal crosshatch pattern, the kind of aggressive tread you see on commercial vehicles. Not passenger cars. Something heavier. A van, most likely.\n\nThe marks are fresh. Recent. You can tell by the way the dirt hasn\'t settled back into the grooves yet. A week old, maybe less. Rain would have washed them away if they\'d been here longer.\n\nYou run your finger along one track. The groove is deep—eighth of an inch, maybe more. New tires. Someone replaced them recently, or the vehicle doesn\'t see much mileage.\n\nThe police report mentioned a gray van. Witnesses saw it near the bus stop around the time Lili disappeared. These could be from that van. The timing matches. The location matches.\n\nYou should photograph these. Document the tread pattern. Compare it to the forensic report—they always catalog tire types when there\'s vehicle involvement.\n\nSomething about these tracks bothers you. They\'re too clean. Too perfect. Like someone wanted them found.',
-                        media: undefined
-                    }
-                }
-            ],
-            onPhotograph: [
-                {
-                    // Already photographed
-                    conditions: [
-                        { type: 'HAS_ITEM', itemId: 'item_photo_tire_marks' }
-                    ],
-                    success: {
-                        message: 'You\'ve already photographed the tire marks. The images are stored in your phone—clear shots of the tread pattern.',
-                        media: undefined
-                    }
-                },
-                {
-                    // First time photographing (fallback/default)
-                    conditions: [],
-                    success: {
-                        message: 'You pull out your phone, angle it to get the best light, and snap several photos. The camera focuses, capturing the tread pattern in sharp detail.\n\nClick. Click. Click.\n\nYou review the images. Clear. Usable. The diagonal crosshatch pattern is visible, the depth of the grooves apparent even in the photo. Good enough for comparison.\n\n*Photo added to evidence.*\n\nNow check the police report. They mentioned tire analysis in the forensics section.',
-                        media: undefined,
-                        effects: [
-                            { type: 'ADD_ITEM_TO_INVENTORY', itemId: 'item_photo_tire_marks' }
-                        ]
-                    }
-                }
-            ],
-            onSearch: {
-                success: {
-                    message: 'You examine the ground around the tire marks, looking for anything else. Cigarette butts, footprints, dropped objects—anything that might connect to whoever drove through here.\n\nNothing.\n\nJust the tracks. Clean. Isolated. Almost too perfect.\n\nWhoever left these knew what they were doing.',
-                    media: undefined
-                }
-            },
-            onTake: {
-                fail: {
-                    message: 'You can\'t take tire marks off the ground. They\'re evidence, but they\'re not portable. Try PHOTOGRAPHING them instead—document the pattern so you can compare it to the police report.',
-                    media: undefined
-                }
-            },
-            onUse: {
-                fail: {
-                    message: 'Tire marks aren\'t a tool. They\'re evidence. PHOTOGRAPH them to document the tread pattern, then compare the image to the forensic analysis in the police report.',
-                    media: undefined
-                }
-            }
-        },
-        version: { schema: '1.0.0', content: '1.0.0' }
-    },
-
-    'obj_brick_walls': {
-        id: 'obj_brick_walls' as GameObjectId,
-        name: 'Brick Walls',
-        alternateNames: ['brick walls', 'walls', 'brick wall', 'bricks', 'wall', 'graffiti', 'rose', 'justice', 'number', '1973'],
-        archetype: 'Decoration',
-        description: 'Tall brick walls on both sides of the alley. Stained black with decades of city grime.',
-        zone: 'zone_side_alley' as ZoneId,
-        transitionNarration: 'You step closer to the brick wall, running your hand along its rough surface.',
-        capabilities: { openable: false, lockable: false, breakable: false, movable: false, powerable: false, container: false, readable: true, inputtable: false },
-        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        handlers: {
-            onExamine: {
-                success: {
-                    message: 'The brick walls rise on both sides of the alley—tall, imposing, hemming you in. Old industrial construction, probably 1940s or 50s based on the brick pattern and mortar style. Red clay brick beneath layers of black grime, decades of city pollution baked into the surface.\n\nThe mortar is crumbling. You can pick it out with your fingernail in places, the cement degraded to powder. Some bricks are loose, water damage having eroded the adhesive over the years. Rain runoff has left vertical streaks down the wall—clean channels through the filth where water flows during storms.\n\nGraffiti covers the left wall. Layers of it—spray-painted tags, gang symbols, indecipherable scrawls piled over each other like archaeological strata. Each generation adding their mark, covering the previous.\n\nBut three markings stand out.\n\nA wild spray-painted ROSE—red and black, thorny stems curling around the petals. Detailed work. Not a quick tag. Someone spent time on this. Below it, in aggressive tagged style, dripping letters: "JUSTICE." The kind of street art that makes a statement. Protest? Memorial? Gang territory?\n\nAnd beneath both, stenciled in faded white paint: the number "1973."\n\nYou stare at the markings. A rose. Justice. 1973. Could they mean something? A date? A code? A message left for someone?\n\nOr just street art—beautiful, angry, meaningless?\n\nYour detective instincts tell you: sometimes graffiti is just graffiti. Not everything connects to your case.',
-                    media: undefined
-                }
-            },
-            onSearch: {
-                success: {
-                    message: 'You run your hands along the bricks, checking for loose ones, hidden compartments, anything that might conceal evidence. Detective work 101: assume nothing is what it seems.\n\nYou press bricks around the rose graffiti. Pull on them. Check the mortar gaps near the "JUSTICE" tag. Trace your fingers around the "1973" stencil, looking for a hidden switch, a loose brick, anything.\n\nNothing.\n\nSolid wall. Crumbling in places, yes, but just age and weather. No secret passages. No hidden safes. No loose brick revealing a key taped inside.\n\nJust a wall. Old. Dirty. Forgotten.\n\nThe graffiti stares back at you—the rose, the word, the number. Beautiful. Angry. Meaningless.\n\nSometimes a wall is just a wall.',
-                    media: undefined
-                }
-            },
-            onRead: {
-                success: {
-                    message: 'You read the graffiti aloud, letting the words sit in the cold alley air.\n\n"JUSTICE."\n\nThe word is spray-painted in aggressive, dripping letters. Black over red, the paint still vivid despite years of weather. Someone was angry when they wrote this. Someone wanted to be heard.\n\nBelow it, stenciled in white: "1973."\n\nA year? A date? A code?\n\nAnd above both, the rose—red and black petals, thorny stems spiraling outward. Beautiful. Deliberate. Defiant.\n\nYou stand there, waiting for meaning to crystallize. Waiting for the pieces to click into place.\n\nNothing clicks.\n\nMaybe it means something. Maybe it\'s just art. Street anger. A memorial. A warning.\n\nOr maybe it\'s nothing at all.',
-                    media: undefined
-                }
-            },
-            onPeek: {
-                success: {
-                    message: 'You lean in close to the graffiti, squinting at the details. Looking for hidden layers. Patterns. Messages within messages.\n\nThe rose: each petal is carefully outlined, shaded. The thorns are sharp, deliberate. You can see where the artist lifted the spray can nozzle between strokes, varying the pressure to create depth. This wasn\'t vandalism. This was art.\n\n"JUSTICE": the letters drip downward, paint running like blood. Or tears. Intentional? Or just gravity doing its work?\n\n"1973": stenciled, not sprayed freehand. Someone made a template. Cut it out. Held it against the wall and painted through it. Precise. Planned.\n\nYou look closer at the paint itself. Faded. Weathered. These markings are old. Years old. Maybe decades.\n\nBut you find nothing else. No hidden symbols. No coded messages. Just graffiti.',
-                    media: undefined
-                }
-            },
-            onKnock: {
-                success: {
-                    message: 'You rap your knuckles against the bricks around the graffiti. Tap tap tap. Listening for hollow spaces. Secret chambers. Hidden compartments behind the wall.\n\nSolid brick. Dense. No echo. No hollow sound.\n\nYou knock around the rose. Solid.\n\nYou knock around "JUSTICE." Solid.\n\nYou knock around "1973." Solid.\n\nIt\'s just a wall. Brick and mortar. Decades old. No hidden spaces. No secret doors.\n\nThe graffiti might mean something, but the wall beneath it is exactly what it appears to be: a wall.',
-                    media: undefined
-                }
-            },
-            onListen: {
-                success: {
-                    message: 'You press your ear against the cold brick, listening. Straining to hear anything beyond the normal city sounds.\n\nTraffic hum from Elm Street. Distant sirens. Wind whistling through the alley entrance.\n\nYou move to the graffiti. Press your ear against the rose. Listen.\n\nNothing.\n\nAgainst "JUSTICE." Nothing.\n\nAgainst "1973." Nothing.\n\nNo mechanical sounds. No hidden machinery. No whispers or movement behind the wall.\n\nJust brick. Cold. Silent. Dead.\n\nWhatever the graffiti means—if it means anything at all—there\'s nothing hidden behind it.',
-                    media: undefined
-                }
-            },
-            onTake: {
-                fail: {
-                    message: 'You can\'t take a brick wall with you. Even if you could pry loose one of the deteriorating bricks, what would you do with it? It\'s just brick. Old clay and mortar. Not evidence.',
-                    media: undefined
-                }
-            },
-            onUse: {
-                fail: {
-                    message: 'A brick wall isn\'t a tool. It\'s a barrier. It defines the alley, contains the space. You can EXAMINE it or SEARCH it if you think there\'s something hidden, but you can\'t use it.',
-                    media: undefined
-                }
-            }
-        },
-        version: { schema: '1.0.0', content: '1.0.0' }
-    },
-
-    'obj_courtyard_door': {
-        id: 'obj_courtyard_door' as GameObjectId,
-        name: 'Courtyard Door',
-        alternateNames: ['courtyard door', 'door', 'hidden door', 'metal door', 'rusted door', 'old door', 'hinges', 'rust'],
-        archetype: 'Door',
-        description: 'A hidden rusted metal door behind the dumpster. Old, locked, deliberately concealed.',
-        zone: 'zone_side_alley' as ZoneId,
-        isRevealed: false,
-        transitionNarration: 'You step closer to the hidden door. Rust flakes off at your touch. This door hasn\'t been opened in years.',
-        capabilities: { openable: true, lockable: true, breakable: true, movable: false, powerable: false, container: false, readable: false, inputtable: true },
-        state: { isOpen: false, isLocked: true, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        leadsToLocationId: 'loc_courtyard' as LocationId,
-        handlers: {
-            onExamine: [
-                {
-                    // Door is locked, lever pulled (hinges compromised)
-                    conditions: [
-                        { type: 'OBJECT_STATE', objectId: 'obj_courtyard_door', statePath: 'isLocked', value: true },
-                        { type: 'OBJECT_STATE', objectId: 'obj_crates', statePath: 'leverPulled', value: true }
-                    ],
-                    success: {
-                        message: 'A heavy metal door, hidden behind the crates. The paint is peeling in long strips, revealing layers of rust beneath. No handle—just a numeric keypad mounted on the frame.\n\nYou study the hinges on the right edge. Rusted. Badly rusted. The metal is corroded, brittle, flaking apart in places. When you pulled that lever, something disengaged inside the wall—you can see the effects now. The hinge pins have shifted slightly, no longer seated properly.\n\nThe door is still locked by the keypad mechanism, but those hinges... they look weak. Compromised. Maybe you could force it.',
-                        media: undefined
-                    }
-                },
-                {
-                    // Door is locked (normal state)
-                    conditions: [
-                        { type: 'OBJECT_STATE', objectId: 'obj_courtyard_door', statePath: 'isLocked', value: true }
-                    ],
-                    success: {
-                        message: 'A heavy metal door, hidden behind the crates. The paint is peeling in long strips, revealing layers of rust beneath. No handle—just a numeric keypad mounted on the frame. Old, weathered, but still functional.\n\nSomeone deliberately hid this door. Someone wanted to keep people out. Or keep something in.\n\nThe door is locked. You need the right code to open it.',
-                        media: {
-                            url: '',
-                            description: 'Rusted locked door with keyhole',
-                            hint: 'locked door needs key'
+                    onSearch: {
+                        success: {
+                            message: "You check under the slats, between the cracks. Nothing hidden in the seat itself.\n\nBut when you push on one side, the whole bench shifts slightly. Not bolted down. One leg shorter than the others - something metallic glints underneath.",
+                            media: undefined
+                        }
+                    },
+                    onMove: {
+                        success: {
+                            message: "You grip the bench and shift it to the side. Heavy. Wood scrapes against concrete.\n\nUnderneath where the leg was: a quarter. 1998 issue. Someone wedged it under there to level the bench.",
+                            media: undefined,
+                            effects: [
+                                { type: 'SET_ENTITY_STATE', objectId: 'obj_bus_bench' as GameObjectId, newState: 'moved' },
+                                { type: 'REVEAL_FROM_PARENT', entityId: 'item_quarter' as ItemId, parentId: 'obj_bus_bench' as GameObjectId }
+                            ]
                         }
                     }
-                },
-                {
-                    // Door is unlocked/open
-                    conditions: [],
-                    success: {
-                        message: 'The hidden door stands open now, revealing the dark courtyard beyond.',
-                        media: undefined
+                }
+            },
+            moved: {
+                overrides: {
+                    onExamine: {
+                        success: {
+                            message: "The bench sits askew now, shifted from its original position. The wood is still carved with years of waiting: \"TC + MR 1998\", gang tags, crude drawings.\n\nThe uneven leg is visible - that's where the quarter was wedged.",
+                            media: undefined
+                        }
+                    },
+                    onSearch: {
+                        success: {
+                            message: "You already moved the bench. Nothing else hidden here.",
+                            media: undefined
+                        }
                     }
                 }
-            ],
-            onListen: [
-                {
-                    // Lever pulled, hinges compromised
-                    conditions: [
-                        { type: 'OBJECT_STATE', objectId: 'obj_crates', statePath: 'leverPulled', value: true }
-                    ],
-                    success: {
-                        message: 'You press your ear against the cold metal. Listen.\n\nA faint sound. Mechanical. Inside the wall behind the door, something shifts. A slow creaking—metal under stress. The hinges, you realize. They\'re no longer properly supported.\n\nWhen you pulled that lever, it disengaged something structural. The hinge mechanisms. They\'re loose now. Unstable.\n\nThe door might still be locked, but it\'s weak.',
-                        media: undefined
-                    }
-                },
-                {
-                    // Normal state
-                    conditions: [],
-                    success: {
-                        message: 'You press your ear against the metal door. Silence. Just the faint hum of the city beyond—traffic, sirens, wind.\n\nNothing mechanical. Nothing moving inside. The door is solid, sealed, waiting.',
-                        media: undefined
-                    }
-                }
-            ],
-            onKnock: {
+            }
+        },
+        capabilities: { container: false, lockable: false, movable: true, breakable: false },
+        revealMethod: 'AUTO',
+        design: {
+            authorNotes: "Payphone puzzle - hides quarter under leg. Player must MOVE bench to reveal quarter. Adds physical interaction element to puzzle.",
+            tags: ['payphone-puzzle', 'movable', 'bus-stop']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'obj_bus_trash_bin': {
+        id: 'obj_bus_trash_bin' as GameObjectId,
+        name: 'Trash Bin',
+        alternateNames: ['trash', 'garbage bin', 'waste bin', 'bin'],
+        description: 'Metal trash bin overflowing with coffee cups, candy wrappers, and transit debris.',
+        locationId: 'loc_bus_stop' as LocationId,
+        archetype: 'Container',
+        state: { currentStateId: 'default' },
+        capabilities: { container: true, lockable: false, movable: false, breakable: false },
+        revealMethod: 'AUTO',
+        handlers: {
+            onExamine: {
                 success: {
-                    message: 'You rap your knuckles against the metal. A hollow, ringing sound echoes back.\n\nHeavy gauge steel, but hollow-core construction. The door is industrial, meant to secure a space, not withstand a serious assault.\n\nIf you had the right leverage, the right tool, you might be able to force it. But brute force alone won\'t work.',
+                    message: "Metal bin, city-issue green. Overflowing. The city doesn't clean these stops like they used to.\n\nCoffee cups. Candy wrappers. Crumpled receipts. Cigarette butts. The debris of transit - people passing through, leaving traces.",
                     media: undefined
                 }
             },
-            onOpen: [
-                {
-                    // Door is locked - can't open
-                    conditions: [
-                        { type: 'OBJECT_STATE', objectId: 'obj_courtyard_door', statePath: 'isLocked', value: true }
-                    ],
-                    success: {
-                        message: 'You try the door. It doesn\'t budge. Locked tight. The keypad displays a blinking cursor, waiting for input.\n\nYou need the right code to unlock it.',
-                        media: undefined
-                    }
-                },
-                {
-                    // Door is unlocked - opens successfully
-                    conditions: [
-                        { type: 'OBJECT_STATE', objectId: 'obj_courtyard_door', statePath: 'isLocked', value: false }
-                    ],
-                    success: {
-                        message: 'The door creaks open on rusted hinges, the sound sharp in the quiet alley. Beyond is a small courtyard—neglected, overgrown, forgotten. Three garage doors line the far wall, each painted a different faded color: blue, red, green.\n\nThis is it. This is where the trail leads.',
-                        media: {
-                            url: '',
-                            description: 'Open door revealing courtyard with garages',
-                            hint: 'courtyard with three garages'
-                        },
-                        effects: [
-                            { type: 'REVEAL_LOCATION', locationId: 'loc_courtyard' }
-                        ]
-                    }
-                }
-            ],
-            onInput: {
-                correctPasswords: ['225'],
-                onSuccess: {
-                    message: 'You punch in the code: 2-2-5.\n\nThe keypad beeps. Green light.\n\nA mechanical click echoes from inside the door. The lock disengages.\n\nThe door is unlocked.',
+            onSearch: {
+                success: {
+                    message: "You dig through the trash. Sticky coffee cups. Old receipts with faded ink. Candy wrappers. Cigarette butts.\n\nYour fingers brush against something at the bottom.\n\n**Items found:**\n🥤 Soda Can\n📄 Bus Ticket\n🍟 Food Wrapper",
                     media: undefined,
                     effects: [
-                        { type: 'SET_OBJECT_STATE', objectId: 'obj_courtyard_door', statePath: 'isLocked', value: false }
+                        { type: 'REVEAL_FROM_PARENT', entityId: 'item_soda_can' as ItemId, parentId: 'obj_bus_trash_bin' as GameObjectId },
+                        { type: 'REVEAL_FROM_PARENT', entityId: 'item_bus_ticket' as ItemId, parentId: 'obj_bus_trash_bin' as GameObjectId },
+                        { type: 'REVEAL_FROM_PARENT', entityId: 'item_food_wrapper' as ItemId, parentId: 'obj_bus_trash_bin' as GameObjectId }
                     ]
-                },
-                onFailure: {
-                    message: 'You enter the code. The keypad beeps. Red light. Wrong code.\n\nThe door remains locked.',
-                    media: undefined
-                }
-            },
-            onPry: [
-                {
-                    // Lever pulled, has crowbar, door still locked - CAN FORCE IT OPEN
-                    conditions: [
-                        { type: 'OBJECT_STATE', objectId: 'obj_crates', statePath: 'leverPulled', value: true },
-                        { type: 'HAS_ITEM', itemId: 'item_crowbar' },
-                        { type: 'OBJECT_STATE', objectId: 'obj_courtyard_door', statePath: 'isLocked', value: true }
-                    ],
-                    success: {
-                        message: 'You wedge the crowbar into the gap between the door and the frame, right at the hinges. The rusted metal gives slightly—those hinge pins are loose, compromised by whatever mechanism that lever controlled.\n\nYou pull. Hard.\n\nThe hinges scream. Metal tears. Rust flakes rain down like red snow.\n\nYou pull harder.\n\nCRACK.\n\nThe top hinge shears off completely, bolts ripping through corroded metal. The door sags, held now only by the bottom hinge and the keypad lock.\n\nOne more pull.\n\nCRRRRACK.\n\nThe bottom hinge tears free. The door swings inward violently, still attached to the frame by the electronic lock mechanism, but the path is open—a gap wide enough to slip through.\n\nYou\'re in.\n\nBeyond the broken door: a small courtyard. Neglected. Overgrown. Forgotten. Three garage doors line the far wall—blue, red, green.\n\nThis is it. This is where the trail leads.',
-                        media: {
-                            url: '',
-                            description: 'Broken door revealing courtyard with garages',
-                            hint: 'forced entry courtyard'
-                        },
-                        effects: [
-                            { type: 'SET_OBJECT_STATE', objectId: 'obj_courtyard_door', statePath: 'isBroken', value: true },
-                            { type: 'SET_OBJECT_STATE', objectId: 'obj_courtyard_door', statePath: 'isLocked', value: false },
-                            { type: 'REVEAL_LOCATION', locationId: 'loc_courtyard' }
-                        ]
-                    }
-                },
-                {
-                    // Lever NOT pulled - hinges too strong
-                    conditions: [
-                        { type: 'HAS_ITEM', itemId: 'item_crowbar' },
-                        { type: 'OBJECT_STATE', objectId: 'obj_courtyard_door', statePath: 'isLocked', value: true }
-                    ],
-                    success: {
-                        message: 'You try wedging the crowbar into the door frame, looking for leverage. The hinges are rusted, sure, but they\'re still seated properly. Industrial bolts. Heavy duty.\n\nYou pull. The crowbar bends slightly under the strain, but the door doesn\'t budge. The hinges hold.\n\nYou\'d need those hinges compromised first—loosened, disengaged, weakened somehow—before you could pry this door open.',
-                        media: undefined
-                    }
-                },
-                {
-                    // No crowbar
-                    conditions: [],
-                    success: {
-                        message: 'You try to pry the door with your bare hands. It doesn\'t move. You\'d need a tool—something with leverage.',
-                        media: undefined
-                    }
-                }
-            ],
-            onKick: [
-                {
-                    // Lever pulled - hinges weak, but still need crowbar
-                    conditions: [
-                        { type: 'OBJECT_STATE', objectId: 'obj_crates', statePath: 'leverPulled', value: true },
-                        { type: 'OBJECT_STATE', objectId: 'obj_courtyard_door', statePath: 'isLocked', value: true }
-                    ],
-                    success: {
-                        message: 'You step back and kick the door hard. Your foot connects with a metallic BANG.\n\nThe door shudders. The hinges rattle—you can hear the looseness, the give in the mechanism. But it doesn\'t break.\n\nYou kick again. Harder.\n\nThe top hinge shifts, scraping metal against metal, but holds.\n\nYou could damage it further with enough kicks, but you\'d risk injury. A crowbar would be smarter—leverage the weak hinges, pry them apart instead of battering them.',
-                        media: undefined
-                    }
-                },
-                {
-                    // Normal state
-                    conditions: [],
-                    success: {
-                        message: 'You kick the door. Your foot bounces off solid metal. The door doesn\'t budge.\n\nThis isn\'t a cheap interior door. It\'s industrial steel. Kicking it is just going to hurt your foot.',
-                        media: undefined
-                    }
-                }
-            ],
-            onBreak: [
-                {
-                    // Lever pulled, has crowbar - suggest PRY instead
-                    conditions: [
-                        { type: 'OBJECT_STATE', objectId: 'obj_crates', statePath: 'leverPulled', value: true },
-                        { type: 'HAS_ITEM', itemId: 'item_crowbar' }
-                    ],
-                    success: {
-                        message: 'The hinges are compromised—you can see that. Rusted, loose, barely holding. If you\'re going to break this door, you should PRY it open with the crowbar. Leverage the weak hinges. That\'s the smart way.',
-                        media: undefined
-                    }
-                },
-                {
-                    // Normal state
-                    conditions: [],
-                    fail: {
-                        message: 'You consider trying to break down the door. Kick it in. Shoulder it. Force it open.\n\nBut this isn\'t some hollow-core apartment door. It\'s solid metal. Industrial grade. Even if you had a battering ram, you\'d make noise loud enough to wake the whole neighborhood.\n\nYou\'re a detective, not a demolition crew. Find the code. That\'s the smart way in.',
-                        media: undefined
-                    }
-                }
-            ],
-            onTake: {
-                fail: {
-                    message: 'It\'s a door. A heavy metal door bolted into a concrete frame. You can\'t take it with you any more than you could carry away a section of brick wall. It\'s architecture.',
-                    media: undefined
-                }
-            },
-            onUse: {
-                fail: {
-                    message: 'A door isn\'t a tool—it\'s a barrier, a passage. If it\'s locked, you need the right code for the keypad. If it\'s unlocked, you can OPEN it. You can\'t use it.',
-                    media: undefined
                 }
             }
         },
         version: { schema: '1.0.0', content: '1.0.0' }
     },
 
-    // COURTYARD OBJECTS
-    'obj_old_tires': {
-        id: 'obj_old_tires' as GameObjectId,
-        name: 'Old Tires',
-        archetype: 'Decoration',
-        description: 'A pile of old car tires stacked in the corner of the courtyard. Weathered, cracked, forgotten.',
-        transitionNarration: 'You approach the pile of old tires. They\'re stacked haphazardly, black rubber cracked from years of exposure.',
-        capabilities: { openable: false, lockable: false, breakable: false, movable: true, powerable: false, container: false, readable: false, inputtable: false },
-        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        handlers: {
-            onExamine: {
-                message: 'Old car tires, stacked in a corner. The rubber is cracked and weathered. Some have weeds growing through the center holes.\n\nNothing special here. Just debris from years of neglect.',
-                media: undefined
-            },
-            onMove: {
-                message: 'You roll the tires aside. Nothing hidden beneath—just more cracked concrete.',
-                media: undefined
-            }
-        },
-        version: { schema: '1.0.0', content: '1.0.0' }
-    },
-
-    'obj_garage_blue_door': {
-        id: 'obj_garage_blue_door' as GameObjectId,
-        name: 'Blue Garage Door',
-        archetype: 'Door',
-        description: 'A garage door painted faded blue. The paint is peeling, revealing rust beneath.',
-        transitionNarration: 'You walk up to the blue garage door. Paint flakes off at your touch.',
-        capabilities: { openable: true, lockable: true, breakable: false, movable: false, powerable: false, container: false, readable: false, inputtable: true },
-        state: { isOpen: false, isLocked: true, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        leadsToLocationId: 'loc_garage_blue' as LocationId,
-        handlers: {
-            onExamine: {
-                message: 'The blue garage door is old and weathered. A small keypad is mounted next to it—requires a code. The paint is so faded you can barely tell it was once blue.',
-                media: {
-                    url: '',
-                    description: 'Faded blue garage door with keypad',
-                    hint: 'locked garage needs code'
-                }
-            },
-            onOpen: [
-                {
-                    conditions: [
-                        { type: 'OBJECT_STATE', objectId: 'obj_garage_blue_door', statePath: 'isLocked', value: true }
-                    ],
-                    success: {
-                        message: 'The garage door is locked. The keypad blinks, waiting for a code.',
-                        media: undefined
-                    }
-                },
-                {
-                    conditions: [],
-                    success: {
-                        message: 'The garage door rolls open with a grinding mechanical sound. Inside, darkness waits.',
-                        media: undefined,
-                        effects: [
-                            { type: 'REVEAL_LOCATION', locationId: 'loc_garage_blue' }
-                        ]
-                    }
-                }
-            ]
-        },
-        version: { schema: '1.0.0', content: '1.0.0' }
-    },
-
-    'obj_garage_red_door': {
-        id: 'obj_garage_red_door' as GameObjectId,
-        name: 'Red Garage Door',
-        archetype: 'Door',
-        description: 'A garage door painted faded red. Rust stains streak down from the hinges.',
-        transitionNarration: 'You step toward the red garage door. Rust flakes fall as you approach.',
-        capabilities: { openable: true, lockable: true, breakable: false, movable: false, powerable: false, container: false, readable: false, inputtable: true },
-        state: { isOpen: false, isLocked: true, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        leadsToLocationId: 'loc_garage_red' as LocationId,
-        handlers: {
-            onExamine: {
-                message: 'The red garage door is heavily rusted. A keypad sits beside it, its numbers worn smooth from use—or disuse.',
-                media: {
-                    url: '',
-                    description: 'Rusted red garage door with keypad',
-                    hint: 'locked garage needs code'
-                }
-            },
-            onOpen: [
-                {
-                    conditions: [
-                        { type: 'OBJECT_STATE', objectId: 'obj_garage_red_door', statePath: 'isLocked', value: true }
-                    ],
-                    success: {
-                        message: 'The garage door won\'t budge. Locked. The keypad awaits input.',
-                        media: undefined
-                    }
-                },
-                {
-                    conditions: [],
-                    success: {
-                        message: 'The red garage door groans open, revealing the cluttered space beyond.',
-                        media: undefined,
-                        effects: [
-                            { type: 'REVEAL_LOCATION', locationId: 'loc_garage_red' }
-                        ]
-                    }
-                }
-            ]
-        },
-        version: { schema: '1.0.0', content: '1.0.0' }
-    },
-
-    'obj_garage_green_door': {
-        id: 'obj_garage_green_door' as GameObjectId,
-        name: 'Green Garage Door',
-        archetype: 'Door',
-        description: 'A garage door painted faded green. The cleanest of the three, but still weathered.',
-        transitionNarration: 'You approach the green garage door. It looks slightly newer than the others.',
-        capabilities: { openable: true, lockable: true, breakable: false, movable: false, powerable: false, container: false, readable: false, inputtable: true },
-        state: { isOpen: false, isLocked: true, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        leadsToLocationId: 'loc_garage_green' as LocationId,
-        handlers: {
-            onExamine: {
-                message: 'The green garage door is the least weathered of the three. Still old, still faded, but maintained—at least compared to the others. A keypad is mounted on the wall.',
-                media: {
-                    url: '',
-                    description: 'Faded green garage door with keypad',
-                    hint: 'locked garage needs code'
-                }
-            },
-            onOpen: [
-                {
-                    conditions: [
-                        { type: 'OBJECT_STATE', objectId: 'obj_garage_green_door', statePath: 'isLocked', value: true }
-                    ],
-                    success: {
-                        message: 'Locked. The keypad waits for a code.',
-                        media: undefined
-                    }
-                },
-                {
-                    conditions: [],
-                    success: {
-                        message: 'The green garage door opens smoothly—someone oiled these hinges. The empty space inside beckons.',
-                        media: undefined,
-                        effects: [
-                            { type: 'REVEAL_LOCATION', locationId: 'loc_garage_green' }
-                        ]
-                    }
-                }
-            ]
-        },
-        version: { schema: '1.0.0', content: '1.0.0' }
-    },
-
-    // ============================================
-    // DARK ALLEY OBJECTS
-    // ============================================
-
-    'obj_graffiti': {
-        id: 'obj_graffiti' as GameObjectId,
-        name: 'Graffiti',
-        alternateNames: ['graffiti', 'spray paint', 'wall art', 'rose graffiti', 'rose drawing', 'tag', 'sb tag'],
-        archetype: 'Static',
-        description: 'Spray-painted graffiti on the brick wall: a crude rose drawing, the tag "SB", and the number "1984".',
-        capabilities: { openable: false, lockable: false, breakable: false, movable: false, powerable: false, container: false, readable: false, inputtable: false },
-        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
+    'obj_bus_schedule': {
+        id: 'obj_bus_schedule' as GameObjectId,
+        name: 'Bus Schedule',
+        alternateNames: ['schedule', 'timetable', 'bus times', 'transit schedule'],
+        description: 'Laminated bus schedule posted on shelter wall.',
+        locationId: 'loc_bus_stop' as LocationId,
+        archetype: 'Signage',
+        state: { currentStateId: 'default' },
+        capabilities: { container: false, lockable: false, movable: false, breakable: false },
+        revealMethod: 'AUTO',
         handlers: {
             onExamine: {
                 success: {
-                    message: 'Spray paint on faded brick. Someone put care into this.\n\nA rose, painted in red and black—petals wilting. Below it: the tag "SB" in angular letters. Below that: "1984" in block numbers.\n\nStreet art or something more?',
+                    message: "Laminated schedule behind scratched plastic. Someone keyed it - deep gouges obscure half the times.\n\nWhat you can read:\n\n**BUS LINES:**\n- Route 47 (Downtown) - RED LINE = A\n- Route 82 (Harbor) - BLUE LINE = B\n- Route 15 (East Side) - GREEN LINE = C\n- Route 33 (West End) - YELLOW LINE = D\n\nLast bus: 10:45 PM\n\nBelow, handwritten in marker: \"SCHEDULE LIES\"\n\nThe line color codes are highlighted, like someone wanted them noticed. Red=A, Blue=B, Green=C, Yellow=D.",
                     media: undefined
+                }
+            }
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'obj_payphone': {
+        id: 'obj_payphone' as GameObjectId,
+        name: 'Payphone',
+        alternateNames: ['phone', 'pay phone', 'phone booth', 'telephone'],
+        description: 'Old payphone booth. The handset dangles from a metal cord. The phone is deactivated.',
+        locationId: 'loc_bus_stop' as LocationId,
+        archetype: 'Device',
+        state: { currentStateId: 'deactivated' },
+        capabilities: { container: false, lockable: false, movable: false, breakable: false },
+        revealMethod: 'AUTO',
+        stateMap: {
+            deactivated: {
+                description: "The payphone is deactivated. Someone disabled it deliberately.",
+                overrides: {
+                    onExamine: {
+                        success: {
+                            message: "A payphone. You haven't seen one in years. Glass booth, metal phone, coin slot. The handset dangles from a steel cord.\n\nThe glass is covered in grime. Fingerprints. Handprints. The residue of countless calls.\n\nWho still uses payphones? People who don't want their calls traced, that's who.",
+                            media: undefined
+                        }
+                    },
+                    onSearch: {
+                        success: {
+                            message: "You examine the payphone more closely.\n\nYou lift the handset - no dial tone. Dead.\n\nBut wait. This isn't broken. Someone deactivated it deliberately. The 1-line digital display reads:\n\n**[ACTIVATION CODE REQUIRED]**\n\nBelow the display: a 12-button keypad (1-2-3-4-5-6-7-8-9-*-0-#). Each key has a small colored dot in the bottom corner:\n- Key 1: purple dot\n- Key 2: green dot\n- Key 3: orange dot\n- Key 4: red dot\n- Key 5: cyan dot\n- Key 6: pink dot\n- Key 7: yellow dot\n- Key 8: lime dot\n- Key 9: blue dot\n- Key *: indigo dot\n- Key 0: amber dot\n- Key #: teal dot\n\nSomeone color-coded the keys. But which colors matter?",
+                            media: undefined,
+                            effects: [
+                                {
+                                    type: 'LAUNCH_MINIGAME',
+                                    gameType: 'payphone-activation',
+                                    objectId: 'obj_payphone',
+                                    solution: '49274297',
+                                    successEffects: [
+                                        { type: 'SET_ENTITY_STATE', entityId: 'obj_payphone', patch: { currentStateId: 'activated' } },
+                                        { type: 'SET_FLAG', flag: 'payphone_activated', value: true },
+                                        {
+                                            type: 'SHOW_MESSAGE',
+                                            speaker: 'narrator',
+                                            content: "**PAYPHONE ACTIVATED**\n\nThe digital display flickers. The mechanism inside whirs to life.\n\n*CLICK*\n\nDial tone. The payphone is operational.\n\nYou'll need a quarter to make a call. Check the bench - people sometimes hide coins under wobbly legs to level furniture."
+                                        }
+                                    ],
+                                    data: {
+                                        keypadColors: {
+                                            '4': 'red',
+                                            '9': 'blue',
+                                            '2': 'green',
+                                            '7': 'yellow',
+                                            '1': 'purple',
+                                            '3': 'orange',
+                                            '5': 'cyan',
+                                            '6': 'pink',
+                                            '8': 'lime',
+                                            '0': 'amber',
+                                            '*': 'indigo',
+                                            '#': 'teal'
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    onUse: {
+                        fail: {
+                            message: "The phone is deactivated. No dial tone."
+                        }
+                    }
+                }
+            },
+            activated: {
+                description: "The payphone hums with power. The dial tone is clear. Operational.",
+                overrides: {
+                    onExamine: {
+                        success: {
+                            message: "The payphone is working now. The display shows: **[READY]**\n\nDial tone clear. The old circuits hum with life.\n\nYou'll need a quarter to make a call.",
+                            media: undefined
+                        }
+                    },
+                    onSearch: {
+                        success: {
+                            message: "You inspect the payphone closely.\n\nThe **coin slot** gleams. Freshly activated. Ready to accept currency.\n\nThe display reads: **[INSERT 25¢]**\n\nThe handset hums faintly - live voltage running through the circuits. Dial tone waiting. All it needs is a quarter.\n\nYou don't have one on you. Where would someone hide loose change around here? Maybe under furniture that wobbles - people wedge coins under uneven legs to level things.",
+                            media: undefined
+                        }
+                    },
+                    onUse: [
+                        {
+                            itemId: 'item_quarter' as ItemId,
+                            conditions: [{ type: 'HAS_ITEM', itemId: 'item_quarter' as ItemId }],
+                            success: {
+                                message: "You insert the quarter into the coin slot.\n\n*CLINK*\n\nThe coin drops. The phone accepts it. You hear a dial tone.\n\nTime to dial.",
+                                effects: [
+                                    { type: 'REMOVE_ITEM', itemId: 'item_quarter' as ItemId },
+                                    {
+                                        type: 'LAUNCH_MINIGAME',
+                                        gameType: 'payphone-dialer',
+                                        objectId: 'obj_payphone',
+                                        solution: '5550147',
+                                        successEffects: [
+                                            { type: 'SET_ENTITY_STATE', entityId: 'obj_payphone', patch: { currentStateId: 'burned' } },
+                                            { type: 'SET_FLAG', flag: 'payphone_call_complete', value: true },
+                                            {
+                                                type: 'SHOW_MESSAGE',
+                                                speaker: 'narrator',
+                                                senderName: 'Payphone Recording',
+                                                content: "**CALL CONNECTED**\n\nThe line rings once. Twice. Then— *CLICK*\n\nA recorded message plays. Listen carefully.",
+                                                messageType: 'audio',
+                                                imageUrl: 'https://res.cloudinary.com/dg912bwcc/video/upload/v1736891396/payphone_message_audio_z0tpud.mp3',
+                                                imageDescription: 'Payphone Message Recording',
+                                                imageHint: 'Evidence from the payphone call'
+                                            },
+                                            {
+                                                type: 'SHOW_MESSAGE',
+                                                speaker: 'narrator',
+                                                content: "*CLICK*\n\nThe line goes dead. The message ended. The payphone's display reads: **CALL ENDED**\n\nWhatever that was about, it sounded important. The phone is now silent - burned, used up."
+                                            }
+                                        ],
+                                        data: {
+                                            expectedNumber: '5550147'
+                                        }
+                                    }
+                                ]
+                            },
+                            fail: {
+                                message: "The payphone needs a quarter. Twenty-five cents. That's the price of a call.\n\nYou don't have one on you. Check the bus stop area - maybe there's loose change hidden somewhere."
+                            }
+                        }
+                    ]
+                }
+            },
+            burned: {
+                description: "The payphone is dead. Used up. No more calls.",
+                overrides: {
+                    onExamine: {
+                        success: {
+                            message: "The payphone sits silent. The display is dark. **OUT OF SERVICE**\n\nYou already used it. One call, one quarter, one chance. That's how payphones work in this city.\n\nBurned.",
+                            media: undefined
+                        }
+                    },
+                    onUse: {
+                        fail: {
+                            message: "The phone is dead. Burned. No dial tone. It gave you one chance, and that chance is gone."
+                        }
+                    }
                 }
             }
         },
         design: {
-            authorNotes: "Provides part of the code for the hidden door. Cross-references with Script Sheet in Garage.",
-            tags: ['clue', 'visual']
+            authorNotes: "Payphone puzzle hub. Requires: 1) Find bus ticket (code), 2) /payphone activation mini-game, 3) Find quarter, 4) USE phone, 5) CALL bench number. Rewards: Audio message with evidence/password.",
+            tags: ['payphone', 'puzzle', 'mini-game']
         },
-        version: { schema: "1.0", content: "1.0" }
+        version: { schema: '1.0.0', content: '1.0.0' }
     },
 
-    'obj_tire_pile': {
-        id: 'obj_tire_pile' as GameObjectId,
-        name: 'Pile of Old Tires',
-        alternateNames: ['pile of old tires', 'tire pile', 'tires', 'old tires', 'pile of tires', 'tire stack'],
-        archetype: 'Furniture',
-        description: 'A haphazard stack of old tires, weathered and cracked.',
-        zone: 'zone_at_dumpster' as ZoneId,
-        capabilities: { openable: false, lockable: false, breakable: false, movable: true, powerable: false, container: false, readable: false, inputtable: false },
-        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
+    // ===== ZONE 2: ELECTRICIAN TRUCK (Type 2 - Locked - Distraction Needed) =====
+
+    'obj_electrician_truck_exterior': {
+        id: 'obj_electrician_truck_exterior' as GameObjectId,
+        name: 'Electrician Truck',
+        alternateNames: ['van', 'work van', 'truck', 'kowalski van', 'white van'],
+        description: 'White work van with "KOWALSKI ELECTRIC" painted in faded blue. License plate: KWL-4429.',
+        locationId: 'loc_electrician_truck' as LocationId,
+        archetype: 'Vehicle',
+        state: { currentStateId: 'default' },
+        capabilities: { container: false, lockable: false, movable: false, breakable: false },
+        revealMethod: 'AUTO',
+        handlers: {
+            onExamine: {
+                success: {
+                    message: "White Ford Transit. Work van, mid-2010s model. \"KOWALSKI ELECTRIC\" painted on the side in blue letters - faded, peeling at the edges.\n\nDented bumper. Mud caked on the wheel wells. Rust blooming at the door seams. The kind of vehicle that's seen hard miles.\n\nLicense plate: **KWL-4429**\n\nMike Kowalski sits in the driver's seat, scrolling his phone. He's not going anywhere soon.",
+                    media: undefined
+                }
+            }
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'obj_electrician_truck_doors': {
+        id: 'obj_electrician_truck_doors' as GameObjectId,
+        name: 'Truck Back Doors',
+        alternateNames: ['back doors', 'van doors', 'rear doors', 'doors'],
+        description: 'Back doors of the van, secured with a padlock. Mike watches from the front seat.',
+        locationId: 'loc_electrician_truck' as LocationId,
+        archetype: 'Container',
+        parentId: 'obj_electrician_truck_exterior' as GameObjectId,
+        state: { currentStateId: 'locked' },
+        capabilities: { container: true, lockable: true, movable: false, breakable: false },
+        revealMethod: 'AUTO',
+        handlers: {
+            onExamine: [
+                {
+                    // Doors opened (Mike distracted)
+                    conditions: [{ type: 'FLAG', flag: 'electrician_distracted' as Flag }],
+                    success: {
+                        message: "The padlock is open. Mike left in a hurry - he didn't bother locking up.\n\nThe van doors swing open easily. Inside, you see his toolbox resting against the wall.",
+                        media: undefined
+                    }
+                },
+                {
+                    // Default - locked
+                    conditions: [],
+                    success: {
+                        message: "Heavy padlock secures the back doors. Mike's paranoid about theft - smart in this neighborhood.\n\nYou can't open these while he's watching. You need to distract him first.",
+                        media: undefined
+                    }
+                }
+            ],
+            onOpen: [
+                {
+                    // Already opened
+                    conditions: [{ type: 'FLAG', flag: 'truck_doors_opened' as Flag }],
+                    success: {
+                        message: "The doors are already open. The toolbox is visible inside.",
+                        media: undefined
+                    }
+                },
+                {
+                    // Can open (Mike distracted)
+                    conditions: [{ type: 'FLAG', flag: 'electrician_distracted' as Flag }],
+                    success: {
+                        message: "You pull open the van doors. They swing wide.\n\nInside: toolbox, electrical spools, conduit pipes. The toolbox sits within reach.",
+                        media: undefined,
+                        effects: [
+                            { type: 'SET_FLAG', flag: 'truck_doors_opened' as Flag },
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'obj_electrician_toolbox', parentId: 'obj_electrician_truck_doors' }
+                        ]
+                    }
+                },
+                {
+                    // Default - can't open (Mike watching)
+                    conditions: [],
+                    success: {
+                        message: "The padlock is secure. Mike sits in the driver's seat, watching you.\n\n\"Can't let people in the van,\" he says. \"Too many tools get stolen.\"\n\nYou need to distract him somehow.",
+                        media: undefined
+                    }
+                }
+            ]
+        },
+        design: {
+            authorNotes: "Unlocks when Mike Kowalski is distracted (AI-judged puzzle). Reveals toolbox containing tools + Evidence 4.",
+            tags: ['container', 'locked', 'distraction-puzzle']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'obj_electrician_toolbox': {
+        id: 'obj_electrician_toolbox' as GameObjectId,
+        name: 'Toolbox',
+        alternateNames: ['tool box', 'box', 'electrician toolbox', 'tools'],
+        description: 'Red metal toolbox containing electrician tools and equipment.',
+        locationId: 'loc_electrician_truck' as LocationId,
+        archetype: 'Container',
+        parentId: 'obj_electrician_truck_doors' as GameObjectId,
+        state: { currentStateId: 'default' },
+        capabilities: { container: true, lockable: false, movable: false, breakable: false },
+        revealMethod: 'REVEAL_FROM_PARENT',
+        handlers: {
+            onExamine: {
+                success: {
+                    message: "Red metal toolbox. Scratched and dented from years of work. The latch opens easily.\n\nInside, you see:\n- A crowbar (rust-spotted but solid)\n- Wire cutters (professional-grade)\n- Lock pick set (FBI standard issue - interesting...)\n- Drill body (missing battery and bit)\n- Electrical tape\n- A crumpled receipt tucked in the corner\n\nMike's collection. Tools of the trade.",
+                    media: undefined
+                }
+            },
+            onOpen: {
+                success: {
+                    message: "You open the toolbox. Metal hinges creak.\n\nThe tools are yours for the taking. Mike's distracted - he won't notice if a few go missing.",
+                    media: undefined,
+                    effects: [
+                        { type: 'REVEAL_FROM_PARENT', entityId: 'item_crowbar', parentId: 'obj_electrician_toolbox' },
+                        { type: 'REVEAL_FROM_PARENT', entityId: 'item_wire_cutters', parentId: 'obj_electrician_toolbox' },
+                        { type: 'REVEAL_FROM_PARENT', entityId: 'item_lock_pick_set', parentId: 'obj_electrician_toolbox' },
+                        { type: 'REVEAL_FROM_PARENT', entityId: 'item_drill_body', parentId: 'obj_electrician_toolbox' },
+                        { type: 'REVEAL_FROM_PARENT', entityId: 'item_hardware_receipt', parentId: 'obj_electrician_toolbox' }
+                    ]
+                }
+            }
+        },
+        design: {
+            authorNotes: "Contains tools (crowbar, wire cutters, lock pick set, drill body) + EVIDENCE 4 (hardware receipt). Revealed when truck doors opened.",
+            tags: ['container', 'tools', 'evidence-location']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    // ===== ZONE 3: CCTV BUILDING (Type 2 - Locked - Keypad 1440 or Bolt Cutters) =====
+
+    'obj_cctv_fence': {
+        id: 'obj_cctv_fence' as GameObjectId,
+        name: 'Chain-Link Fence',
+        alternateNames: ['fence', 'chain fence', 'security fence', 'perimeter', 'gate'],
+        description: 'Chain-link fence surrounding the CCTV building. Rusted but intact.',
+        locationId: 'loc_cctv_exterior' as LocationId,
+        archetype: 'Structure',
+        state: { currentStateId: 'locked' },
+        capabilities: { container: false, lockable: true, movable: false, breakable: false },
+        revealMethod: 'AUTO',
         children: {
-            items: ['item_alley_crowbar'] as ItemId[],
-            objects: []
+            objects: ['obj_cctv_keypad' as GameObjectId, 'obj_cctv_monitor_station' as GameObjectId, 'obj_cctv_filing_cabinet' as GameObjectId]
         },
         handlers: {
-            onExamine: {
-                success: {
-                    message: 'Old tires stacked in a loose pile. Rubber cracked and split from weather. They look like they\'ve been here for years.',
-                    media: undefined
-                }
-            },
-            onMove: [
+            onExamine: [
                 {
-                    conditions: [{ type: 'FLAG', flag: 'tires_moved', value: true }],
+                    // Fence cut
+                    conditions: [{ type: 'FLAG', flag: 'cctv_fence_cut' as Flag }],
                     success: {
-                        message: 'The tires are already scattered. The crowbar is visible now.',
+                        message: "The chain-link fence has been cut. A section hangs loose where you used the bolt cutters.\n\nYou can walk right through. The building is accessible.",
                         media: undefined
                     }
                 },
                 {
+                    // Keypad unlocked
+                    conditions: [{ type: 'FLAG', flag: 'cctv_door_unlocked' as Flag }],
+                    success: {
+                        message: "The fence surrounds the building. But you unlocked the keypad - the gate is open. No need to cut the fence.",
+                        media: undefined
+                    }
+                },
+                {
+                    // Default - locked
                     conditions: [],
                     success: {
-                        message: 'You shove the pile aside. Tires roll and thump across wet concrete.\n\nSomething metal glints in the gap: a crowbar, wedged between the bottom tires.',
+                        message: "Chain-link fence, eight feet high. Rusted at the posts but structurally sound. Surrounds the CCTV control building like a cage.\n\nTwo ways in:\n1. The keypad-controlled gate (need 4-digit code)\n2. Cut through with bolt cutters\n\nYour choice.",
+                        media: undefined
+                    }
+                }
+            ],
+            onUse: [
+                {
+                    // Use bolt cutters
+                    itemId: 'item_bolt_cutters' as ItemId,
+                    conditions: [{ type: 'NO_FLAG', flag: 'cctv_fence_cut' as Flag }],
+                    success: {
+                        message: "You position the bolt cutters on the chain link. Heavy steel jaws. You squeeze.\n\n*SNAP*\n\nThe chain parts. You cut a vertical line - three feet, four feet. The fence section peels back like a curtain.\n\nYou're in.",
                         media: undefined,
                         effects: [
-                            { type: 'SET_FLAG', flag: 'tires_moved', value: true },
-                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_alley_crowbar', parentId: 'obj_tire_pile' }
+                            { type: 'SET_FLAG', flag: 'cctv_fence_cut' as Flag },
+                            { type: 'SET_FLAG', flag: 'cctv_accessible' as Flag },
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'obj_cctv_keypad', parentId: 'obj_cctv_fence' },
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'obj_cctv_monitor_station', parentId: 'obj_cctv_fence' },
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'obj_cctv_filing_cabinet', parentId: 'obj_cctv_fence' }
+                        ]
+                    },
+                    fail: {
+                        message: "You already cut the fence. No need to do it again.",
+                        media: undefined
+                    }
+                }
+            ]
+        },
+        design: {
+            authorNotes: "Can be bypassed via keypad (code 1440) OR cut with bolt cutters. Alternative access methods.",
+            tags: ['barrier', 'locked', 'alternative-access']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'obj_cctv_keypad': {
+        id: 'obj_cctv_keypad' as GameObjectId,
+        name: 'Keypad',
+        alternateNames: ['door keypad', 'access keypad', 'security keypad', 'code pad'],
+        description: 'Rusted keypad mounted beside the gate. Four-digit code required.',
+        locationId: 'loc_cctv_exterior' as LocationId,
+        archetype: 'Device',
+        state: { currentStateId: 'locked' },
+        capabilities: { container: false, lockable: true, movable: false, breakable: false },
+        revealMethod: 'AUTO',
+        handlers: {
+            onExamine: [
+                {
+                    // Already unlocked
+                    conditions: [{ type: 'FLAG', flag: 'cctv_door_unlocked' as Flag }],
+                    success: {
+                        message: "The keypad shows a green light. Access granted. The gate is unlocked.",
+                        media: undefined
+                    }
+                },
+                {
+                    // Default - locked
+                    conditions: [],
+                    success: {
+                        message: "Old keypad. Weathered by years of rain. Four-digit code entry.\n\nThe numbers are worn where people pressed them most: 1, 4, 0. Common digits.\n\nYou need the exact code to unlock the gate.",
+                        media: undefined
+                    }
+                }
+            ]
+        },
+        design: {
+            authorNotes: "Unlocks with code 1440 (found on Kiosk receipt - not yet implemented in Phase 3A). Opens gate to CCTV building.",
+            tags: ['keypad', 'puzzle', 'code-lock']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'obj_cctv_monitor_station': {
+        id: 'obj_cctv_monitor_station' as GameObjectId,
+        name: 'Monitor Station',
+        alternateNames: ['monitors', 'monitor', 'control station', 'cctv station', 'screens'],
+        description: 'Bank of monitors displaying live CCTV feeds. Recording system accessible.',
+        locationId: 'loc_cctv_interior' as LocationId,
+        archetype: 'Device',
+        parentId: undefined,
+        state: { currentStateId: 'default' },
+        capabilities: { container: false, lockable: false, movable: false, breakable: false },
+        revealMethod: 'AUTO',
+        handlers: {
+            onExamine: [
+                {
+                    // Screenshot already taken
+                    conditions: [{ type: 'HAS_ITEM', itemId: 'item_cctv_screenshot' as ItemId }],
+                    success: {
+                        message: "The monitors cycle through camera feeds. You already printed the screenshot you needed - the gray van, April 15th, plate LKJ-9472.\n\nNo need to search again. You have Evidence 1.",
+                        media: undefined
+                    }
+                },
+                {
+                    // Default - can search
+                    conditions: [],
+                    success: {
+                        message: "Six monitors arranged in two rows. Live feeds from traffic cameras across Bloodhaven. Elm Street. Harbor. Downtown. Industrial district.\n\nBelow the monitors: a control panel. Keyboard, mouse, printer. The system records everything - stores footage for 90 days.\n\nYou can SEARCH the footage for specific dates. Sarah mentioned the gray van appeared repeatedly on Elm Street before April 15th.",
+                        media: undefined
+                    }
+                }
+            ],
+            onSearch: [
+                {
+                    // Already found screenshot
+                    conditions: [{ type: 'HAS_ITEM', itemId: 'item_cctv_screenshot' as ItemId }],
+                    success: {
+                        message: "You already have the screenshot. No need to search again.",
+                        media: undefined
+                    }
+                },
+                {
+                    // Find screenshot (first time)
+                    conditions: [],
+                    success: {
+                        message: "You sit at the control panel. The interface is outdated - Windows XP, clunky menus. But it works.\n\nYou search the Elm Street camera archives:\n- April 10, 2026\n- April 12, 2026\n- April 15, 2026 - 6:15 PM\n\nThere. April 15th. Timestamp matches Lili's alleged abduction.\n\nA gray cargo van parked on Elm Street. The camera angle is perfect - you can see the license plate clearly.\n\n**License Plate: LKJ-9472**\n\nYou hit PRINT. The printer whirs. A photo spits out - clear, dated, timestamped.\n\nThis is evidence.",
+                        media: undefined,
+                        effects: [
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_cctv_screenshot', parentId: 'obj_cctv_monitor_station' }
                         ]
                     }
                 }
             ]
         },
         design: {
-            authorNotes: "Contains crowbar, which is needed for opening the locker and other puzzles.",
-            tags: ['container', 'movable']
+            authorNotes: "EVIDENCE 1 LOCATION - Search footage to find CCTV screenshot showing gray van (plate LKJ-9472). Numeric portion '9472' is PIN for Garage #3.",
+            tags: ['evidence-location', 'evidence-1', 'puzzle', 'cctv']
         },
-        version: { schema: "1.0", content: "1.0" }
+        version: { schema: '1.0.0', content: '1.0.0' }
     },
+
+    'obj_cctv_filing_cabinet': {
+        id: 'obj_cctv_filing_cabinet' as GameObjectId,
+        name: 'Filing Cabinet',
+        alternateNames: ['cabinet', 'file cabinet', 'files', 'drawer'],
+        description: 'Metal filing cabinet. Unlocked. Contains maintenance logs and incident reports.',
+        locationId: 'loc_cctv_interior' as LocationId,
+        archetype: 'Container',
+        state: { currentStateId: 'default' },
+        capabilities: { container: true, lockable: false, movable: false, breakable: false },
+        revealMethod: 'AUTO',
+        handlers: {
+            onExamine: {
+                success: {
+                    message: "Gray metal filing cabinet. Four drawers. The top drawer is unlocked.\n\nLabels on the drawers:\n- MAINTENANCE LOGS\n- INCIDENT REPORTS\n- SYSTEM BACKUPS\n- ARCHIVED FOOTAGE (USB)\n\nBureaucracy in steel.",
+                    media: undefined
+                }
+            },
+            onSearch: {
+                success: {
+                    message: "You search the filing cabinet.\n\nMaintenance logs: Camera repairs, system updates, bulb replacements. Nothing interesting.\n\nIncident reports: Vandalism, camera tampering, brief outages. All minor.\n\nOne entry catches your eye:\n\"April 15, 2026 - Camera 4 (Bus Station) offline 5:50 PM - 7:30 PM. Cause: Unknown.\"\n\nThe same night Lili claims you abducted her. The cameras were offline. Convenient.\n\nBut nothing directly useful here. The real evidence is on the monitors.",
+                    media: undefined
+                }
+            }
+        },
+        design: {
+            authorNotes: "Flavor object. Provides context (bus station cameras offline April 15th) but no items or evidence.",
+            tags: ['flavor', 'container', 'lore']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    // ===== ZONE 4: CONSTRUCTION SITE (Type 2 - Locked - Hard Hat + Vest Required) =====
+
+    'obj_construction_gate': {
+        id: 'obj_construction_gate' as GameObjectId,
+        name: 'Construction Gate',
+        alternateNames: ['gate', 'fence gate', 'entrance', 'chain link gate'],
+        description: 'Chain-link gate blocking construction site entrance. Tony Greco stands guard.',
+        locationId: 'loc_construction_exterior' as LocationId,
+        archetype: 'Structure',
+        state: { currentStateId: 'locked' },
+        capabilities: { container: false, lockable: true, movable: false, breakable: false },
+        revealMethod: 'AUTO',
+        children: {
+            objects: ['obj_construction_tool_shed' as GameObjectId, 'obj_construction_office_trailer' as GameObjectId]
+        },
+        handlers: {
+            onExamine: [
+                {
+                    // Access granted
+                    conditions: [{ type: 'FLAG', flag: 'construction_access_granted' as Flag }],
+                    success: {
+                        message: "The gate is open. Tony stepped aside after you showed him the safety gear.\n\nThe construction site is accessible. Tool shed and office trailer await.",
+                        media: undefined
+                    }
+                },
+                {
+                    // Default - blocked
+                    conditions: [],
+                    success: {
+                        message: "Chain-link gate. Closed. Tony Greco stands in front of it, arms crossed, clipboard in hand.\n\n\"Hard hat and safety vest,\" he says. \"No exceptions. Insurance rules.\"\n\nHe's not budging. You need proper safety gear to get in.",
+                        media: undefined
+                    }
+                }
+            ]
+        },
+        design: {
+            authorNotes: "Unlocks when player wears/shows hard hat + safety vest. Tony Greco (NPC) controls access.",
+            tags: ['barrier', 'locked', 'npc-controlled']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'obj_construction_tool_shed': {
+        id: 'obj_construction_tool_shed' as GameObjectId,
+        name: 'Tool Shed',
+        alternateNames: ['shed', 'tool storage', 'storage shed'],
+        description: 'Portable tool shed with combination lock. Four-digit code required.',
+        locationId: 'loc_construction_interior' as LocationId,
+        archetype: 'Container',
+        state: { currentStateId: 'locked' },
+        capabilities: { container: true, lockable: true, movable: false, breakable: false },
+        revealMethod: 'AUTO',
+        handlers: {
+            onExamine: [
+                {
+                    // Already unlocked
+                    conditions: [{ type: 'FLAG', flag: 'tool_shed_unlocked' as Flag }],
+                    success: {
+                        message: "The combination lock hangs open. The tool shed is accessible.\n\nInside, you can see safety equipment: a hard hat, a reflective vest, and what looks like a battery pack for a power tool.",
+                        media: undefined
+                    }
+                },
+                {
+                    // Default - locked
+                    conditions: [],
+                    success: {
+                        message: "Metal storage shed. Portable, the kind construction sites use. A four-digit combination lock secures the door.\n\nThe lock is weathered but functional. You need the correct code.\n\nFour digits. You've seen four-digit numbers around Elm Street. The street sign said \"EST. 1987\"...",
+                        media: undefined
+                    }
+                }
+            ],
+            onSearch: [
+                {
+                    // Already opened
+                    conditions: [{ type: 'FLAG', flag: 'tool_shed_unlocked' as Flag }],
+                    success: {
+                        message: "You search the tool shed.\n\nSafety equipment hangs on hooks:\n- Yellow hard hat (adjustable straps)\n- Orange reflective safety vest\n- DeWalt 20V battery pack (fully charged)\n\nStandard construction site gear. You can take what you need.",
+                        media: undefined,
+                        effects: [
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_hard_hat', parentId: 'obj_construction_tool_shed' },
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_safety_vest', parentId: 'obj_construction_tool_shed' },
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_drill_battery', parentId: 'obj_construction_tool_shed' }
+                        ]
+                    }
+                },
+                {
+                    // Not yet unlocked
+                    conditions: [],
+                    success: {
+                        message: "The tool shed is locked. You need to unlock the combination lock first.",
+                        media: undefined
+                    }
+                }
+            ]
+        },
+        design: {
+            authorNotes: "Combination lock code: 1987 (from Elm Street sign). Contains hard hat, safety vest, drill battery (Part 2/3).",
+            tags: ['container', 'combination-lock', 'puzzle']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'obj_construction_office_trailer': {
+        id: 'obj_construction_office_trailer' as GameObjectId,
+        name: 'Office Trailer',
+        alternateNames: ['trailer', 'portable office', 'office', 'foreman office'],
+        description: 'Portable office trailer. Door unlocked. Contains desk, filing cabinet, construction plans.',
+        locationId: 'loc_construction_interior' as LocationId,
+        archetype: 'Container',
+        state: { currentStateId: 'default' },
+        capabilities: { container: true, lockable: false, movable: false, breakable: false },
+        revealMethod: 'AUTO',
+        handlers: {
+            onExamine: {
+                success: {
+                    message: "Portable office trailer. White aluminum siding, small windows, metal steps leading to the door.\n\nThe door is unlocked - Tony doesn't bother locking it during work hours.\n\nInside, you can see a desk, filing cabinet, and construction plans pinned to the wall.",
+                    media: undefined
+                }
+            },
+            onSearch: {
+                success: {
+                    message: "You search the office trailer.\n\nDesk: Clipboard with work orders, coffee mug (cold), scattered pens.\n\nFiling cabinet: Permits, blueprints, inspection reports. Bureaucracy.\n\nOn the desk, half-buried under papers: a heavy-duty drill bit. Metal boring bit, the kind for drilling through locks.\n\nYou pocket it. Part 3 of 3 for the drill assembly.",
+                    media: undefined,
+                    effects: [
+                        { type: 'REVEAL_FROM_PARENT', entityId: 'item_drill_bit', parentId: 'obj_construction_office_trailer' }
+                    ]
+                }
+            }
+        },
+        design: {
+            authorNotes: "Contains drill bit (Part 3/3). Search to reveal item.",
+            tags: ['container', 'drill-part', 'office']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    // ===== ZONE 6: FLORIST SHOP (Type 1 - Unlocked) =====
+
+    'obj_florist_counter': {
+        id: 'obj_florist_counter' as GameObjectId,
+        name: 'Display Counter',
+        alternateNames: ['counter', 'register', 'checkout counter'],
+        description: 'Display counter with cash register, order slips, and business cards.',
+        locationId: 'loc_florist_interior' as LocationId,
+        archetype: 'Furniture',
+        state: { currentStateId: 'default' },
+        capabilities: { container: false, lockable: false, movable: false, breakable: false },
+        revealMethod: 'AUTO',
+        handlers: {
+            onExamine: {
+                success: {
+                    message: "Display counter made of polished wood. Behind it, a cash register - old mechanical type, not digital.\n\nOrder slips are stacked neatly beside the register. Business cards in a small holder: \"Petal & Stem - Fresh Flowers Daily.\"\n\nProfessional. Organized. Margaret runs a tight ship.",
+                    media: undefined
+                }
+            }
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'obj_florist_display': {
+        id: 'obj_florist_display' as GameObjectId,
+        name: 'Flower Display',
+        alternateNames: ['flowers', 'display', 'bouquets', 'arrangements'],
+        description: 'Fresh flower displays - roses, lilies, carnations in bright bunches.',
+        locationId: 'loc_florist_interior' as LocationId,
+        archetype: 'Display',
+        state: { currentStateId: 'default' },
+        capabilities: { container: false, lockable: false, movable: false, breakable: false },
+        revealMethod: 'AUTO',
+        handlers: {
+            onExamine: {
+                success: {
+                    message: "Fresh flowers crowd the display cases. Roses - red, white, pink. Lilies. Carnations. Baby's breath. All carefully arranged.\n\nThe scent is strong. Earth and green stems and that sweet floral perfume.\n\nBeautiful, if you're into that sort of thing. You prefer evidence.",
+                    media: undefined
+                }
+            }
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    // ===== ZONE 7: BUTCHER SHOP (Type 1 - Unlocked) =====
+
+    'obj_butcher_counter': {
+        id: 'obj_butcher_counter' as GameObjectId,
+        name: 'Butcher Block',
+        alternateNames: ['counter', 'butcher block', 'cutting board', 'block'],
+        description: 'Heavy wooden butcher block. Worn smooth by years of use. Deep knife marks. Bloodstains.',
+        locationId: 'loc_butcher_interior' as LocationId,
+        archetype: 'Furniture',
+        state: { currentStateId: 'default' },
+        capabilities: { container: false, lockable: false, movable: false, breakable: false },
+        revealMethod: 'AUTO',
+        handlers: {
+            onExamine: {
+                success: {
+                    message: "Thick wood. Maple, maybe oak. The surface is scarred - deep cuts from decades of cleavers, knives, bone saws.\n\nBloodstains seep into the grain. Beef, pork, chicken. All the animals that passed through here, reduced to cuts and portions.\n\nThe wood is worn smooth where Klaus's hands grip it. Countless hours of work.",
+                    media: undefined
+                }
+            }
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'obj_butcher_meat_hooks': {
+        id: 'obj_butcher_meat_hooks' as GameObjectId,
+        name: 'Meat Hooks',
+        alternateNames: ['hooks', 'hanging meat', 'sausages'],
+        description: 'Metal hooks hanging from ceiling. Sausages, beef cuts, chicken suspended.',
+        locationId: 'loc_butcher_interior' as LocationId,
+        archetype: 'Fixture',
+        state: { currentStateId: 'default' },
+        capabilities: { container: false, lockable: false, movable: false, breakable: false },
+        revealMethod: 'AUTO',
+        handlers: {
+            onExamine: {
+                success: {
+                    message: "Steel hooks bolted to ceiling tracks. Sausages dangle - bratwurst, kielbasa, salami. Beef cuts wrapped in butcher paper. Whole chickens, plucked and pale.\n\nThe hooks sway slightly when you walk past. A quiet creak of metal on metal.\n\nYou've seen interrogation rooms that looked friendlier.",
+                    media: undefined
+                }
+            }
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'obj_butcher_tool_rack': {
+        id: 'obj_butcher_tool_rack' as GameObjectId,
+        name: 'Tool Rack',
+        alternateNames: ['rack', 'tools', 'wall rack'],
+        description: 'Wall-mounted tool rack containing cleavers, saws, and bolt cutters.',
+        locationId: 'loc_butcher_interior' as LocationId,
+        archetype: 'Container',
+        state: { currentStateId: 'default' },
+        capabilities: { container: true, lockable: false, movable: false, breakable: false },
+        revealMethod: 'AUTO',
+        handlers: {
+            onExamine: {
+                success: {
+                    message: "Tool rack mounted on the wall. Professional butcher equipment:\n\n- Meat cleavers (various sizes)\n- Bone saws (manual and electric)\n- Fillet knives\n- Heavy-duty bolt cutters (for cutting through bone and chain)\n\nAll clean, well-maintained. Klaus takes pride in his tools.\n\nThe bolt cutters catch your eye. Those would be useful for cutting chains, padlocks, or anything else that needs serious cutting power.",
+                    media: undefined
+                }
+            },
+            onSearch: {
+                success: {
+                    message: "You examine the tool rack more closely.\n\nThe bolt cutters are accessible - Klaus wouldn't mind if you borrowed them. Friendly guy.\n\nYou could take them if you need a tool for cutting heavy metal.",
+                    media: undefined,
+                    effects: [
+                        { type: 'REVEAL_FROM_PARENT', entityId: 'item_bolt_cutters', parentId: 'obj_butcher_tool_rack' }
+                    ]
+                }
+            }
+        },
+        design: {
+            authorNotes: "Contains bolt cutters (freely given by Klaus NPC). Use for garage chains, CCTV fence, or as alternative to other lock methods.",
+            tags: ['container', 'tool-source']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    // ===== ZONE 8: KIOSK (Type 1 - Unlocked) =====
+
+    'obj_kiosk_counter': {
+        id: 'obj_kiosk_counter' as GameObjectId,
+        name: 'Kiosk Counter',
+        alternateNames: ['counter', 'checkout', 'register'],
+        description: 'Small counter with lottery tickets, scratch-offs, and a tip jar.',
+        locationId: 'loc_kiosk' as LocationId,
+        archetype: 'Furniture',
+        state: { currentStateId: 'default' },
+        capabilities: { container: false, lockable: false, movable: false, breakable: false },
+        revealMethod: 'AUTO',
+        handlers: {
+            onExamine: {
+                success: {
+                    message: "Bright blue counter. Lottery tickets arranged in neat rows - Powerball, Mega Millions, scratch-offs with promises of instant wealth.\n\nA tip jar sits by the register. Few coins inside. People don't tip at kiosks.\n\nRavi keeps everything organized. Optimistic. Hopeful. The American dream in a blue painted box.",
+                    media: undefined
+                }
+            }
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'obj_kiosk_receipt_spike': {
+        id: 'obj_kiosk_receipt_spike' as GameObjectId,
+        name: 'Receipt Spike',
+        alternateNames: ['spike', 'receipt holder', 'receipts'],
+        description: 'Metal spike with old receipts impaled on it. Standard kiosk bookkeeping.',
+        locationId: 'loc_kiosk' as LocationId,
+        archetype: 'Container',
+        state: { currentStateId: 'default' },
+        capabilities: { container: true, lockable: false, movable: false, breakable: false },
+        revealMethod: 'AUTO',
+        handlers: {
+            onExamine: {
+                success: {
+                    message: "Metal receipt spike. Old-school bookkeeping - punch each receipt onto the spike when the transaction's done.\n\nA stack of crumpled receipts impales the spike. Coffee sales, lottery tickets, candy bars. The daily business of survival.\n\nOne receipt near the top has handwriting on it. Someone wrote a note.",
+                    media: undefined
+                }
+            },
+            onSearch: {
+                success: {
+                    message: "You flip through the receipts on the spike.\n\nMostly mundane - $2.50 coffee, $5 lottery ticket, $1.99 candy bar.\n\nThen you find it. A receipt with handwritten text on the back:\n\n\"CCTV keypad - 1440\"\n\nSomeone wrote down the CCTV building access code. Sloppy security, but lucky for you.\n\nYou pocket the receipt. This could get you into the CCTV control building.",
+                    media: undefined,
+                    effects: [
+                        { type: 'SET_FLAG', flag: 'found_cctv_code' as Flag }
+                    ]
+                }
+            }
+        },
+        design: {
+            authorNotes: "Contains receipt with CCTV keypad code (1440). Required for CCTV Building access via keypad (alternative to bolt cutters).",
+            tags: ['puzzle-hint', 'code-source']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'obj_kiosk_coffee_machine': {
+        id: 'obj_kiosk_coffee_machine' as GameObjectId,
+        name: 'Coffee Machine',
+        alternateNames: ['coffee maker', 'machine', 'coffee pot'],
+        description: 'Drip coffee machine with half-full pot. Smells burnt.',
+        locationId: 'loc_kiosk' as LocationId,
+        archetype: 'Appliance',
+        state: { currentStateId: 'default' },
+        capabilities: { container: false, lockable: false, movable: false, breakable: false },
+        revealMethod: 'AUTO',
+        handlers: {
+            onExamine: {
+                success: {
+                    message: "Standard drip coffee maker. Glass carafe half-full of dark liquid. The warming plate keeps it hot - or at least, keeps it from going cold.\n\nThe smell is burnt. Coffee that's been sitting too long. But in this neighborhood, nobody complains.\n\nRavi offers free coffee to regulars. Part of the charm.",
+                    media: undefined
+                }
+            }
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    // ===== ZONE 9: ALLEY (Type 1 - Unlocked, Secret Door is Type 3) =====
 
     'obj_alley_dumpster': {
         id: 'obj_alley_dumpster' as GameObjectId,
         name: 'Dumpster',
-        alternateNames: ['dumpster', 'rusty dumpster', 'rusted dumpster', 'green dumpster', 'trash bin', 'bin'],
+        alternateNames: ['garbage', 'trash', 'bin', 'trash bin'],
+        description: 'Large metal dumpster overflowing with trash bags. Lever mechanism on the side.',
+        locationId: 'loc_alley' as LocationId,
         archetype: 'Container',
-        description: 'A large green dumpster. Its lid is slightly ajar. The smell is... wrong.',
-        capabilities: { openable: true, lockable: false, breakable: false, movable: false, powerable: false, container: true, readable: false, inputtable: false },
-        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        inventory: { items: [] as ItemId[], capacity: 10, allowTags: [], denyTags: [] },
-        children: {
-            items: [],
-            objects: ['obj_sealed_bag' as GameObjectId]
-        },
+        state: { currentStateId: 'locked' },
+        capabilities: { container: true, lockable: true, movable: false, breakable: false },
+        revealMethod: 'AUTO',
         handlers: {
-            onSmell: {
-                success: {
-                    message: 'You lean closer and inhale.\n\nNot rot. Not garbage. Chemical. Bleach, maybe. Something sharp and sterile.\n\nWrong for a dumpster. Very wrong.',
-                    media: undefined
-                }
-            },
-            onClimb: [
+            onExamine: [
                 {
-                    conditions: [{ type: 'FLAG', flag: 'dumpster_searched', value: true }],
+                    // Already opened
+                    conditions: [{ type: 'FLAG', flag: 'dumpster_opened' as Flag, value: true }],
                     success: {
-                        message: 'You\'ve already searched the dumpster. Nothing more to find in there.',
+                        message: "The dumpster lid is open. Trash bags spill out. The smell is overwhelming.\n\nYou can see a yellow hard hat partially buried in the garbage. Alternative to the one at the construction site.",
                         media: undefined
                     }
                 },
                 {
+                    // Default - locked
                     conditions: [],
                     success: {
-                        message: 'You haul yourself up and over the edge, dropping into the dumpster.\n\nThe smell hits harder inside—that chemical tang. Your shoes squelch on something damp.\n\nMost of the contents are gone. Too clean for a city dumpster. But there—tucked against the corner—a sealed backpack.',
-                        media: undefined,
-                        effects: [
-                            { type: 'SET_FLAG', flag: 'dumpster_searched', value: true },
-                            { type: 'REVEAL_FROM_PARENT', entityId: 'obj_sealed_bag', parentId: 'obj_alley_dumpster' }
-                        ]
-                    }
-                }
-            ],
-            onSearch: [
-                {
-                    conditions: [{ type: 'FLAG', flag: 'dumpster_searched', value: true }],
-                    success: {
-                        message: 'You\'ve already searched inside. The sealed bag is the only thing worth noting.',
-                        media: undefined
-                    }
-                },
-                {
-                    conditions: [],
-                    success: {
-                        message: 'You lean over the edge and peer inside.\n\nToo dark to see much. You\'ll need to climb in to search properly.',
+                        message: "Industrial dumpster. Green metal, rust blooming at the corners. Overflowing with black trash bags.\n\nThe lid is secured with an old lever mechanism on the side. Three positions: UP, MIDDLE, DOWN.\n\nYou need the correct sequence to unlock it.",
                         media: undefined
                     }
                 }
             ],
-            onExamine: {
-                success: {
-                    message: 'Big green dumpster, lid half-open. You can smell it from here—but it doesn\'t smell like garbage.\n\nSmells like someone cleaned something. Thoroughly.',
-                    media: undefined
-                }
-            }
-        },
-        design: {
-            authorNotes: "First object in Alley. Smell reveals chemical cleaning. Climb/search reveals sealed bag with invoice evidence.",
-            tags: ['container', 'clue', 'sensory']
-        },
-        version: { schema: "1.0", content: "1.0" }
-    },
-
-    'obj_alley_crates': {
-        id: 'obj_alley_crates' as GameObjectId,
-        name: 'Wooden Crates',
-        alternateNames: ['wooden crates', 'crates', 'boxes', 'wooden boxes', 'stack of crates'],
-        archetype: 'Furniture',
-        description: 'Several wooden crates stacked against the wall.',
-        capabilities: { openable: false, lockable: false, breakable: false, movable: true, powerable: false, container: false, readable: false, inputtable: false },
-        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        children: {
-            items: [],
-            objects: ['obj_alley_metal_door'] as GameObjectId[]
-        },
-        handlers: {
-            onExamine: {
-                success: {
-                    message: 'Old wooden crates stacked against the far wall. Weathered, splintered. They look like they\'ve been sitting here for months.',
-                    media: undefined
-                }
-            },
-            onMove: [
+            onOpen: [
                 {
-                    conditions: [{ type: 'FLAG', flag: 'crates_moved', value: true }],
+                    // Already opened
+                    conditions: [{ type: 'FLAG', flag: 'dumpster_opened' as Flag, value: true }],
                     success: {
-                        message: 'The crates are already shoved aside. The hidden door in the wall is visible.',
+                        message: "The dumpster is already open. You can see the hard hat inside the trash.",
                         media: undefined
                     }
                 },
                 {
+                    // Not yet unlocked
                     conditions: [],
                     success: {
-                        message: 'You push the crates aside. Wood scrapes on concrete.\n\nThe wall behind them isn\'t brick—it\'s a metal door, painted to blend with the alley wall. A small keypad gleams next to the handle.\n\nFour digits. Someone wanted this entrance very hidden.',
-                        media: undefined,
-                        effects: [
-                            { type: 'SET_FLAG', flag: 'crates_moved', value: true },
-                            { type: 'REVEAL_FROM_PARENT', entityId: 'obj_alley_metal_door', parentId: 'obj_alley_crates' }
-                        ]
+                        message: "The lever mechanism is locked. You need to set the correct sequence: UP-DOWN-UP.\n\nThe homeless man mentioned this if you talked to him.",
+                        media: undefined
                     }
                 }
             ]
         },
         design: {
-            authorNotes: "Hides the metal door with keypad. Player must move crates to discover the door.",
-            tags: ['movable', 'concealment']
+            authorNotes: "Lever puzzle: UP-DOWN-UP (hint from homeless Eddie). Contains hard hat (alternative to Construction shed). Flavor container.",
+            tags: ['container', 'puzzle', 'lever-sequence']
         },
-        version: { schema: "1.0", content: "1.0" }
+        version: { schema: '1.0.0', content: '1.0.0' }
     },
 
-    'obj_alley_metal_door': {
-        id: 'obj_alley_metal_door' as GameObjectId,
-        name: 'Metal Door',
-        alternateNames: ['metal door', 'hidden door', 'door', 'keypad door', 'alley door', 'backdoor'],
-        archetype: 'Door',
-        description: 'A metal door painted to match the alley wall. A keypad sits beside the handle.',
-        capabilities: { openable: true, lockable: true, breakable: false, movable: false, powerable: false, container: false, readable: false, inputtable: true },
-        state: { isOpen: false, isLocked: true, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        input: { type: 'pin', validation: '1984', hint: 'Four-digit code', attempts: null, lockout: null },
+    'obj_alley_electrical_panel': {
+        id: 'obj_alley_electrical_panel' as GameObjectId,
+        name: 'Electrical Panel',
+        alternateNames: ['panel', 'breaker box', 'electrical box', 'fuse box'],
+        description: 'Old electrical panel mounted on brick wall. Rusted shut. Seems suspicious.',
+        locationId: 'loc_alley' as LocationId,
+        archetype: 'Mechanism',
+        state: { currentStateId: 'locked' },
+        capabilities: { container: false, lockable: true, movable: false, breakable: false },
+        revealMethod: 'AUTO',
         handlers: {
             onExamine: [
                 {
-                    conditions: [{ type: 'STATE', entityId: 'obj_alley_metal_door', key: 'isOpen', equals: true }],
+                    // Secret door opened
+                    conditions: [{ type: 'FLAG', flag: 'secret_door_open' as Flag, value: true }],
                     success: {
-                        message: 'The door stands open, revealing the hidden room beyond. The keypad glows green.',
+                        message: "The electrical panel hangs open. Wires disconnected. The brick wall beside it has slid aside, revealing the hidden passage to the garages.\n\nYou solved the puzzle. The door is open.",
                         media: undefined
                     }
                 },
                 {
-                    conditions: [{ type: 'STATE', entityId: 'obj_alley_metal_door', key: 'isLocked', equals: false }],
+                    // Panel opened, cipher solved
+                    conditions: [{ type: 'FLAG', flag: 'electrical_panel_opened' as Flag, value: true }],
                     success: {
-                        message: 'The door is unlocked. The keypad shows a green light. You can open it now.',
+                        message: "The electrical panel is open. Inside, you see three colored wires - RED, BLUE, YELLOW - connected to numbered terminals (1-9).\n\nThe graffiti cipher gives you the answer: 4 × 8 ÷ 2 = 16.\n\nYou need to rewire the terminals to match the number 16.",
                         media: undefined
                     }
                 },
                 {
+                    // Default - locked
                     conditions: [],
                     success: {
-                        message: 'Solid metal door, keypad-locked. Four-digit PIN. The handle won\'t budge without the right code.',
-                        media: undefined
-                    }
-                }
-            ],
-            onOpen: [
-                {
-                    conditions: [
-                        { type: 'STATE', entityId: 'obj_alley_metal_door', key: 'isLocked', equals: false },
-                        { type: 'STATE', entityId: 'obj_alley_metal_door', key: 'isOpen', equals: false }
-                    ],
-                    success: {
-                        message: 'You pull the handle. The door swings open with a pneumatic hiss.\n\nA small room beyond. Hidden. Secret.\n\nThis is where they operated.',
-                        media: undefined,
-                        effects: [
-                            { type: 'SET_ENTITY_STATE', entityId: 'obj_alley_metal_door', patch: { isOpen: true } },
-                            { type: 'SET_FLAG', flag: 'hidden_room_discovered', value: true }
-                        ]
-                    }
-                },
-                {
-                    conditions: [{ type: 'STATE', entityId: 'obj_alley_metal_door', key: 'isLocked', equals: true }],
-                    success: {
-                        message: 'The door is locked. The keypad blinks red. You need the code.',
-                        media: undefined
-                    },
-                    fail: {
-                        message: 'The door won\'t budge. Locked tight.',
-                        media: undefined
-                    }
-                }
-            ],
-            onPasswordSuccess: {
-                success: {
-                    message: 'The keypad beeps. Green light.\n\nClunk. The door unlocks.\n\n1984. Of course.',
-                    media: undefined,
-                    effects: [
-                        { type: 'SET_ENTITY_STATE', entityId: 'obj_alley_metal_door', patch: { isLocked: false } }
-                    ]
-                }
-            },
-            onPasswordFail: {
-                success: {
-                    message: 'Wrong code. The keypad buzzes, red light flashing.',
-                    media: undefined
-                }
-            }
-        },
-        design: {
-            authorNotes: "Locked with PIN 1984. Code comes from Graffiti (SB + 1984) + Script Sheet in Garage ('Backdoor code = SB year'). Opens to Hidden Room.",
-            tags: ['door', 'locked', 'puzzle']
-        },
-        version: { schema: "1.0", content: "1.0" }
-    },
-
-    'obj_rusty_locker': {
-        id: 'obj_rusty_locker' as GameObjectId,
-        name: 'Rusty Metal Locker',
-        alternateNames: ['rusty metal locker', 'rusty locker', 'metal locker', 'locker', 'old locker'],
-        archetype: 'Container',
-        description: 'An old metal locker, rusted and bent but still latched shut.',
-        capabilities: { openable: true, lockable: false, breakable: false, movable: false, powerable: false, container: true, readable: false, inputtable: false },
-        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'locked' },
-        inventory: { items: [], capacity: 1, allowTags: [], denyTags: [] },
-        children: {
-            items: [],
-            objects: ['obj_cashbox' as GameObjectId]
-        },
-        handlers: {
-            onExamine: [
-                {
-                    conditions: [{ type: 'STATE', entityId: 'obj_rusty_locker', key: 'isOpen', equals: true }],
-                    success: {
-                        message: 'The locker door hangs open, bent from the crowbar. Inside is empty now—you already took the cashbox.',
-                        media: undefined
-                    }
-                },
-                {
-                    conditions: [],
-                    success: {
-                        message: 'Rusty metal locker against the alley wall. The door is bent and warped, but still closed. A simple latch holds it shut.\n\nYou could pry it open with the right tool.',
-                        media: undefined
-                    }
-                }
-            ],
-            onOpen: [
-                {
-                    conditions: [{ type: 'STATE', entityId: 'obj_rusty_locker', key: 'isOpen', equals: true }],
-                    success: {
-                        message: 'It\'s already open.',
-                        media: undefined
-                    }
-                },
-                {
-                    conditions: [],
-                    success: {
-                        message: 'The latch is bent shut. You\'ll need to pry it open.',
+                        message: "An old breaker box mounted on the brick wall. Metal cover rusted shut.\n\nWhy would an electrical panel be in an alley, mounted on a dead-end wall?\n\nSomething's off. You need wire cutters to pry it open.",
                         media: undefined
                     }
                 }
             ],
             onUse: [
                 {
-                    itemId: 'item_alley_crowbar',
-                    conditions: [{ type: 'STATE', entityId: 'obj_rusty_locker', key: 'isOpen', equals: true }],
+                    // Use wire cutters to open panel
+                    itemId: 'item_wire_cutters' as ItemId,
+                    conditions: [{ type: 'FLAG', flag: 'electrical_panel_opened' as Flag, value: false }],
                     success: {
-                        message: 'Already pried open. No need to hit it again.',
-                        media: undefined
-                    }
-                },
-                {
-                    itemId: 'item_alley_crowbar',
-                    conditions: [],
-                    success: {
-                        message: 'You wedge the crowbar into the gap and lever it hard.\n\nMetal screams. The latch tears free.\n\nInside: a locked metal cashbox. Small, dented, heavy.',
+                        message: "You wedge the wire cutters into the panel seam. Pry. The rusted metal groans.\n\n*SNAP*\n\nThe panel swings open. Inside: three colored wires - RED, BLUE, YELLOW - connected to numbered terminals.\n\nThis isn't a normal electrical panel. It's a puzzle. A lock.\n\nYou need to figure out the correct wiring sequence. The graffiti on the wall might have a clue.",
                         media: undefined,
                         effects: [
-                            { type: 'SET_ENTITY_STATE', entityId: 'obj_rusty_locker', patch: { isOpen: true } },
-                            { type: 'REVEAL_FROM_PARENT', entityId: 'obj_cashbox', parentId: 'obj_rusty_locker' }
+                            { type: 'SET_FLAG', flag: 'electrical_panel_opened' as Flag }
                         ]
                     }
                 }
             ]
         },
         design: {
-            authorNotes: "Onion-chain start: Locker → Cashbox → Evidence Bag → Contact Sheet. Requires crowbar from tire pile.",
-            tags: ['container', 'onion-chain', 'requires-tool']
+            authorNotes: "SECRET DOOR PUZZLE - Requires wire cutters + cipher solution (16). Opens passage to Hidden Garages. Cipher clue on obj_alley_graffiti.",
+            tags: ['puzzle', 'secret-door', 'cipher']
         },
-        version: { schema: "1.0", content: "1.0" }
+        version: { schema: '1.0.0', content: '1.0.0' }
     },
 
-    // ============================================
-    // HIDDEN ROOM OBJECTS
-    // ============================================
-
-    'obj_hidden_table': {
-        id: 'obj_hidden_table' as GameObjectId,
-        name: 'Metal Table',
-        archetype: 'Furniture',
-        description: 'A small metal table in the center of the room. Its surface is scratched and stained.',
-        capabilities: { openable: false, lockable: false, breakable: false, movable: false, powerable: false, container: false, readable: false, inputtable: false },
-        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        children: {
-            items: [],
-            objects: ['obj_burner_phone' as GameObjectId]
-        },
+    'obj_alley_graffiti': {
+        id: 'obj_alley_graffiti' as GameObjectId,
+        name: 'Graffiti Wall',
+        alternateNames: ['graffiti', 'wall', 'tags', 'spray paint'],
+        description: 'Brick wall covered in graffiti tags, symbols, and crude drawings.',
+        locationId: 'loc_alley' as LocationId,
+        archetype: 'Signage',
+        state: { currentStateId: 'default' },
+        capabilities: { container: false, lockable: false, movable: false, breakable: false },
+        revealMethod: 'AUTO',
         handlers: {
             onExamine: {
                 success: {
-                    message: 'Metal table, bolted to the floor. Surface covered in scratches. Someone worked here.\n\nA cheap burner phone sits on top, screen dark.',
+                    message: "The brick wall is a canvas of urban art. Spray paint tags layered over each other. Gang symbols. Phone numbers. Crude drawings.\n\nBut one section stands out - a pattern of symbols:\n\n**4 RED EYES** (spray-painted red circles with black dots)\n**8 BLUE STARS** (five-pointed stars in blue)\n**2 YELLOW LIGHTNING BOLTS** (jagged yellow lines)\n\nBelow them, someone wrote in white paint:\n\"RED EYES × BLUE STARS ÷ YELLOW BOLTS = ?\"\n\nA cipher. A math puzzle. The answer unlocks something.\n\n4 × 8 ÷ 2 = **16**",
+                    media: undefined
+                }
+            }
+        },
+        design: {
+            authorNotes: "CIPHER PUZZLE CLUE - Math equation: 4 × 8 ÷ 2 = 16. Answer unlocks electrical panel (secret door). Visual puzzle.",
+            tags: ['puzzle-clue', 'cipher', 'readable']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    // ===== ZONE 10: HIDDEN GARAGES (Type 3 - Hidden) =====
+
+    'obj_garage_1': {
+        id: 'obj_garage_1' as GameObjectId,
+        name: 'Garage Door #1',
+        alternateNames: ['garage 1', 'door 1', 'first garage', 'garage one'],
+        description: 'Old garage door with mechanical padlock. Weathered paint.',
+        locationId: 'loc_hidden_garages' as LocationId,
+        archetype: 'Container',
+        state: { currentStateId: 'locked' },
+        capabilities: { container: true, lockable: true, movable: false, breakable: false },
+        revealMethod: 'AUTO',
+        handlers: {
+            onExamine: [
+                {
+                    // Already opened
+                    conditions: [{ type: 'FLAG', flag: 'garage_1_opened' as Flag, value: true }],
+                    success: {
+                        message: "Garage #1 is open. The padlock lies on the ground, cut or picked.\n\nInside: old furniture, paint cans, garden tools. Nothing useful. Just storage.",
+                        media: undefined
+                    }
+                },
+                {
+                    // Default - locked
+                    conditions: [],
+                    success: {
+                        message: "Garage door #1. Old roll-up door, paint peeling. A heavy mechanical padlock secures it.\n\nYou could pick the lock with your lock pick set, or cut it with bolt cutters.",
+                        media: undefined
+                    }
+                }
+            ],
+            onOpen: [
+                {
+                    // Already opened
+                    conditions: [{ type: 'FLAG', flag: 'garage_1_opened' as Flag, value: true }],
+                    success: {
+                        message: "Garage #1 is already open. Nothing useful inside.",
+                        media: undefined
+                    }
+                },
+                {
+                    // Not yet unlocked
+                    conditions: [],
+                    success: {
+                        message: "The garage is locked with a mechanical padlock. You need to pick the lock or cut it with bolt cutters.",
+                        media: undefined
+                    }
+                }
+            ],
+            onUse: [
+                {
+                    // Use lock pick set
+                    itemId: 'item_lock_pick_set' as ItemId,
+                    conditions: [{ type: 'FLAG', flag: 'garage_1_opened' as Flag, value: false }],
+                    success: {
+                        message: "You insert the lock pick into the padlock. Feel for the pins. Tension wrench steady.\n\n*Click*\n*Click*\n*CLUNK*\n\nThe padlock opens. You pull open the garage door.\n\nInside: old furniture, paint cans, garden tools. Nothing relevant to your investigation.",
+                        media: undefined,
+                        effects: [
+                            { type: 'SET_FLAG', flag: 'garage_1_opened' as Flag }
+                        ]
+                    }
+                },
+                {
+                    // Use bolt cutters
+                    itemId: 'item_bolt_cutters' as ItemId,
+                    conditions: [{ type: 'FLAG', flag: 'garage_1_opened' as Flag, value: false }],
+                    success: {
+                        message: "You position the bolt cutters on the padlock shackle. Squeeze.\n\n*SNAP*\n\nThe shackle parts. The padlock falls to the ground.\n\nYou pull open the garage door. Inside: old furniture, paint cans, garden tools. Nothing useful.",
+                        media: undefined,
+                        effects: [
+                            { type: 'SET_FLAG', flag: 'garage_1_opened' as Flag }
+                        ]
+                    }
+                }
+            ]
+        },
+        design: {
+            authorNotes: "Flavor garage - no evidence. Can be opened with lock pick set OR bolt cutters. Alternative methods.",
+            tags: ['container', 'flavor', 'locked']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'obj_garage_2': {
+        id: 'obj_garage_2' as GameObjectId,
+        name: 'Garage Door #2',
+        alternateNames: ['garage 2', 'door 2', 'second garage', 'garage two'],
+        description: 'Garage door with combination lock. Four-digit dial.',
+        locationId: 'loc_hidden_garages' as LocationId,
+        archetype: 'Container',
+        state: { currentStateId: 'locked' },
+        capabilities: { container: true, lockable: true, movable: false, breakable: false },
+        revealMethod: 'AUTO',
+        handlers: {
+            onExamine: {
+                success: {
+                    message: "Garage door #2. Secured with a four-digit combination lock.\n\nThe dial is weathered but functional. You'd need the correct combination to open it.\n\nOr you could just use bolt cutters and skip the puzzle entirely.",
+                    media: undefined
+                }
+            },
+            onOpen: {
+                success: {
+                    message: "The combination lock is secure. You need the 4-digit code, or use bolt cutters to bypass it.",
+                    media: undefined
+                }
+            }
+        },
+        design: {
+            authorNotes: "Flavor garage - no evidence. Can be opened with combination (flavor puzzle) OR bolt cutters. Optional exploration.",
+            tags: ['container', 'flavor', 'locked', 'combination']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'obj_garage_3': {
+        id: 'obj_garage_3' as GameObjectId,
+        name: 'Garage Door #3',
+        alternateNames: ['garage 3', 'door 3', 'third garage', 'garage three'],
+        description: 'Modern garage door with digital keypad. Four-digit PIN required.',
+        locationId: 'loc_hidden_garages' as LocationId,
+        archetype: 'Container',
+        state: { currentStateId: 'locked' },
+        capabilities: { container: true, lockable: true, movable: false, breakable: false },
+        revealMethod: 'AUTO',
+        handlers: {
+            onExamine: [
+                {
+                    // Already opened
+                    conditions: [{ type: 'FLAG', flag: 'garage_3_opened' as Flag, value: true }],
+                    success: {
+                        message: "Garage #3 is open. The digital keypad shows green - access granted.\n\nInside, you can see the gray cargo van. License plate: LKJ-9472.\n\nThis is it. The van from the CCTV footage.",
+                        media: undefined
+                    }
+                },
+                {
+                    // Default - locked
+                    conditions: [],
+                    success: {
+                        message: "Garage door #3. Unlike the others, this one has a modern digital keypad mounted beside it.\n\nFour-digit PIN required. The keypad glows red - locked.\n\nThe license plate from the CCTV screenshot comes to mind: LKJ-**9472**.\n\nMaybe the numeric portion is the PIN?",
+                        media: undefined
+                    }
+                }
+            ],
+            onOpen: [
+                {
+                    // Already opened
+                    conditions: [{ type: 'FLAG', flag: 'garage_3_opened' as Flag, value: true }],
+                    success: {
+                        message: "The garage is already open. The gray van waits inside.",
+                        media: undefined
+                    }
+                },
+                {
+                    // Not yet unlocked
+                    conditions: [],
+                    success: {
+                        message: "The garage is locked. You need to enter the correct 4-digit PIN on the keypad.\n\nThe license plate number from Evidence 1 might be relevant: LKJ-9472. The numeric portion is 9472.",
+                        media: undefined
+                    }
+                }
+            ]
+        },
+        design: {
+            authorNotes: "EVIDENCE 2 LOCATION - PIN is 9472 (from license plate LKJ-9472 in Evidence 1). Contains gray van with registration card.",
+            tags: ['container', 'evidence-location', 'keypad-lock']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'obj_garage_3_van': {
+        id: 'obj_garage_3_van' as GameObjectId,
+        name: 'Gray Van',
+        alternateNames: ['van', 'cargo van', 'vehicle', 'gray cargo van'],
+        description: 'Gray cargo van. License plate: LKJ-9472. Matches CCTV screenshot.',
+        locationId: 'loc_hidden_garages' as LocationId,
+        archetype: 'Vehicle',
+        parentId: 'obj_garage_3' as GameObjectId,
+        state: { currentStateId: 'default' },
+        capabilities: { container: true, lockable: false, movable: false, breakable: false },
+        revealMethod: 'REVEAL_FROM_PARENT',
+        handlers: {
+            onExamine: {
+                success: {
+                    message: "Gray cargo van. 2024 Chevrolet Express.\n\nLicense plate: **LKJ-9472**\n\nThis is the van from the CCTV screenshot. The vehicle that was repeatedly spotted on Elm Street before Lili's alleged abduction.\n\nThe doors are unlocked. The glove compartment is accessible.",
                     media: undefined,
                     effects: [
-                        { type: 'REVEAL_FROM_PARENT', entityId: 'obj_burner_phone', parentId: 'obj_hidden_table' }
+                        { type: 'REVEAL_FROM_PARENT', entityId: 'obj_garage_3_glove_box', parentId: 'obj_garage_3_van' }
                     ]
                 }
             }
         },
         design: {
-            authorNotes: "Holds burner phone, key evidence linking to the operation network.",
-            tags: ['furniture', 'evidence']
+            authorNotes: "Gray van from CCTV footage. Contains glove box with Evidence 2 (registration card). Revealed when Garage #3 opens.",
+            tags: ['vehicle', 'evidence-container']
         },
-        version: { schema: "1.0", content: "1.0" }
+        version: { schema: '1.0.0', content: '1.0.0' }
     },
 
-    'obj_hidden_shelf': {
-        id: 'obj_hidden_shelf' as GameObjectId,
-        name: 'Metal Shelf',
-        archetype: 'Furniture',
-        description: 'A metal shelf mounted on the back wall. Mostly empty.',
-        capabilities: { openable: false, lockable: false, breakable: false, movable: false, powerable: false, container: false, readable: false, inputtable: false },
-        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
+    'obj_garage_3_glove_box': {
+        id: 'obj_garage_3_glove_box' as GameObjectId,
+        name: 'Glove Compartment',
+        alternateNames: ['glove box', 'compartment', 'glovebox'],
+        description: 'Glove compartment in the gray van. Contains registration documents.',
+        locationId: 'loc_hidden_garages' as LocationId,
+        archetype: 'Container',
+        parentId: 'obj_garage_3_van' as GameObjectId,
+        state: { currentStateId: 'default' },
+        capabilities: { container: true, lockable: false, movable: false, breakable: false },
+        revealMethod: 'REVEAL_FROM_PARENT',
         handlers: {
             onExamine: {
                 success: {
-                    message: 'Empty metal shelf on the wall. A few dust marks show where things used to sit. Cleared out recently.',
+                    message: "The glove compartment pops open. Inside:\n\n- Vehicle registration card\n- Owner's manual\n- Tire pressure gauge\n- Old gas receipts\n\nThe registration card is what you need. Evidence.",
+                    media: undefined
+                }
+            },
+            onOpen: {
+                success: {
+                    message: "You open the glove compartment. The registration card is right there.\n\nOwner: Jeremy Miller\nAddress: 447 Willow Lane, Bloodhaven\n\nThis is Evidence 2. Take it.",
+                    media: undefined,
+                    effects: [
+                        { type: 'REVEAL_FROM_PARENT', entityId: 'item_van_registration', parentId: 'obj_garage_3_glove_box' }
+                    ]
+                }
+            }
+        },
+        design: {
+            authorNotes: "EVIDENCE 2 LOCATION - Contains van registration card identifying owner (Jeremy Miller, 447 Willow Lane). Final container in evidence chain.",
+            tags: ['container', 'evidence-location']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    // ===== ZONE STORAGE CONTAINERS (for dropped items) =====
+
+    'obj_street_storage': {
+        id: 'obj_street_storage' as GameObjectId,
+        name: 'Dropped Items',
+        alternateNames: ['dropped items', 'items', 'ground', 'floor'],
+        description: 'Items you\'ve dropped on Elm Street.',
+        locationId: 'loc_elm_street' as LocationId,
+        archetype: 'Container',
+        state: { currentStateId: 'default' },
+        capabilities: { container: true, lockable: false, movable: false, breakable: false },
+        revealMethod: 'AUTO',
+        handlers: {
+            onExamine: {
+                success: {
+                    message: "Items you've dropped here on Elm Street. You can TAKE them back if needed.",
                     media: undefined
                 }
             }
         },
         design: {
-            authorNotes: "Flavor object for Hidden Room atmosphere. Shows evidence of recent activity.",
-            tags: ['furniture', 'atmosphere']
+            authorNotes: "Zone storage container for Elm Street dropped items.",
+            tags: ['storage', 'hidden']
         },
-        version: { schema: "1.0", content: "1.0" }
+        version: { schema: '1.0.0', content: '1.0.0' }
     },
 
-    // ============================================
-    // GARAGE OBJECTS
-    // ============================================
-
-    'obj_workbench': {
-        id: 'obj_workbench' as GameObjectId,
-        name: 'Workbench',
-        archetype: 'Furniture',
-        description: 'A cluttered workbench covered in tools and papers.',
-        capabilities: { openable: false, lockable: false, breakable: false, movable: false, powerable: false, container: false, readable: false, inputtable: false },
-        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        children: {
-            items: ['item_script_sheet'] as ItemId[],
-            objects: []
-        },
+    'obj_florist_exterior_storage': {
+        id: 'obj_florist_exterior_storage' as GameObjectId,
+        name: 'Dropped Items',
+        alternateNames: ['dropped items', 'items', 'ground', 'floor'],
+        description: 'Items you\'ve dropped outside the florist shop.',
+        locationId: 'loc_florist_exterior' as LocationId,
+        archetype: 'Container',
+        state: { currentStateId: 'default' },
+        capabilities: { container: true, lockable: false, movable: false, breakable: false },
+        revealMethod: 'AUTO',
         handlers: {
-            onExamine: [
+            onExamine: {
+                success: {
+                    message: "Items you've left outside the florist shop. You can TAKE them back.",
+                    media: undefined
+                }
+            }
+        },
+        design: {
+            authorNotes: "Zone storage container for florist exterior dropped items.",
+            tags: ['storage', 'hidden']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'obj_florist_interior_storage': {
+        id: 'obj_florist_interior_storage' as GameObjectId,
+        name: 'Dropped Items',
+        alternateNames: ['dropped items', 'items', 'ground', 'floor'],
+        description: 'Items you\'ve dropped inside the florist shop.',
+        locationId: 'loc_florist_interior' as LocationId,
+        archetype: 'Container',
+        state: { currentStateId: 'default' },
+        capabilities: { container: true, lockable: false, movable: false, breakable: false },
+        revealMethod: 'AUTO',
+        handlers: {
+            onExamine: {
+                success: {
+                    message: "Items you've left on the floor of the florist shop. You can TAKE them back.",
+                    media: undefined
+                }
+            }
+        },
+        design: {
+            authorNotes: "Zone storage container for florist shop dropped items.",
+            tags: ['storage', 'hidden']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'obj_butcher_exterior_storage': {
+        id: 'obj_butcher_exterior_storage' as GameObjectId,
+        name: 'Dropped Items',
+        alternateNames: ['dropped items', 'items', 'ground', 'floor'],
+        description: 'Items you\'ve dropped outside the butcher shop.',
+        locationId: 'loc_butcher_exterior' as LocationId,
+        archetype: 'Container',
+        state: { currentStateId: 'default' },
+        capabilities: { container: true, lockable: false, movable: false, breakable: false },
+        revealMethod: 'AUTO',
+        handlers: {
+            onExamine: {
+                success: {
+                    message: "Items you've left outside the butcher shop. You can TAKE them back.",
+                    media: undefined
+                }
+            }
+        },
+        design: {
+            authorNotes: "Zone storage container for butcher exterior dropped items.",
+            tags: ['storage', 'hidden']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'obj_butcher_interior_storage': {
+        id: 'obj_butcher_interior_storage' as GameObjectId,
+        name: 'Dropped Items',
+        alternateNames: ['dropped items', 'items', 'ground', 'floor'],
+        description: 'Items you\'ve dropped inside the butcher shop.',
+        locationId: 'loc_butcher_interior' as LocationId,
+        archetype: 'Container',
+        state: { currentStateId: 'default' },
+        capabilities: { container: true, lockable: false, movable: false, breakable: false },
+        revealMethod: 'AUTO',
+        handlers: {
+            onExamine: {
+                success: {
+                    message: "Items you've left on the floor of the butcher shop. You can TAKE them back.",
+                    media: undefined
+                }
+            }
+        },
+        design: {
+            authorNotes: "Zone storage container for butcher shop dropped items.",
+            tags: ['storage', 'hidden']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'obj_bus_stop_storage': {
+        id: 'obj_bus_stop_storage' as GameObjectId,
+        name: 'Dropped Items',
+        alternateNames: ['dropped items', 'items', 'ground', 'floor'],
+        description: 'Items you\'ve dropped at the bus stop.',
+        locationId: 'loc_bus_stop' as LocationId,
+        archetype: 'Container',
+        state: { currentStateId: 'default' },
+        capabilities: { container: true, lockable: false, movable: false, breakable: false },
+        revealMethod: 'AUTO',
+        handlers: {
+            onExamine: {
+                success: {
+                    message: "Items you've left at the bus stop. You can TAKE them back.",
+                    media: undefined
+                }
+            }
+        },
+        design: {
+            authorNotes: "Zone storage container for bus stop dropped items.",
+            tags: ['storage', 'hidden']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'obj_alley_storage': {
+        id: 'obj_alley_storage' as GameObjectId,
+        name: 'Dropped Items',
+        alternateNames: ['dropped items', 'items', 'ground', 'floor'],
+        description: 'Items you\'ve dropped in the alley.',
+        locationId: 'loc_alley' as LocationId,
+        archetype: 'Container',
+        state: { currentStateId: 'default' },
+        capabilities: { container: true, lockable: false, movable: false, breakable: false },
+        revealMethod: 'AUTO',
+        handlers: {
+            onExamine: {
+                success: {
+                    message: "Items you've left in the alley. You can TAKE them back.",
+                    media: undefined
+                }
+            }
+        },
+        design: {
+            authorNotes: "Zone storage container for alley dropped items.",
+            tags: ['storage', 'hidden']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    }
+};
+
+// ===== NPCS =====
+const npcs: Record<NpcId, NPC> = {
+    // ===== NPC 1: MARGARET CHEN (Florist) - Type 1→2, EVIDENCE 3 SOURCE =====
+    'npc_margaret_chen': {
+        id: 'npc_margaret_chen' as NpcId,
+        name: 'Margaret Chen',
+        description: 'The owner of Petal & Stem florist. Middle-aged, kind eyes, hands always moving - arranging, trimming, watering. She notices things. The kind of person who remembers faces.',
+        image: undefined, // TODO: Add portrait
+        zone: 'zone_florist_shop' as ZoneId,
+        npcType: 'type1',
+        importance: 'primary',
+        initialState: {
+            stage: 'active',
+            trust: 70,
+            attitude: 'friendly'
+        },
+        dialogueType: 'scripted',
+        welcomeMessage: 'Margaret looks up from arranging lilies.\n\n"Can I help you find something?"',
+        goodbyeMessage: 'Margaret nods. "Take care, Detective."',
+        handlers: {
+            onGive: [
                 {
-                    conditions: [{ type: 'HAS_ITEM', itemId: 'item_script_sheet' }],
+                    itemId: 'item_lili_photo',
+                    conditions: [{ type: 'FLAG', flag: 'margaret_gave_statement', value: true }],
                     success: {
-                        message: 'The workbench is a mess of tools and grease-stained rags. Nothing else interesting.',
-                        media: undefined
+                        message: 'Margaret glances at the photo.\n\n"I already told you everything I know. I hope it helps."'
                     }
                 },
                 {
+                    itemId: 'item_lili_photo',
                     conditions: [],
                     success: {
-                        message: 'Workbench covered in old newspapers, tools, shop rags.\n\nOne paper stands out—folded and clean. A scene script sheet. Someone left it here deliberately.',
-                        media: undefined,
+                        message: 'Margaret takes the photo. Studies it.\n\n"Oh my. Yes. I\'ve seen her."\n\nShe hands it back.\n\n"She comes in sometimes. Not alone, though. Always with a young man. Mid-twenties, I\'d say. Quiet type. But... intense.\n\nThe way he looked at her - completely devoted. Hung on her every word. She seemed more... reserved. Calculating, almost. Always looking over her shoulder.\n\nBut him? He\'d do anything she asked. Anything. I\'ve seen that look before. It\'s... obsession."\n\nYou pull out your phone.\n\n"Can you give a statement? On record?"\n\nMargaret nods. "Of course. If this helps you, Detective, I\'m happy to go on record."',
                         effects: [
-                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_script_sheet', parentId: 'obj_workbench' }
+                            { type: 'SET_FLAG', flag: 'margaret_gave_statement', value: true },
+                            {
+                                type: 'CREATE_DYNAMIC_ITEM',
+                                item: {
+                                    id: 'item_witness_statement_audio' as ItemId,
+                                    name: 'Witness Statement (Margaret Chen)',
+                                    description: 'Audio recording of Margaret Chen\'s witness statement about Lili Morgenstern and the obsessed young man who always accompanied her.',
+                                    itemType: 'Evidence',
+                                    media: {
+                                        audio: {
+                                            url: 'https://placeholder-audio-url/margaret_statement.mp3',
+                                            description: 'Margaret Chen witness statement',
+                                            transcript: 'My name is Margaret Chen, owner of Petal & Stem Florist on Elm Street. I\'ve seen the woman in this photo - Lili - multiple times over the past two months. She always came with a young man who appeared obsessively devoted to her. She seemed detached, but he would do anything she asked.'
+                                        }
+                                    },
+                                    handlers: {
+                                        onExamine: {
+                                            success: {
+                                                message: 'Audio recording: Margaret Chen witness statement.\n\nRecorded on Elm Street. States Lili was repeatedly seen with an obsessed young man who would "do anything she asked."\n\nThis is Evidence 3.'
+                                            }
+                                        }
+                                    },
+                                    design: {
+                                        tags: ['evidence', 'audio', 'witness-statement'],
+                                        authorNotes: 'EVIDENCE 3 - Proves Lili had relationship with obsessed man (staging collaboration)'
+                                    },
+                                    version: { schema: '1.0.0', content: '1.0.0' }
+                                }
+                            },
+                            { type: 'ADD_ITEM', itemId: 'item_witness_statement_audio' as ItemId },
+                            { type: 'SET_FLAG', flag: 'found_evidence_3', value: true },
+                            {
+                                type: 'SHOW_MESSAGE',
+                                speaker: 'narrator',
+                                content: 'EVIDENCE 3 ACQUIRED: Recorded witness statement.\n\nMargaret\'s testimony proves Lili had a relationship with an obsessed young man. This contradicts her claim of random abduction.',
+                                messageType: 'text'
+                            },
+                            // Demote to Type 2
+                            { type: 'SET_ENTITY_STATE', entityId: 'npc_margaret_chen', patch: { stage: 'demoted', importance: 'ambient' } }
                         ]
                     }
                 }
             ]
         },
-        design: {
-            authorNotes: "Contains the Script Sheet which provides the hint for the hidden door code (Backdoor code = SB year).",
-            tags: ['furniture', 'clue']
+        demoteRules: {
+            onFlagsAll: ['margaret_gave_statement' as Flag],
+            then: {
+                setStage: 'demoted',
+                setImportance: 'ambient',
+                effects: []
+            }
         },
-        version: { schema: "1.0", content: "1.0" }
+        postCompletionProfile: {
+            welcomeMessage: 'Margaret smiles. "Back again?"',
+            goodbyeMessage: 'Margaret returns to her flowers.',
+            defaultResponse: 'Margaret talks about flower meanings, business being slow, the neighborhood changing. Friendly. But her crucial information has been given.',
+            topics: [
+                {
+                    topicId: 'flowers',
+                    label: 'Flower meanings',
+                    keywords: ['flowers', 'roses', 'lilies', 'meaning'],
+                    response: {
+                        message: 'Margaret brightens.\n\n"Lilies represent purity. Roses, love. But meanings change with color. Red roses - passion. White - innocence. Yellow - friendship... or sometimes betrayal."\n\nShe arranges stems with practiced hands.'
+                    }
+                },
+                {
+                    topicId: 'business',
+                    label: 'Business',
+                    keywords: ['business', 'shop', 'customers', 'sales'],
+                    response: {
+                        message: 'Margaret sighs.\n\n"Business has been slow. People don\'t buy flowers like they used to. Supermarkets sell cheap bouquets. Can\'t compete."\n\nShe shrugs. "But I love what I do."'
+                    }
+                }
+            ]
+        },
+        fallbacks: {
+            default: 'Margaret continues arranging flowers, offering polite small talk.',
+            offTopic: 'Margaret listens politely but doesn\'t have much to say about that.'
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
     },
 
-    'obj_tool_cabinet': {
-        id: 'obj_tool_cabinet' as GameObjectId,
-        name: 'Tool Cabinet',
-        archetype: 'Container',
-        description: 'A tall metal cabinet with pegboard doors. Tools hang inside and out.',
-        capabilities: { openable: true, lockable: false, breakable: false, movable: false, powerable: false, container: true, readable: false, inputtable: false },
-        state: { isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false, currentStateId: 'default' },
-        inventory: { items: [] as ItemId[], capacity: 5, allowTags: [], denyTags: [] },
+    // ===== NPC 2: MIKE KOWALSKI (Electrician) - Type 1→2 =====
+    'npc_mike_kowalski': {
+        id: 'npc_mike_kowalski' as NpcId,
+        name: 'Mike Kowalski',
+        description: 'Electrician. Mid-forties, work-worn hands, perpetual coffee stain on his thermos. Guards his van like a hawk. Too many tools stolen in this neighborhood. He\'s not leaving.',
+        image: undefined, // TODO: Add portrait
+        zone: 'zone_electrician_truck' as ZoneId,
+        npcType: 'type1',
+        importance: 'supporting',
+        initialState: {
+            stage: 'active',
+            trust: 30,
+            attitude: 'neutral'
+        },
+        dialogueType: 'scripted',
+        welcomeMessage: 'Mike glances up from his phone.\n\n"Help you?" His tone suggests he\'d rather you didn\'t need help.',
+        goodbyeMessage: 'Mike returns to his phone.',
         handlers: {
-            onExamine: {
+            // TODO: AI-judged distraction will be implemented later
+            // For now, placeholder for creative distraction attempts
+            onTalk: {
+                conditions: [{ type: 'FLAG', flag: 'distracted_mike', value: true }],
                 success: {
-                    message: 'Standard tool cabinet. Wrenches, screwdrivers, a coil of wire. Nothing unusual.',
-                    media: undefined
+                    message: 'Mike is still away checking on that issue you mentioned. His van is unattended.'
+                },
+                fail: {
+                    message: 'Mike is sitting in the driver\'s seat, scrolling his phone, guarding his tools.\n\n"I can\'t leave my van. Too many tools get stolen around here."\n\nYou\'ll need to distract him somehow if you want access to his toolbox.'
                 }
             }
         },
-        design: {
-            authorNotes: "Placeholder Garage object for atmosphere. Can be expanded later.",
-            tags: ['container', 'placeholder']
-        },
-        version: { schema: "1.0", content: "1.0" }
-    }
-};
-
-// =====================================
-// NPCs
-// =====================================
-
-const npcs: Record<NpcId, NPC> = {
-    'npc_electrician': {
-        id: 'npc_electrician' as NpcId,
-        name: 'Electrician',
-        archetype: 'Type1-Scripted',
-        description: 'A middle-aged man in work coveralls standing by his van.',
-        personality: 'Gruff but helpful. He keeps to himself but notices everything on this street.',
-        location: 'loc_street' as LocationId,
-        image: {
-            url: '',
-            description: 'Electrician in work clothes',
-            hint: 'electrician worker'
-        },
-        proximity: { minDistance: 0, maxDistance: 10 },
-        topics: [
-            {
-                topicId: 'topic_greeting',
-                keywords: ['hello', 'hi', 'hey'],
-                response: 'The electrician nods. "Help you with something? I\'m just finishing up a job here."',
-                once: false
-            },
-            {
-                topicId: 'topic_lili',
-                keywords: ['lili', 'girl', 'missing', 'abduction'],
-                response: 'He frowns. "Yeah, I heard about that. Saw a gray van parked here earlier, around 3:30. Didn\'t think much of it at the time."',
-                once: true
-            }
-        ],
-        handlers: {
-            onTalk: {
-                message: 'The electrician wipes his hands on a rag and looks up. "Yeah? What do you need?"'
+        demoteRules: {
+            onFlagsAll: ['distracted_mike' as Flag],
+            then: {
+                setStage: 'demoted',
+                setImportance: 'ambient',
+                effects: []
             }
         },
-        npcType: 'type1',
-        importance: 'key',
-        initialState: {
-            stage: 'active',
-            isRevealed: true
+        postCompletionProfile: {
+            welcomeMessage: 'Mike nods. "Yeah?"',
+            goodbyeMessage: 'Mike goes back to his coffee.',
+            defaultResponse: 'Mike complains about the construction workers tripping breakers, union dues going up, copper prices making jobs harder. Blue-collar grievances.',
+            topics: [
+                {
+                    topicId: 'union',
+                    label: 'Union',
+                    keywords: ['union', 'dues', 'workers'],
+                    response: {
+                        message: 'Mike grunts.\n\n"Union dues keep going up. But what choice do we have? Gotta stick together. Otherwise bosses would screw us even worse."\n\nHe takes a sip of coffee.'
+                    }
+                },
+                {
+                    topicId: 'construction',
+                    label: 'Construction site',
+                    keywords: ['construction', 'site', 'workers', 'building'],
+                    response: {
+                        message: 'Mike shakes his head.\n\n"Those guys? Always tripping breakers. I fix their electrical, they break it again next week. Job security, I guess."\n\nHe doesn\'t sound thrilled.'
+                    }
+                }
+            ]
+        },
+        fallbacks: {
+            default: 'Mike offers curt responses. He\'s not chatty.',
+            offTopic: 'Mike shrugs. "Don\'t know much about that."'
         },
         version: { schema: '1.0.0', content: '1.0.0' }
     },
 
-    'npc_florist': {
-        id: 'npc_florist' as NpcId,
-        name: 'Florist',
-        archetype: 'Type1-Scripted',
-        description: 'A friendly woman in an apron, arranging flowers in the shop window.',
-        personality: 'Warm and chatty. She notices the comings and goings on the street.',
-        location: 'loc_street' as LocationId,
-        image: {
-            url: '',
-            description: 'Florist with apron',
-            hint: 'flower shop owner'
-        },
-        proximity: { minDistance: 0, maxDistance: 10 },
-        topics: [
-            {
-                topicId: 'topic_greeting',
-                keywords: ['hello', 'hi', 'hey'],
-                response: 'She smiles warmly. "Good afternoon! Can I help you with anything?"',
-                once: false
-            },
-            {
-                topicId: 'topic_delivery',
-                keywords: ['delivery', 'invoice', 'flowers', 'bouquet'],
-                response: 'Her eyes light up. "Oh yes! I made a delivery around 3:30 today. Beautiful roses—someone ordered them for this street. The customer was very specific about the time."',
-                once: true
-            }
-        ],
-        handlers: {
-            onTalk: {
-                message: 'The florist looks up from her work and smiles. "Hello there! Beautiful day for flowers, isn\'t it?"'
-            }
-        },
-        npcType: 'type1',
-        importance: 'key',
+    // ===== NPC 3: KLAUS RICHTER (Butcher) - Type 2 (Flavor Only) =====
+    'npc_klaus_richter': {
+        id: 'npc_klaus_richter' as NpcId,
+        name: 'Klaus Richter',
+        description: 'Owner of Richter\'s Meats. German accent, dark humor, surprisingly friendly. Gives tools freely - bolt cutters, sausage for Eddie. Mentions seeing a gray van by the alley.',
+        image: undefined, // TODO: Add portrait
+        zone: 'zone_butcher_shop' as ZoneId,
+        npcType: 'type2',
+        importance: 'supporting',
         initialState: {
             stage: 'active',
-            isRevealed: true
+            trust: 60,
+            attitude: 'friendly'
+        },
+        dialogueType: 'freeform',
+        persona: 'You are Klaus Richter, a German butcher in Bloodhaven. Friendly, makes dark jokes without realizing they sound ominous (e.g., "You look like you\'ve been through the grinder!"). You freely give tools - bolt cutters, sausages - because you like helping people. You saw a gray van parked by the alley yesterday. Speak with slight German accent, warm but with unintentional gallows humor.',
+        welcomeMessage: 'Klaus looks up from sharpening his cleaver.\n\n"Ah! Customer! You look like you\'ve been through the grinder! Haha! How can I help?"',
+        goodbyeMessage: 'Klaus waves his cleaver cheerfully. "Come back anytime!"',
+        limits: {
+            maxInteractions: 5,
+            interactionLimitResponse: 'Klaus smiles but returns to his work. "Busy day. Come back later, ja?"'
+        },
+        topics: [
+            {
+                topicId: 'tools',
+                label: 'Tools',
+                keywords: ['bolt cutters', 'tools', 'borrow', 'lend'],
+                response: {
+                    message: 'Klaus gestures to the tool rack.\n\n"Bolt cutters? Sure, take \'em. Just bring back when done, ja? Too many things disappear in this neighborhood."'
+                }
+            },
+            {
+                topicId: 'gray_van',
+                label: 'Gray van',
+                keywords: ['van', 'gray', 'vehicle', 'alley'],
+                response: {
+                    message: 'Klaus nods.\n\n"Ja, I saw it. Gray cargo van. Parked by the alley yesterday. Odd. Never seen it before. Then gone."\n\nHe shrugs. "Lots of odd things in this neighborhood."'
+                }
+            }
+        ],
+        fallbacks: {
+            default: 'Klaus talks about meat cuts, smoking techniques, the old country. Friendly, with unintentionally dark jokes.',
+            offTopic: 'Klaus chuckles. "Don\'t know about that. I just cut meat!"'
         },
         version: { schema: '1.0.0', content: '1.0.0' }
     },
 
-    'npc_kiosk_vendor': {
-        id: 'npc_kiosk_vendor' as NpcId,
-        name: 'Kiosk Vendor',
-        archetype: 'Type1-Scripted',
-        description: 'An elderly man running the neighborhood kiosk. He sells newspapers and snacks.',
-        personality: 'Grumpy but observant. He\'s been running this kiosk for decades.',
-        location: 'loc_street' as LocationId,
-        image: {
-            url: '',
-            description: 'Elderly kiosk vendor',
-            hint: 'old newspaper seller'
-        },
-        proximity: { minDistance: 0, maxDistance: 10 },
-        topics: [
-            {
-                topicId: 'topic_greeting',
-                keywords: ['hello', 'hi', 'hey'],
-                response: 'He grunts. "You buying something or just wasting my time?"',
-                once: false
-            },
-            {
-                topicId: 'topic_van',
-                keywords: ['van', 'gray', 'vehicle', 'suspicious'],
-                response: 'He squints. "Gray van? Yeah, I saw it. Parked right there by the gray building. Driver didn\'t get out. Just sat there watching."',
-                once: true
-            }
-        ],
-        handlers: {
-            onTalk: {
-                message: 'The vendor looks up from his newspaper. "What do you want?"'
-            }
-        },
-        npcType: 'type1',
-        importance: 'key',
+    // ===== NPC 4: RAVI PATEL (Kiosk Owner) - Type 2 (Flavor Only) =====
+    'npc_ravi_patel': {
+        id: 'npc_ravi_patel' as NpcId,
+        name: 'Ravi Patel',
+        description: 'Kiosk owner. Young, friendly, perpetual smile. Sells coffee, lottery tickets, fingerprint powder for his "detective novel hobby." Knows the neighborhood. Hints that receipt has CCTV code.',
+        image: undefined, // TODO: Add portrait
+        zone: 'zone_kiosk' as ZoneId,
+        npcType: 'type2',
+        importance: 'supporting',
         initialState: {
             stage: 'active',
-            isRevealed: true
+            trust: 70,
+            attitude: 'friendly'
+        },
+        dialogueType: 'freeform',
+        persona: 'You are Ravi Patel, a friendly kiosk owner in Bloodhaven. Always cheerful, love helping customers. You\'re writing a detective novel as a hobby (bad novel, but enthusiastic). You keep fingerprint powder for "research." You saw a gray van parked by the alley recently. You have a receipt spike with old receipts - one has "CCTV keypad - 1440" written on it. You give items freely: "Take what you need, friend!"',
+        welcomeMessage: 'Ravi beams.\n\n"Hey, friend! Coffee? Snacks? Help yourself!"',
+        goodbyeMessage: 'Ravi waves. "Come back anytime!"',
+        limits: {
+            maxInteractions: 5,
+            interactionLimitResponse: 'Ravi smiles apologetically. "Sorry, friend, I need to help other customers. Come back later!"'
+        },
+        topics: [
+            {
+                topicId: 'novel',
+                label: 'Detective novel',
+                keywords: ['novel', 'book', 'writing', 'detective', 'story'],
+                response: {
+                    message: 'Ravi\'s eyes light up.\n\n"I\'m writing a detective novel! It\'s about a kiosk owner who solves crimes! You know, because we see everything in the neighborhood."\n\nHe pulls out a notebook covered in coffee stains. "It\'s terrible, but I love it!"'
+                }
+            },
+            {
+                topicId: 'gray_van',
+                label: 'Gray van',
+                keywords: ['van', 'gray', 'vehicle', 'alley'],
+                response: {
+                    message: 'Ravi nods.\n\n"Saw it parked by the alley recently. Gray cargo van. Young guy driving. Looked nervous. Kept checking over his shoulder."\n\nHe shrugs. "Weird, right?"'
+                }
+            }
+        ],
+        fallbacks: {
+            default: 'Ravi chatters about lottery winners, his detective novel, neighborhood gossip. Always friendly.',
+            offTopic: 'Ravi smiles. "Don\'t know much about that, friend!"'
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    // ===== NPC 5: EDDIE (Homeless Man) - Type 1→2 =====
+    'npc_eddie': {
+        id: 'npc_eddie' as NpcId,
+        name: 'Eddie',
+        description: 'Homeless man living in the alley. Tattered coat, tired eyes. Hungry. Needs food. In exchange for smoked sausage, he gives information about the gray van and the dumpster lever hint.',
+        image: undefined, // TODO: Add portrait
+        zone: 'zone_alley' as ZoneId,
+        npcType: 'type1',
+        importance: 'supporting',
+        initialState: {
+            stage: 'active',
+            trust: 50,
+            attitude: 'neutral'
+        },
+        dialogueType: 'scripted',
+        welcomeMessage: 'Eddie looks up from his cardboard bed.\n\n"Got anything to eat? Haven\'t had a meal in days..."',
+        goodbyeMessage: 'Eddie nods. "Thanks for stopping by."',
+        handlers: {
+            onGive: [
+                {
+                    itemId: 'item_smoked_sausage',
+                    conditions: [{ type: 'FLAG', flag: 'eddie_fed', value: true }],
+                    success: {
+                        message: 'Eddie shakes his head.\n\n"Thanks, but I\'m good now. You already helped me."'
+                    }
+                },
+                {
+                    itemId: 'item_smoked_sausage',
+                    conditions: [],
+                    success: {
+                        message: 'Eddie takes the sausage. His hands shake.\n\n"Oh man, thank you. You\'re a good person, Detective. I know you didn\'t do what they\'re saying."\n\nHe takes a bite. Chews slowly.\n\n"I\'ve been here for weeks. Seen a gray van come and go. Young guy, always nervous. And that girl from the news? She was here too. With him.\n\nThey didn\'t look like victim and kidnapper to me. More like... partners."\n\nYou lean in.\n\n"Where\'d they go?"\n\nEddie gestures at the brick wall.\n\n"Behind the wall. Secret door. I see everything from my spot here. They thought nobody was watching."\n\nHe points at the dumpster.\n\n"That old dumpster? Lever system. UP-DOWN-UP. That\'s how you open those old models. Found a hard hat in there once."',
+                        effects: [
+                            { type: 'REMOVE_ITEM', itemId: 'item_smoked_sausage' as ItemId },
+                            { type: 'SET_FLAG', flag: 'eddie_fed', value: true },
+                            { type: 'SET_FLAG', flag: 'knows_dumpster_sequence', value: true },
+                            { type: 'SET_FLAG', flag: 'knows_secret_door', value: true },
+                            { type: 'SET_ENTITY_STATE', entityId: 'npc_eddie', patch: { stage: 'demoted', importance: 'ambient' } }
+                        ]
+                    }
+                }
+            ]
+        },
+        demoteRules: {
+            onGiveItemsAny: ['item_smoked_sausage' as ItemId],
+            then: {
+                setStage: 'demoted',
+                setImportance: 'ambient',
+                effects: []
+            }
+        },
+        postCompletionProfile: {
+            welcomeMessage: 'Eddie nods. "Hey, Detective."',
+            goodbyeMessage: 'Eddie returns to his cardboard.',
+            defaultResponse: 'Eddie tells stories about street life, mentions police searched the alley but missed the wall door, talks about seeing the neighborhood change over the years.',
+            topics: [
+                {
+                    topicId: 'street_life',
+                    label: 'Street life',
+                    keywords: ['homeless', 'street', 'living', 'survive'],
+                    response: {
+                        message: 'Eddie sighs.\n\n"You learn to be invisible. People look past you. But that means you see things they don\'t."\n\nHe pulls his coat tighter. "Cold nights are the worst."'
+                    }
+                },
+                {
+                    topicId: 'police',
+                    label: 'Police search',
+                    keywords: ['police', 'search', 'cops', 'investigation'],
+                    response: {
+                        message: 'Eddie chuckles darkly.\n\n"They searched the alley. Walked right past that wall door. Never even noticed it. Too busy looking for obvious stuff."\n\nHe shakes his head. "You found it though."'
+                    }
+                }
+            ]
+        },
+        fallbacks: {
+            default: 'Eddie shares quiet observations about the street. He\'s seen a lot.',
+            offTopic: 'Eddie shrugs. "Don\'t know about that."'
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    // ===== NPC 6: TONY GRECO (Construction Foreman) - Type 1→2 =====
+    'npc_tony_greco': {
+        id: 'npc_tony_greco' as NpcId,
+        name: 'Tony Greco',
+        description: 'Construction foreman. Forties, weathered face, union sticker on his hard hat. Blocks the gate. "Hard hat and vest. No exceptions. Insurance." Once you have proper gear, he lets you in.',
+        image: undefined, // TODO: Add portrait
+        zone: 'zone_construction_site' as ZoneId,
+        npcType: 'type1',
+        importance: 'supporting',
+        initialState: {
+            stage: 'active',
+            trust: 40,
+            attitude: 'neutral'
+        },
+        dialogueType: 'scripted',
+        welcomeMessage: 'Tony crosses his arms.\n\n"Can\'t let you in without proper gear. Hard hat and vest. No exceptions. Insurance."',
+        goodbyeMessage: 'Tony returns to his clipboard.',
+        handlers: {
+            onTalk: {
+                conditions: [
+                    { type: 'HAS_ITEM', itemId: 'item_hard_hat' },
+                    { type: 'HAS_ITEM', itemId: 'item_safety_vest' }
+                ],
+                success: {
+                    message: 'Tony looks at your hard hat and safety vest.\n\n"Alright. You\'re good. Don\'t touch anything. We\'ve had enough delays."\n\nHe steps aside.\n\nYou can enter the construction site now.',
+                    effects: [
+                        { type: 'SET_FLAG', flag: 'tony_allows_entry', value: true },
+                        { type: 'SET_ENTITY_STATE', entityId: 'npc_tony_greco', patch: { stage: 'demoted', importance: 'ambient' } }
+                    ]
+                },
+                fail: {
+                    message: 'Tony doesn\'t budge.\n\n"Hard hat and vest. Both. No exceptions. Insurance rules."\n\nHe taps his clipboard. "Come back when you have proper gear."'
+                }
+            }
+        },
+        demoteRules: {
+            onFlagsAll: ['tony_allows_entry' as Flag],
+            then: {
+                setStage: 'demoted',
+                setImportance: 'ambient',
+                effects: []
+            }
+        },
+        postCompletionProfile: {
+            welcomeMessage: 'Tony nods. "Yeah?"',
+            goodbyeMessage: 'Tony goes back to his paperwork.',
+            defaultResponse: 'Tony complains about city permits taking forever, inspectors being picky, delays costing money. Typical construction foreman frustrations.',
+            topics: [
+                {
+                    topicId: 'permits',
+                    label: 'Permits',
+                    keywords: ['permits', 'city', 'bureaucracy', 'paperwork'],
+                    response: {
+                        message: 'Tony scowls.\n\n"Permits take forever. City inspectors nitpick everything. Meanwhile, we\'re bleeding money on delays."\n\nHe slaps his clipboard. "Bureaucracy."'
+                    }
+                },
+                {
+                    topicId: 'delays',
+                    label: 'Construction delays',
+                    keywords: ['delays', 'construction', 'schedule', 'timeline'],
+                    response: {
+                        message: 'Tony shakes his head.\n\n"Three weeks behind. Electrical issues, permit delays, weather. Boss is gonna have my head."\n\nHe sounds exhausted.'
+                    }
+                }
+            ]
+        },
+        fallbacks: {
+            default: 'Tony talks about union rules, safety regulations, budget overruns. All business.',
+            offTopic: 'Tony shrugs. "Not my department."'
         },
         version: { schema: '1.0.0', content: '1.0.0' }
     }
 };
 
-// =====================================
-// LOCATIONS
-// =====================================
-
+// ===== LOCATIONS =====
 const locations: Record<LocationId, Location> = {
-    'loc_street': {
-        locationId: 'loc_street' as LocationId,
+    // ===== ZONE 0: ELM STREET (Hub - Always Unlocked) =====
+    'loc_elm_street': {
+        locationId: 'loc_elm_street' as LocationId,
         name: 'Elm Street',
-        sceneDescription: 'Elm Street is a quiet urban neighborhood. Bus stops, small shops, and residential buildings line both sides of the street. This is where Lili was last seen.',
-        introMessage: 'You arrive at Elm Street, the last place Lili Chen was spotted before she disappeared. The street is quiet now, but the feeling of something wrong lingers in the air.',
-        objects: [
-            'obj_bus_stop' as GameObjectId,
-            'obj_gray_building_door' as GameObjectId,
-            'obj_florist_shop' as GameObjectId,
-            'obj_kiosk_counter' as GameObjectId,
-            'obj_side_alley' as GameObjectId
-        ],
-        npcs: [
-            'npc_electrician' as NpcId,
-            'npc_florist' as NpcId,
-            'npc_kiosk_vendor' as NpcId
-        ],
-        zones: [
-            {
-                id: 'zone_street_overview' as ZoneId,
-                isDefault: true,
-                title: 'Street Overview',
-                description: 'You stand on Elm Street, taking in the scene',
-                objectIds: [],
-                transitionNarration: 'You step back to get a wider view of the street'
-            },
-            {
-                id: 'zone_bus_stop' as ZoneId,
-                parent: 'zone_street_overview' as ZoneId,
-                title: 'Bus Stop',
-                objectIds: ['obj_bus_stop' as GameObjectId, 'obj_bench' as GameObjectId, 'obj_info_board' as GameObjectId, 'obj_bus_sign' as GameObjectId],
-                transitionNarration: 'You walk over to the bus stop'
-            },
-            {
-                id: 'zone_gray_building' as ZoneId,
-                parent: 'zone_street_overview' as ZoneId,
-                title: 'Gray Building',
-                objectIds: ['obj_gray_building_door' as GameObjectId],
-                transitionNarration: 'You approach the gray building entrance'
-            },
-            {
-                id: 'zone_florist' as ZoneId,
-                parent: 'zone_street_overview' as ZoneId,
-                title: 'Florist Shop',
-                objectIds: ['obj_florist_shop' as GameObjectId],
-                transitionNarration: 'You walk toward the florist shop'
-            },
-            {
-                id: 'zone_kiosk' as ZoneId,
-                parent: 'zone_street_overview' as ZoneId,
-                title: 'Kiosk',
-                objectIds: ['obj_kiosk_counter' as GameObjectId],
-                transitionNarration: 'You move to the kiosk counter'
-            },
-            {
-                id: 'zone_side_alley' as ZoneId,
-                parent: 'zone_street_overview' as ZoneId,
-                title: 'Side Alley',
-                objectIds: ['obj_side_alley' as GameObjectId],
-                transitionNarration: 'You turn into the narrow side alley'
-            },
-            {
-                id: 'zone_at_dumpster' as ZoneId,
-                parent: 'zone_side_alley' as ZoneId,
-                title: 'At the Dumpster',
-                objectIds: ['obj_dumpster' as GameObjectId, 'obj_tire_pile' as GameObjectId],
-                transitionNarration: 'You approach the large dumpster'
-            },
-            {
-                id: 'zone_inside_dumpster' as ZoneId,
-                parent: 'zone_at_dumpster' as ZoneId,
-                title: 'Inside the Dumpster',
-                objectIds: ['obj_old_suitcase' as GameObjectId, 'obj_paper_carton' as GameObjectId, 'obj_backpack' as GameObjectId],
-                requiresAction: 'climb',
-                transitionNarration: 'You climb into the dumpster, surrounded by garbage'
-            }
-        ],
-        transitionTemplates: [
-            'You walk down Elm Street toward the {entity}. The afternoon sun casts long shadows across the pavement.',
-            'You move carefully toward the {entity}, scanning the surroundings. This is where she vanished.',
-            'Your footsteps echo on the quiet street as you approach the {entity}. No one seems to notice you.',
-            'You cross the street toward the {entity}, dodging a puddle from last night\'s rain.',
-            'The street is nearly empty as you make your way to the {entity}. A car passes slowly, driver barely glancing your way.',
-            'You navigate past a parked delivery truck, heading for the {entity}. The smell of exhaust lingers.',
-            'A light breeze carries the scent of flowers from the florist as you approach the {entity}.',
-            'You step around cracked pavement, moving toward the {entity}. This neighborhood has seen better days.',
-            'The kiosk vendor watches you briefly as you head to the {entity}, then returns to his newspaper.',
-            'You walk past faded storefronts toward the {entity}. Elm Street feels frozen in time, stuck somewhere between neglect and normalcy.'
-        ],
-        spatialMode: 'sprawling' // Large outdoor area - requires navigation between zones
+        sceneDescription: 'You stand on Elm Street, a quiet urban block lined with old brick buildings. The air smells faintly of coffee and exhaust. Streetlights flicker on as dusk approaches, casting long shadows across the cracked sidewalk.\n\nTo the north, a bus stop shelter sits beneath a buzzing fluorescent sign. West, a white electrician\'s van is parked at the curb. East, a narrow alley mouth opens between buildings. South, the construction site\'s orange barriers block off half the sidewalk.\n\nStorefronts line the block:\n- A florist shop with gold-lettered windows\n- A butcher shop with faded red paint\n- Ravi\'s kiosk, its serving window open and glowing warmly',
+        introMessage: 'You stand on Elm Street.\n\nThis is where it happened. Where Lili claims you abducted her. April 15th, 6:15 PM. Right here.\n\nBut you weren\'t here. You know that. Sarah knows that. Now you need to prove it.\n\nThe street is quiet. Evening settling in. Streetlights flicker on, casting long noir shadows. You take it in - the bus stop, the shops, the electrician\'s van, the alley. Somewhere here, there\'s evidence. Evidence that will prove the abduction was staged.\n\nTime to investigate.',
+        objects: ['obj_streetlight' as GameObjectId, 'obj_sidewalk' as GameObjectId, 'obj_street_sign' as GameObjectId],
+        npcs: [],
+        items: []
     },
 
-    'loc_courtyard': {
-        locationId: 'loc_courtyard' as LocationId,
-        name: 'Hidden Courtyard',
-        sceneDescription: 'A small neglected courtyard hidden behind the side alley. Cracked concrete, overgrown weeds pushing through the cracks. Three garage doors line the back wall, each painted a different faded color: blue, red, green. The air here feels stagnant, forgotten.',
-        introMessage: 'You step through the hidden door into the courtyard. It\'s quiet here—too quiet. The three garage doors stare back at you like closed eyes. What secrets do they hide?',
-        objects: [
-            'obj_old_tires' as GameObjectId,
-            'obj_garage_blue_door' as GameObjectId,
-            'obj_garage_red_door' as GameObjectId,
-            'obj_garage_green_door' as GameObjectId
-        ],
+    // ===== ZONE 1: BUS STOP (Flavor Zone - Type 1) =====
+    'loc_bus_stop': {
+        locationId: 'loc_bus_stop' as LocationId,
+        name: 'Bus Stop',
+        sceneDescription: 'The bus stop shelter offers little protection from the wind that funnels down Elm Street. A cracked plastic bench sits beneath a flickering fluorescent sign showing routes and schedules.\n\nGraffiti covers the shelter\'s metal frame - tags, doodles, and the occasional phone number. A dented trash bin overflows with newspapers and coffee cups. An old payphone hangs on the back wall, its receiver dangling by the cord.\n\nFrom here, you can see most of the block - the shops to the south, the construction site\'s fence rattling in the wind, and the alley\'s dark mouth to the east. The wind carries the smell of garbage and exhaust.',
+        introMessage: 'You step into the bus shelter.\n\nThe bench is old wood, carved with initials and crude drawings. The kind of place people wait, impatient, watching for headlights. The trash bin overflows - the city doesn\'t clean these stops like they used to.\n\nAnd there, at the corner: a payphone booth. You haven\'t seen one in years. Who still uses payphones?\n\nMaybe someone who doesn\'t want their call traced.',
+        objects: ['obj_bus_shelter' as GameObjectId, 'obj_bus_bench' as GameObjectId, 'obj_bus_trash_bin' as GameObjectId, 'obj_bus_schedule' as GameObjectId, 'obj_payphone' as GameObjectId],
         npcs: [],
-        zones: [
-            {
-                title: 'Courtyard Ground',
-                objectIds: ['obj_old_tires' as GameObjectId]
-            },
-            {
-                title: 'Blue Garage',
-                objectIds: ['obj_garage_blue_door' as GameObjectId]
-            },
-            {
-                title: 'Red Garage',
-                objectIds: ['obj_garage_red_door' as GameObjectId]
-            },
-            {
-                title: 'Green Garage',
-                objectIds: ['obj_garage_green_door' as GameObjectId]
-            }
-        ]
+        items: []
     },
 
-    'loc_garage_blue': {
-        locationId: 'loc_garage_blue' as LocationId,
-        name: 'Blue Garage Interior',
-        sceneDescription: 'The blue garage is dark and musty. Old tools hang on the walls, covered in rust and dust. A workbench sits against the far wall.',
-        introMessage: 'You step into the blue garage. The smell of motor oil and decay fills your nostrils.',
-        objects: [],
-        npcs: [],
-        zones: []
+    // ===== ZONE 2: ELECTRICIAN TRUCK (Type 2 - Locked - Distraction Needed) =====
+    'loc_electrician_truck': {
+        locationId: 'loc_electrician_truck' as LocationId,
+        name: 'Electrician Truck',
+        sceneDescription: 'A white work van parked at the curb. "KOWALSKI ELECTRIC" painted on the side in faded blue letters. The back doors are secured with a padlock. Mike Kowalski sits in the driver\'s seat, scrolling his phone, sipping from a battered thermos. The van\'s old - dented bumper, mud on the tires. License plate: KWL-4429.',
+        introMessage: 'You approach the electrician\'s van.\n\nMike Kowalski glances up from his phone. Mid-forties, work-worn hands, coffee-stained thermos. He doesn\'t move from the driver\'s seat.\n\n"Help you?" His tone says he\'d rather you didn\'t need help.\n\nThe back doors are padlocked shut. He\'s guarding his tools. Smart. This neighborhood has a reputation.',
+        objects: ['obj_electrician_truck_exterior' as GameObjectId, 'obj_electrician_truck_doors' as GameObjectId],
+        npcs: ['npc_mike_kowalski' as NpcId],
+        items: []
     },
 
-    'loc_garage_red': {
-        locationId: 'loc_garage_red' as LocationId,
-        name: 'Red Garage Interior',
-        sceneDescription: 'The red garage is cluttered with boxes and old furniture. Everything is covered in a thick layer of dust.',
-        introMessage: 'The red garage opens before you. Shadows loom in the corners.',
-        objects: [],
+    // ===== ZONE 3A: CCTV BUILDING EXTERIOR (Outside Fence) =====
+    'loc_cctv_exterior': {
+        locationId: 'loc_cctv_exterior' as LocationId,
+        name: 'CCTV Control Building',
+        sceneDescription: 'You stand outside a small concrete building surrounded by a chain-link fence. Security cameras watch the perimeter like silent sentinels. Through the fence, you can see a heavy metal door with a rusted keypad mounted beside it.\n\nInside the fence, through dusty windows, server racks blink with LEDs. The building hums with the sound of cooling fans.\n\nThe fence gate is locked. You\'ll need to get through it first.',
+        introMessage: 'You approach the CCTV control building.\n\nThis is where the city\'s traffic cameras are monitored. Where footage is stored. Where the truth might be hiding.\n\nA chain-link fence surrounds the building. The gate is locked. You need to get past this fence before you can reach the door.',
+        objects: ['obj_cctv_fence' as GameObjectId],
         npcs: [],
-        zones: []
+        items: []
     },
 
-    'loc_garage_green': {
-        locationId: 'loc_garage_green' as LocationId,
-        name: 'Green Garage Interior',
-        sceneDescription: 'The green garage is almost empty. Just bare concrete walls and a drain in the center of the floor.',
-        introMessage: 'You push open the green garage door. The space inside is eerily empty.',
-        objects: [],
+    // ===== ZONE 3B: CCTV BUILDING INTERIOR (Inside Building) =====
+    'loc_cctv_interior': {
+        locationId: 'loc_cctv_interior' as LocationId,
+        name: 'CCTV Control Building (Inside)',
+        sceneDescription: 'Inside the CCTV control building, rows of server racks line the walls, blinking with status LEDs. Cooling fans hum constantly. The air smells of warm electronics and dust.\n\nMonitor stations sit dark - most equipment looks abandoned. But the servers are still running. Still recording.\n\nA filing cabinet stands against the far wall, metal drawers labeled by year.',
+        introMessage: 'You step inside the CCTV building.\n\nThe hum of servers fills the space. Rows of black equipment, blinking lights in the darkness. The city\'s eyes and ears, still watching even though no one\'s monitoring.\n\nThis is where the footage is stored. Somewhere in these racks is the truth about that gray van.',
+        objects: ['obj_cctv_monitor_station' as GameObjectId, 'obj_cctv_filing_cabinet' as GameObjectId],
         npcs: [],
-        zones: []
+        items: []
     },
 
-    // ============================================
-    // DARK ALLEY LOCATIONS
-    // ============================================
-
-    'loc_dark_alley': {
-        locationId: 'loc_dark_alley' as LocationId,
-        name: 'Dark Alley',
-        sceneDescription: 'A narrow alley behind the main street. The smell of garbage and damp concrete fills your nostrils. Rain-slicked walls close in on both sides. The dim light barely illuminates scattered objects and graffiti.',
-        coord: { x: 2, y: 1, z: 0 },
-        spatialMode: 'compact',
-        objects: ['obj_alley_dumpster', 'obj_graffiti', 'obj_alley_crates', 'obj_tire_pile', 'obj_rusty_locker'] as GameObjectId[],
-        npcs: [],
-        entryPortals: ['portal_street_to_alley' as PortalId],
-        exitPortals: ['portal_alley_to_street' as PortalId, 'portal_alley_to_hidden_room' as PortalId],
-        zones: [
-            {
-                title: 'Against the far wall',
-                objectIds: ['obj_alley_crates', 'obj_alley_metal_door']
-            },
-            {
-                title: 'Near the dumpster',
-                objectIds: ['obj_alley_dumpster']
-            },
-            {
-                title: 'On the brick wall',
-                objectIds: ['obj_graffiti']
-            },
-            {
-                title: 'In the corner',
-                objectIds: ['obj_tire_pile', 'obj_rusty_locker']
-            }
-        ],
-        transitionTemplates: [
-            'You navigate through puddles and debris toward the {entity}.',
-            'The stench grows stronger as you approach the {entity}.',
-            'Your footsteps echo off wet brick as you move to the {entity}.',
-            'You pick your way through scattered trash toward the {entity}.',
-            'Rain drips from fire escapes above as you head for the {entity}.'
-        ]
+    // ===== ZONE 4A: CONSTRUCTION SITE EXTERIOR (Outside Gate) =====
+    'loc_construction_exterior': {
+        locationId: 'loc_construction_exterior' as LocationId,
+        name: 'Construction Site',
+        sceneDescription: 'A three-story building wrapped in scaffolding and caution tape rises before you. A chain-link fence surrounds the perimeter, orange safety barriers blocking the sidewalk. Through the fence, you can see idle equipment - generators, concrete mixers, tool carts.\n\nTony Greco, the foreman, stands at the locked gate. Arms crossed, clipboard in hand, hard hat with a union sticker. He eyes you skeptically.\n\nThe gate is locked. Tony controls access.',
+        introMessage: 'You approach the construction site.\n\nTony Greco blocks the gate. Forties, weathered face, no-nonsense expression. He looks at you - no hard hat, no safety vest.\n\n"Can\'t let you in without proper gear. Hard hat and vest. No exceptions. Insurance."\n\nHis tone is flat. He\'s said this a thousand times. Rules are rules.',
+        objects: ['obj_construction_gate' as GameObjectId],
+        npcs: ['npc_tony_greco' as NpcId],
+        items: []
     },
 
-    'loc_hidden_room': {
-        locationId: 'loc_hidden_room' as LocationId,
-        name: 'Hidden Room',
-        sceneDescription: 'A cramped, windowless space hidden behind the alley wall. Bare concrete, a single dim bulb overhead. This room was meant to stay secret. The air is stale and cold.',
-        coord: { x: 3, y: 1, z: 0 },
-        spatialMode: 'compact',
-        objects: ['obj_hidden_table', 'obj_hidden_shelf'] as GameObjectId[],
+    // ===== ZONE 4B: CONSTRUCTION SITE INTERIOR (Inside Site) =====
+    'loc_construction_interior': {
+        locationId: 'loc_construction_interior' as LocationId,
+        name: 'Construction Site (Inside)',
+        sceneDescription: 'Inside the construction site, equipment sits idle. The air smells of concrete dust and machine oil. Orange barriers and caution tape mark hazard zones. Scaffolding towers overhead, casting geometric shadows.\n\nA portable office trailer sits in the corner, door ajar. Nearby, a metal tool shed with a combination lock.\n\nThe building itself rises three stories, wrapped in safety netting and steel beams. Work stopped weeks ago.',
+        introMessage: 'You step into the construction site.\n\nThe place is quiet. No workers, no machinery running. Just the occasional creak of scaffolding in the wind.\n\nYou see a tool shed and an office trailer. Both look accessible if you can get past their locks.',
+        objects: ['obj_construction_tool_shed' as GameObjectId, 'obj_construction_office_trailer' as GameObjectId],
         npcs: [],
-        entryPortals: ['portal_hidden_room_from_alley' as PortalId],
-        exitPortals: ['portal_hidden_room_to_alley' as PortalId],
-        zones: [
-            {
-                title: 'Against the back wall',
-                objectIds: ['obj_hidden_shelf']
-            },
-            {
-                title: 'In the center',
-                objectIds: ['obj_hidden_table']
-            }
-        ],
-        transitionTemplates: [
-            'You move through the cramped space to the {entity}.',
-            'The bare bulb flickers as you approach the {entity}.',
-            'Your shoes scrape on concrete as you reach the {entity}.'
-        ]
+        items: []
     },
 
-    'loc_garage': {
-        locationId: 'loc_garage' as LocationId,
-        name: 'Garage',
-        sceneDescription: 'A cluttered garage space. Tools hang on pegboards, oil stains mark the floor. The air smells of gasoline and old newspapers. This is clearly a workspace that\'s seen better days.',
-        coord: { x: 1, y: 2, z: 0 },
-        spatialMode: 'compact',
-        objects: ['obj_workbench', 'obj_tool_cabinet'] as GameObjectId[],
+    // ===== ZONE 5A: FLORIST SHOP EXTERIOR (Type 1 - Street Level) =====
+    'loc_florist_exterior': {
+        locationId: 'loc_florist_exterior' as LocationId,
+        name: 'Florist Shop',
+        sceneDescription: 'You stand before a small florist shop. The storefront window displays colorful flower arrangements - roses, lilies, bright bunches arranged in ceramic vases. Gold lettering on the glass reads "Chen\'s Flowers - Est. 2003".\n\nA glass door with small wind chimes hanging above stands closed but unlocked. Through the window, you can see someone moving inside among the flowers.\n\nThe faint scent of roses drifts through the doorway.',
+        introMessage: 'You approach the florist shop.\n\nThe window display is cheerful - bright flowers, carefully arranged. The kind of shop that seems out of place in this rough neighborhood. But it\'s survived. Someone\'s made it work.\n\nThe door is closed. You\'ll need to open it to enter.',
+        objects: ['obj_florist_door' as GameObjectId],
         npcs: [],
-        entryPortals: ['portal_street_to_garage' as PortalId],
-        exitPortals: ['portal_garage_to_street' as PortalId],
-        zones: [
-            {
-                title: 'At the workbench',
-                objectIds: ['obj_workbench']
-            },
-            {
-                title: 'Against the wall',
-                objectIds: ['obj_tool_cabinet']
-            }
-        ],
-        transitionTemplates: [
-            'You walk across oil-stained concrete to the {entity}.',
-            'Tools rattle slightly as you move toward the {entity}.',
-            'The smell of gasoline intensifies near the {entity}.'
-        ]
+        items: []
+    },
+
+    // ===== ZONE 5B: FLORIST SHOP INTERIOR (Behind Door) =====
+    'loc_florist_interior': {
+        locationId: 'loc_florist_interior' as LocationId,
+        name: 'Florist Shop (Inside)',
+        sceneDescription: 'Inside the florist shop, the air is thick with the perfume of roses, lilies, and fresh greenery. Sunlight filters through the front window, illuminating dust motes floating above colorful arrangements.\n\nMargaret Chen stands behind a wooden counter, trimming stems with practiced precision. Flower displays line the walls - reds, yellows, purples bursting from ceramic vases. A small radio plays soft classical music from somewhere in the back.\n\nThe shop is cool and humid, like a greenhouse. Water drips quietly from freshly-cut stems.',
+        introMessage: 'You step inside the florist shop.\n\nThe smell of flowers is almost overwhelming - roses, lilies, that earthy green scent of cut stems. It\'s a small shop, cheerful, intimate.\n\nMargaret Chen looks up from her work. Friendly face, tired eyes. She\'s been running this shop for years, you can tell. The kind of person who notices things.\n\n"Can I help you find something?"\n\nMaybe she can help you find more than flowers.',
+        objects: ['obj_florist_counter' as GameObjectId, 'obj_florist_display' as GameObjectId],
+        npcs: ['npc_margaret_chen' as NpcId],
+        items: []
+    },
+
+    // ===== ZONE 6A: BUTCHER SHOP EXTERIOR (Type 1 - Street Level) =====
+    'loc_butcher_exterior': {
+        locationId: 'loc_butcher_exterior' as LocationId,
+        name: 'Butcher Shop',
+        sceneDescription: 'You stand before a traditional butcher shop. The window displays hanging sausages and a hand-painted sign reading "Richter\'s Meats - Family Owned Since 1952". The glass is slightly fogged from the cold interior.\n\nA heavy wooden door with faded red paint stands closed. A metal sign bolted to the frame confirms the name. Through the small window in the door, you can see white tile walls and hanging meat hooks.\n\nThe faint smell of smoked meat drifts from the shop.',
+        introMessage: 'You approach the butcher shop.\n\nOld-school. Family business. The kind of place that\'s been here longer than you\'ve been alive. The paint is faded, the sign is weathered, but it\'s still open. Still serving the neighborhood.\n\nThe door is closed. You\'ll need to open it to enter.',
+        objects: ['obj_butcher_door' as GameObjectId],
+        npcs: [],
+        items: []
+    },
+
+    // ===== ZONE 6B: BUTCHER SHOP INTERIOR (Behind Door) =====
+    'loc_butcher_interior': {
+        locationId: 'loc_butcher_interior' as LocationId,
+        name: 'Butcher Shop (Inside)',
+        sceneDescription: 'The butcher shop is cold - your breath mists in the chilled air. Meat hooks dangle from ceiling tracks, some empty, some holding cuts wrapped in white paper. The walls are white tile, scrubbed clean but showing age in the grout lines.\n\nKlaus Richter works behind the counter, a cleaver in hand. The metallic scent of fresh meat mixes with the faint tang of bleach. A vintage cash register sits on the counter, its brass keys gleaming under fluorescent lights.\n\nThe hum of refrigeration is constant. Somewhere in the back, a compressor kicks on with a mechanical groan.',
+        introMessage: 'You step inside the butcher shop.\n\nThe cold air hits you immediately. The smell - smoked meat, blood, sawdust. Klaus Richter glances up from sharpening his cleaver. Sixties, thick accent, hands like slabs of beef.\n\n"Guten Tag! You need meat?" He grins. The kind of grin that doesn\'t realize how dark it looks when you\'re holding a cleaver.\n\nBehind him, a tool rack on the wall - cleavers, saws, and something that catches your eye: bolt cutters.\n\nFriendly guy. Probably give you the bolt cutters if you asked.',
+        objects: ['obj_butcher_counter' as GameObjectId, 'obj_butcher_meat_hooks' as GameObjectId, 'obj_butcher_tool_rack' as GameObjectId],
+        npcs: ['npc_klaus_richter' as NpcId],
+        items: []
+    },
+
+    // ===== ZONE 7: KIOSK (Type 1 - Unlocked) =====
+    'loc_kiosk': {
+        locationId: 'loc_kiosk' as LocationId,
+        name: 'Convenience Kiosk',
+        sceneDescription: 'A small convenience kiosk painted bright blue. Magazines and snacks fill the window display. Lottery tickets, tabloid newspapers, energy drinks. Behind the counter, Ravi arranges scratch-off tickets in neat rows. The smell of cheap coffee and sugar.',
+        introMessage: 'You step up to the kiosk.\n\nBright blue paint, cheerful in a way that feels forced. Ravi stands behind the counter, arranging lottery tickets. Young guy, friendly face, perpetual smile.\n\n"Hey, friend! Coffee? Snacks? Help yourself!"\n\nThe kind of place that sells everything and nothing. Lottery dreams and sugar highs. But Ravi\'s the kind of guy who sees the neighborhood. Who notices things.\n\nMaybe he noticed a gray van.',
+        objects: ['obj_kiosk_counter' as GameObjectId, 'obj_kiosk_receipt_spike' as GameObjectId, 'obj_kiosk_coffee_machine' as GameObjectId],
+        npcs: ['npc_ravi_patel' as NpcId],
+        items: []
+    },
+
+    // ===== ZONE 8: ALLEY (Type 1 - Unlocked, but Secret Door is Type 3 Hidden) =====
+    'loc_alley': {
+        locationId: 'loc_alley' as LocationId,
+        name: 'Side Alley',
+        sceneDescription: 'The alley is narrow and dim, even in daylight. Brick walls rise on both sides, stained with water damage and old graffiti. The air smells of wet concrete and something sour - maybe garbage, maybe something worse.\n\nA large dumpster sits against the south wall, its lid half-open. An electrical panel is mounted on the north wall, its metal cover rusted and tagged with spray paint. The graffiti is fresh - red eyes, blue stars, yellow lightning bolts arranged in a pattern.\n\nEddie sits on a folded cardboard mat near the dumpster, wrapped in an army surplus jacket. He doesn\'t look up as you enter. Water drips somewhere in the darkness.',
+        introMessage: 'You step into the alley.\n\nBrick walls on both sides, tagged with graffiti - names, symbols, threats. The dumpster overflows. The smell of rot and old food. A homeless man sits on cardboard, watching you. Not hostile. Just watching.\n\nThe alley ends at a brick wall. Dead end.\n\nBut wait. The ground near the wall - fresh scrape marks. Like something heavy has been moved recently.\n\nAnd there, mounted on the brick: an old electrical panel. Rusted shut.',
+        objects: ['obj_alley_dumpster' as GameObjectId, 'obj_alley_electrical_panel' as GameObjectId, 'obj_alley_graffiti' as GameObjectId],
+        npcs: ['npc_eddie' as NpcId],
+        items: []
+    },
+
+    // ===== ZONE 9: HIDDEN GARAGES (Type 3 - Hidden - Revealed via Alley Secret Door) =====
+    'loc_hidden_garages': {
+        locationId: 'loc_hidden_garages' as LocationId,
+        name: 'Hidden Garages',
+        sceneDescription: 'A hidden courtyard behind the brick wall. Three garage doors stand in a row, numbered 1, 2, and 3. Oil stains mark the concrete. Weeds push through cracks. The air smells of motor oil and rust. This place was overlooked during the police search - too well hidden.',
+        introMessage: 'The brick wall slides open.\n\nYou step through into a hidden courtyard. Three garage doors, numbered 1, 2, 3. Old. Forgotten. The kind of place the city forgot about years ago.\n\nOil stains on the concrete. Weeds pushing through cracks. The smell of rust and motor oil.\n\nThe police never found this place. Too well hidden. But you did.\n\nSomewhere in these garages, there might be answers.',
+        objects: ['obj_garage_1' as GameObjectId, 'obj_garage_2' as GameObjectId, 'obj_garage_3' as GameObjectId, 'obj_garage_3_van' as GameObjectId, 'obj_garage_3_glove_box' as GameObjectId],
+        npcs: [],
+        items: []
     }
 };
 
-// =====================================
-// PORTALS, STRUCTURES, WORLD
-// =====================================
-
+// ===== PORTALS =====
 const portals: Record<PortalId, Portal> = {
-    'portal_street_to_courtyard': {
-        id: 'portal_street_to_courtyard' as PortalId,
-        fromLocationId: 'loc_street' as LocationId,
-        toLocationId: 'loc_courtyard' as LocationId,
-        doorObjectId: 'obj_courtyard_door' as GameObjectId,
-        isRevealed: false,
-        isAccessible: false,
-        description: 'A hidden door behind the dumpster in the side alley.',
-        transitionMessage: 'You pass through the hidden door into the forgotten courtyard.'
+    // Elm Street → Bus Stop (north)
+    'portal_elm_to_bus': {
+        id: 'portal_elm_to_bus' as PortalId,
+        fromLocationId: 'loc_elm_street' as LocationId,
+        toLocationId: 'loc_bus_stop' as LocationId,
+        direction: 'north',
+        alternateNames: ['bus stop', 'shelter', 'north', 'bus'],
+        description: 'The weathered bus stop shelter stands to the north, its rusted frame casting long shadows.',
+        requirements: { conditions: [] }
     },
-    'portal_courtyard_to_street': {
-        id: 'portal_courtyard_to_street' as PortalId,
-        fromLocationId: 'loc_courtyard' as LocationId,
-        toLocationId: 'loc_street' as LocationId,
-        doorObjectId: 'obj_courtyard_door' as GameObjectId,
-        isRevealed: true,
-        isAccessible: true,
-        description: 'The door back to the side alley.',
-        transitionMessage: 'You return through the door to the side alley.'
-    },
-    'portal_courtyard_to_blue_garage': {
-        id: 'portal_courtyard_to_blue_garage' as PortalId,
-        fromLocationId: 'loc_courtyard' as LocationId,
-        toLocationId: 'loc_garage_blue' as LocationId,
-        doorObjectId: 'obj_garage_blue_door' as GameObjectId,
-        isRevealed: true,
-        isAccessible: false,
-        description: 'The faded blue garage door.',
-        transitionMessage: 'You enter the blue garage.'
-    },
-    'portal_blue_garage_to_courtyard': {
-        id: 'portal_blue_garage_to_courtyard' as PortalId,
-        fromLocationId: 'loc_garage_blue' as LocationId,
-        toLocationId: 'loc_courtyard' as LocationId,
-        doorObjectId: 'obj_garage_blue_door' as GameObjectId,
-        isRevealed: true,
-        isAccessible: true,
-        description: 'The blue garage door back to the courtyard.',
-        transitionMessage: 'You step back into the courtyard.'
-    },
-    'portal_courtyard_to_red_garage': {
-        id: 'portal_courtyard_to_red_garage' as PortalId,
-        fromLocationId: 'loc_courtyard' as LocationId,
-        toLocationId: 'loc_garage_red' as LocationId,
-        doorObjectId: 'obj_garage_red_door' as GameObjectId,
-        isRevealed: true,
-        isAccessible: false,
-        description: 'The rusted red garage door.',
-        transitionMessage: 'You enter the red garage.'
-    },
-    'portal_red_garage_to_courtyard': {
-        id: 'portal_red_garage_to_courtyard' as PortalId,
-        fromLocationId: 'loc_garage_red' as LocationId,
-        toLocationId: 'loc_courtyard' as LocationId,
-        doorObjectId: 'obj_garage_red_door' as GameObjectId,
-        isRevealed: true,
-        isAccessible: true,
-        description: 'The red garage door back to the courtyard.',
-        transitionMessage: 'You step back into the courtyard.'
-    },
-    'portal_courtyard_to_green_garage': {
-        id: 'portal_courtyard_to_green_garage' as PortalId,
-        fromLocationId: 'loc_courtyard' as LocationId,
-        toLocationId: 'loc_garage_green' as LocationId,
-        doorObjectId: 'obj_garage_green_door' as GameObjectId,
-        isRevealed: true,
-        isAccessible: false,
-        description: 'The green garage door.',
-        transitionMessage: 'You enter the green garage.'
-    },
-    'portal_green_garage_to_courtyard': {
-        id: 'portal_green_garage_to_courtyard' as PortalId,
-        fromLocationId: 'loc_garage_green' as LocationId,
-        toLocationId: 'loc_courtyard' as LocationId,
-        doorObjectId: 'obj_garage_green_door' as GameObjectId,
-        isRevealed: true,
-        isAccessible: true,
-        description: 'The green garage door back to the courtyard.',
-        transitionMessage: 'You step back into the courtyard.'
+    // Bus Stop → Elm Street (south) - Hidden from look around (already on Elm Street)
+    'portal_bus_to_elm': {
+        id: 'portal_bus_to_elm' as PortalId,
+        fromLocationId: 'loc_bus_stop' as LocationId,
+        toLocationId: 'loc_elm_street' as LocationId,
+        direction: 'south',
+        alternateNames: ['street', 'south', 'back', 'elm street', 'elm'],
+        description: 'Elm Street stretches south, back toward the heart of the investigation.',
+        requirements: { conditions: [] },
+        hideInLookAround: true  // Don't show in look around - player is already on Elm Street
     },
 
-    // ============================================
-    // DARK ALLEY PORTALS
-    // ============================================
-
-    'portal_street_to_alley': {
-        id: 'portal_street_to_alley' as PortalId,
-        fromLocationId: 'loc_street' as LocationId,
-        toLocationId: 'loc_dark_alley' as LocationId,
-        isRevealed: true,
-        isAccessible: true,
-        description: 'A narrow passage leading into a dark alley.',
-        transitionMessage: 'You enter the dark alley.'
+    // Bus Stop → Side Alley (outdoor hub - can see street-level locations)
+    'portal_bus_to_alley': {
+        id: 'portal_bus_to_alley' as PortalId,
+        fromLocationId: 'loc_bus_stop' as LocationId,
+        toLocationId: 'loc_alley' as LocationId,
+        direction: 'east',
+        alternateNames: ['alley', 'alleyway', 'east', 'side alley', 'narrow alley'],
+        description: 'A narrow alley opens to the east, between the old buildings.',
+        requirements: { conditions: [] }
+    },
+    // Bus Stop → Florist Exterior
+    'portal_bus_to_florist': {
+        id: 'portal_bus_to_florist' as PortalId,
+        fromLocationId: 'loc_bus_stop' as LocationId,
+        toLocationId: 'loc_florist_exterior' as LocationId,
+        direction: 'approach',
+        alternateNames: ['florist', 'flower shop', 'florist shop', 'petal', 'stem'],
+        description: 'Approach the florist shop with its gold-lettered windows.',
+        requirements: { conditions: [] }
+    },
+    // Bus Stop → Butcher Exterior
+    'portal_bus_to_butcher': {
+        id: 'portal_bus_to_butcher' as PortalId,
+        fromLocationId: 'loc_bus_stop' as LocationId,
+        toLocationId: 'loc_butcher_exterior' as LocationId,
+        direction: 'approach',
+        alternateNames: ['butcher', 'butcher shop', 'meat shop', 'richter'],
+        description: 'Approach the butcher shop with its faded red door.',
+        requirements: { conditions: [] }
+    },
+    // Bus Stop → Kiosk
+    'portal_bus_to_kiosk': {
+        id: 'portal_bus_to_kiosk' as PortalId,
+        fromLocationId: 'loc_bus_stop' as LocationId,
+        toLocationId: 'loc_kiosk' as LocationId,
+        direction: 'enter',
+        alternateNames: ['kiosk', 'convenience', 'blue kiosk', 'shop'],
+        description: 'The bright blue kiosk stands nearby, magazines and snacks in the window.',
+        requirements: { conditions: [] }
+    },
+    // Bus Stop → CCTV Exterior
+    'portal_bus_to_cctv': {
+        id: 'portal_bus_to_cctv' as PortalId,
+        fromLocationId: 'loc_bus_stop' as LocationId,
+        toLocationId: 'loc_cctv_exterior' as LocationId,
+        direction: 'approach',
+        alternateNames: ['cctv', 'cctv building', 'control building', 'security building'],
+        description: 'Approach the CCTV control building surrounded by its chain-link fence.',
+        requirements: { conditions: [] }
+    },
+    // Bus Stop → Construction Exterior
+    'portal_bus_to_construction': {
+        id: 'portal_bus_to_construction' as PortalId,
+        fromLocationId: 'loc_bus_stop' as LocationId,
+        toLocationId: 'loc_construction_exterior' as LocationId,
+        direction: 'approach',
+        alternateNames: ['construction site', 'construction', 'site', 'scaffolding'],
+        description: 'Approach the construction site with its orange barriers and scaffolding.',
+        requirements: { conditions: [] }
+    },
+    // Bus Stop → Electrician Truck
+    'portal_bus_to_truck': {
+        id: 'portal_bus_to_truck' as PortalId,
+        fromLocationId: 'loc_bus_stop' as LocationId,
+        toLocationId: 'loc_electrician_truck' as LocationId,
+        direction: 'west',
+        alternateNames: ['truck', 'van', 'electrician truck', 'vehicle', 'white van'],
+        description: 'The white electrician\'s van is parked along the street.',
+        requirements: { conditions: [] }
     },
 
-    'portal_alley_to_street': {
-        id: 'portal_alley_to_street' as PortalId,
-        fromLocationId: 'loc_dark_alley' as LocationId,
-        toLocationId: 'loc_street' as LocationId,
-        isRevealed: true,
-        isAccessible: true,
-        description: 'The exit back to the main street.',
-        transitionMessage: 'You step back onto the street.'
+    // Elm Street → Electrician Truck (west)
+    'portal_elm_to_truck': {
+        id: 'portal_elm_to_truck' as PortalId,
+        fromLocationId: 'loc_elm_street' as LocationId,
+        toLocationId: 'loc_electrician_truck' as LocationId,
+        direction: 'west',
+        alternateNames: ['truck', 'van', 'west', 'electrician truck', 'vehicle'],
+        description: 'A white electrician\'s van sits parked to the west, its paint faded and worn.',
+        requirements: { conditions: [] }
+    },
+    // Electrician Truck → Elm Street (east)
+    'portal_truck_to_elm': {
+        id: 'portal_truck_to_elm' as PortalId,
+        fromLocationId: 'loc_electrician_truck' as LocationId,
+        toLocationId: 'loc_elm_street' as LocationId,
+        direction: 'east',
+        alternateNames: ['street', 'east', 'back', 'elm street', 'elm'],
+        description: 'Elm Street lies to the east, the shops and foot traffic continuing their daily rhythm.',
+        requirements: { conditions: [] }
     },
 
-    'portal_alley_to_hidden_room': {
-        id: 'portal_alley_to_hidden_room' as PortalId,
-        fromLocationId: 'loc_dark_alley' as LocationId,
-        toLocationId: 'loc_hidden_room' as LocationId,
-        doorObjectId: 'obj_alley_metal_door' as GameObjectId,
-        isRevealed: false,
-        isAccessible: false,
-        description: 'The metal door with the keypad. Opens to a hidden room.',
-        transitionMessage: 'You step through the hidden door.'
+
+    // Elm Street → Alley (east)
+    'portal_elm_to_alley': {
+        id: 'portal_elm_to_alley' as PortalId,
+        fromLocationId: 'loc_elm_street' as LocationId,
+        toLocationId: 'loc_alley' as LocationId,
+        direction: 'east',
+        alternateNames: ['alley', 'alleyway', 'east', 'side alley', 'narrow alley'],
+        description: 'A narrow alley cuts between buildings to the east, dark and uninviting.',
+        requirements: { conditions: [] }
+    },
+    // Alley → Elm Street (west)
+    'portal_alley_to_elm': {
+        id: 'portal_alley_to_elm' as PortalId,
+        fromLocationId: 'loc_alley' as LocationId,
+        toLocationId: 'loc_elm_street' as LocationId,
+        direction: 'west',
+        alternateNames: ['street', 'west', 'back', 'elm street', 'elm', 'out'],
+        description: 'The mouth of the alley opens west onto Elm Street, back into the light.',
+        requirements: { conditions: [] }
     },
 
-    'portal_hidden_room_from_alley': {
-        id: 'portal_hidden_room_from_alley' as PortalId,
-        fromLocationId: 'loc_hidden_room' as LocationId,
-        toLocationId: 'loc_dark_alley' as LocationId,
-        doorObjectId: 'obj_alley_metal_door' as GameObjectId,
-        isRevealed: true,
-        isAccessible: true,
-        description: 'The door back to the alley.',
-        transitionMessage: 'You step back into the alley.'
+    // Elm Street → Florist Exterior (always visible)
+    'portal_elm_to_florist_exterior': {
+        id: 'portal_elm_to_florist_exterior' as PortalId,
+        fromLocationId: 'loc_elm_street' as LocationId,
+        toLocationId: 'loc_florist_exterior' as LocationId,
+        direction: 'approach',
+        alternateNames: ['florist', 'flower shop', 'florist shop', 'enter florist', 'go to florist'],
+        description: 'Approach the florist shop with its gold-lettered windows.',
+        requirements: { conditions: [] }
+    },
+    // Florist Exterior → Elm Street (return)
+    'portal_florist_exterior_to_elm': {
+        id: 'portal_florist_exterior_to_elm' as PortalId,
+        fromLocationId: 'loc_florist_exterior' as LocationId,
+        toLocationId: 'loc_elm_street' as LocationId,
+        direction: 'back',
+        alternateNames: ['back', 'street', 'elm street', 'leave', 'return'],
+        description: 'Step back onto Elm Street.',
+        requirements: { conditions: [] }
     },
 
-    'portal_hidden_room_to_alley': {
-        id: 'portal_hidden_room_to_alley' as PortalId,
-        fromLocationId: 'loc_hidden_room' as LocationId,
-        toLocationId: 'loc_dark_alley' as LocationId,
-        doorObjectId: 'obj_alley_metal_door' as GameObjectId,
-        isRevealed: true,
-        isAccessible: true,
-        description: 'The door leading back to the alley.',
-        transitionMessage: 'You exit the hidden room.'
+    // Florist Exterior → Interior (hidden until door opens)
+    'portal_florist_exterior_to_interior': {
+        id: 'portal_florist_exterior_to_interior' as PortalId,
+        fromLocationId: 'loc_florist_exterior' as LocationId,
+        toLocationId: 'loc_florist_interior' as LocationId,
+        direction: 'enter',
+        alternateNames: ['inside', 'in', 'enter', 'enter shop', 'go inside', 'go in'],
+        description: 'Through the open door into the florist shop interior.',
+        requirements: { conditions: [] },
+        isRevealed: false  // Revealed when obj_florist_door is opened
+    },
+    // Florist Interior → Exterior (exit)
+    'portal_florist_interior_to_exterior': {
+        id: 'portal_florist_interior_to_exterior' as PortalId,
+        fromLocationId: 'loc_florist_interior' as LocationId,
+        toLocationId: 'loc_florist_exterior' as LocationId,
+        direction: 'exit',
+        alternateNames: ['exit', 'leave', 'out', 'outside', 'door'],
+        description: 'Back through the door to the shop entrance.',
+        requirements: { conditions: [] }
     },
 
-    // ============================================
-    // GARAGE PORTALS
-    // ============================================
-
-    'portal_street_to_garage': {
-        id: 'portal_street_to_garage' as PortalId,
-        fromLocationId: 'loc_street' as LocationId,
-        toLocationId: 'loc_garage' as LocationId,
-        isRevealed: true,
-        isAccessible: true,
-        description: 'A roll-up garage door, standing open.',
-        transitionMessage: 'You enter the garage.'
+    // Elm Street → Butcher Exterior (always visible)
+    'portal_elm_to_butcher_exterior': {
+        id: 'portal_elm_to_butcher_exterior' as PortalId,
+        fromLocationId: 'loc_elm_street' as LocationId,
+        toLocationId: 'loc_butcher_exterior' as LocationId,
+        direction: 'approach',
+        alternateNames: ['butcher', 'butcher shop', 'meat shop', 'enter butcher', 'go to butcher'],
+        description: 'Approach the butcher shop with its faded red door.',
+        requirements: { conditions: [] }
+    },
+    // Butcher Exterior → Elm Street (return)
+    'portal_butcher_exterior_to_elm': {
+        id: 'portal_butcher_exterior_to_elm' as PortalId,
+        fromLocationId: 'loc_butcher_exterior' as LocationId,
+        toLocationId: 'loc_elm_street' as LocationId,
+        direction: 'back',
+        alternateNames: ['back', 'street', 'elm street', 'leave', 'return'],
+        description: 'Step back onto Elm Street.',
+        requirements: { conditions: [] }
     },
 
-    'portal_garage_to_street': {
-        id: 'portal_garage_to_street' as PortalId,
-        fromLocationId: 'loc_garage' as LocationId,
-        toLocationId: 'loc_street' as LocationId,
-        isRevealed: true,
-        isAccessible: true,
-        description: 'The garage door leading back to the street.',
-        transitionMessage: 'You step back onto the street.'
+    // Butcher Exterior → Interior (hidden until door opens)
+    'portal_butcher_exterior_to_interior': {
+        id: 'portal_butcher_exterior_to_interior' as PortalId,
+        fromLocationId: 'loc_butcher_exterior' as LocationId,
+        toLocationId: 'loc_butcher_interior' as LocationId,
+        direction: 'enter',
+        alternateNames: ['inside', 'in', 'enter', 'enter shop', 'go inside', 'go in'],
+        description: 'Through the open door into the butcher shop interior.',
+        requirements: { conditions: [] },
+        isRevealed: false  // Revealed when obj_butcher_door is opened
+    },
+    // Butcher Interior → Exterior (exit)
+    'portal_butcher_interior_to_exterior': {
+        id: 'portal_butcher_interior_to_exterior' as PortalId,
+        fromLocationId: 'loc_butcher_interior' as LocationId,
+        toLocationId: 'loc_butcher_exterior' as LocationId,
+        direction: 'exit',
+        alternateNames: ['exit', 'leave', 'out', 'outside', 'door'],
+        description: 'Back through the door to the shop entrance.',
+        requirements: { conditions: [] }
+    },
+
+    // Elm Street → CCTV Exterior (always visible)
+    'portal_elm_to_cctv_exterior': {
+        id: 'portal_elm_to_cctv_exterior' as PortalId,
+        fromLocationId: 'loc_elm_street' as LocationId,
+        toLocationId: 'loc_cctv_exterior' as LocationId,
+        direction: 'approach',
+        alternateNames: ['cctv', 'cctv building', 'control building', 'security building'],
+        description: 'Approach the CCTV control building surrounded by its chain-link fence.',
+        requirements: { conditions: [] }
+    },
+    // CCTV Exterior → Elm Street (return)
+    'portal_cctv_exterior_to_elm': {
+        id: 'portal_cctv_exterior_to_elm' as PortalId,
+        fromLocationId: 'loc_cctv_exterior' as LocationId,
+        toLocationId: 'loc_elm_street' as LocationId,
+        direction: 'back',
+        alternateNames: ['back', 'street', 'elm street', 'leave', 'return'],
+        description: 'Step back onto Elm Street.',
+        requirements: { conditions: [] }
+    },
+
+    // CCTV Exterior → Interior (hidden until fence/door opens)
+    'portal_cctv_exterior_to_interior': {
+        id: 'portal_cctv_exterior_to_interior' as PortalId,
+        fromLocationId: 'loc_cctv_exterior' as LocationId,
+        toLocationId: 'loc_cctv_interior' as LocationId,
+        direction: 'enter',
+        alternateNames: ['inside', 'in', 'enter', 'enter building', 'go inside', 'go in'],
+        description: 'Through the fence and door into the CCTV building interior.',
+        requirements: { conditions: [] },
+        isRevealed: false  // Revealed when fence is unlocked
+    },
+    // CCTV Interior → Exterior (exit)
+    'portal_cctv_interior_to_exterior': {
+        id: 'portal_cctv_interior_to_exterior' as PortalId,
+        fromLocationId: 'loc_cctv_interior' as LocationId,
+        toLocationId: 'loc_cctv_exterior' as LocationId,
+        direction: 'exit',
+        alternateNames: ['exit', 'leave', 'out', 'outside'],
+        description: 'Back outside through the door to the fence area.',
+        requirements: { conditions: [] }
+    },
+
+    // Elm Street → Construction Exterior (always visible)
+    'portal_elm_to_construction_exterior': {
+        id: 'portal_elm_to_construction_exterior' as PortalId,
+        fromLocationId: 'loc_elm_street' as LocationId,
+        toLocationId: 'loc_construction_exterior' as LocationId,
+        direction: 'approach',
+        alternateNames: ['construction', 'construction site', 'site', 'building site'],
+        description: 'Approach the construction site with its orange barriers and scaffolding.',
+        requirements: { conditions: [] }
+    },
+    // Construction Exterior → Elm Street (return)
+    'portal_construction_exterior_to_elm': {
+        id: 'portal_construction_exterior_to_elm' as PortalId,
+        fromLocationId: 'loc_construction_exterior' as LocationId,
+        toLocationId: 'loc_elm_street' as LocationId,
+        direction: 'back',
+        alternateNames: ['back', 'street', 'elm street', 'leave', 'return'],
+        description: 'Step back onto Elm Street.',
+        requirements: { conditions: [] }
+    },
+
+    // Construction Exterior → Interior (hidden until gate opens)
+    'portal_construction_exterior_to_interior': {
+        id: 'portal_construction_exterior_to_interior' as PortalId,
+        fromLocationId: 'loc_construction_exterior' as LocationId,
+        toLocationId: 'loc_construction_interior' as LocationId,
+        direction: 'enter',
+        alternateNames: ['inside', 'in', 'enter', 'enter site', 'go inside', 'go in'],
+        description: 'Through the gate into the construction site interior.',
+        requirements: { conditions: [] },
+        isRevealed: false  // Revealed when gate is unlocked
+    },
+    // Construction Interior → Exterior (exit)
+    'portal_construction_interior_to_exterior': {
+        id: 'portal_construction_interior_to_exterior' as PortalId,
+        fromLocationId: 'loc_construction_interior' as LocationId,
+        toLocationId: 'loc_construction_exterior' as LocationId,
+        direction: 'exit',
+        alternateNames: ['exit', 'leave', 'out', 'outside', 'gate'],
+        description: 'Back through the gate to the street entrance.',
+        requirements: { conditions: [] }
+    },
+
+    // Elm Street → Kiosk (enter)
+    'portal_elm_to_kiosk': {
+        id: 'portal_elm_to_kiosk' as PortalId,
+        fromLocationId: 'loc_elm_street' as LocationId,
+        toLocationId: 'loc_kiosk' as LocationId,
+        direction: 'enter',
+        alternateNames: ['kiosk', 'newsstand', 'news stand', 'enter kiosk', 'go to kiosk'],
+        description: 'The small kiosk stands open for business, magazines and newspapers on display.',
+        requirements: { conditions: [] }
+    },
+    // Kiosk → Elm Street (exit)
+    'portal_kiosk_to_elm': {
+        id: 'portal_kiosk_to_elm' as PortalId,
+        fromLocationId: 'loc_kiosk' as LocationId,
+        toLocationId: 'loc_elm_street' as LocationId,
+        direction: 'exit',
+        alternateNames: ['exit', 'leave', 'out', 'outside', 'street', 'elm street'],
+        description: 'The street awaits just beyond the kiosk counter.',
+        requirements: { conditions: [] }
+    },
+
+
+    // Alley → Hidden Garages (SECRET - requires flag)
+    'portal_alley_to_garages': {
+        id: 'portal_alley_to_garages' as PortalId,
+        fromLocationId: 'loc_alley' as LocationId,
+        toLocationId: 'loc_hidden_garages' as LocationId,
+        direction: 'enter',
+        alternateNames: ['secret door', 'hidden door', 'brick wall', 'garages', 'hidden garages', 'through door', 'enter door'],
+        description: 'The hidden door in the brick wall stands open, revealing darkness beyond.',
+        requirements: {
+            conditions: [
+                { type: 'FLAG', flag: 'secret_door_open' }
+            ]
+        }
+    },
+    // Hidden Garages → Alley (back)
+    'portal_garages_to_alley': {
+        id: 'portal_garages_to_alley' as PortalId,
+        fromLocationId: 'loc_hidden_garages' as LocationId,
+        toLocationId: 'loc_alley' as LocationId,
+        direction: 'back',
+        alternateNames: ['back', 'alley', 'out', 'exit', 'leave', 'door'],
+        description: 'The secret door leads back to the alley.',
+        requirements: { conditions: [] }
     }
 };
 
-const structures: Record<StructureId, Structure> = {};
-
-const world = {
-    worldId: 'world_chapter1' as WorldId,
-    name: 'Chapter 1 World',
-    cells: {},
-    navEdges: []
-};
-
-// =====================================
-// CHAPTERS
-// =====================================
-
+// ===== CHAPTERS =====
 const chapters: Record<ChapterId, Chapter> = {
     'chapter_1': {
         id: 'chapter_1' as ChapterId,
         title: 'Chapter 1: The Investigation Begins',
-        goal: 'Investigate the abduction of Lili Chen and gather evidence.',
+        goal: 'Investigate the alleged abduction of Lili Morgenstern and gather evidence proving it was staged.',
         objectives: [
-            { flag: 'received_case_files' as Flag, label: 'Review the case files' },
-            { flag: 'talked_to_witnesses' as Flag, label: 'Interview witnesses on Elm Street' },
-            { flag: 'found_first_clue' as Flag, label: 'Discover the first clue' },
+            { flag: 'found_evidence_1' as Flag, label: 'Find Evidence 1: CCTV Screenshot (gray van plate LKJ-9472)' },
+            { flag: 'found_evidence_2' as Flag, label: 'Find Evidence 2: Van Registration (owner: Jeremy Miller)' },
+            { flag: 'found_evidence_3' as Flag, label: 'Find Evidence 3: Witness Statement (Lili with obsessed man)' },
+            { flag: 'found_evidence_4' as Flag, label: 'Find Evidence 4: Hardware Receipt (abduction supplies)' }
         ],
         hints: [
-            'Start by examining the audio message and police report.',
-            'Look around the street to see all the zones.',
-            'Talk to the people on the street—they might have seen something.',
-            'Check the bus station area where Lili was last seen.'
+            'Start by using your phone to check messages from Sarah.',
+            'Look around Elm Street to see all the zones and talk to people.',
+            'Show Lili\'s photo to witnesses who might recognize her.',
+            'The license plate number from the CCTV footage might be useful as a PIN code.',
+            'You need to collect 3 of 4 evidence pieces to complete the chapter.'
         ],
-        startLocationId: 'loc_street' as LocationId,
-        introMessage: 'The case files arrive as you stand on Elm Street. An audio message from your colleague plays, briefing you on Lili Chen\'s abduction. An email attachment contains the full police report.\n\nThis is where it happened. This quiet street is where an 8-year-old girl vanished in broad daylight. Time to find out what really happened here.',
-        locations: {},
-        gameObjects: {},
-        items: {},
-        npcs: {},
+        startLocationId: 'loc_elm_street' as LocationId,
+        introMessage: 'Sarah sends you a photo of Lili Morgenstern and a brief voice message about a gray van spotted repeatedly on Elm Street before the alleged abduction.\n\nThis is where it happened. This quiet street is where Lili claims you abducted her. Time to prove the truth - that it was staged.\n\nYou stand on Elm Street. Streetlights cast long shadows. Time to investigate.',
+        locations,
+        gameObjects,
+        items,
+        npcs
     }
 };
 
-// =====================================
-// MAIN GAME CARTRIDGE
-// =====================================
-
+// ===== MAIN GAME =====
 export const game: Game = {
     id: 'chapter-1-investigation' as GameId,
     title: 'Walk in Justice - Chapter 1',
-    description: 'The investigation deepens. After uncovering the metal box and its dark secrets, you must now connect the dots between a 1940s cold case and a modern-day copycat killer. The abduction of Lili Chen is just the beginning.',
-    setting: 'Modern-day USA, 2025 - Elm Street',
+    description: 'The investigation deepens. You must prove the abduction of Lili Morgenstern was staged by gathering concrete evidence on Elm Street.',
+    setting: 'Modern-day USA, 2025 - Elm Street, Bloodhaven',
     gameType: 'Limited Open World',
     narratorName: 'Narrator',
-    promptContext: `You are the System, responsible for interpreting player commands and translating them into valid game actions. Your role is purely technical—you analyze input and route it to the correct handler.
+    promptContext: `You are the System Narrator for "Walk in Justice", a noir detective game.
 
-**// 1. Your Primary Task: Command Interpretation**
-Your single most important task is to translate the player's natural language input into a single, valid game command from the 'Available Game Commands' list. Use the exact entity names provided in the 'Visible Names' lists.
+**Player Character**: Burt Macklin, former FBI agent, falsely accused of abducting Lili Morgenstern
+**Setting**: Elm Street, Bloodhaven - investigating the staged abduction
+**Tone**: Hard-boiled noir, cynical, atmospheric, Raymond Chandler style
+**Mission**: Find evidence proving the abduction was staged (need 3 of 4 evidence pieces)
 
-**// 2. Your Response Protocol**
-- **NO System Messages for Valid Commands:** For ALL valid, actionable commands (take, use, examine, open, read, move, break, etc.), your \`agentResponse\` MUST ALWAYS be null. The Narrator handles ALL descriptive output.
+**Narrative Style**:
+- Short, punchy sentences. Noir atmosphere.
+- Vivid sensory details (sights, sounds, smells)
+- Internal monologue showing Burt's detective instincts
+- Cynical observations about human nature
+- No hand-holding - player must think and explore
 
-**// 3. Handling Invalid Input**
-- **Illogical/Destructive Actions:** ONLY mark as invalid for truly nonsensical actions. Use \`commandToExecute: "invalid"\`.
-- **CRITICAL - You MUST NOT Block Valid Commands:** Your ONLY job is translating natural language → game commands.
+**Evidence Locations** (don't reveal directly):
+1. CCTV Screenshot - CCTV Building (easy)
+2. Van Registration - Hidden Garages (hard, requires Evidence 1 PIN)
+3. Witness Statement - Florist Shop (medium, show photo to Margaret)
+4. Hardware Receipt - Electrician Truck (medium, distraction puzzle)
 
-**// 4. Final Output**
-Your entire output must be a single, valid JSON object matching the output schema.
-`,
-    objectInteractionPromptContext: `You are the System, processing the player's interaction with the {{objectName}}. Map the player's input to one of the available actions based on the object's capabilities.`,
-    storyStyleGuide: `You are a master storyteller transforming a text-based RPG log into a captivating crime noir chapter. Write in third person, past tense, focusing on FBI agent Burt Macklin. Use rich, descriptive noir style with atmosphere and internal thought.`,
-
-    systemMedia: {
-        take: {
-            success: {
-                url: '',
-                description: 'Item goes into pocket',
-                hint: 'putting item away'
-            }
-        }
-    },
+Player wins by collecting ANY 3 evidence pieces and sending them to Sarah Chen via phone.`,
+    initialFlags: [],
+    initialInventory: ['item_player_phone' as ItemId, 'item_lili_photo' as ItemId],
+    startChapterId: 'chapter_1' as ChapterId,
 
     systemMessages: {
         needsTarget: {
@@ -4050,12 +3657,12 @@ Your entire output must be a single, valid JSON object matching the output schem
         },
         notVisible: (itemName: string) => "item_not_visible",
         inventoryEmpty: "inventory_empty",
-        inventoryList: (itemNames: string) => `You're carrying:\n${itemNames}`,  // Keep static (structured list)
+        inventoryList: (itemNames: string) => `You're carrying:\n${itemNames}`,
         alreadyHaveItem: (itemName: string) => "already_have_item",
         cannotGoThere: "cannot_go_there",
         chapterIncomplete: (goal: string, locationName: string) => "chapter_incomplete",
-        chapterTransition: (chapterTitle: string) => `━━━ ${chapterTitle} ━━━`,  // Keep static (structured divider)
-        locationTransition: (locationName: string) => `You arrive at ${locationName}.`,  // Keep static (simple announcement)
+        chapterTransition: (chapterTitle: string) => `━━━ ${chapterTitle} ━━━`,
+        locationTransition: (locationName: string) => `You arrive at ${locationName}.`,
         noNextChapter: "no_next_chapter",
         notReadable: (itemName: string) => "item_not_readable",
         alreadyReadAll: (itemName: string) => "already_read_all",
@@ -4077,13 +3684,10 @@ Your entire output must be a single, valid JSON object matching the output schem
         somethingWentWrong: "something_went_wrong",
     },
 
-    world: world,
-    structures: structures,
-    locations: locations,
-    portals: portals,
-    gameObjects: gameObjects,
-    items: items,
-    npcs: npcs,
-    chapters: chapters,
-    startChapterId: 'chapter_1' as ChapterId,
+    chapters,
+    locations,
+    items,
+    gameObjects,
+    npcs,
+    portals
 };

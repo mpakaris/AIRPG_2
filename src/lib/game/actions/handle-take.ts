@@ -9,6 +9,7 @@
 'use server';
 
 import type { Game, PlayerState, Effect, ItemId, GameObjectId } from "@/lib/game/types";
+import { INVENTORY_MAX_SIZE, INVENTORY_PERMANENT_ITEMS } from "@/lib/game/types";
 import { HandlerResolver, VisibilityResolver, GameStateManager } from "@/lib/game/engine";
 import { normalizeName } from "@/lib/utils";
 import { buildEffectsFromOutcome } from "@/lib/game/utils/outcome-helpers";
@@ -207,10 +208,26 @@ export async function handleTake(state: PlayerState, targetName: string, game: G
     ];
   }
 
-  // 5. Find the parent container (if any)
+  // 5. Check inventory capacity
+  const currentInventorySize = state.inventory.length;
+  if (currentInventorySize >= INVENTORY_MAX_SIZE) {
+    return [{
+      type: 'SHOW_MESSAGE',
+      speaker: 'system',
+      content: `Your inventory is full (${currentInventorySize}/${INVENTORY_MAX_SIZE} items). You need to DROP something before you can take more items.`
+    }];
+  }
+
+  // Show capacity warning when approaching full
+  const willBeFull = currentInventorySize + 1 >= INVENTORY_MAX_SIZE;
+  const capacityWarning = willBeFull
+    ? `\n\n[Inventory: ${currentInventorySize + 1}/${INVENTORY_MAX_SIZE} items - Full! Drop items if needed.]`
+    : `\n\n[Inventory: ${currentInventorySize + 1}/${INVENTORY_MAX_SIZE} items]`;
+
+  // 6. Find the parent container (if any)
   const parentId = VisibilityResolver.findParent(itemId, state);
 
-  // 6. Build effects
+  // 7. Build effects
   const effects: Effect[] = [
     { type: 'ADD_ITEM', itemId: itemId as ItemId }
   ];
@@ -229,9 +246,10 @@ export async function handleTake(state: PlayerState, targetName: string, game: G
     });
   }
 
-  // Add success message with media support
+  // Add success message with media support and capacity warning
   const successOutcome = item.handlers?.onTake?.success;
-  const successMessage = successOutcome?.message || `You take the ${item.name}.`;
+  const baseMessage = successOutcome?.message || `You take the ${item.name}.`;
+  const successMessage = baseMessage + capacityWarning;
 
   // Check if handler has custom media
   const customMedia = successOutcome?.media;

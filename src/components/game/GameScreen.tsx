@@ -15,6 +15,8 @@ import { cn } from "@/lib/utils";
 import { LoaderCircle, Menu, Send } from "lucide-react";
 import Image from "next/image";
 import { Fragment, useEffect, useRef, type FC } from "react";
+import { PayphoneActivationGame } from "./PayphoneActivationGame";
+import { PayphoneDialer } from "./PayphoneDialer";
 
 interface GameScreenProps {
   messages: Message[];
@@ -171,7 +173,7 @@ const splitMessagesForDisplay = (
   return result;
 };
 
-const MessageLog: FC<Pick<GameScreenProps, "messages">> = ({ messages }) => {
+const MessageLog: FC<Pick<GameScreenProps, "messages" | "onCommandSubmit">> = ({ messages, onCommandSubmit }) => {
   const scrollViewportRef = useRef<HTMLDivElement>(null);
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
 
@@ -255,6 +257,31 @@ const MessageLog: FC<Pick<GameScreenProps, "messages">> = ({ messages }) => {
                   </div>
                 )}
                 {message.content && <MessageContent message={message} />}
+                {message.type === 'minigame' && message.minigame && (
+                  <div className="mt-3">
+                    {message.minigame.gameType === 'payphone-activation' && (
+                      <PayphoneActivationGame
+                        solution={message.minigame.data?.solution || ''}
+                        keypadColors={message.minigame.data?.keypadColors || {}}
+                        onComplete={(success, code) => {
+                          if (success) {
+                            // Send server action to update game state (generic mini-game completion)
+                            onCommandSubmit(`/minigame-complete payphone-activation ${code}`);
+                          }
+                        }}
+                      />
+                    )}
+                    {message.minigame.gameType === 'payphone-dialer' && (
+                      <PayphoneDialer
+                        expectedNumber={message.minigame.data?.expectedNumber || '5550147'}
+                        onDial={(success, dialedNumber) => {
+                          // Send server action using generic minigame completion
+                          onCommandSubmit(`/minigame-complete payphone-dialer ${dialedNumber}`);
+                        }}
+                      />
+                    )}
+                  </div>
+                )}
                 {message.image &&
                   typeof message.image.url === "string" &&
                   (() => {
@@ -509,7 +536,7 @@ export const GameScreen: FC<GameScreenProps> = ({
         </div>
       </header>
       <main className="flex flex-1 flex-col overflow-hidden pb-20 md:pb-0">
-        <MessageLog messages={messages} />
+        <MessageLog messages={messages} onCommandSubmit={onCommandSubmit} />
       </main>
       <footer className="fixed bottom-0 left-0 right-0 md:relative border-t bg-card p-4">
         <div className="mx-auto max-w-4xl">

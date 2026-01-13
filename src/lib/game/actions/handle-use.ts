@@ -16,32 +16,43 @@ import { findBestMatch } from "@/lib/game/utils/name-matching";
 import { getSmartNotFoundMessage } from "@/lib/game/utils/smart-messages";
 import { MessageExpander } from "@/lib/game/utils/message-expansion";
 import { attemptPhotograph, isCameraDevice } from "@/lib/game/utils/photography-helper";
+import { canOpenContainer } from "@/lib/game/utils/attribute-calculator";
 
 export async function handleUse(state: PlayerState, itemName: string, targetName: string, game: Game): Promise<Effect[]> {
-  const normalizedItemName = normalizeName(itemName);
+  // ARCHITECTURE: Handlers should work with IDs when possible
+  // 1. Check if input is already an ID (from AI)
+  // 2. Fallback to name matching if needed (legacy/edge cases)
 
-  // 1. LOCATION-AWARE SEARCH: Find item (prioritizes current location)
-  const itemMatch = findBestMatch(normalizedItemName, state, game, {
-    searchInventory: true,
-    searchVisibleItems: true,
-    searchObjects: false,
-    requireFocus: false  // Search all visible entities (focus validation happens separately below)
-  });
+  let itemId: ItemId | null = null;
 
-  if (!itemMatch) {
-    const smartMessage = getSmartNotFoundMessage(normalizedItemName, state, game, {
+  // Direct ID lookup (preferred - no ambiguity)
+  if (itemName.startsWith('item_') && game.items[itemName as ItemId]) {
+    itemId = itemName as ItemId;
+  } else {
+    // Fallback: Fuzzy name matching
+    const normalizedItemName = normalizeName(itemName);
+    const itemMatch = findBestMatch(normalizedItemName, state, game, {
       searchInventory: true,
       searchVisibleItems: true,
-      searchObjects: false
+      searchObjects: false,
+      requireFocus: false
     });
-    return [{
-      type: 'SHOW_MESSAGE',
-      speaker: 'narrator',
-      content: smartMessage.found ? `You notice that, but you can't use it from here.` : smartMessage.message
-    }];
-  }
 
-  const itemId = itemMatch.id as ItemId;
+    if (!itemMatch) {
+      const smartMessage = getSmartNotFoundMessage(normalizedItemName, state, game, {
+        searchInventory: true,
+        searchVisibleItems: true,
+        searchObjects: false
+      });
+      return [{
+        type: 'SHOW_MESSAGE',
+        speaker: 'narrator',
+        content: smartMessage.found ? `You notice that, but you can't use it from here.` : smartMessage.message
+      }];
+    }
+
+    itemId = itemMatch.id as ItemId;
+  }
   const itemToUse = game.items[itemId];
   if (!itemToUse) {
     const message = await MessageExpander.dontHaveItem(game.systemMessages.dontHaveItem, itemName);
@@ -54,22 +65,28 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
 
   // 2. If using item on a target
   if (targetName) {
+    let targetObjectId: GameObjectId | null = null;
     const normalizedTargetName = normalizeName(targetName);
-
-    // IMPORTANT: When in device focus mode (phone, etc.), restrict search to current focus
-    // Otherwise, allow searching all visible entities
     const isInDeviceMode = !!state.activeDeviceFocus;
 
-    // LOCATION-AWARE SEARCH: Find target object (prioritizes current location)
-    const targetMatch = findBestMatch(normalizedTargetName, state, game, {
-      searchInventory: false,
-      searchVisibleItems: false,
-      searchObjects: true,
-      requireFocus: isInDeviceMode  // When using device (phone), search only within current focus
-    });
+    // Direct ID lookup (preferred - no ambiguity)
+    if (targetName.startsWith('obj_') && game.gameObjects[targetName as GameObjectId]) {
+      targetObjectId = targetName as GameObjectId;
+    } else {
+      // Fallback: Fuzzy name matching
+      const targetMatch = findBestMatch(normalizedTargetName, state, game, {
+        searchInventory: false,
+        searchVisibleItems: false,
+        searchObjects: true,
+        requireFocus: isInDeviceMode
+      });
 
-    if (targetMatch?.category === 'object') {
-      const targetObjectId = targetMatch.id as GameObjectId;
+      if (targetMatch?.category === 'object') {
+        targetObjectId = targetMatch.id as GameObjectId;
+      }
+    }
+
+    if (targetObjectId) {
       const targetObject = game.gameObjects[targetObjectId];
       if (!targetObject) {
         const message = await MessageExpander.cantUseItem(game.systemMessages.cantUseItem, itemToUse.name);
@@ -79,6 +96,16 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
           content: message
         }];
       }
+
+      // DEBUG: Log payphone state
+      console.log(`🔍 USE HANDLER - PAYPHONE STATE CHECK:`);
+      console.log(`   Target Object: ${targetObject.name}`);
+      console.log(`   Has state system: ${!!targetObject.state?.stateMap}`);
+      if (targetObject.state?.stateMap) {
+        console.log(`   Current state: ${targetObject.state.currentStateId}`);
+        console.log(`   Available states:`, Object.keys(targetObject.state.stateMap));
+      }
+      console.log(`   World state for this object:`, state.world?.[targetObjectId]);
 
       // FOCUS VALIDATION: Check if target is within current focus
       // NOTE: Focus validation is handled by findBestMatch with requireFocus: true
@@ -113,11 +140,103 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
         // Otherwise, continue to check other handlers
       }
 
-      // Check if object has onUse handlers
-      const useHandlers = targetObject.handlers?.onUse;
+      // ATTRIBUTE SYSTEM: Check if target has requirements (for containers/doors)
+      if (targetObject.requirements && targetObject.capabilities.openable) {
+        const attributeCheck = canOpenContainer(targetObject, [itemToUse], targetObject.name);
+
+        if (!attributeCheck.success) {
+          // Item doesn't meet requirements - return helpful message
+          return [{
+            type: 'SHOW_MESSAGE',
+            speaker: 'narrator',
+            content: attributeCheck.message
+          }];
+        }
+
+        // Requirements met! Open the container and consume items if needed
+        const effects: Effect[] = [];
+
+        // Get current state to check if already open
+        const runtimeState = GameStateManager.getEntityState(state, targetObjectId);
+
+        if (runtimeState.isOpen) {
+          return [{
+            type: 'SHOW_MESSAGE',
+            speaker: 'narrator',
+            content: `The ${targetObject.name} is already open.`
+          }];
+        }
+
+        // Open the container
+        effects.push({
+          type: 'SET_ENTITY_STATE',
+          entityId: targetObjectId,
+          patch: { isOpen: true, isLocked: false }
+        });
+
+        // Show success message
+        effects.push({
+          type: 'SHOW_MESSAGE',
+          speaker: 'narrator',
+          content: `You use the ${itemToUse.name} on the ${targetObject.name}. ${attributeCheck.message}`
+        });
+
+        // Consume items if needed
+        if (attributeCheck.consumedItems && attributeCheck.consumedItems.length > 0) {
+          for (const consumedItemId of attributeCheck.consumedItems) {
+            effects.push({
+              type: 'REMOVE_ITEM',
+              itemId: consumedItemId
+            });
+          }
+        }
+
+        // Add focus effect
+        const focusEffect = FocusManager.determineNextFocus({
+          action: 'use',
+          target: targetObjectId,
+          targetType: 'object',
+          actionSucceeded: true,
+          currentFocus: state.currentFocusId,
+          state,
+          game
+        });
+
+        if (focusEffect) {
+          effects.push(focusEffect);
+        }
+
+        return effects;
+      }
+
+      // IMPORTANT: Get raw handler from state overrides or base handlers
+      // We need the RAW handler (not resolved) because USE handlers use item-based arrays
+      // where we filter by itemId BEFORE evaluating conditions
+      let useHandlers: any;
+
+      const entityState = GameStateManager.getEntityState(state, targetObjectId);
+      const currentStateId = entityState.currentStateId || 'default';
+
+      // Check state override first (get raw value, don't resolve arrays yet)
+      if (targetObject.stateMap?.[currentStateId]?.overrides?.onUse) {
+        useHandlers = targetObject.stateMap[currentStateId].overrides.onUse;
+      } else {
+        // Fall back to base handlers
+        useHandlers = targetObject.handlers?.onUse;
+      }
+
       if (Array.isArray(useHandlers)) {
+        // DEBUG: Log what we're looking for
+        console.log(`🔍 USE HANDLER DEBUG:`);
+        console.log(`   Looking for itemId: "${itemId}"`);
+        console.log(`   Item name: "${itemToUse.name}"`);
+        console.log(`   Target: "${targetObject.name}"`);
+        console.log(`   Available handlers:`, useHandlers.map(h => ({ itemId: h.itemId, hasConditions: !!h.conditions })));
+
         // Find ALL handlers for this specific item
         const matchingHandlers = useHandlers.filter(h => h.itemId === itemId);
+
+        console.log(`   Matching handlers found: ${matchingHandlers.length}`);
 
         if (matchingHandlers.length > 0) {
           // Evaluate conditions for each matching handler

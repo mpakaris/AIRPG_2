@@ -33,7 +33,8 @@ import { processEffects } from '@/lib/game/actions/process-effects';
 import { game as gameCartridge } from '@/lib/game/cartridge';
 import { AVAILABLE_COMMANDS } from '@/lib/game/commands';
 import { GameStateManager } from '@/lib/game/engine';
-import type { Chapter, ChapterId, CommandResult, Effect, Flag, Game, GameId, GameObject, GameObjectId, Item, ItemId, Location, Message, NPC, NpcId, PlayerState, Portal, Story, User } from '@/lib/game/types';
+import type { Chapter, ChapterId, CommandResult, Effect, Flag, Game, GameId, GameObject, GameObjectId, Item, ItemId, Location, Message, NPC, NpcId, PlayerState, Portal, SerializableGame, Story, User } from '@/lib/game/types';
+import { toSerializableGame } from '@/lib/game/types';
 import { createMessage } from '@/lib/utils';
 import { extractUIMessages } from '@/lib/utils/extract-ui-messages';
 import { dispatchMessage } from '@/lib/whinself-service';
@@ -111,6 +112,48 @@ async function getCurrentGameIdForUser(userId: string): Promise<GameId> {
 
 // --- Data Loading ---
 
+/**
+ * Get default systemMessages functions
+ * (Functions are lost during JSON serialization to Firestore, so we restore them)
+ */
+function getDefaultSystemMessages() {
+    return {
+        needsTarget: {
+            examine: "need_target_examine",
+            read: "need_target_read",
+            take: "need_target_take",
+            goto: "need_target_goto",
+        },
+        notVisible: (itemName: string) => "item_not_visible",
+        inventoryEmpty: "inventory_empty",
+        inventoryList: (itemNames: string) => `You're carrying:\n${itemNames}`,
+        alreadyHaveItem: (itemName: string) => "already_have_item",
+        cannotGoThere: "cannot_go_there",
+        chapterIncomplete: (goal: string, locationName: string) => "chapter_incomplete",
+        chapterTransition: (chapterTitle: string) => `━━━ ${chapterTitle} ━━━`,
+        locationTransition: (locationName: string) => `You arrive at ${locationName}.`,
+        noNextChapter: "no_next_chapter",
+        notReadable: (itemName: string) => "item_not_readable",
+        alreadyReadAll: (itemName: string) => "already_read_all",
+        textIllegible: "text_illegible",
+        dontHaveItem: (itemName: string) => "dont_have_item",
+        cantUseItem: (itemName: string) => "cant_use_item",
+        cantUseOnTarget: (itemName: string, targetName: string) => "cant_use_item_on_target",
+        noVisibleTarget: (targetName: string) => "no_visible_target",
+        useDidntWork: "use_didnt_work",
+        cantMoveObject: (objectName: string) => "cant_move_object",
+        movedNothingFound: (objectName: string) => "moved_nothing_found",
+        cantOpen: (targetName: string) => "cant_open",
+        needsFocus: "needs_focus",
+        focusSystemError: "focus_system_error",
+        noPasswordInput: (objectName: string) => "no_password_input",
+        alreadyUnlocked: (objectName: string) => "already_unlocked",
+        wrongPassword: "wrong_password",
+        cantDoThat: "cant_do_that",
+        somethingWentWrong: "something_went_wrong",
+    };
+}
+
 export async function getGameData(gameId: GameId): Promise<Game | null> {
     // NEW: Load from Firebase in dev mode too (after auto-seeding on npm run dev)
     console.log(`Loading game data for ${gameId} from Firestore...`);
@@ -161,6 +204,9 @@ export async function getGameData(gameId: GameId): Promise<Game | null> {
         gameData.items = items as Record<string, Item>;
         gameData.npcs = npcs as Record<string, NPC>;
         gameData.portals = portals as Record<string, Portal>;
+
+        // Restore systemMessages functions (lost during JSON serialization)
+        gameData.systemMessages = getDefaultSystemMessages();
 
         console.log(`✅ Game data loaded from Firestore: ${gameData.title}`);
         return gameData;
@@ -923,6 +969,106 @@ export async function processCommand(
             const allMessagesWithNew = [...allMessagesForSession, consolidatedEntry as any];
             const allUIMessages = extractUIMessages(allMessagesWithNew);
             return { newState: currentState, messages: allUIMessages };
+        } else if (lowerInput.startsWith('/minigame-complete ')) {
+            // GENERIC COMMAND: Mini-Game Completion (cartridge-driven)
+            const parts = safePlayerInput.substring(19).trim().split(' '); // Remove "/minigame-complete " prefix
+            const gameType = parts[0];
+            const playerInput = parts.slice(1).join(' ');
+
+            if (playerMessage) uiMessagesThisTurn.push(playerMessage);
+
+            const executionStartTime = Date.now();
+
+            // Find the most recent minigame message of this type
+            const recentMinigame = [...allMessagesForSession].reverse().find((msg: any) =>
+                msg.type === 'minigame' && msg.minigame?.gameType === gameType
+            );
+
+            if (!recentMinigame || !recentMinigame.minigame) {
+                const errorMessage: Message = {
+                    id: `msg_${Date.now()}`,
+                    sender: 'narrator',
+                    senderName: game.narratorName || 'Narrator',
+                    type: 'text',
+                    content: "No active mini-game found.",
+                    timestamp: Date.now()
+                };
+                uiMessagesThisTurn.push(errorMessage);
+                executionMs = Date.now() - executionStartTime;
+            } else {
+                const solution = recentMinigame.minigame.data?.solution;
+                const successEffects = recentMinigame.minigame.data?.successEffects || [];
+                const objectId = recentMinigame.minigame.objectId;
+
+                // Verify input matches solution
+                const isCorrect = playerInput === solution;
+
+                if (!isCorrect) {
+                    const errorMessage: Message = {
+                        id: `msg_${Date.now()}`,
+                        sender: 'narrator',
+                        senderName: game.narratorName || 'Narrator',
+                        type: 'text',
+                        content: "Incorrect. Try again.",
+                        timestamp: Date.now()
+                    };
+                    uiMessagesThisTurn.push(errorMessage);
+                } else {
+                    // Apply success effects from cartridge
+                    const { processEffects } = await import('@/lib/game/actions/process-effects');
+                    const result = await processEffects(currentState, successEffects, game);
+                    currentState = result.newState;
+
+                    // Add messages from effects to UI
+                    uiMessagesThisTurn.push(...result.messages);
+                }
+
+                executionMs = Date.now() - executionStartTime;
+
+                // Create consolidated log entry
+                const consolidatedEntry = {
+                    type: 'command',
+                    timestamp: Date.now(),
+                    input: { raw: safePlayerInput },
+                    interpretation: null,
+                    execution: {
+                        verb: 'minigame_complete',
+                        target: objectId || 'unknown',
+                        effects: isCorrect ? successEffects.map((e: any) => e.type) : [],
+                        success: isCorrect,
+                        errorMessage: isCorrect ? null : 'Incorrect solution',
+                        executionMs: executionMs || 0,
+                    },
+                    uiMessages: uiMessagesThisTurn,
+                    stateSnapshot: {
+                        before: stateBefore,
+                        after: currentState,
+                    },
+                    tokens: undefined,
+                    performance: {
+                        preprocessingMs: 0,
+                        aiInterpretationMs: 0,
+                        executionMs: executionMs || 0,
+                        stateUpdateMs: 0,
+                        totalMs: executionMs || 0,
+                    },
+                    context: {
+                        chapterId: currentState.currentChapterId,
+                        locationId: currentState.currentLocationId,
+                        turnNumber: allMessagesForSession.filter((msg: any) => msg.type === 'command').length + 1,
+                    },
+                    wasSuccessful: isCorrect,
+                    wasUnclear: false,
+                };
+
+                // Save to Firebase
+                await logAndSave(userId, gameId, currentState, [consolidatedEntry as any]);
+
+                // Return messages for UI
+                const allMessagesWithNew = [...allMessagesForSession, consolidatedEntry as any];
+                const allUIMessages = extractUIMessages(allMessagesWithNew);
+                return { newState: currentState, messages: allUIMessages };
+            }
         } else {
             // UNIFIED COMMAND LOGGING: Track everything for debugging and analytics
             commandStartTime = Date.now();
@@ -1028,6 +1174,48 @@ export async function processCommand(
                 }
             }
 
+            // Add accessible location names (from portals) so AI knows where player can navigate
+            // Define street-level locations (matching handle-go.ts and handle-look.ts)
+            const streetLevelLocations = new Set([
+                'loc_elm_street',
+                'loc_bus_stop',
+                'loc_florist_exterior',
+                'loc_butcher_exterior',
+                'loc_kiosk',
+                'loc_cctv_exterior',
+                'loc_construction_exterior',
+                'loc_electrician_truck',
+                'loc_alley'
+            ]);
+
+            const currentIsStreet = streetLevelLocations.has(currentState.currentLocationId as any);
+
+            // Add direct portal destinations
+            for (const portal of Object.values(game.portals)) {
+                if (portal.fromLocationId === currentState.currentLocationId) {
+                    const targetLocation = game.locations[portal.toLocationId];
+                    if (targetLocation) {
+                        visibleEntityNames.push(targetLocation.name);
+                        // Also add portal alternateNames for variations (e.g., "alley", "side alley")
+                        if (portal.alternateNames) {
+                            visibleEntityNames.push(...portal.alternateNames);
+                        }
+                    }
+                }
+            }
+
+            // If at street-level, add ALL other street-level locations (for auto-routing awareness)
+            if (currentIsStreet) {
+                for (const locId of streetLevelLocations) {
+                    if (locId !== currentState.currentLocationId) {
+                        const loc = game.locations[locId as LocationId];
+                        if (loc) {
+                            visibleEntityNames.push(loc.name);
+                        }
+                    }
+                }
+            }
+
             // 4. AI INTERPRETATION WITH SAFETY NET
             const aiInterpretationStartTime = Date.now();
 
@@ -1113,28 +1301,39 @@ export async function processCommand(
             }
             console.log('═══════════════════════════════════════════════════════════\n');
 
-            // 5. LOG AI RESPONSE TO PLAYER (ONLY if incorrectly filled)
-            // The AI should leave responseToPlayer EMPTY for normal command interpretation
-            // The reasoning field is EXPECTED and used for debugging - only responseToPlayer is an error
-            if (safetyNetResult.responseToPlayer && safetyNetResult.responseToPlayer.trim() !== '') {
-                // Log to console only - DO NOT add to message log (would create empty entries in admin dashboard)
+            // 5. FAILSAFE: Strip responseToPlayer for game action commands
+            // The AI should NEVER fill responseToPlayer for normal commands like USE, EXAMINE, etc.
+            // Only conversational/off-topic commands should have responseToPlayer
+            const commandToCheck = safetyNetResult.commandToExecute?.toLowerCase() || '';
+            const isGameAction = commandToCheck.startsWith('use ') ||
+                                 commandToCheck.startsWith('examine ') ||
+                                 commandToCheck.startsWith('take ') ||
+                                 commandToCheck.startsWith('go ') ||
+                                 commandToCheck.startsWith('search ') ||
+                                 commandToCheck.startsWith('open ') ||
+                                 commandToCheck.startsWith('read ') ||
+                                 commandToCheck.startsWith('break ') ||
+                                 commandToCheck.startsWith('move ') ||
+                                 commandToCheck.startsWith('drop ') ||
+                                 commandToCheck.startsWith('combine ') ||
+                                 commandToCheck.startsWith('talk ') ||
+                                 commandToCheck.startsWith('look') ||
+                                 commandToCheck.startsWith('inventory') ||
+                                 commandToCheck.startsWith('help');
+
+            if (isGameAction && safetyNetResult.responseToPlayer && safetyNetResult.responseToPlayer.trim() !== '') {
                 console.error('\n🚨 ═══════════════════════════════════════════════════════════');
-                console.error('   AI REASONING ERROR DETECTED');
+                console.error('   AI ERROR - STRIPPING INVALID RESPONSE');
                 console.error('═══════════════════════════════════════════════════════════');
-                console.error('❌ AI filled responseToPlayer field when it should have been empty.');
-                console.error('   This field should ONLY be used for truly invalid commands.\n');
+                console.error('❌ AI incorrectly filled responseToPlayer for game action.');
                 console.error(`📥 Player Input: "${safePlayerInput}"`);
-                console.error(`💬 Response to Player: "${safetyNetResult.responseToPlayer}"`);
-                console.error(`🎯 Command: "${safetyNetResult.commandToExecute}"`);
-                console.error(`📊 Confidence: ${(safetyNetResult.confidence * 100).toFixed(1)}%`);
-                console.error(`💭 Reasoning: ${safetyNetResult.reasoning || '(none)'}`);
-                console.error(`🔧 Fix: Update AI prompt to keep responseToPlayer empty for normal commands`);
+                console.error(`💬 Invalid Response (STRIPPED): "${safetyNetResult.responseToPlayer}"`);
+                console.error(`🎯 Command (executing anyway): "${safetyNetResult.commandToExecute}"`);
+                console.error('🛡️ FAILSAFE: Response stripped, command will execute normally.');
                 console.error('═══════════════════════════════════════════════════════════\n');
 
-                // NOTE: We do NOT add this to allMessagesForSession because:
-                // 1. It would create empty "Sender: ()" entries in admin dashboard
-                // 2. Console logging is sufficient for debugging
-                // 3. The actual command still executes correctly
+                // STRIP the responseToPlayer - let the game engine handle the command
+                safetyNetResult.responseToPlayer = '';
             }
 
             // 6. HANDLE TRULY INVALID COMMANDS (with contextual feedback)
@@ -2487,7 +2686,7 @@ export async function applyDevCheckpoint(userId: string, checkpointId: string): 
  * Loads the chapter's game data and player state from Firebase
  */
 export async function switchChapter(userId: string, targetGameId: GameId): Promise<{
-    game: Game;
+    game: SerializableGame;
     playerState: PlayerState;
     messages: Message[];
 }> {
@@ -2539,8 +2738,11 @@ export async function switchChapter(userId: string, targetGameId: GameId): Promi
 
     console.log(`✅ Loaded ${uiMessages.length} UI messages from ${rawMessages.length} log entries for ${targetGameId}`);
 
+    // Convert to serializable game (removes functions that can't be passed to client)
+    const serializableGame = toSerializableGame(game);
+
     return {
-        game,
+        game: serializableGame,
         playerState,
         messages: uiMessages
     };

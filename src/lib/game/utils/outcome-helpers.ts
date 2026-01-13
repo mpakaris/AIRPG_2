@@ -146,7 +146,8 @@ export function buildEffectsFromOutcome(
   // 1. Add state-changing effects FIRST (no messages yet)
   if (outcome.effects) {
     for (const effect of outcome.effects) {
-      if (effect.type !== 'SHOW_MESSAGE') {
+      // Exclude message-creating effects (SHOW_MESSAGE, LAUNCH_MINIGAME)
+      if (effect.type !== 'SHOW_MESSAGE' && effect.type !== 'LAUNCH_MINIGAME') {
         effects.push(effect);
       }
     }
@@ -158,10 +159,11 @@ export function buildEffectsFromOutcome(
     effects.push(outcomeToMessageEffect(outcome, fallbackEntityId, entityType, game, isFail));
   }
 
-  // 3. Add any additional SHOW_MESSAGE effects from outcome
+  // 3. Add any message-creating effects from outcome (SHOW_MESSAGE, LAUNCH_MINIGAME)
+  // These come AFTER the main message to preserve correct order (text before minigame)
   if (outcome.effects) {
     for (const effect of outcome.effects) {
-      if (effect.type === 'SHOW_MESSAGE') {
+      if (effect.type === 'SHOW_MESSAGE' || effect.type === 'LAUNCH_MINIGAME') {
         effects.push(effect);
       }
     }

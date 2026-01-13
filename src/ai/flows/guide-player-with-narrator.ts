@@ -59,6 +59,15 @@ const prompt = ai.definePrompt({
 **Available Game Commands:**
 {{availableCommands}}
 
+**CRITICAL NAVIGATION RULES:**
+When outputting "go" commands, ALWAYS use the exact NAME of the location/object from the visible lists above.
+NEVER construct IDs like "loc_xxx" or "loc_side_alley".
+Examples:
+- Player: "go to side alley" → commandToExecute: "go side alley" ✅
+- Player: "go to bus stop" → commandToExecute: "go bus stop" ✅
+- WRONG: "go loc_side_alley" ❌
+- WRONG: "go loc_bus_stop" ❌
+
 Your entire output must be a single, valid JSON object matching the output schema.
 `,
 });

@@ -49,6 +49,7 @@ function checkChapterCompletion(state: PlayerState, game: Game): boolean {
 }
 
 export async function handleGo(state: PlayerState, targetName: string, game: Game): Promise<Effect[]> {
+  console.log('[DEBUG handle-go] Called with targetName:', targetName, 'from location:', state.currentLocationId);
   const chapter = game.chapters[game.startChapterId];
   const currentLocation = game.locations[state.currentLocationId];
   targetName = targetName.toLowerCase();
@@ -86,11 +87,111 @@ export async function handleGo(state: PlayerState, targetName: string, game: Gam
   // ===========================================================================
   // CASE 1: Navigate to Another Location
   // ===========================================================================
-  const cleanedTargetName = targetName.replace(/["']/g, '');
+  // Clean up target name: remove quotes and common articles
+  let cleanedTargetName = targetName.replace(/["']/g, '');
+  cleanedTargetName = cleanedTargetName.replace(/^(the|a|an)\s+/i, '').trim();
+
+  // Search by name - check exact match, partial match, or portal alternateNames
   let targetLocation: Location | undefined;
+
+  // Try exact name match first
   targetLocation = Object.values(game.locations).find(loc => loc.name.toLowerCase() === cleanedTargetName);
 
+  // If no exact match, check if any portal's alternateNames match this target
+  if (!targetLocation) {
+    const matchingPortal = Object.values(game.portals).find(portal =>
+      portal.alternateNames?.some(alt => alt.toLowerCase() === cleanedTargetName)
+    );
+    if (matchingPortal) {
+      targetLocation = game.locations[matchingPortal.toLocationId];
+    }
+  }
+
+  // If still no match, try partial name match (e.g., "florist" matches "Petal & Stem Florist")
+  if (!targetLocation) {
+    targetLocation = Object.values(game.locations).find(loc =>
+      loc.name.toLowerCase().includes(cleanedTargetName)
+    );
+  }
+
   if (targetLocation) {
+    console.log('[DEBUG handle-go] Target location found:', targetLocation.locationId, targetLocation.name);
+    console.log('[DEBUG handle-go] Current location:', state.currentLocationId);
+
+    // Define street-level locations (all exterior locations accessible from main street/bus stop)
+    const streetLevelLocations = new Set([
+      'loc_elm_street',
+      'loc_bus_stop',
+      'loc_florist_exterior',
+      'loc_butcher_exterior',
+      'loc_kiosk',
+      'loc_cctv_exterior',
+      'loc_construction_exterior',
+      'loc_electrician_truck',
+      'loc_alley'
+    ]);
+
+    // HUB-BASED NAVIGATION: Check if there's a direct portal from current location to target
+    const directPortal = Object.values(game.portals).find(portal =>
+      portal.fromLocationId === state.currentLocationId &&
+      portal.toLocationId === targetLocation!.locationId
+    );
+
+    if (!directPortal) {
+      // No direct portal - check if we should auto-route
+      const currentIsStreet = streetLevelLocations.has(state.currentLocationId);
+      const targetIsStreet = streetLevelLocations.has(targetLocation.locationId);
+
+      // AUTO-ROUTING: If both current and target are street-level, automatically route through hub
+      if (currentIsStreet && targetIsStreet) {
+        console.log('[DEBUG handle-go] Both locations are street-level, attempting auto-routing');
+        // Find route: current → hub → target
+        const allPortals = Object.values(game.portals);
+        const currentToHub = allPortals.find(p =>
+          p.fromLocationId === state.currentLocationId &&
+          ['loc_elm_street', 'loc_bus_stop'].includes(p.toLocationId)
+        );
+        const hubToTarget = allPortals.find(p =>
+          ['loc_elm_street', 'loc_bus_stop'].includes(p.fromLocationId) &&
+          p.toLocationId === targetLocation.locationId
+        );
+
+        console.log('[DEBUG handle-go] currentToHub:', currentToHub?.id, currentToHub?.toLocationId);
+        console.log('[DEBUG handle-go] hubToTarget:', hubToTarget?.id, hubToTarget?.toLocationId);
+
+        if (currentToHub && hubToTarget) {
+          console.log('[DEBUG handle-go] Auto-routing successful, moving to:', targetLocation.locationId);
+          // Auto-route through hub transparently
+          return [
+            { type: 'MOVE_TO_LOCATION', toLocationId: targetLocation.locationId },
+            { type: 'END_CONVERSATION' },
+            { type: 'END_INTERACTION' },
+            { type: 'SHOW_MESSAGE', speaker: 'system', content: game.systemMessages.locationTransition(targetLocation.name) },
+            createLocationMessage(targetLocation)
+          ];
+        }
+      }
+
+      // Non-street-level or no hub route found - show error message
+      // Find which location the target is accessible from
+      const routePortal = Object.values(game.portals).find(portal =>
+        portal.toLocationId === targetLocation!.locationId
+      );
+
+      if (routePortal) {
+        const hubLocation = game.locations[routePortal.fromLocationId];
+        const message = await MessageExpander.static(
+          `You can't go directly to ${targetLocation.name} from here. It's accessible from ${hubLocation.name}.`
+        );
+        return [{ type: 'SHOW_MESSAGE', speaker: 'narrator', content: message }];
+      } else {
+        // No route found at all
+        const message = await MessageExpander.static(game.systemMessages.cannotGoThere);
+        return [{ type: 'SHOW_MESSAGE', speaker: 'system', content: message }];
+      }
+    }
+
+    // Direct portal exists - allow navigation
     return [
       { type: 'MOVE_TO_LOCATION', toLocationId: targetLocation.locationId },
       { type: 'END_CONVERSATION' },

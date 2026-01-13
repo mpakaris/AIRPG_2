@@ -17,6 +17,57 @@ export type StructureId = string & { readonly __brand: 'StructureId' };
 export type PortalId = string & { readonly __brand: 'PortalId' };
 export type ZoneId = string & { readonly __brand: 'ZoneId' };
 
+// --- Inventory System Constants ---
+export const INVENTORY_MAX_SIZE = 6;  // 1 permanent (phone) + 5 usable slots
+export const INVENTORY_PERMANENT_ITEMS: ItemId[] = ['item_player_phone' as ItemId];
+
+// --- Attribute System for Item Combinations ---
+
+export type ItemAttributes = {
+  // Force/Mechanical
+  force?: number;           // Physical impact strength (0-20)
+  prying?: number;          // Leverage/prying ability (0-20)
+  cutting?: number;         // Cutting ability (0-20)
+  drilling?: number;        // Penetration/boring (0-20)
+  picking?: number;         // Lockpicking finesse (0-20)
+
+  // Electrical
+  electricity?: number;     // Electrical power (0-20)
+  conductor?: boolean;      // Can conduct electricity
+
+  // Chemical
+  corrosion?: number;       // Acid/corrosive strength (0-20)
+  explosion?: number;       // Explosive force (0-20)
+  heat?: number;            // Temperature/burning (0-20)
+
+  // Environmental
+  waterDamage?: number;     // Water volume/pressure (0-20)
+  cold?: number;            // Freezing ability (0-20)
+
+  // Utility
+  light?: number;           // Illumination (0-20)
+  adhesive?: number;        // Bonding strength (0-20)
+  unlocking?: number;       // Specific key/unlock value (0-20)
+
+  // Meta
+  consumable?: boolean;     // Is consumed when used
+  reusable?: boolean;       // Can be used multiple times
+  degradable?: boolean;     // Degrades with use
+};
+
+export type ContainerRequirement = {
+  // OR logic: any ONE of these solutions works
+  options: Array<{
+    // AND logic: ALL attributes in this option must be satisfied
+    attributes: Partial<ItemAttributes>;
+    minTotal?: number;        // Optional: minimum total of all provided attributes
+  }>;
+};
+
+export type CombinedItemAttributes = ItemAttributes & {
+  sourceItems: ItemId[];      // Track which items created this combination
+};
+
 // --- Entity Type Classifications (for Archetypes) ---
 
 export type GameObjectType = 
@@ -47,9 +98,14 @@ export type Message = {
   id: string;
   sender: 'narrator' | 'player' | 'system' | 'agent' | NpcId;
   senderName: string;
-  type: 'text' | 'image' | 'video' | 'article' | 'document' | 'audio' | 'pdf';
+  type: 'text' | 'image' | 'video' | 'article' | 'document' | 'audio' | 'pdf' | 'minigame';
   content: string;
   image?: ImageDetails;
+  minigame?: {
+    gameType: 'payphone-activation' | string;
+    objectId?: string;
+    data?: Record<string, any>;
+  };
   timestamp: number;
   usage?: TokenUsage;
 };
@@ -72,7 +128,7 @@ export type Effect =
   | { type: 'DESTROY_ITEM'; itemId: ItemId } // From world
   | { type: 'SET_FLAG'; flag: Flag; value?: boolean } // Added value parameter for explicit true/false
   | { type: 'REVEAL_OBJECT'; objectId: GameObjectId }
-  | { type: 'SHOW_MESSAGE'; speaker: Message['sender']; senderName?: string; content: string; messageType?: Message['type']; imageId?: ItemId | NpcId | GameObjectId; imageEntityType?: 'item' | 'object' | 'npc'; imageUrl?: string; imageDescription?: string; imageHint?: string; usage?: TokenUsage }
+  | { type: 'SHOW_MESSAGE'; speaker: Message['sender']; senderName?: string; content: string; messageType?: Message['type']; imageId?: ItemId | NpcId | GameObjectId; imageEntityType?: 'item' | 'object' | 'npc'; imageUrl?: string; imageDescription?: string; imageHint?: string; usage?: TokenUsage; minigameData?: { gameType: string; data?: Record<string, any> } }
   | { type: 'START_CONVERSATION'; npcId: NpcId }
   | { type: 'END_CONVERSATION' }
   | { type: 'START_INTERACTION'; objectId: string }
@@ -107,6 +163,7 @@ export type Effect =
   | { type: 'INCREMENT_NPC_INTERACTION', npcId: NpcId }
   | { type: 'COMPLETE_NPC_TOPIC', npcId: NpcId, topicId: string }
   | { type: 'UPDATE_CONVERSATION_SUMMARY', npcId: NpcId, summary: string } // NEW: Update NPC conversation summary
+  | { type: 'LAUNCH_MINIGAME'; gameType: string; objectId?: string; solution?: string; successEffects?: Effect[]; data?: Record<string, any> } // NEW: Launch interactive mini-game
   | { type: 'SET_STORY', story: Story };
 
 
@@ -393,6 +450,10 @@ type HandlerOverrides = Partial<{
     onUse: Handler;
     onOpen: Handler;
     onUnlock: Handler;
+    onSearch: Handler;
+    onMove: Handler;
+    onClose: Handler;
+    onBreak: Handler;
 }>
 
 // ============================================================================
@@ -499,6 +560,9 @@ export type GameObject = {
     currentStateId: string;
     isVisible?: boolean; // Optional visibility flag for progressive disclosure
   };
+
+  // NEW: Attribute-based requirements for opening containers
+  requirements?: ContainerRequirement;
 
   inventory?: {
     items: ItemId[];
@@ -636,7 +700,10 @@ export type Item = {
     isAnalyzable: boolean;
     isPhotographable: boolean;
   };
-  
+
+  // NEW: Attribute system for puzzle combinations
+  attributes?: ItemAttributes;
+
   state?: {
     readCount: number;
     currentStateId: string;
@@ -966,19 +1033,30 @@ export type Location = {
 };
 
 export type Portal = {
-    portalId: PortalId;
-    name: string;
-    kind: 'door' | 'gate' | 'window' | 'ladder' | 'elevator' | 'hatch';
+    id?: PortalId;  // Optional for backward compatibility
+    portalId?: PortalId;  // Legacy field
+    name?: string;
+    kind?: 'door' | 'gate' | 'window' | 'ladder' | 'elevator' | 'hatch';
     tags?: ('front' | 'back' | 'roof' | 'staff-only' | 'quiet')[];
-    from: { scope: 'cell' | 'location'; id: CellId | LocationId; };
-    to: { scope: 'cell' | 'location'; id: CellId | LocationId; };
-    capabilities: { lockable: boolean; climbable: boolean; vertical: boolean; };
-    state: { isLocked: boolean; isOpen: boolean; };
+    from?: { scope: 'cell' | 'location'; id: CellId | LocationId; };
+    to?: { scope: 'cell' | 'location'; id: CellId | LocationId; };
+
+    // Simple portal fields (Chapter 1 style)
+    fromLocationId?: LocationId;
+    toLocationId?: LocationId;
+    direction?: string;
+    alternateNames?: string[];
+    description?: string;
+    requirements?: { conditions: Condition[] };
+    hideInLookAround?: boolean;  // Hide this portal from "look around" displays
+
+    capabilities?: { lockable: boolean; climbable: boolean; vertical: boolean; };
+    state?: { isLocked: boolean; isOpen: boolean; };
     unlockCondition?: { keyItemId?: ItemId; code?: string; phrase?: string; flag?: Flag; };
     stealthProfile?: { noise: 'low' | 'medium' | 'high'; visibility: 'low' | 'medium' | 'high'; risk: 'low' | 'medium' | 'high'; };
     entryEffects?: { setFlags?: Flag[]; affectReputation?: string; branchTag?: string; };
-    handlers: {
-        onExamine: Handler;
+    handlers?: {
+        onExamine?: Handler;
         onUnlock?: Handler;
         onEnter?: Handler;
         onExit?: Handler;

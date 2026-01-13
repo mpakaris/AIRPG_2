@@ -8,10 +8,12 @@
 
 'use server';
 
-import type { Game, PlayerState, Effect, ItemId } from "@/lib/game/types";
+import type { Game, PlayerState, Effect, ItemId, GameObjectId } from "@/lib/game/types";
+import { INVENTORY_PERMANENT_ITEMS } from "@/lib/game/types";
 import { Validator, HandlerResolver } from "@/lib/game/engine";
 import { normalizeName } from "@/lib/utils";
 import { buildEffectsFromOutcome } from "@/lib/game/utils/outcome-helpers";
+import { getZoneStorageId } from "@/lib/game/utils/zone-storage";
 
 export async function handleDrop(state: PlayerState, itemName: string, game: Game): Promise<Effect[]> {
   const normalizedItemName = normalizeName(itemName);
@@ -53,25 +55,54 @@ export async function handleDrop(state: PlayerState, itemName: string, game: Gam
     }];
   }
 
-  // 2. Get handler
+  // 2. Check if item is permanent (can't be dropped)
+  if (INVENTORY_PERMANENT_ITEMS.includes(itemId as ItemId)) {
+    return [{
+      type: 'SHOW_MESSAGE',
+      speaker: 'system',
+      content: `You can't drop the ${item.name}. It's essential equipment.`
+    }];
+  }
+
+  // 3. Get zone storage container for current location
+  const storageId = getZoneStorageId(state.currentLocationId);
+  if (!storageId) {
+    return [{
+      type: 'SHOW_MESSAGE',
+      speaker: 'system',
+      content: `You can't drop items here.`
+    }];
+  }
+
+  // 4. Get handler
   const handler = item.handlers?.onDrop;
 
   if (!handler) {
-    // No handler defined - use default behavior
-    return [
+    // No handler defined - use default behavior: move to zone storage
+    const effects: Effect[] = [
       {
         type: 'REMOVE_ITEM',
         itemId: itemId as ItemId
       },
       {
+        type: 'ADD_ITEM_TO_CONTAINER',
+        itemId: itemId as ItemId,
+        containerId: storageId
+      },
+      {
+        type: 'REVEAL_OBJECT',
+        objectId: storageId
+      },
+      {
         type: 'SHOW_MESSAGE',
         speaker: 'narrator',
-        content: `You drop the ${item.name}.`
+        content: `You set aside the ${item.name} in this area. You can pick it up later from your dropped items.`
       }
     ];
+    return effects;
   }
 
-  // 3. Evaluate conditions
+  // 5. Evaluate conditions (custom handler exists)
   const conditionsMet = Validator.evaluateConditions(handler.conditions, state, game);
   const outcome = conditionsMet ? handler.success : handler.fail;
 
@@ -83,14 +114,23 @@ export async function handleDrop(state: PlayerState, itemName: string, game: Gam
     }];
   }
 
-  // 4. Build effects using helper (with media support)
+  // 6. Build effects using helper (with media support)
   const effects: Effect[] = [];
 
-  // If success, remove from inventory (unless outcome already has REMOVE_ITEM)
+  // Remove from inventory and add to zone storage
   if (conditionsMet && !outcome.effects?.some(e => e.type === 'REMOVE_ITEM')) {
     effects.push({
       type: 'REMOVE_ITEM',
       itemId: itemId as ItemId
+    });
+    effects.push({
+      type: 'ADD_ITEM_TO_CONTAINER',
+      itemId: itemId as ItemId,
+      containerId: storageId
+    });
+    effects.push({
+      type: 'REVEAL_OBJECT',
+      objectId: storageId
     });
   }
 

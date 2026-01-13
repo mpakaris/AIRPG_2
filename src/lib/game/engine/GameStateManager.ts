@@ -369,7 +369,35 @@ export class GameStateManager {
             };
           }
 
+          // MINI-GAME: If minigameData is provided, attach it to the message
+          if (effect.minigameData) {
+            message.minigame = effect.minigameData;
+          }
+
           newMessages.push(message);
+          break;
+
+        case 'LAUNCH_MINIGAME':
+          // Create a minigame message
+          const minigameMessage = createMessage(
+            'system',
+            'Mini-Game',
+            effect.gameType || 'Interactive Puzzle',
+            'minigame'
+          );
+
+          // Attach minigame data
+          minigameMessage.minigame = {
+            gameType: effect.gameType,
+            objectId: effect.objectId,
+            data: {
+              solution: effect.solution,
+              successEffects: effect.successEffects,
+              ...effect.data
+            }
+          };
+
+          newMessages.push(minigameMessage);
           break;
 
         // ============================================================================

@@ -61,14 +61,24 @@ export class FocusManager {
         return this.createFocusEffect(target as string, targetType, state, game);
 
       case 'examine':
-        // When examining, focus on the examined object (unless descendant rule applies)
-        console.log(`[FocusManager] Examine action - setting focus to ${target}`);
-        return this.createFocusEffect(target as string, targetType, state, game);
+        // When examining, focus on the examined object SILENTLY (description is the message)
+        console.log(`[FocusManager] Examine action - setting focus to ${target} (silent)`);
+        return {
+          type: 'SET_FOCUS',
+          focusId: target as any,
+          focusType: targetType
+          // NO transitionMessage - examine description is enough
+        };
 
       case 'read':
-        // When reading, focus on the document/object (unless descendant rule applies)
-        console.log(`[FocusManager] Read action - setting focus to ${target}`);
-        return this.createFocusEffect(target as string, targetType, state, game);
+        // When reading, focus on the document/object SILENTLY (content is the message)
+        console.log(`[FocusManager] Read action - setting focus to ${target} (silent)`);
+        return {
+          type: 'SET_FOCUS',
+          focusId: target as any,
+          focusType: targetType
+          // NO transitionMessage - read content is enough
+        };
 
       case 'use':
         // When using item on object, focus on the object

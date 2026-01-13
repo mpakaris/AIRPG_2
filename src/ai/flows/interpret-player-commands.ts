@@ -90,9 +90,21 @@ const interpretPlayerCommandPrompt = ai.definePrompt({
   Based on the player's command, determine which command to execute.
   Ensure the command starts with a valid verb from the list of available commands (examine, take, go, use, talk, look, inventory, password, read, open, break, search, drop, close, move, combine).
 
+  **IMPORTANT: USE IDs WHEN AVAILABLE**
+  - The game state contains entity IDs (item_quarter, obj_payphone, loc_cafe, etc.)
+  - When you see IDs in the game state, USE THEM in your output for accuracy
+  - IDs are more reliable than names (no ambiguity, no fuzzy matching needed)
+  - Examples:
+    - Player has "item_quarter" in inventory → "use item_quarter on obj_payphone" ✅
+    - Current focus is "obj_payphone" → "examine obj_payphone" ✅
+  - Only use names when IDs are not available in the context
+
   **IMPORTANT: Navigation commands**
   - ONLY use "go" for ALL navigation (goto, moveto, shift are deprecated - use "go" instead)
-  - Examples: "go side alley", "go pile of tires", "go cafe"
+  - Use location IDs or names
+  - Examples:
+    - "go loc_side_alley" ✅ OR "go side alley" ✅
+    - "go loc_cafe" ✅ OR "go cafe" ✅
 
   **CRITICAL: ALWAYS PRESERVE THE TARGET (WITHOUT QUOTES)**
   - ALWAYS include the target object/item/location in your command output
