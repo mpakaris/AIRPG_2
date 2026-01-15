@@ -259,6 +259,31 @@ export function getInitialState(game: Game): PlayerState {
     }
   }
 
+  // NEW: Handle items with direct parentId property
+  for (const itemId in game.items) {
+    const item = game.items[itemId as ItemId];
+
+    // If item has direct parentId property, set up the relationship
+    if (item.parentId) {
+      const parentId = item.parentId as string;
+
+      // Initialize parent's containedEntities if needed
+      if (!world[parentId]) world[parentId] = {};
+      if (!world[parentId].containedEntities) {
+        world[parentId].containedEntities = [];
+      }
+
+      // Add child to parent's containedEntities (if not already there)
+      if (!world[parentId].containedEntities!.includes(item.id)) {
+        world[parentId].containedEntities!.push(item.id);
+      }
+
+      // Set parent on child
+      if (!world[item.id]) world[item.id] = {};
+      world[item.id].parentId = parentId;
+    }
+  }
+
   // ============================================================================
   // Find Starting Location
   // ============================================================================

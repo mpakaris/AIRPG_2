@@ -325,16 +325,76 @@ export async function handleUse(state: PlayerState, itemName: string, targetName
     });
 
     if (targetItemMatch) {
-      // Item-on-item combination (not implemented yet)
-      // Handle deserialization: systemMessages functions are lost after JSON serialization
+      // ITEM-ON-ITEM INTERACTION
+      const targetItemId = targetItemMatch.id as ItemId;
+      const targetItem = game.items[targetItemId];
+
+      // Check if source item has onUse handler for this target item
+      const useHandlers = itemToUse.handlers?.onUse;
+
+      if (Array.isArray(useHandlers)) {
+        console.log(`🔍 ITEM-ON-ITEM USE HANDLER DEBUG:`);
+        console.log(`   Source item: "${itemToUse.name}" (${itemId})`);
+        console.log(`   Target item: "${targetItem?.name}" (${targetItemId})`);
+        console.log(`   Available handlers:`, useHandlers.map(h => ({ itemId: h.itemId, hasConditions: !!h.conditions })));
+
+        // Find ALL handlers for this specific target item
+        const matchingHandlers = useHandlers.filter(h => h.itemId === targetItemId);
+
+        console.log(`   Matching handlers found: ${matchingHandlers.length}`);
+
+        if (matchingHandlers.length > 0) {
+          // Evaluate conditions for each matching handler
+          // Return the FIRST one where conditions match
+          for (const handler of matchingHandlers) {
+            const conditionsMet = Validator.evaluateConditions(handler.conditions, state, game);
+            const outcome = conditionsMet ? handler.success : handler.fail;
+            const isFail = !conditionsMet;
+
+            // If we have an outcome (either success with met conditions, or fail with unmet conditions)
+            if (outcome) {
+              console.log(`   ✅ Handler matched! Conditions met: ${conditionsMet}`);
+
+              const effects = buildEffectsFromOutcome(outcome);
+
+              // Add focus effect (items don't typically change focus, but include for consistency)
+              const focusEffect = FocusManager.determineNextFocus({
+                action: 'use',
+                target: targetItemId,
+                targetType: 'item',
+                actionSucceeded: !isFail,
+                currentFocus: state.currentFocusId,
+                state,
+                game
+              });
+
+              if (focusEffect) {
+                effects.push(focusEffect);
+              }
+
+              return effects;
+            }
+          }
+
+          // If we get here, we found matching handlers but none had outcomes
+          const message = await MessageExpander.static(game.systemMessages.useDidntWork);
+          return [{
+            type: 'SHOW_MESSAGE',
+            speaker: 'narrator',
+            content: message
+          }];
+        }
+      }
+
+      // No matching handler - show "can't use" message
       const messageKey = typeof game.systemMessages.cantUseOnTarget === 'function'
-        ? game.systemMessages.cantUseOnTarget(itemName, targetName)
+        ? game.systemMessages.cantUseOnTarget(itemToUse.name, targetItem?.name || targetName)
         : 'cant_use_item_on_target'; // Fallback keyword
 
       const { expandSystemMessage } = await import('@/lib/game/utils/message-expansion');
       const message = await expandSystemMessage(messageKey, {
-        itemName: itemName,
-        targetName: targetName
+        itemName: itemToUse.name,  // Use resolved item name, not ID
+        targetName: targetItem?.name || targetName  // Use resolved item name, not ID
       });
 
       return [{

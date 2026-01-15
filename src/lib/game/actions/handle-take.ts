@@ -147,6 +147,8 @@ export async function handleTake(state: PlayerState, targetName: string, game: G
       }
     } else if (accessCheck.reason === 'container_closed') {
       errorMessage = `You'll need to open the container first before you can take what's inside.`;
+    } else if (accessCheck.reason === 'container_locked') {
+      errorMessage = `The ${accessCheck.targetName || 'item'} is secured. You'll need to unlock it first.`;
     } else {
       errorMessage = 'You cannot reach that from here';
     }

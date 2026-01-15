@@ -191,7 +191,39 @@ export async function handleGo(state: PlayerState, targetName: string, game: Gam
       }
     }
 
-    // Direct portal exists - allow navigation
+    // Direct portal exists - CHECK REQUIREMENTS BEFORE ALLOWING
+    // Validate portal requirements (flags, items, etc.)
+    if (directPortal.requirements && directPortal.requirements.conditions && directPortal.requirements.conditions.length > 0) {
+      // Check each condition
+      const allConditionsMet = directPortal.requirements.conditions.every(condition => {
+        switch (condition.type) {
+          case 'HAS_FLAG':
+            return state.flags[condition.flag] === true;
+          case 'NO_FLAG':
+            return !state.flags[condition.flag];
+          case 'HAS_ITEM':
+            return state.inventory.some(id => id === condition.itemId);
+          case 'STATE':
+            // Check entity state
+            if (condition.entityId && condition.stateId) {
+              const entityState = state.entityStates[condition.entityId];
+              return entityState?.currentStateId === condition.stateId;
+            }
+            return false;
+          default:
+            return true;
+        }
+      });
+
+      if (!allConditionsMet) {
+        // Requirements not met - show blocked message
+        const blockedMsg = directPortal.blockedMessage || `You can't go to ${targetLocation.name} right now.`;
+        const message = await MessageExpander.static(blockedMsg);
+        return [{ type: 'SHOW_MESSAGE', speaker: 'narrator', content: message }];
+      }
+    }
+
+    // Requirements met (or no requirements) - allow navigation
     return [
       { type: 'MOVE_TO_LOCATION', toLocationId: targetLocation.locationId },
       { type: 'END_CONVERSATION' },

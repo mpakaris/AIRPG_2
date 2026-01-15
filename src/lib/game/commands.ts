@@ -39,7 +39,6 @@ export const AVAILABLE_COMMANDS = [
   'discard <item>',
   'use <item>',
   'use <item> on <object>',
-  'combine <item> with <item>',
   'read <item>',
 
   // NPCs

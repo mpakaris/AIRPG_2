@@ -558,58 +558,12 @@ const items: Record<ItemId, Item> = {
         version: { schema: '1.0.0', content: '1.0.0' }
     },
 
-    'item_hard_hat': {
-        id: 'item_hard_hat' as ItemId,
-        name: 'Hard Hat',
-        alternateNames: ['hardhat', 'helmet', 'construction hat', 'safety helmet'],
-        archetype: 'Tool',
-        description: 'Yellow hard hat with adjustment straps. Required for construction site access.',
-        zone: 'personal',
-        parentId: 'obj_construction_tool_shed' as GameObjectId,
-        capabilities: { isTakable: true, isReadable: false, isUsable: true, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
-        revealMethod: 'REVEAL_FROM_PARENT',
-        attributes: {
-            protective: true,
-            reusable: true
-        },
-        tags: ['safety', 'wearable'],
-        handlers: {
-            onExamine: {
-                success: {
-                    message: 'A bright yellow hard hat. Standard construction safety equipment. Plastic shell with foam padding inside. Adjustment straps for fitting.\n\nSticker on the side reads: "SAFETY FIRST - NO HAT, NO ENTRY"\n\nRequired for entering active construction sites.',
-                    media: undefined
-                }
-            },
-            onUse: {
-                success: {
-                    message: 'You put on the hard hat. It fits snugly.\n\nYou look like you belong on a construction site now.',
-                    media: undefined,
-                    effects: [
-                        { type: 'SET_FLAG', flag: 'wearing_hard_hat' as Flag }
-                    ]
-                }
-            },
-            onTake: {
-                success: {
-                    message: 'You take the hard hat. Might be useful for accessing construction areas.',
-                    media: undefined
-                }
-            }
-        },
-        design: {
-            authorNotes: "Found in Construction tool shed OR Alley dumpster. Required (with safety vest) for Construction site access. Wear to satisfy foreman Tony Greco.",
-            tags: ['safety', 'construction', 'access']
-        },
-        version: { schema: '1.0.0', content: '1.0.0' }
-    },
-
     'item_safety_vest': {
         id: 'item_safety_vest' as ItemId,
         name: 'Safety Vest',
         alternateNames: ['vest', 'reflective vest', 'high vis vest', 'safety jacket'],
         archetype: 'Tool',
         description: 'Bright orange reflective safety vest. Required for construction site access.',
-        zone: 'personal',
         parentId: 'obj_construction_tool_shed' as GameObjectId,
         capabilities: { isTakable: true, isReadable: false, isUsable: true, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         revealMethod: 'REVEAL_FROM_PARENT',
@@ -754,7 +708,6 @@ const items: Record<ItemId, Item> = {
         alternateNames: ['ticket', 'old ticket', 'bus pass', 'transit ticket'],
         archetype: 'Evidence',
         description: 'An old bus ticket with a long serial number printed on it.',
-        zone: 'personal',
         parentId: 'obj_bus_trash_bin' as GameObjectId,
         capabilities: { isTakable: true, isReadable: true, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: true },
         revealMethod: 'REVEAL_FROM_PARENT',
@@ -807,7 +760,6 @@ const items: Record<ItemId, Item> = {
         alternateNames: ['coin', '25 cents', 'change', 'quarter dollar'],
         archetype: 'Currency',
         description: 'A dirty quarter. Twenty-five cents. Enough for one payphone call.',
-        zone: 'personal',
         parentId: 'obj_bus_bench' as GameObjectId,
         capabilities: { isTakable: true, isReadable: false, isUsable: true, isCombinable: false, isConsumable: true, isScannable: false, isAnalyzable: false, isPhotographable: false },
         revealMethod: 'REVEAL_FROM_PARENT',
@@ -842,7 +794,6 @@ const items: Record<ItemId, Item> = {
         alternateNames: ['can', 'cola can', 'empty can', 'crushed can'],
         archetype: 'Junk',
         description: 'A crushed aluminum can. Generic brand cola. Empty.',
-        zone: 'personal',
         parentId: 'obj_bus_trash_bin' as GameObjectId,
         capabilities: { isTakable: true, isReadable: false, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         revealMethod: 'REVEAL_FROM_PARENT',
@@ -874,7 +825,6 @@ const items: Record<ItemId, Item> = {
         alternateNames: ['wrapper', 'candy wrapper', 'chip bag', 'snack wrapper'],
         archetype: 'Junk',
         description: 'A greasy food wrapper. Chips, maybe. Crumpled and stained.',
-        zone: 'personal',
         parentId: 'obj_bus_trash_bin' as GameObjectId,
         capabilities: { isTakable: true, isReadable: false, isUsable: false, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
         revealMethod: 'REVEAL_FROM_PARENT',
@@ -896,6 +846,188 @@ const items: Record<ItemId, Item> = {
         design: {
             authorNotes: "Red herring item. Adds realism to trash bin contents and creates decision fatigue. No puzzle value.",
             tags: ['red-herring', 'trash', 'bus-stop']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    // ===== CONSTRUCTION SITE ITEMS =====
+
+    'item_pliers': {
+        id: 'item_pliers' as ItemId,
+        name: 'Pliers',
+        alternateNames: ['pliers', 'pair of pliers', 'cutting pliers', 'wire cutters', 'cutters', 'tool'],
+        archetype: 'Tool',
+        description: 'Heavy-duty cutting pliers with red rubber grips. Broken - missing spring mechanism.',
+        parentId: 'obj_construction_scaffolding' as GameObjectId,
+        capabilities: { isTakable: true, isReadable: false, isUsable: true, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+        revealMethod: 'REVEAL_FROM_PARENT',
+        attributes: {
+            cutting: true,
+            reusable: true
+        },
+        tags: ['tool', 'cutting', 'repairable'],
+        handlers: {
+            // EXAMINE - Shows repair state
+            onExamine: [
+                {
+                    // REPAIRED STATE: Functional pliers
+                    conditions: [
+                        { type: 'HAS_FLAG', flag: 'pliers_repaired' as Flag }
+                    ],
+                    success: {
+                        message: 'Heavy-duty cutting pliers. Red rubber grips, worn from use. The cutting edge looks sharp - designed for wire, cable ties, zip-ties.\n\nThe handles have good tension - the spring mechanism is working perfectly. These will cut through plastic, wire, anything light-duty.\n\nReady to use.',
+                        media: undefined
+                    }
+                },
+                {
+                    // BROKEN STATE: Missing spring (default)
+                    conditions: [],
+                    success: {
+                        message: 'Heavy-duty cutting pliers. Red rubber grips, worn from use. The cutting edge looks sharp - designed for wire, cable ties, zip-ties.\n\nBut the handles move freely without resistance. The spring mechanism is missing from the hinge. Without tension, the cutting edges won\'t close properly.\n\nYou\'d need to repair them before they\'re useful.',
+                        media: undefined
+                    }
+                }
+            ],
+            // USE - Repair with spring
+            onUse: [
+                {
+                    itemId: 'item_spring' as ItemId,
+                    conditions: [
+                        { type: 'HAS_ITEM', itemId: 'item_spring' as ItemId }
+                    ],
+                    success: {
+                        message: 'You position the coiled spring at the hinge point. Push it into the slot. It clicks into place.\n\nYou test the handles - they snap back now. Spring tension restored. The cutting edges align perfectly when you squeeze.\n\nThe pliers are functional. Ready to cut.',
+                        media: undefined,
+                        effects: [
+                            { type: 'SET_FLAG', flag: 'pliers_repaired' as Flag, value: true },
+                            { type: 'REMOVE_ITEM', itemId: 'item_spring' as ItemId }
+                        ]
+                    },
+                    fail: {
+                        message: 'The pliers are broken. The spring mechanism is missing. You need to find a replacement spring to repair them.'
+                    }
+                }
+            ],
+            // TAKE - Different messages based on repair state
+            onTake: [
+                {
+                    // Already repaired
+                    conditions: [
+                        { type: 'HAS_FLAG', flag: 'pliers_repaired' as Flag }
+                    ],
+                    success: {
+                        message: 'You take the pliers. Functional cutting tool. Ready to use.',
+                        media: undefined
+                    }
+                },
+                {
+                    // Broken (default)
+                    conditions: [],
+                    success: {
+                        message: 'You take the pliers. Heavy, but the handles move too freely - broken. Might still be useful if you can repair them.',
+                        media: undefined
+                    }
+                }
+            ]
+        },
+        design: {
+            authorNotes: "Found on scaffolding. BROKEN by default (pliers_repaired=false). USE SPRING ON PLIERS to repair (sets pliers_repaired=true). Then USE PLIERS ON ZIP-TIES to free hard hat.",
+            tags: ['tool', 'puzzle', 'construction', 'repairable']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'item_spring': {
+        id: 'item_spring' as ItemId,
+        name: 'Spring',
+        alternateNames: ['coil spring', 'metal spring', 'coiled spring', 'tension spring', 'pliers spring'],
+        archetype: 'Tool',
+        description: 'Small coiled metal spring. Looks like a replacement part for tool mechanisms.',
+        parentId: 'obj_construction_scaffolding' as GameObjectId,
+        capabilities: { isTakable: true, isReadable: false, isUsable: true, isCombinable: false, isConsumable: true, isScannable: false, isAnalyzable: false, isPhotographable: false },
+        revealMethod: 'REVEAL_FROM_PARENT',
+        tags: ['spare-part', 'consumable'],
+        handlers: {
+            onExamine: {
+                success: {
+                    message: 'Small coiled metal spring. About an inch long, tightly wound. The kind used in tool mechanisms to provide tension - hinges, grips, cutting tools.\n\nIt\'s a spare part. Someone must have dropped it during repairs.',
+                    media: undefined
+                }
+            },
+            onUse: [
+                {
+                    // USE spring ON pliers (reciprocal handler)
+                    itemId: 'item_pliers' as ItemId,
+                    conditions: [
+                        { type: 'HAS_ITEM', itemId: 'item_pliers' as ItemId }
+                    ],
+                    success: {
+                        message: 'You position the coiled spring at the hinge point. Push it into the slot. It clicks into place.\n\nYou test the handles - they snap back now. Spring tension restored. The cutting edges align perfectly when you squeeze.\n\nThe pliers are functional. Ready to cut.',
+                        media: undefined,
+                        effects: [
+                            { type: 'SET_FLAG', flag: 'pliers_repaired' as Flag, value: true },
+                            { type: 'REMOVE_ITEM', itemId: 'item_spring' as ItemId }
+                        ]
+                    },
+                    fail: {
+                        message: 'You need pliers to attach the spring to.'
+                    }
+                }
+            ],
+            onTake: {
+                success: {
+                    message: 'You take the spring. Small, but it might repair something that needs tension.',
+                    media: undefined
+                }
+            }
+        },
+        design: {
+            authorNotes: "Consumable repair part for pliers. USE SPRING ON PLIERS to fix broken tool.",
+            tags: ['spare-part', 'construction', 'consumable']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'item_hard_hat': {
+        id: 'item_hard_hat' as ItemId,
+        name: 'Hard Hat',
+        alternateNames: ['hardhat', 'helmet', 'construction hat', 'safety helmet', 'hat', 'yellow hat'],
+        archetype: 'Tool',
+        description: 'Yellow hard hat with adjustment straps. Required for construction site access.',
+        parentId: 'obj_scaffolding_zip_ties' as GameObjectId,
+        capabilities: { isTakable: true, isReadable: false, isUsable: true, isCombinable: false, isConsumable: false, isScannable: false, isAnalyzable: false, isPhotographable: false },
+        revealMethod: 'REVEAL_FROM_PARENT',
+        attributes: {
+            protective: true,
+            reusable: true
+        },
+        tags: ['safety', 'wearable', 'construction'],
+        handlers: {
+            onExamine: {
+                success: {
+                    message: 'A bright yellow hard hat. Standard construction safety equipment. Plastic shell with foam padding inside. Adjustment straps for fitting.\n\nSticker on the side reads: "SAFETY FIRST - NO HAT, NO ENTRY"\n\nRequired for entering active construction sites.',
+                    media: undefined
+                }
+            },
+            onUse: {
+                success: {
+                    message: 'You put on the hard hat. It fits snugly.\n\nYou look like you belong on a construction site now. Tony might let you in.',
+                    media: undefined,
+                    effects: [
+                        { type: 'SET_FLAG', flag: 'wearing_hard_hat' as Flag, value: true }
+                    ]
+                }
+            },
+            onTake: {
+                success: {
+                    message: 'You take the hard hat. Yellow, sturdy. Might be useful for accessing construction areas.',
+                    media: undefined
+                }
+            }
+        },
+        design: {
+            authorNotes: "Secured to scaffolding with zip-ties. Player must cut zip-ties with repaired pliers first. Required for Construction site access. Must WEAR (use) to satisfy foreman Tony Greco.",
+            tags: ['safety', 'construction', 'access', 'wearable']
         },
         version: { schema: '1.0.0', content: '1.0.0' }
     }
@@ -1276,7 +1408,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
     'obj_payphone': {
         id: 'obj_payphone' as GameObjectId,
         name: 'Payphone',
-        alternateNames: ['phone', 'pay phone', 'phone booth', 'telephone'],
+        alternateNames: ['pay phone', 'phone booth', 'booth', 'payphone booth', 'public phone', 'street phone', 'booth phone'],
         description: 'Old payphone booth. The handset dangles from a metal cord. The phone is deactivated.',
         locationId: 'loc_bus_stop' as LocationId,
         archetype: 'Device',
@@ -1754,6 +1886,151 @@ const gameObjects: Record<GameObjectId, GameObject> = {
 
     // ===== ZONE 4: CONSTRUCTION SITE (Type 2 - Locked - Hard Hat + Vest Required) =====
 
+    // ===== CONSTRUCTION SITE EXTERIOR OBJECTS =====
+
+    'obj_construction_scaffolding': {
+        id: 'obj_construction_scaffolding' as GameObjectId,
+        name: 'Scaffolding',
+        alternateNames: ['scaffold', 'metal scaffolding', 'construction scaffolding', 'framework', 'platform'],
+        description: 'Metal scaffolding system with platforms. The lowest platform is chest-high, accessible from ground level.',
+        locationId: 'loc_construction_exterior' as LocationId,
+        archetype: 'Structure',
+        state: { currentStateId: 'default', isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false },
+        capabilities: { container: false, lockable: false, openable: false, movable: false, breakable: false, powerable: false, readable: false, inputtable: false },
+        revealMethod: 'AUTO',
+        handlers: {
+            onExamine: {
+                success: {
+                    message: "Metal scaffolding system - the temporary skeleton that lets workers access upper floors during construction. Steel pipes connected with couplers, wooden planks forming platforms every ten feet. Orange safety barriers mark the base.\n\nThe lowest platform is about chest height - accessible from street level. Designed to hold workers, tools, materials. Weight capacity probably 500 pounds per section.\n\nYou can see some items on the lowest platform from here.",
+                    media: undefined
+                }
+            },
+            onSearch: [
+                {
+                    // Everything taken - platform is empty
+                    conditions: [
+                        { type: 'HAS_ITEM', itemId: 'item_pliers' as ItemId },
+                        { type: 'HAS_ITEM', itemId: 'item_spring' as ItemId },
+                        { type: 'HAS_ITEM', itemId: 'item_hard_hat' as ItemId }
+                    ],
+                    success: {
+                        message: "You step up onto the orange safety barrier again. Chest-high platform.\n\nYou sweep your hand across the wooden planks. Empty now. You took everything - pliers, spring, hard hat. All in your inventory.\n\nNothing left to find here.",
+                        media: undefined
+                    }
+                },
+                {
+                    // Tools taken, hard hat remains (either secured or freed)
+                    conditions: [
+                        { type: 'HAS_ITEM', itemId: 'item_pliers' as ItemId },
+                        { type: 'HAS_ITEM', itemId: 'item_spring' as ItemId }
+                    ],
+                    success: {
+                        message: "You step up onto the orange safety barrier again. Chest-high platform.\n\nYou sweep your hand across the wooden planks. The pliers and spring are gone - you took them.\n\nThe hard hat is still here, secured with zip-ties.",
+                        media: undefined
+                    }
+                },
+                {
+                    // Only pliers taken
+                    conditions: [
+                        { type: 'HAS_ITEM', itemId: 'item_pliers' as ItemId }
+                    ],
+                    success: {
+                        message: "You step up onto the orange safety barrier again. Chest-high platform.\n\nYou sweep your hand across the wooden planks. The pliers are gone - you took them.\n\nWhat remains:\n\n🔩 Spring\n\nThe hard hat is still here, secured with zip-ties.",
+                        media: undefined
+                    }
+                },
+                {
+                    // Only spring taken
+                    conditions: [
+                        { type: 'HAS_ITEM', itemId: 'item_spring' as ItemId }
+                    ],
+                    success: {
+                        message: "You step up onto the orange safety barrier again. Chest-high platform.\n\nYou sweep your hand across the wooden planks. The spring is gone - you took it.\n\nWhat remains:\n\n🔧 Pliers\n\nThe hard hat is still here, secured with zip-ties.",
+                        media: undefined
+                    }
+                },
+                {
+                    // First search - nothing taken yet
+                    conditions: [],
+                    success: {
+                        message: "You step up onto the orange safety barrier, gripping the cold steel pipe. The metal is rough under your fingers - years of weather, rust forming in the joints where moisture collects. Your boots scrape against the barrier as you stretch upward.\n\nChest-high platform. You sweep your hand across the wooden planks - grit, sawdust, dried mud. The scaffolding sways slightly. You're only five feet up, but the framework groans. Workers trust these things with their lives every day.\n\nYour fingers find items scattered on the platform:\n\n🔩 Spring\n🔧 Pliers\n⚠️ Hard Hat (secured with zip-ties)",
+                        media: undefined,
+                        effects: [
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'obj_scaffolding_zip_ties' as GameObjectId, parentId: 'obj_construction_scaffolding' as GameObjectId },
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_pliers' as ItemId, parentId: 'obj_construction_scaffolding' as GameObjectId },
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_spring' as ItemId, parentId: 'obj_construction_scaffolding' as GameObjectId },
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_hard_hat' as ItemId, parentId: 'obj_scaffolding_zip_ties' as GameObjectId }
+                        ]
+                    }
+                }
+            ]
+        },
+        design: {
+            authorNotes: "Accessible BEFORE gate. Search reveals pliers, spring, and zip-ties container with hard hat. Pliers are broken - need spring to repair. Repaired pliers cut zip-ties to free hard hat.",
+            tags: ['structure', 'search', 'construction']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'obj_scaffolding_zip_ties': {
+        id: 'obj_scaffolding_zip_ties' as GameObjectId,
+        name: 'Zip-Ties',
+        alternateNames: ['zip ties', 'plastic ties', 'cable ties', 'tie', 'ties', 'zip tie', 'secured equipment', 'secured gear'],
+        description: 'Heavy-duty plastic zip-ties securing the hard hat to the scaffolding railing.',
+        locationId: 'loc_construction_exterior' as LocationId,
+        parentId: 'obj_construction_scaffolding' as GameObjectId,
+        archetype: 'Container',
+        state: { currentStateId: 'locked', isOpen: true, isLocked: true, isBroken: false, isPoweredOn: false },
+        capabilities: { container: true, lockable: true, openable: true, movable: false, breakable: false, powerable: false, readable: false, inputtable: false },
+        revealMethod: 'REVEAL_FROM_PARENT',
+        handlers: {
+            onExamine: [
+                {
+                    // Already cut
+                    conditions: [{ type: 'HAS_FLAG', flag: 'zip_ties_cut' as Flag }],
+                    success: {
+                        message: "The zip-ties have been cut. Severed plastic ends dangle from the railing.\n\nThe hard hat is now free to take.",
+                        media: undefined
+                    }
+                },
+                {
+                    // Still secured
+                    conditions: [],
+                    success: {
+                        message: "Industrial-strength plastic zip-ties. Thick, reinforced. Looped through the adjustment straps of a yellow hard hat, securing it to the scaffolding railing.\n\nPulling won't work - they're too tight. You'd need cutting tools. Wire cutters or pliers would do it.",
+                        media: undefined
+                    }
+                }
+            ],
+            onUse: [
+                {
+                    itemId: 'item_pliers' as ItemId,
+                    conditions: [
+                        { type: 'HAS_ITEM', itemId: 'item_pliers' as ItemId },
+                        { type: 'HAS_FLAG', flag: 'pliers_repaired' as Flag }
+                    ],
+                    success: {
+                        message: "You position the pliers around the first zip-tie. Squeeze. The cutting edge bites through the plastic. *SNIP*\n\nFirst tie cut.\n\nYou move to the second. *SNIP*\n\nBoth zip-ties fall away, severed ends dangling from the railing.\n\nThe hard hat is now free. You can take it.",
+                        media: undefined,
+                        effects: [
+                            { type: 'SET_FLAG', flag: 'zip_ties_cut' as Flag, value: true },
+                            { type: 'SET_ENTITY_STATE', entityId: 'obj_scaffolding_zip_ties' as GameObjectId, patch: { isLocked: false, isOpen: true } },
+                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_hard_hat' as ItemId, parentId: 'obj_scaffolding_zip_ties' as GameObjectId }
+                        ]
+                    },
+                    fail: {
+                        message: "You try to squeeze the pliers, but the handles move limply. No tension. The cutting edges don't close properly.\n\nThese pliers are broken - the spring mechanism is missing. They won't cut anything like this. You need to repair them first."
+                    }
+                }
+            ]
+        },
+        design: {
+            authorNotes: "Container securing hard hat with zip-ties. Player must USE PLIERS ON ZIP-TIES to cut them and free the hard hat. Puzzle layer before accessing construction site.",
+            tags: ['container', 'puzzle', 'locked', 'cutting']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
     'obj_construction_gate': {
         id: 'obj_construction_gate' as GameObjectId,
         name: 'Construction Gate',
@@ -1770,10 +2047,10 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         handlers: {
             onExamine: [
                 {
-                    // Access granted
-                    conditions: [{ type: 'FLAG', flag: 'construction_access_granted' as Flag }],
+                    // Access granted - wearing hard hat
+                    conditions: [{ type: 'HAS_FLAG', flag: 'wearing_hard_hat' as Flag }],
                     success: {
-                        message: "The gate is open. Tony stepped aside after you showed him the safety gear.\n\nThe construction site is accessible. Tool shed and office trailer await.",
+                        message: "The gate is open. Tony stepped aside after you put on the hard hat.\n\n\"Alright, you're good. Don't touch anything. We've had enough delays.\"\n\nThe construction site is accessible now.",
                         media: undefined
                     }
                 },
@@ -1781,14 +2058,14 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                     // Default - blocked
                     conditions: [],
                     success: {
-                        message: "Chain-link gate. Closed. Tony Greco stands in front of it, arms crossed, clipboard in hand.\n\n\"Hard hat and safety vest,\" he says. \"No exceptions. Insurance rules.\"\n\nHe's not budging. You need proper safety gear to get in.",
+                        message: "Chain-link gate. Closed. Tony Greco stands in front of it, arms crossed, clipboard in hand.\n\n\"Hard hat,\" he says. \"No exceptions. Insurance rules.\"\n\nHe's not budging. You need a hard hat to get in.",
                         media: undefined
                     }
                 }
             ]
         },
         design: {
-            authorNotes: "Unlocks when player wears/shows hard hat + safety vest. Tony Greco (NPC) controls access.",
+            authorNotes: "Unlocks when player wears hard hat (wearing_hard_hat flag). Tony Greco (NPC) controls access.",
             tags: ['barrier', 'locked', 'npc-controlled']
         },
         version: { schema: '1.0.0', content: '1.0.0' }
@@ -1810,7 +2087,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                     // Already unlocked
                     conditions: [{ type: 'FLAG', flag: 'tool_shed_unlocked' as Flag }],
                     success: {
-                        message: "The combination lock hangs open. The tool shed is accessible.\n\nInside, you can see safety equipment: a hard hat, a reflective vest, and what looks like a battery pack for a power tool.",
+                        message: "The combination lock hangs open. The tool shed is accessible.\n\nInside, you can see power tools and equipment.",
                         media: undefined
                     }
                 },
@@ -1828,13 +2105,9 @@ const gameObjects: Record<GameObjectId, GameObject> = {
                     // Already opened
                     conditions: [{ type: 'FLAG', flag: 'tool_shed_unlocked' as Flag }],
                     success: {
-                        message: "You search the tool shed.\n\nSafety equipment hangs on hooks:\n- Yellow hard hat (adjustable straps)\n- Orange reflective safety vest\n- DeWalt 20V battery pack (fully charged)\n\nStandard construction site gear. You can take what you need.",
+                        message: "You search the tool shed.\n\nPower tools, extension cords, spare parts. Standard construction supplies. Nothing immediately useful for your investigation.",
                         media: undefined,
-                        effects: [
-                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_hard_hat', parentId: 'obj_construction_tool_shed' },
-                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_safety_vest', parentId: 'obj_construction_tool_shed' },
-                            { type: 'REVEAL_FROM_PARENT', entityId: 'item_drill_battery', parentId: 'obj_construction_tool_shed' }
-                        ]
+                        effects: []
                     }
                 },
                 {
@@ -1848,8 +2121,8 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             ]
         },
         design: {
-            authorNotes: "Combination lock code: 1987 (from Elm Street sign). Contains hard hat, safety vest, drill battery (Part 2/3).",
-            tags: ['container', 'combination-lock', 'puzzle']
+            authorNotes: "Placeholder for future puzzle content. Currently empty to keep Construction Site flow simple.",
+            tags: ['container', 'combination-lock', 'placeholder']
         },
         version: { schema: '1.0.0', content: '1.0.0' }
     },
@@ -3002,9 +3275,8 @@ const npcs: Record<NpcId, NPC> = {
     'npc_tony_greco': {
         id: 'npc_tony_greco' as NpcId,
         name: 'Tony Greco',
-        description: 'Construction foreman. Forties, weathered face, union sticker on his hard hat. Blocks the gate. "Hard hat and vest. No exceptions. Insurance." Once you have proper gear, he lets you in.',
+        description: 'Construction foreman. Forties, weathered face, union sticker on his hard hat. Blocks the gate. "Hard hat. No exceptions. Insurance." Once you wear a hard hat, he lets you in.',
         image: undefined, // TODO: Add portrait
-        zone: 'zone_construction_site' as ZoneId,
         npcType: 'type1',
         importance: 'supporting',
         initialState: {
@@ -3013,28 +3285,26 @@ const npcs: Record<NpcId, NPC> = {
             attitude: 'neutral'
         },
         dialogueType: 'scripted',
-        welcomeMessage: 'Tony crosses his arms.\n\n"Can\'t let you in without proper gear. Hard hat and vest. No exceptions. Insurance."',
+        welcomeMessage: 'Tony crosses his arms.\n\n"Can\'t let you in without proper gear. Hard hat. No exceptions. Insurance."',
         goodbyeMessage: 'Tony returns to his clipboard.',
         handlers: {
             onTalk: {
                 conditions: [
-                    { type: 'HAS_ITEM', itemId: 'item_hard_hat' },
-                    { type: 'HAS_ITEM', itemId: 'item_safety_vest' }
+                    { type: 'HAS_FLAG', flag: 'wearing_hard_hat' as Flag }
                 ],
                 success: {
-                    message: 'Tony looks at your hard hat and safety vest.\n\n"Alright. You\'re good. Don\'t touch anything. We\'ve had enough delays."\n\nHe steps aside.\n\nYou can enter the construction site now.',
+                    message: 'Tony looks at your hard hat.\n\n"Alright. You\'re good. Don\'t touch anything. We\'ve had enough delays."\n\nHe steps aside.\n\nYou can enter the construction site now.',
                     effects: [
-                        { type: 'SET_FLAG', flag: 'tony_allows_entry', value: true },
                         { type: 'SET_ENTITY_STATE', entityId: 'npc_tony_greco', patch: { stage: 'demoted', importance: 'ambient' } }
                     ]
                 },
                 fail: {
-                    message: 'Tony doesn\'t budge.\n\n"Hard hat and vest. Both. No exceptions. Insurance rules."\n\nHe taps his clipboard. "Come back when you have proper gear."'
+                    message: 'Tony doesn\'t budge.\n\n"Hard hat. No exceptions. Insurance rules."\n\nHe taps his clipboard. "Come back when you have proper gear."'
                 }
             }
         },
         demoteRules: {
-            onFlagsAll: ['tony_allows_entry' as Flag],
+            onFlagsAll: ['wearing_hard_hat' as Flag],
             then: {
                 setStage: 'demoted',
                 setImportance: 'ambient',
@@ -3133,9 +3403,9 @@ const locations: Record<LocationId, Location> = {
     'loc_construction_exterior': {
         locationId: 'loc_construction_exterior' as LocationId,
         name: 'Construction Site',
-        sceneDescription: 'A three-story building wrapped in scaffolding and caution tape rises before you. A chain-link fence surrounds the perimeter, orange safety barriers blocking the sidewalk. Through the fence, you can see idle equipment - generators, concrete mixers, tool carts.\n\nTony Greco, the foreman, stands at the locked gate. Arms crossed, clipboard in hand, hard hat with a union sticker. He eyes you skeptically.\n\nThe gate is locked. Tony controls access.',
-        introMessage: 'You approach the construction site.\n\nTony Greco blocks the gate. Forties, weathered face, no-nonsense expression. He looks at you - no hard hat, no safety vest.\n\n"Can\'t let you in without proper gear. Hard hat and vest. No exceptions. Insurance."\n\nHis tone is flat. He\'s said this a thousand times. Rules are rules.',
-        objects: ['obj_construction_gate' as GameObjectId],
+        sceneDescription: 'A three-story building wrapped in scaffolding and caution tape rises before you. A chain-link fence surrounds the perimeter, orange safety barriers blocking the sidewalk. Through the fence, you can see idle equipment - generators, concrete mixers, tool carts.\n\nTony Greco, the foreman, stands at the locked gate. Arms crossed, clipboard in hand, hard hat with a union sticker. He eyes you skeptically.\n\nThe gate is locked. Tony controls access.\n\nOutside the fence, metal scaffolding rises against the building facade - platforms accessible from street level.',
+        introMessage: 'You approach the construction site.\n\nTony Greco blocks the gate. Forties, weathered face, no-nonsense expression. He looks at you wearing no safety gear.\n\n"Can\'t let you in without proper gear. Hard hat. No exceptions. Insurance."\n\nHis tone is flat. He\'s said this a thousand times. Rules are rules.\n\nYou notice scaffolding along the building exterior - accessible even from outside the fence.',
+        objects: ['obj_construction_scaffolding' as GameObjectId, 'obj_construction_gate' as GameObjectId],
         npcs: ['npc_tony_greco' as NpcId],
         items: []
     },
@@ -3145,7 +3415,7 @@ const locations: Record<LocationId, Location> = {
         locationId: 'loc_construction_interior' as LocationId,
         name: 'Construction Site (Inside)',
         sceneDescription: 'Inside the construction site, equipment sits idle. The air smells of concrete dust and machine oil. Orange barriers and caution tape mark hazard zones. Scaffolding towers overhead, casting geometric shadows.\n\nA portable office trailer sits in the corner, door ajar. Nearby, a metal tool shed with a combination lock.\n\nThe building itself rises three stories, wrapped in safety netting and steel beams. Work stopped weeks ago.',
-        introMessage: 'You step into the construction site.\n\nThe place is quiet. No workers, no machinery running. Just the occasional creak of scaffolding in the wind.\n\nYou see a tool shed and an office trailer. Both look accessible if you can get past their locks.',
+        introMessage: 'You step into the construction site.\n\nThe place is quiet. No workers, no machinery running. Just the occasional creak of scaffolding in the wind.\n\nYou look around:\n\n🏚️ Tool Shed (locked with combination)\n🏢 Office Trailer (door ajar)\n\nBoth look searchable.',
         objects: ['obj_construction_tool_shed' as GameObjectId, 'obj_construction_office_trailer' as GameObjectId],
         npcs: [],
         items: []
@@ -3517,16 +3787,20 @@ const portals: Record<PortalId, Portal> = {
         requirements: { conditions: [] }
     },
 
-    // Construction Exterior → Interior (hidden until gate opens)
+    // Construction Exterior → Interior (blocked until wearing hard hat)
     'portal_construction_exterior_to_interior': {
         id: 'portal_construction_exterior_to_interior' as PortalId,
         fromLocationId: 'loc_construction_exterior' as LocationId,
         toLocationId: 'loc_construction_interior' as LocationId,
         direction: 'enter',
-        alternateNames: ['inside', 'in', 'enter', 'enter site', 'go inside', 'go in'],
+        alternateNames: ['inside', 'in', 'enter', 'enter site', 'go inside', 'go in', 'construction site inside', 'interior'],
         description: 'Through the gate into the construction site interior.',
-        requirements: { conditions: [] },
-        isRevealed: false  // Revealed when gate is unlocked
+        blockedMessage: 'Tony blocks the gate.\n\n"Hard hat. No exceptions. Insurance rules."\n\nYou need to wear a hard hat before entering.',
+        requirements: {
+            conditions: [
+                { type: 'HAS_FLAG', flag: 'wearing_hard_hat' as Flag }
+            ]
+        }
     },
     // Construction Interior → Exterior (exit)
     'portal_construction_interior_to_exterior': {

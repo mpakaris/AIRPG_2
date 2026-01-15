@@ -40,6 +40,46 @@ Read `src/documentation/handler-resolution-and-media.md` for:
 - **Pattern 2 (Multi-State)**: Complex branching → use array of handlers
 - **Order matters**: Most specific conditions first, default (no conditions) last
 
+#### 2.1 Handler Content Rules - Information Hierarchy (CRITICAL!)
+
+**Purpose:** Preserve mystery, player agency, and discovery flow. Don't solve puzzles for the player.
+
+**EXAMINE (onExamine)** - Visual Overview
+- What the player SEES when looking at the object
+- Vague, general description of appearance/function
+- Hints that items might be present, but doesn't list them
+- Example: "The lowest platform is chest height. You can see some items on the platform from here."
+- ❌ DON'T: Give detailed item descriptions or solve puzzles
+
+**SEARCH (onSearch)** - Discovery List
+- What the player FINDS when actively searching
+- Brief icon list with minimal detail: `🔧 Pliers` or `🦺 Safety Equipment (secured with zip-ties)`
+- Reveals entities via `REVEAL_FROM_PARENT` effects
+- ❌ DON'T: Describe items in detail (that's what EXAMINE item is for)
+- ❌ DON'T: Explain how to solve puzzles ("these pliers can cut the ties!")
+- ✅ DO: Let players figure out connections themselves
+
+**EXAMINE [specific item]** - Detailed Inspection
+- NOW you can be detailed about THIS specific item
+- Describe condition, features, potential uses
+- Example: "Heavy-duty pliers. Red rubber grips. The cutting edge is sharp - designed for cutting wire, cable ties, zip-ties."
+
+**Progressive Discovery Flow:**
+```
+EXAMINE scaffolding → "You see some items"
+  ↓
+SEARCH scaffolding → "🔧 Pliers" + "🦺 Safety Equipment (secured)"
+  ↓
+EXAMINE pliers → "Cutting edge... designed for cutting zip-ties"
+  ↓
+Player connects: "I can use pliers on zip-ties!"
+```
+
+**Focus Messages:**
+- EXAMINE: Silent focus (description IS the message)
+- SEARCH: Silent focus (results ARE the message)
+- USE/TALK/GO: Can show focus transition messages
+
 #### 3. Existing Documentation (READ BEFORE CODING!)
 
 | Making changes to... | Read this first |
@@ -47,6 +87,8 @@ Read `src/documentation/handler-resolution-and-media.md` for:
 | Handlers/conditions | `handler-resolution-and-media.md` |
 | Parent-child/reveals | `handler-resolution-and-media.md` |
 | Focus/navigation | `focus-and-zones.md` |
+| **Containers/locking** | **Core Mechanics #1 (3-State System)** |
+| **Item interactions** | **Core Mechanics #7 (Use X on Y)** |
 | Any bug fix | `backlog.md` (check if already documented) |
 
 ---
@@ -91,6 +133,369 @@ Before committing:
 - [ ] Are parent-child relationships intact?
 - [ ] Is documentation updated (backlog.md if bug fix)?
 - [ ] Tested on multiple objects/entities?
+
+---
+
+## 🔒 CORE GAME MECHANICS - IMMUTABLE RULES
+
+**⚠️ DO NOT MODIFY THESE SYSTEMS WITHOUT EXPLICIT USER APPROVAL**
+
+These are fundamental mechanics that MUST remain stable. Violations of these rules break the entire game.
+
+### 1. CONTAINER 3-STATE SYSTEM
+
+**Rule**: Containers use 3 binary states to control visibility and accessibility.
+
+**Complete Documentation**: See `CONTAINER-SYSTEM.md` for full details, examples, and patterns.
+
+**3-State Philosophy**:
+1. **isOpen/isClosed** → Controls **VISIBILITY** (can you SEE contents?)
+2. **isLocked/isUnlocked** → Controls **TAKEABILITY** (can you TAKE contents?)
+3. **isBroken/isIntact** → **BYPASSES** all locks (break to access)
+
+**Key Examples**:
+- **Zip-ties**: `isOpen: true, isLocked: true` → Hard hat is VISIBLE but NOT takeable
+- **Locked vase**: `isOpen: true, isLocked: true` → Contents visible but locked
+- **Broken vase**: `isBroken: true` → Lock bypassed, contents takeable
+
+**Access Validation Order** (ZoneManager.ts:RULE 4):
+```typescript
+// 1. If BROKEN → Bypass all locks
+if (isBreakable && isBroken) return { allowed: true };
+
+// 2. If LOCKED → Block (even if opened/visible)
+if (isLockable && isLocked) return { allowed: false };
+
+// 3. If CLOSED → Block (not visible)
+if (isOpenable && !isOpen) return { allowed: false };
+
+// 4. UNLOCKED + OPENED → Allow
+return { allowed: true };
+```
+
+**Code Location**: `src/lib/game/engine/ZoneManager.ts:84-151` (RULE 4)
+
+**Required Properties**:
+```typescript
+// Container Object
+{
+  capabilities: {
+    container: true,
+    lockable: true,   // Can be locked/unlocked
+    openable: true,   // Can be opened/closed
+    breakable: true,  // Can be broken to bypass
+    // ... other capabilities (all 8 must be present)
+  },
+  state: {
+    currentStateId: string,
+    isOpen: boolean,      // VISIBILITY control
+    isLocked: boolean,    // TAKEABILITY control
+    isBroken: boolean,    // BYPASS control
+    isPoweredOn: boolean
+  }
+}
+
+// Child Item
+{
+  parentId: 'obj_container_id'  // REQUIRED - links to parent
+}
+```
+
+**NEVER**:
+- ❌ Add `zone: 'personal'` to items that should be locked in containers
+- ❌ Use incomplete state objects (all boolean flags must be present)
+- ❌ Check only `isOpen` - must check `isLocked` AND `isBroken` too
+- ❌ Move container checks after zone checks in ZoneManager
+
+**Test Case** (Construction Site Zip-Ties):
+```typescript
+// CORRECT Setup
+item_hard_hat: {
+  parentId: 'obj_scaffolding_zip_ties',  // NO zone: 'personal'!
+}
+
+obj_scaffolding_zip_ties: {
+  capabilities: { lockable: true, openable: true, container: true, ... },
+  state: { isOpen: true, isLocked: true, isBroken: false, ... }
+}
+
+// Expected Behavior
+search scaffolding → Hard hat VISIBLE (isOpen: true)
+take hard hat → ❌ BLOCKED "Secured with zip-ties" (isLocked: true)
+use pliers on zip-ties → Sets isLocked: false
+take hard hat → ✅ Success (isOpen: true, isLocked: false)
+```
+
+---
+
+### 2. STATE COMPLETENESS REQUIREMENT
+
+**Rule**: ALL GameObject state and capabilities properties must be complete and explicit.
+
+**Required State Properties**:
+```typescript
+state: {
+  currentStateId: string,  // State machine ID
+  isOpen: boolean,         // REQUIRED even if not openable
+  isLocked: boolean,       // REQUIRED even if not lockable
+  isBroken: boolean,       // REQUIRED even if not breakable
+  isPoweredOn: boolean,    // REQUIRED even if not powerable
+  isVisible?: boolean      // Optional
+}
+```
+
+**Required Capabilities** (all 8 MUST be present):
+```typescript
+capabilities: {
+  container: boolean,
+  lockable: boolean,
+  openable: boolean,
+  movable: boolean,
+  breakable: boolean,
+  powerable: boolean,
+  readable: boolean,
+  inputtable: boolean
+}
+```
+
+**NEVER**:
+- ❌ Use incomplete state: `state: { currentStateId: 'locked' }` is WRONG
+- ❌ Use incomplete capabilities: `capabilities: { container: true }` is WRONG
+- ❌ Rely on default values - be explicit
+- ❌ Add new required properties without updating ALL existing objects
+
+**Why**: Incomplete state objects cause the engine to use `undefined` values, which can bypass validation logic (e.g., `!containerState.isOpen` returns `true` when it should be checking an explicit `false`).
+
+---
+
+### 3. NAME COLLISION PREVENTION
+
+**Rule**: Avoid name collisions between personal items (zone: 'personal') and world objects.
+
+**Personal Equipment** (always accessible, `zone: 'personal'`):
+- Examples: FBI phone, badge, notebook
+- Should use specific names to avoid conflicts
+- Example: `item_player_phone` name: "Phone", alternateNames: ['smartphone', 'cell phone', 'fbi phone']
+
+**World Objects**:
+- Should NOT use generic names that conflict with personal items
+- Check personal item names BEFORE adding alternateNames to world objects
+
+**WRONG** (causes collision):
+```typescript
+// Player has FBI phone with name "Phone"
+obj_payphone: {
+  name: 'Payphone',
+  alternateNames: ['phone', ...]  // ❌ Will match FBI phone instead!
+}
+```
+
+**CORRECT**:
+```typescript
+obj_payphone: {
+  name: 'Payphone',
+  alternateNames: ['pay phone', 'phone booth', 'booth']  // ✅ No conflicts
+}
+```
+
+**NEVER**:
+- ❌ Add generic tool names ('phone', 'knife', 'gun') as alternateNames to world objects if player has those as personal items
+- ❌ Use single-word alternateNames that could conflict ('gun', 'phone', 'badge')
+
+---
+
+### 4. ZONE SYSTEM PRIORITY ORDER
+
+**Rule**: Container checks happen BEFORE zone checks for items with `parentId`.
+
+**Access Check Priority** (`ZoneManager.canAccess`):
+1. **RULE 1**: Items in inventory → always accessible
+2. **RULE 2**: Get target zone
+3. **RULE 3**: Personal equipment (`zone: 'personal'`) → always accessible
+4. **RULE 4**: **Container state check** (CRITICAL - happens BEFORE zone checks)
+5. **RULE 5**: No zones defined in location → allow access (compact mode)
+6. **RULE 6**: Check if in current zone
+7. **RULE 7+**: Other special cases
+
+**Code Location**: `src/lib/game/engine/ZoneManager.ts:64-236`
+
+**NEVER**:
+- ❌ Move container checks (RULE 4) after zone checks (RULE 5+)
+- ❌ Skip container checks for locations without zones
+- ❌ Return early before container state is validated
+- ❌ Change the priority order without updating this documentation
+
+---
+
+### 5. PLAYER STATE PERSISTENCE
+
+**Rule**: PlayerState in Firestore overrides cartridge defaults.
+
+**How It Works**:
+1. Cartridge defines initial state (e.g., `isOpen: false`)
+2. Game effects modify runtime state (e.g., `SET_ENTITY_STATE: {isOpen: true}`)
+3. Runtime state persists in Firestore `player_states/{userId}_{gameId}`
+4. On load, runtime state **merges** with cartridge data (runtime wins)
+
+**Implications**:
+- Changes to cartridge defaults **DON'T** affect existing player saves
+- Must **hard reset player state** to test cartridge changes
+- UI "reset" button loads checkpoint state, doesn't wipe Firestore
+
+**Testing Protocol**:
+```bash
+# 1. Deploy cartridge changes
+npm run db:bake && npm run db:seed:game
+
+# 2. HARD RESET player state (wipes Firestore cache)
+npm run db:reset:player
+
+# 3. Hard refresh browser
+# Mac: Cmd+Shift+R
+# Windows: Ctrl+Shift+R
+```
+
+**NEVER**:
+- ❌ Expect cartridge changes to affect existing saves without hard reset
+- ❌ Modify cartridge and assume players see changes immediately
+- ❌ Use UI "reset" button for testing cartridge changes (loads checkpoint, doesn't wipe state)
+
+---
+
+### 6. HANDLER RESOLUTION SYSTEM
+
+**Rule**: stateMap overrides take priority over base handlers.
+
+**Resolution Order** (`HandlerResolver.getEffectiveHandler`):
+1. `stateMap[currentStateId].overrides.onVerb` (highest priority)
+2. `entity.handlers.onVerb`
+3. Archetype handlers (not implemented yet)
+4. Fallback message (lowest priority)
+
+**Code Location**: `src/lib/game/engine/HandlerResolver.ts:55-85`
+
+**NEVER**:
+- ❌ Change this priority order
+- ❌ Skip stateMap checking in handler resolution
+- ❌ Return handler arrays without resolving conditions first
+
+---
+
+### 7. UNIVERSAL "USE X ON Y" INTERACTION PATTERN
+
+**Rule**: All item-on-item and item-on-object interactions use the "use X on Y" verb. The "combine" command does NOT exist.
+
+**Design Philosophy**:
+- **Single interaction verb** prevents player confusion ("Do I use or combine?")
+- **Context-driven outcomes** - the narrative response explains what happened (repair, unlock, cut, insert, etc.)
+- **Unified handler pattern** - same `onUse` handler structure for items and objects
+
+**How It Works**:
+
+1. **AI Interpretation** (`interpret-player-commands.ts:93-97`):
+   - AI sees NO "combine" in available commands list
+   - All natural language variations map to "use X on Y":
+     - "repair pliers with spring" → `use item_spring on item_pliers`
+     - "cut zip-ties with pliers" → `use item_pliers on obj_scaffolding_zip_ties`
+     - "fix X with Y" → `use Y on X`
+     - "install X on Y" → `use X on Y`
+
+2. **Handler Resolution** (`handle-use.ts:327-405`):
+   - **Item-on-Object**: Check object's `onUse` handlers for `itemId` match
+   - **Item-on-Item**: Check source item's `onUse` handlers for target `itemId` match
+   - **Evaluation order**: Filter by `itemId` → Evaluate `conditions` → Execute `success` or `fail`
+
+3. **Reciprocal Handlers** (best practice):
+   - Define handlers on BOTH items for bidirectional interaction
+   - Example: "use spring on pliers" OR "use pliers on spring" both work
+   ```typescript
+   // Spring handler
+   item_spring: {
+     handlers: {
+       onUse: [{
+         itemId: 'item_pliers' as ItemId,
+         conditions: [{ type: 'HAS_ITEM', itemId: 'item_pliers' }],
+         success: { message: "Pliers repaired!", effects: [...] }
+       }]
+     }
+   }
+
+   // Pliers handler (reciprocal)
+   item_pliers: {
+     handlers: {
+       onUse: [{
+         itemId: 'item_spring' as ItemId,
+         conditions: [{ type: 'HAS_ITEM', itemId: 'item_spring' }],
+         success: { message: "Pliers repaired!", effects: [...] }
+       }]
+     }
+   }
+   ```
+
+**Code Locations**:
+- AI command list: `src/lib/game/commands.ts:40-42` (no "combine" entry)
+- AI prompt: `src/ai/flows/interpret-player-commands.ts:93-97` (explicit "use X on Y" instructions)
+- Command routing: `src/app/actions.ts` (no `case 'combine'` routing)
+- Item-on-item handler: `src/lib/game/actions/handle-use.ts:327-405`
+- Item-on-object handler: `src/lib/game/actions/handle-use.ts:228-283`
+
+**Examples**:
+```typescript
+// Construction Site Puzzle (Chapter 1)
+1. TAKE spring, TAKE pliers
+2. USE spring ON pliers → Repairs pliers (sets pliers_repaired flag)
+3. USE pliers ON zip-ties → Unlocks hard hat (sets isLocked: false)
+4. TAKE hard hat → Success!
+```
+
+**NEVER**:
+- ❌ Add "combine" to AVAILABLE_COMMANDS list
+- ❌ Create handler stubs that say "not implemented yet" - fully implement or don't add
+- ❌ Use `onCombine` handlers - they don't exist in the engine
+- ❌ Return "can't combine" messages - the word "combine" should never appear to players
+
+**Migration Note**:
+- Old `handle-combine.ts` file is deprecated (do not use)
+- All existing "combine" references removed on 2025-01-15
+- If you see "combine" anywhere, it's a bug - remove it immediately
+
+---
+
+### Core Mechanics Violations - What Went Wrong
+
+**2025-01-14** - Container Locking Failures:
+1. **Hard hat takeable despite locked container**:
+   - Cause: Added `zone: 'personal'` to hard hat (bypassed container checks via RULE 3)
+   - Fix: Removed `zone: 'personal'`, let container system handle blocking
+   - Lesson: Never use `zone: 'personal'` for items that should be locked
+
+2. **Payphone search returned FBI phone message**:
+   - Cause: Payphone had `alternateNames: ['phone', ...]` which matched `item_player_phone`
+   - Fix: Removed 'phone' from payphone alternateNames
+   - Lesson: Check personal item names before adding alternateNames to world objects
+
+3. **Cached player state overrode fixes**:
+   - Cause: Firestore PlayerState had old data (isOpen: true from previous testing)
+   - Fix: Created `npm run db:reset:player` command for hard resets
+   - Lesson: Always hard reset player state when testing container/state changes
+
+**2025-01-15** - "Use X on Y" Universal Pattern Implementation:
+1. **AI interpreting "use spring on pliers" as "combine"**:
+   - Cause: `AVAILABLE_COMMANDS` still had `'combine <item> with <item>'` entry
+   - Fix: Removed "combine" from `src/lib/game/commands.ts:40-42`
+   - Lesson: AI sees AVAILABLE_COMMANDS list - removing from prompt alone isn't enough
+
+2. **Item-on-item interactions not implemented**:
+   - Cause: `handle-use.ts:328` had `// not implemented yet` comment, returned generic error
+   - Fix: Implemented full handler resolution for item-on-item (same as item-on-object)
+   - Lesson: Never add handler stubs without full implementation - breaks gameplay immediately
+
+3. **"Combine" routing still existed in actions.ts**:
+   - Cause: `case 'combine'` routing at line 1581, import of `handleCombine` at line 12
+   - Fix: Removed `case 'combine'`, removed import, removed validation check
+   - Lesson: Search entire codebase for command references, not just AI prompt
+
+**Total wasted time**: 2 days on a mechanic that should have taken 1 hour. Root cause: incomplete removal of deprecated "combine" system across multiple files (commands.ts, actions.ts, handle-use.ts).
 
 ---
 

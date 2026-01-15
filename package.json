@@ -16,6 +16,7 @@
     "db:seed": "npm run db:bake && tsx scripts/seed.ts all",
     "db:seed:game": "npm run db:bake && tsx scripts/seed.ts game",
     "db:clear:chapter1": "tsx scripts/clear-chapter1-objects.ts",
+    "db:reset:player": "tsx scripts/hard-reset-player.ts",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",

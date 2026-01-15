@@ -88,7 +88,13 @@ const interpretPlayerCommandPrompt = ai.definePrompt({
   {{/each}}
 
   Based on the player's command, determine which command to execute.
-  Ensure the command starts with a valid verb from the list of available commands (examine, take, go, use, talk, look, inventory, password, read, open, break, search, drop, close, move, combine).
+  Ensure the command starts with a valid verb from the list of available commands (examine, take, go, use, talk, look, inventory, password, read, open, break, search, drop, close, move).
+
+  **CRITICAL: For item-on-item actions, ALWAYS use "use X on Y", NEVER use "combine"**
+  - "use spring on pliers" → "use item_spring on item_pliers" ✅
+  - "repair pliers with spring" → "use item_spring on item_pliers" ✅
+  - "fix X with Y" → "use Y on X" ✅
+  - DO NOT use "combine" - that command does not exist in this game
 
   **IMPORTANT: USE IDs WHEN AVAILABLE**
   - The game state contains entity IDs (item_quarter, obj_payphone, loc_cafe, etc.)
@@ -217,6 +223,43 @@ const interpretPlayerCommandPrompt = ai.definePrompt({
     - "push the bookshelf" → "move bookshelf" ✅
   - CRITICAL: "rip" and "tear" are ALWAYS destructive actions (break), NEVER gentle actions (open)
   - NEVER respond with "You don't see foot/hand/fist here" - these are body parts, not game objects
+
+  **CRITICAL: UNDERSTAND ACTION SEQUENCES & PREREQUISITES**
+  - Many player commands describe GOALS that require MULTIPLE STEPS to accomplish
+  - Your job is to identify the FIRST/NEXT step the player needs to take, NOT skip ahead to the final goal
+  - Common patterns where players describe goals but you must interpret the immediate action:
+
+  **Pattern 1: "Use X to [goal]" or "Verb X with Y" → Focus on USING X/Y, not the goal**
+  - "use coin to make a call on payphone" → The player has a coin and wants to use it. Output: "use item_quarter on obj_payphone" ✅
+    - DON'T skip to "call [number]" ❌ - the player hasn't inserted the coin yet!
+  - "use key to open door" → The player wants to use the key. Output: "use item_key on obj_door" ✅
+    - DON'T skip to "open door" ❌ - they specified using the key, so that's the action
+  - "use crowbar to break window" → Output: "use item_crowbar on obj_window" ✅
+    - DON'T skip to "break window" ❌ - they want to USE the crowbar
+  - "repair pliers with spring" → Output: "use item_spring on item_pliers" ✅
+    - DON'T use "combine" ❌ - this is fixing/using, not combining
+  - "fix X with Y" → Output: "use Y on X" ✅
+  - "install X on Y" → Output: "use X on Y" ✅
+
+  **Pattern 2: Payment/Currency Actions → Always USE the money, don't skip ahead**
+  - "pay for X" / "buy X" / "give money for X" → Output: "use [money_item] on [vendor/machine]" ✅
+  - "insert coin into payphone" → Output: "use item_quarter on obj_payphone" ✅
+  - "put quarter in machine" → Output: "use item_quarter on obj_machine" ✅
+
+  **Pattern 3: Multi-Step Processes → Identify what the player CAN do NOW**
+  - Check the game state - what items does the player HAVE? What's their CURRENT location/focus?
+  - If the player says "make a call" but hasn't inserted money yet → they need to INSERT MONEY FIRST
+  - If the player says "open safe" but mentions having a key → they want to USE THE KEY, not just open
+  - Example decision tree for "make a call on payphone":
+    1. Does player have money (quarter/coin)? YES → "use item_quarter on obj_payphone" ✅
+    2. Has player already inserted money? Check flags/state → "call [number]" ✅
+    3. Player has no money? → "examine obj_payphone" (to learn what's needed) ✅
+
+  **Why this matters:**
+  - Players naturally describe their END GOAL ("make a call", "get inside", "unlock safe")
+  - But games require STEP-BY-STEP actions ("insert coin" → THEN → "dial number")
+  - Your job: Identify the IMMEDIATE/NEXT action needed, not the final outcome
+  - ALWAYS check: Does the player have the items/prerequisites to accomplish this step?
 
   Output should be formatted as valid JSON.
   `,

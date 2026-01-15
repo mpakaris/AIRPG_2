@@ -63,41 +63,125 @@ export class ZoneManager {
     state: PlayerState,
     game: Game
   ): AccessResult {
+    console.log(`\n[ZoneManager.canAccess] CALLED for ${targetType}: ${targetId}`);
+
     // RULE 1: Items in inventory are always accessible
     if (targetType === 'item' && state.inventory.includes(targetId as ItemId)) {
+      console.log(`[ZoneManager] ✅ RULE 1: Already in inventory`);
       return { allowed: true };
     }
 
     // RULE 2: Get target zone
     const targetZone = this.getEntityZone(targetId, targetType, game);
+    console.log(`[ZoneManager] RULE 2: targetZone = ${targetZone}`);
 
     // RULE 3: Personal equipment is always accessible
     if (targetZone === 'personal') {
+      console.log(`[ZoneManager] ✅ RULE 3: Personal equipment - ALLOWING`);
       return { allowed: true };
     }
 
-    // RULE 4: If no zone system in location (Chapter 0 compatibility), allow access
+    // RULE 4: Container checks (MUST happen before zone checks!)
+    // This ensures container locking works even in compact mode (no zones)
+    if (targetType === 'item') {
+      const item = game.items[targetId as ItemId];
+      const itemState = GameStateManager.getEntityState(state, targetId);
+
+      console.log(`[ZoneManager] RULE 4: Checking item ${item.name} (${targetId})`);
+      console.log(`[ZoneManager]   itemState.parentId: ${itemState.parentId}`);
+
+      // Check if item is inside a container
+      if (itemState.parentId) {
+        const containerId = itemState.parentId;
+        const container = game.gameObjects[containerId as GameObjectId];
+        const containerState = GameStateManager.getEntityState(state, containerId);
+
+        console.log(`[ZoneManager]   Container: ${container?.name} (${containerId})`);
+        console.log(`[ZoneManager]   Container capabilities.openable: ${container?.capabilities?.openable}`);
+        console.log(`[ZoneManager]   Container state.isOpen: ${containerState.isOpen}`);
+        console.log(`[ZoneManager]   Container state.isLocked: ${containerState.isLocked}`);
+
+        if (!container) {
+          return { allowed: false, reason: 'not_accessible', targetName: item.name };
+        }
+
+        // CONTAINER ACCESS LOGIC (3-state system):
+        // - isOpen/isClosed → Controls VISIBILITY (can you SEE contents?)
+        // - isLocked/isUnlocked → Controls TAKEABILITY (can you TAKE contents?)
+        // - isBroken → BYPASSES all locks
+
+        const isBreakable = container.capabilities?.breakable === true;
+        const isBroken = containerState.isBroken === true;
+        const isLockable = container.capabilities?.lockable === true;
+        const isLocked = containerState.isLocked === true;
+        const isOpenable = container.capabilities?.openable === true;
+        const isOpen = containerState.isOpen === true;
+
+        console.log(`[ZoneManager]   isBreakable: ${isBreakable}, isBroken: ${isBroken}`);
+        console.log(`[ZoneManager]   isLockable: ${isLockable}, isLocked: ${isLocked}`);
+        console.log(`[ZoneManager]   isOpenable: ${isOpenable}, isOpen: ${isOpen}`);
+
+        // 1. If container is BROKEN → Bypass all locks/openings
+        if (isBreakable && isBroken) {
+          console.log(`[ZoneManager] ✅ Container is broken - bypassing all locks`);
+          return { allowed: true };
+        }
+
+        // 2. If container is LOCKED → Block access (even if opened/visible)
+        if (isLockable && isLocked) {
+          console.log(`[ZoneManager] ❌ BLOCKING access to ${item.name} - container ${container.name} is locked`);
+          return {
+            allowed: false,
+            reason: 'container_locked',
+            targetName: item.name
+          };
+        }
+
+        // 3. If container is CLOSED → Block access (contents not visible)
+        if (isOpenable && !isOpen) {
+          console.log(`[ZoneManager] ❌ BLOCKING access to ${item.name} - container ${container.name} is closed`);
+          return {
+            allowed: false,
+            reason: 'container_closed',
+            targetName: item.name
+          };
+        }
+
+        console.log(`[ZoneManager] ✅ Container check passed for ${item.name} - unlocked and opened`);
+        // Container is accessible - continue to zone checks below
+      }
+    }
+
+    // RULE 5: If no zone system in location (Chapter 0 compatibility), allow access
+    // This check happens AFTER container checks, so container locking works in compact mode
     const location = game.locations[state.currentLocationId];
+    console.log(`[ZoneManager] RULE 5: location.zones.length = ${location.zones?.length || 0}`);
     if (!location.zones || location.zones.length === 0) {
-      // Compact mode or no zones defined - everything accessible
+      // Compact mode or no zones defined - everything accessible (after container checks)
+      console.log(`[ZoneManager] ✅ RULE 5: No zone system - ALLOWING`);
       return { allowed: true };
     }
 
-    // RULE 5: Check if target is in current zone
+    // RULE 6: Check if target is in current zone
     const currentZone = state.currentZoneId;
+    console.log(`[ZoneManager] RULE 6: currentZone = ${currentZone}, targetZone = ${targetZone}`);
 
     if (!currentZone) {
       // Player has no zone set - should not happen, but allow for now
-      console.warn('[ZoneManager] Player has no currentZoneId set');
+      console.warn('[ZoneManager] ⚠️  Player has no currentZoneId set - ALLOWING');
       return { allowed: true };
     }
 
     if (targetZone === currentZone) {
       // Target is in player's current zone - accessible
+      console.log(`[ZoneManager] ✅ RULE 6: Target in current zone - ALLOWING`);
       return { allowed: true };
     }
 
-    // RULE 6: Special case - items inside containers
+    console.log(`[ZoneManager] 📍 Proceeding to RULE 7 (zone-based container checks)...`);
+
+    // RULE 7: Special case - items inside containers (zone validation)
+    // This only runs if zones exist and target is in different zone
     if (targetType === 'item') {
       const item = game.items[targetId as ItemId];
       const itemState = GameStateManager.getEntityState(state, targetId);
@@ -106,11 +190,6 @@ export class ZoneManager {
       if (itemState.parentId) {
         const containerId = itemState.parentId;
         const container = game.gameObjects[containerId as GameObjectId];
-        const containerState = GameStateManager.getEntityState(state, containerId);
-
-        if (!container) {
-          return { allowed: false, reason: 'not_accessible', targetName: item.name };
-        }
 
         // Container (or any of its parents) must be in current zone - CHECK RECURSIVELY
         const containerInZone = this.isContainerInZoneRecursive(
@@ -120,6 +199,8 @@ export class ZoneManager {
           game
         );
 
+        console.log(`[ZoneManager]   containerInZone: ${containerInZone}`);
+
         if (!containerInZone) {
           return {
             allowed: false,
@@ -128,21 +209,12 @@ export class ZoneManager {
           };
         }
 
-        // Container must be open (or not openable, meaning items are just revealed)
-        if (container.capabilities?.openable && !containerState.isOpen) {
-          return {
-            allowed: false,
-            reason: 'container_closed',
-            targetName: item.name
-          };
-        }
-
-        // Container is in zone and accessible - item is accessible
+        // Container is in zone - item is accessible
         return { allowed: true };
       }
     }
 
-    // RULE 6.5: Special case - objects without zones that are listed in current zone's objectIds
+    // RULE 8: Special case - objects without zones that are listed in current zone's objectIds
     // Check this FIRST before checking parent containers
     if (targetType === 'object' && !targetZone) {
       const zone = location.zones?.find(z => z.id === currentZone);
@@ -151,7 +223,7 @@ export class ZoneManager {
         return { allowed: true };
       }
 
-      // RULE 6.6: Objects inside containers (like pants inside trash bag)
+      // RULE 9: Objects inside containers (like pants inside trash bag)
       const targetObj = game.gameObjects[targetId as GameObjectId];
       const objState = GameStateManager.getEntityState(state, targetId);
 
@@ -181,9 +253,31 @@ export class ZoneManager {
           };
         }
 
-        // Container must be open/broken (or not openable/breakable, meaning objects are just revealed)
-        const requiresOpening = container.capabilities?.openable || container.capabilities?.breakable;
-        if (requiresOpening && !containerState.isOpen && !containerState.isBroken) {
+        // CONTAINER ACCESS LOGIC (3-state system for GameObjects):
+        // Same logic as items - check broken, locked, then opened
+        const isBreakable = container.capabilities?.breakable === true;
+        const isBroken = containerState.isBroken === true;
+        const isLockable = container.capabilities?.lockable === true;
+        const isLocked = containerState.isLocked === true;
+        const isOpenable = container.capabilities?.openable === true;
+        const isOpen = containerState.isOpen === true;
+
+        // 1. If container is BROKEN → Bypass all locks/openings
+        if (isBreakable && isBroken) {
+          return { allowed: true };
+        }
+
+        // 2. If container is LOCKED → Block access (even if opened/visible)
+        if (isLockable && isLocked) {
+          return {
+            allowed: false,
+            reason: 'container_locked',
+            targetName: targetObj.name
+          };
+        }
+
+        // 3. If container is CLOSED → Block access (contents not visible)
+        if (isOpenable && !isOpen) {
           return {
             allowed: false,
             reason: 'container_closed',
@@ -196,7 +290,7 @@ export class ZoneManager {
       }
     }
 
-    // RULE 7: Target is in different zone - not accessible
+    // RULE 10: Target is in different zone - not accessible
     const targetEntity = this.getEntity(targetId, targetType, game);
     const targetName = targetEntity?.name || 'that';
 

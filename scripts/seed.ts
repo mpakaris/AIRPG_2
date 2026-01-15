@@ -3,7 +3,7 @@ import { config } from 'dotenv';
 config(); // Load environment variables from .env file
 
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -93,16 +93,31 @@ async function seedGameCartridge() {
                 console.log(`   ⏭️  Skipping empty sub-collection: ${subCollectionName}`);
                 return;
             }
+
+            // CRITICAL: For items, delete all existing docs first to prevent merge behavior
+            if (subCollectionName === 'items') {
+                const existingDocs = await db.collection('games').doc(gameId).collection(subCollectionName).listDocuments();
+                const deleteBatch = db.batch();
+                for (const doc of existingDocs) {
+                    deleteBatch.delete(doc);
+                }
+                if (existingDocs.length > 0) {
+                    await deleteBatch.commit();
+                    console.log(`   🗑️  Deleted ${existingDocs.length} existing ${subCollectionName} documents`);
+                }
+            }
+
             const batch = db.batch();
             for (const key in data) {
-                const entity = data[key];
+                const entity = data[key] as any;
                 const docId = entity.id || entity.locationId || entity.portalId;
                 if (!docId) {
                     console.warn(`   ⚠️  Skipping entity in ${subCollectionName} with key ${key} (no ID)`);
                     continue;
                 }
+
                 const docRef = db.collection('games').doc(gameId).collection(subCollectionName).doc(docId);
-                batch.set(docRef, { ...entity }, { merge: true });
+                batch.set(docRef, { ...entity });
             }
             await batch.commit();
             console.log(`   ✅ ${subCollectionName}: ${Object.keys(data).length} documents`);

@@ -1,4 +1,5 @@
 # CHAPTER 1: ELM STREET INVESTIGATION
+
 ## Complete Design Document
 
 **Location**: Elm Street, Bloodhaven
@@ -32,12 +33,14 @@ Be careful."
 ## 🔍 INVESTIGATION CONTEXT
 
 **The Setup:**
+
 - Lili claims Burt abducted her from bus station on April 15, 6:15 PM
 - Bus station CCTV was mysteriously offline that night (all cameras)
 - Sarah found gray van appearing repeatedly on Elm Street traffic cams (weeks before April 15)
 - Van vanished after April 15 (suggests planning/staging)
 
 **Player's Mission:**
+
 - Investigate Elm Street (van's apparent base of operations)
 - Find the gray van and identify who operates it
 - Gather evidence proving the abduction was staged (not random)
@@ -47,12 +50,12 @@ Be careful."
 
 ## 🎯 THE 4 EVIDENCE PIECES
 
-| # | Evidence | Type | Location | Difficulty | What It Proves |
-|---|----------|------|----------|------------|----------------|
-| **1** | CCTV Screenshot | Photo | CCTV Building | EASY | Gray van (plate LKJ-9472) was operating on Elm Street → Provides PIN 9472 for Garage #3 |
-| **2** | Van Registration Card | Physical Item | Hidden Garage #3 | HARD | Van owned by "Jeremy Miller, 447 Willow Lane" (identifies suspect, provides address) |
-| **3** | Recorded Witness Statement | Audio File | Florist Shop (NPC) | MEDIUM | Lili had relationship with obsessed young man (proves staging/collaboration) |
-| **4** | Hardware Store Receipt | Physical Item | Electrician's Truck | MEDIUM | "J. Miller" bought abduction supplies April 10 (proves premeditation) |
+| #     | Evidence                   | Type          | Location            | Difficulty | What It Proves                                                                          |
+| ----- | -------------------------- | ------------- | ------------------- | ---------- | --------------------------------------------------------------------------------------- |
+| **1** | CCTV Screenshot            | Photo         | CCTV Building       | EASY       | Gray van (plate LKJ-9472) was operating on Elm Street → Provides PIN 9472 for Garage #3 |
+| **2** | Van Registration Card      | Physical Item | Hidden Garage #3    | HARD       | Van owned by "Jeremy Miller, 447 Willow Lane" (identifies suspect, provides address)    |
+| **3** | Recorded Witness Statement | Audio File    | Florist Shop (NPC)  | MEDIUM     | Lili had relationship with obsessed young man (proves staging/collaboration)            |
+| **4** | Hardware Store Receipt     | Physical Item | Electrician's Truck | MEDIUM     | "J. Miller" bought abduction supplies April 10 (proves premeditation)                   |
 
 **Win Condition**: Collect any 3 evidence → USE phone → Send to Sarah → Chapter Complete
 
@@ -105,11 +108,13 @@ Be careful."
 "A quiet residential street in the evening. Streetlights cast long shadows. To the north, you see a bus stop. Shops line the sidewalk: a florist, a butcher, a kiosk. An electrician's truck is parked on the curb. A narrow alley opens to the east. Construction scaffolding towers to the south."
 
 **Objects**:
+
 - **Streetlight** (examinable) - "Flickering. The bulb needs replacing."
 - **Sidewalk** (examinable) - "Cracked concrete. Gum stains and old graffiti."
 - **Street Sign** (readable) - "ELM STREET - EST. 1987"
 
 **Items**:
+
 - **Newspaper** (takeable, readable)
   - Article: "SERIAL KILLER 'THE FLORIST' STRIKES AGAIN - Lili Morgenstern Still Missing"
   - Flavor text, no evidence
@@ -117,6 +122,7 @@ Be careful."
 **NPCs**: None
 
 **Connections**:
+
 - North → Bus Stop
 - East → Alley
 - South → Construction Site
@@ -136,6 +142,7 @@ Be careful."
 "A weathered bus shelter with cracked plexiglass walls. A wooden bench sits inside. A trash bin overflows nearby. A payphone booth stands at the corner—an oddity in the smartphone era."
 
 **Objects**:
+
 - **Bench** (examinable, sittable) - "Graffiti carved into wood: 'TC + MR 1998'"
 - **Trash Bin** (container, openable)
   - Contains: Empty coffee cups, candy wrappers, crumpled receipts (all flavor, no evidence)
@@ -160,6 +167,7 @@ Be careful."
 "A white work van with 'KOWALSKI ELECTRIC' painted on the side. The back doors are secured with a padlock. Mike Kowalski sits in the driver's seat, scrolling his phone, taking occasional sips from a thermos."
 
 **Objects**:
+
 - **Van Exterior** (examinable) - "Dented bumper. Mud on the tires. License plate: KWL-4429."
 - **Van Back Doors** (container, locked initially)
   - **Unlocks when**: Electrician is distracted
@@ -168,6 +176,7 @@ Be careful."
   - Contains: Crowbar, Wire Cutters, Lock Pick Set, Electrical Tape, Drill Body (Part 1/3)
 
 **Items** (Inside Toolbox):
+
 - **Crowbar** (tool) - Use at Florist filing cabinet
 - **Wire Cutters** (tool) - Use at Alley secret door
 - **Lock Pick Set** ⭐ (permanent tool) - Use on mechanical locks throughout game
@@ -180,6 +189,7 @@ Be careful."
   - **Key Detail**: Abduction supplies bought 5 days before incident, same name as van owner!
 
 **NPCs**:
+
 - **Mike Kowalski (Electrician)** - Type 1 → Type 2
   - **Initial State**: "I can't leave my van. Too many tools get stolen around here."
   - **Distraction Puzzle**: AI-judged creativity
@@ -187,6 +197,7 @@ Be careful."
 **DISTRACTION PUZZLE** (AI-Judged):
 
 Player can try ANY creative distraction. Examples that work:
+
 - "Tell him there's a power outage at the construction site"
 - "Offer him coffee from the kiosk"
 - "Tell him his brake lights are on"
@@ -194,11 +205,13 @@ Player can try ANY creative distraction. Examples that work:
 - "Mention you saw someone messing with power lines"
 
 Examples that DON'T work:
+
 - "Distract him" (too vague)
 - "Tell him there's a fire" (too extreme, he'd call 911)
 - Generic greetings
 
 **Mechanic**:
+
 ```
 > TALK TO Mike > "There's a power outage at the construction site"
 
@@ -217,6 +230,7 @@ a breaker again. Hold on, I'll check it out."
 
 **After Distraction**:
 Mike returns, converts to Type 2 (flavor):
+
 - Complains about construction workers
 - Mentions union dues
 - Talks about rising copper prices
@@ -234,6 +248,7 @@ Mike returns, converts to Type 2 (flavor):
 "A small convenience kiosk painted bright blue. Magazines and snacks fill the window display. The owner, Ravi, stands behind the counter arranging lottery tickets."
 
 **Objects**:
+
 - **Magazine Rack** (examinable) - Tabloids, newspapers with Lili's story
 - **Counter** (examinable) - Lottery tickets, receipt spike, tip jar
 - **Snack Display** (container, can take items)
@@ -241,18 +256,21 @@ Mike returns, converts to Type 2 (flavor):
 - **Back Shelf** (examinable) - Supplies, including fingerprint powder kit
 
 **Items**:
+
 - **Coffee** (takeable) - Use for Electrician distraction (alternative method)
 - **Fingerprint Powder Kit** ⭐ (takeable) - Required for Evidence 2 at payphone
 - **Energy Drink** (takeable) - Useless flavor item
 - **Tabloid Newspaper** (readable) - "MACKLIN ARRESTED - Family Legacy in Ruins" (angers player)
 
 **NPCs**:
+
 - **Ravi Patel (Kiosk Owner)** - Type 2 (Flavor only)
   - Friendly, gossips about neighborhood
   - Mentions seeing gray van parked by alley recently
   - Gives items freely: "Take what you need. You look stressed, friend."
 
 **Dialogue**:
+
 ```
 Ravi: "Coffee? Help yourself. I saw you looking at that
 payphone. Weird someone still uses those, right? I keep
@@ -273,6 +291,7 @@ have it if you want."
 "A small flower shop with cheerful window displays. The scent of roses and lilies fills the air. Fresh bouquets crowd the counters. The owner, a middle-aged woman, arranges flowers behind the register."
 
 **Objects**:
+
 - **Display Counter** (examinable) - Cash register, order slips, business cards
 - **Flower Cooler** (container, openable)
   - Contains: Fresh bouquets, flower food packets, ribbon spools
@@ -280,11 +299,13 @@ have it if you want."
   - Contains: Flower boxes, gardening tools, ladder
 
 **Items**:
+
 - **Bouquet of Lilies** (takeable) - Flavor item (Lili's flower connection)
 - **Gardening Gloves** (takeable) - Can be used for handling rough objects
 - **Business Card** (takeable) - "Petal & Stem - Fresh Flowers Daily"
 
 **NPCs**:
+
 - **Margaret Chen (Florist)** - Type 1 → Type 2 (EVIDENCE LOCATION)
   - Friendly, observant
   - Recognizes Lili's photo when shown
@@ -332,6 +353,7 @@ EVIDENCE 3 ACQUIRED: Recorded witness statement (proves relationship)
 
 **After Statement**:
 Margaret converts to Type 2:
+
 - Talks about flower meanings
 - Mentions business has been slow
 - Discusses neighborhood changes
@@ -347,6 +369,7 @@ Margaret converts to Type 2:
 "A traditional butcher shop with hanging sausages in the window. The smell of smoked meat and sawdust fills the air. Klaus Richter sharpens a cleaver behind the counter, humming an old tune."
 
 **Objects**:
+
 - **Butcher Block** (examinable) - "Worn wood. Deep knife marks. Bloodstains."
 - **Meat Hooks** (examinable) - "Hanging beef, sausages, chicken"
 - **Walk-in Freezer** (container, openable)
@@ -355,12 +378,14 @@ Margaret converts to Type 2:
   - Contains: Bolt Cutters, Meat cleaver, Bone saw
 
 **Items**:
+
 - **Bolt Cutters** ⭐ (takeable) - Use at Hidden Garages padlocks
 - **Smoked Sausage** (takeable) - Trade to Homeless Man for info/audio
 - **Meat Cleaver** (examinable, can't take)
   - "You reach for the cleaver. Then stop. You're trying to prove you're NOT violent."
 
 **NPCs**:
+
 - **Klaus Richter (Butcher)** - Type 2 (Flavor only)
   - Friendly, makes dark jokes unknowingly
   - "You look like you've been through the grinder! Haha!"
@@ -380,6 +405,7 @@ Margaret converts to Type 2:
 "A three-story building wrapped in scaffolding and caution tape. Construction equipment sits idle. A chain-link fence surrounds the perimeter. Tony Greco, the foreman, stands at the gate, arms crossed."
 
 **Objects**:
+
 - **Chain-Link Fence** (barrier, locked gate)
   - **Unlocks with**: Wear hard hat OR safety vest (Foreman allows entry)
 - **Tool Shed** (container, locked with combination lock)
@@ -390,6 +416,7 @@ Margaret converts to Type 2:
   - Contains: Construction plans, clipboard, Drill Bit (Part 3/3)
 
 **Items**:
+
 - **Hard Hat** (takeable, wearable) - Required for entry (alternative: find in Alley dumpster)
 - **Safety Vest** (takeable, wearable) - Required for entry
 - **Drill Battery (Part 2/3)** - In tool shed
@@ -397,6 +424,7 @@ Margaret converts to Type 2:
 - **Construction Plans** (readable) - Flavor, mentions old Bloom building foundations
 
 **NPCs**:
+
 - **Tony Greco (Foreman)** - Type 1 → Type 2
   - **Initial State**: "Hard hat and vest. No exceptions. Insurance."
   - **Unlocks with**: Player wears hard hat + vest (OR shows both items)
@@ -423,6 +451,7 @@ Enter 4-digit code: ____
 ```
 
 **Multi-Part Tool Assembly**:
+
 ```
 [After collecting all 3 parts:]
 - Drill Body (Electrician Truck)
@@ -449,6 +478,7 @@ This could drill through locks, metal, or wood."
 "A small concrete building with a chain-link fence. A rusted keypad is mounted beside the door. Security cameras watch the perimeter. Through the fence, you can see blinking server racks inside."
 
 **Objects**:
+
 - **Chain-Link Fence** (barrier - can cut with bolt cutters OR use door)
 - **Keypad** (inputtable - 4-digit passcode)
   - **Correct code**: 1440 (found on Kiosk receipt)
@@ -459,6 +489,7 @@ This could drill through locks, metal, or wood."
   - Contains: Maintenance logs, incident reports, USB drives
 
 **Items**:
+
 - **CCTV Screenshot** ⭐ **EVIDENCE 1** (from monitor station)
   - Description: "Printed screenshot from April 15, 6:15 PM. Shows gray van (plate: LKJ-9472) on Elm Street. This contradicts the police report - it's NOT your vehicle."
   - Photo clearly shows license plate: **LKJ-9472**
@@ -467,6 +498,7 @@ This could drill through locks, metal, or wood."
 - **Security Badge** (can use to access Construction site as alternative to hard hat)
 
 **NPCs**:
+
 - **Marcus Hayes (Security Guard)** - Type 1 → Type 2
   - **Initial State**: "This is a restricted area. You got a warrant?"
   - **Can give**: Hints that footage exists, mentions he saw a van that day
@@ -508,6 +540,7 @@ EVIDENCE 1 ACQUIRED: CCTV Screenshot (plate LKJ-9472)
 ```
 
 **Alternative Access**:
+
 - Use bolt cutters on fence (skip keypad)
 - Show other evidence to Marcus (he lets you in)
 
@@ -522,6 +555,7 @@ EVIDENCE 1 ACQUIRED: CCTV Screenshot (plate LKJ-9472)
 "A narrow brick alley between buildings. Graffiti covers the walls—tags, phone numbers, crude drawings. A dumpster sits against the left wall, overflowing. A man in a tattered coat rests on flattened cardboard near the dumpster. The alley ends at a brick wall... or does it?"
 
 **Objects**:
+
 - **Dumpster** (container, locked with lever puzzle)
   - **Unlocks with**: Lever sequence UP-DOWN-UP (Homeless Man gives hint)
   - Contains: Trash bags (nested), Hard Hat (alternative to Construction), Empty bottles
@@ -579,10 +613,12 @@ RED EYES x BLUE STARS ÷ YELLOW BOLTS = ?"
 ```
 
 **Items**:
+
 - **Hard Hat** (alternative location, in dumpster)
 - **Empty Bottle** (takeable) - Can use for fingerprint dusting (alternative to powder kit)
 
 **NPCs**:
+
 - **Eddie "Homeless Man"** - Type 1 → Type 2
   - **Initial State**: Sitting by dumpster, looks tired
   - **Needs**: Food (Smoked Sausage from Butcher)
@@ -620,6 +656,7 @@ That's how you open those old models."
 
 **After Trading**:
 Eddie converts to Type 2:
+
 - Tells stories about street life
 - Mentions police searched alley but missed the wall door
 - Talks about seeing neighborhood changes
@@ -635,6 +672,7 @@ Eddie converts to Type 2:
 "A hidden courtyard behind the brick wall. Three garage doors stand in a row, numbered 1, 2, and 3. Oil stains mark the concrete. Weeds push through cracks. This place was overlooked during the police search."
 
 **Objects**:
+
 - **Garage Door #1** (container, locked - Mechanical Padlock)
   - **Unlocks with**: Lock Pick Set OR Bolt Cutters
   - Contains: Old furniture, paint cans, garden tools (nothing useful)
@@ -646,6 +684,7 @@ Eddie converts to Type 2:
   - Contains: Gray van, toolbox, **EVIDENCE 2**
 
 **Items**:
+
 - **Van Registration Card** ⭐ **EVIDENCE 2** (in Garage #3 glove box)
   - Description: "Registration for gray van, plate LKJ-9472. Owner: Jeremy Miller - Address: 447 Willow Lane, Bloodhaven."
   - **Key Detail**: Name matches receipt (J. Miller), address leads to Chapter 3 investigation (Bloom Estate)
@@ -732,18 +771,18 @@ EVIDENCE 2 ACQUIRED: Van registration (owner: Jeremy Miller)
 
 ### Puzzle Type Distribution
 
-| Puzzle Type | Location | Difficulty | Time |
-|-------------|----------|------------|------|
-| **Lock Pick Minigame** | Florist Back Office | Easy | 5 min |
-| **NPC Distraction (AI-Judged)** | Electrician Truck | Medium | 10 min |
-| **Combination Lock (Riddle)** | Construction Tool Shed | Easy | 3 min |
-| **Multi-Part Assembly** | Drill (3 parts across zones) | Medium | 15 min |
-| **Lever Sequence** | Alley Dumpster | Easy | 2 min |
-| **Cipher Puzzle** | Alley Graffiti → Electrical Panel | Hard | 15 min |
-| **Digital Keypad (Simon Says)** | Garage #1 | Medium | 5 min |
-| **Heavy Lock (Tool Required)** | Garage #3 | Medium | 5 min |
-| **NPC Trade** | Homeless Man (Food for Audio) | Easy | 5 min |
-| **Forensics** | Payphone Fingerprints | Easy | 5 min |
+| Puzzle Type                     | Location                          | Difficulty | Time   |
+| ------------------------------- | --------------------------------- | ---------- | ------ |
+| **Lock Pick Minigame**          | Florist Back Office               | Easy       | 5 min  |
+| **NPC Distraction (AI-Judged)** | Electrician Truck                 | Medium     | 10 min |
+| **Combination Lock (Riddle)**   | Construction Tool Shed            | Easy       | 3 min  |
+| **Multi-Part Assembly**         | Drill (3 parts across zones)      | Medium     | 15 min |
+| **Lever Sequence**              | Alley Dumpster                    | Easy       | 2 min  |
+| **Cipher Puzzle**               | Alley Graffiti → Electrical Panel | Hard       | 15 min |
+| **Digital Keypad (Simon Says)** | Garage #1                         | Medium     | 5 min  |
+| **Heavy Lock (Tool Required)**  | Garage #3                         | Medium     | 5 min  |
+| **NPC Trade**                   | Homeless Man (Food for Audio)     | Easy       | 5 min  |
+| **Forensics**                   | Payphone Fingerprints             | Easy       | 5 min  |
 
 **Total Puzzle Variety**: 10 different types, no repetition
 
@@ -752,30 +791,34 @@ EVIDENCE 2 ACQUIRED: Van registration (owner: Jeremy Miller)
 ## 🛠️ TOOLS & ITEMS
 
 ### Permanent Tools (Can't Drop)
+
 - **Phone** (camera, audio player, PDF reader, communication)
 - **Lock Pick Set** (opens mechanical locks via minigame)
 
 ### Collectible Tools
-| Tool | Location | Use |
-|------|----------|-----|
-| **Crowbar** | Electrician Truck | Florist filing cabinet (alternative to lock pick) |
-| **Wire Cutters** | Electrician Truck | Alley electrical panel (secret door) |
-| **Bolt Cutters** | Butcher Shop | Garage chains/padlocks |
-| **Hard Hat** | Construction Shed OR Alley Dumpster | Construction site entry |
-| **Safety Vest** | Construction Shed | Construction site entry |
+
+| Tool             | Location                            | Use                                               |
+| ---------------- | ----------------------------------- | ------------------------------------------------- |
+| **Crowbar**      | Electrician Truck                   | Florist filing cabinet (alternative to lock pick) |
+| **Wire Cutters** | Electrician Truck                   | Alley electrical panel (secret door)              |
+| **Bolt Cutters** | Butcher Shop                        | Garage chains/padlocks                            |
+| **Hard Hat**     | Construction Shed OR Alley Dumpster | Construction site entry                           |
+| **Safety Vest**  | Construction Shed                   | Construction site entry                           |
 
 ### Multi-Part Tool
-| Part | Location | Final Use |
-|------|----------|-----------|
-| **Drill Body** | Electrician Truck | Combine all 3 → |
-| **Drill Battery** | Construction Shed | Opens Garage #3 |
-| **Drill Bit** | Construction Office | (alternative to bolt cutters) |
+
+| Part              | Location            | Final Use                     |
+| ----------------- | ------------------- | ----------------------------- |
+| **Drill Body**    | Electrician Truck   | Combine all 3 →               |
+| **Drill Battery** | Construction Shed   | Opens Garage #3               |
+| **Drill Bit**     | Construction Office | (alternative to bolt cutters) |
 
 ### Trade Items
-| Item | Source | Trade To | Get |
-|------|--------|----------|-----|
-| **Smoked Sausage** | Butcher | Homeless Eddie | Van sighting information + dumpster hint |
-| **Coffee** | Kiosk | Electrician Mike | Access to van (alternative distraction) |
+
+| Item               | Source  | Trade To         | Get                                      |
+| ------------------ | ------- | ---------------- | ---------------------------------------- |
+| **Smoked Sausage** | Butcher | Homeless Eddie   | Van sighting information + dumpster hint |
+| **Coffee**         | Kiosk   | Electrician Mike | Access to van (alternative distraction)  |
 
 ---
 
@@ -786,15 +829,17 @@ EVIDENCE 2 ACQUIRED: Van registration (owner: Jeremy Miller)
 **Mechanic**: Set 5 pins to correct heights (LOW/MEDIUM/HIGH)
 
 **Feedback**:
-- Correct pin: "*click* - Feels right"
-- Wrong pin: "*scrape* - Not quite"
-- All correct: "*CLUNK* - Lock opens!"
+
+- Correct pin: "_click_ - Feels right"
+- Wrong pin: "_scrape_ - Not quite"
+- All correct: "_CLUNK_ - Lock opens!"
 
 **Hint System**: Player can LISTEN for clicks (audio feedback guides)
 
 **Difficulty**: Randomized pin heights each attempt
 
 **Used At**:
+
 - Florist back office door
 - Florist filing cabinet
 - Garage #2 padlock
@@ -808,11 +853,13 @@ EVIDENCE 2 ACQUIRED: Van registration (owner: Jeremy Miller)
 **Embedded**: JS/Next.js component with button interface
 
 **Difficulty Scaling**:
+
 - Round 1: 4 colors
 - Round 2: 5 colors (if failed)
 - Round 3: 6 colors (if failed again)
 
 **Used At**:
+
 - Garage #1 digital lock
 
 ---
@@ -828,6 +875,7 @@ EVIDENCE 2 ACQUIRED: Van registration (owner: Jeremy Miller)
 **Input**: Set electrical panel to 16 OR rewire terminals manually
 
 **Used At**:
+
 - Alley electrical panel (secret door)
 
 ---
@@ -837,6 +885,7 @@ EVIDENCE 2 ACQUIRED: Van registration (owner: Jeremy Miller)
 ### Evidence 1: CCTV Screenshot (EASY)
 
 **Steps**:
+
 1. Read Sarah's message → Learn about gray van on Elm Street
 2. GO TO Kiosk → EXAMINE receipt spike → TAKE receipt with CCTV passcode (1440)
 3. GO TO CCTV Building
@@ -856,6 +905,7 @@ EVIDENCE 2 ACQUIRED: Van registration (owner: Jeremy Miller)
 ### Evidence 2: Van Registration (HARD)
 
 **Steps**:
+
 1. Obtain Evidence 1 (CCTV Screenshot) first → Get license plate LKJ-9472
 2. GO TO Alley
 3. EXAMINE brick wall → Notice electrical panel
@@ -877,6 +927,7 @@ EVIDENCE 2 ACQUIRED: Van registration (owner: Jeremy Miller)
 ### Evidence 3: Recorded Witness Statement (MEDIUM)
 
 **Steps**:
+
 1. Obtain Lili's photo (from Sarah's message or evidence)
 2. GO TO Florist Shop (Petal & Stem)
 3. TALK TO Margaret Chen
@@ -894,6 +945,7 @@ EVIDENCE 2 ACQUIRED: Van registration (owner: Jeremy Miller)
 ### Evidence 4: Hardware Store Receipt (MEDIUM)
 
 **Steps**:
+
 1. GO TO Electrician Truck
 2. Distract Mike Kowalski (creative AI-judged solution)
 3. OPEN van back doors
@@ -912,27 +964,27 @@ EVIDENCE 2 ACQUIRED: Van registration (owner: Jeremy Miller)
 
 ### Optimal Path (Collect 3 Evidence - Minimum)
 
-| Phase | Activity | Time |
-|-------|----------|------|
-| **Setup** | Read Sarah's message | 3 min |
-| **Evidence 1** | CCTV Screenshot (easy) | 20 min |
+| Phase          | Activity                   | Time   |
+| -------------- | -------------------------- | ------ |
+| **Setup**      | Read Sarah's message       | 3 min  |
+| **Evidence 1** | CCTV Screenshot (easy)     | 20 min |
 | **Evidence 3** | Witness statement (medium) | 15 min |
-| **Evidence 4** | Hardware receipt (medium) | 15 min |
-| **Completion** | Send to Sarah, chapter end | 5 min |
-| **TOTAL** | **58 minutes** |
+| **Evidence 4** | Hardware receipt (medium)  | 15 min |
+| **Completion** | Send to Sarah, chapter end | 5 min  |
+| **TOTAL**      | **58 minutes**             |
 
 ### Full Completion (All 4 Evidence)
 
-| Phase | Activity | Time |
-|-------|----------|------|
-| **Setup** | Read Sarah's message | 3 min |
+| Phase           | Activity                   | Time   |
+| --------------- | -------------------------- | ------ |
+| **Setup**       | Read Sarah's message       | 3 min  |
 | **Exploration** | Talk to NPCs, gather tools | 15 min |
-| **Evidence 1** | CCTV Screenshot (easy) | 20 min |
-| **Evidence 2** | Van registration (hardest) | 45 min |
-| **Evidence 3** | Witness statement (medium) | 15 min |
-| **Evidence 4** | Hardware receipt (medium) | 15 min |
-| **Completion** | Send to Sarah | 5 min |
-| **TOTAL** | **118 minutes** |
+| **Evidence 1**  | CCTV Screenshot (easy)     | 20 min |
+| **Evidence 2**  | Van registration (hardest) | 45 min |
+| **Evidence 3**  | Witness statement (medium) | 15 min |
+| **Evidence 4**  | Hardware receipt (medium)  | 15 min |
+| **Completion**  | Send to Sarah              | 5 min  |
+| **TOTAL**       | **118 minutes**            |
 
 **Target**: 90-120 minutes (players collect 3/4 evidence or explore fully)
 
@@ -975,14 +1027,14 @@ Next Target: 447 Willow Lane
 
 ## 🎭 NPC SUMMARY
 
-| NPC | Type | Location | Initial State | Unlock Condition | Gives/Allows | Post-Action |
-|-----|------|----------|---------------|------------------|--------------|-------------|
-| **Mike Kowalski** | Type 1 → 2 | Electrician Truck | Guards van | AI-judged distraction | Tools (crowbar, wire cutters, lock pick, drill body, **Evidence 4 receipt**) | Union complaints |
-| **Margaret Chen** | Type 1 → 2 | Florist Shop | Friendly, observant | Show Lili's photo | **Evidence 3 - Recorded witness statement** | Flower talk, sympathetic |
-| **Klaus Richter** | Type 2 | Butcher Shop | Friendly | None | Bolt cutters, sausage, gossip | Dark humor |
-| **Tony Greco** | Type 1 → 2 | Construction | Blocks gate | Hard hat + vest | Site access, drill parts | Permit rants |
-| **Ravi Patel** | Type 2 | Kiosk | Friendly | None | Coffee, CCTV code hint | Neighborhood gossip |
-| **Eddie (Homeless)** | Type 1 → 2 | Alley | Hungry | Food (sausage) | Van sighting info, dumpster hint | Street stories |
+| NPC                  | Type       | Location          | Initial State       | Unlock Condition      | Gives/Allows                                                                 | Post-Action              |
+| -------------------- | ---------- | ----------------- | ------------------- | --------------------- | ---------------------------------------------------------------------------- | ------------------------ |
+| **Mike Kowalski**    | Type 1 → 2 | Electrician Truck | Guards van          | AI-judged distraction | Tools (crowbar, wire cutters, lock pick, drill body, **Evidence 4 receipt**) | Union complaints         |
+| **Margaret Chen**    | Type 1 → 2 | Florist Shop      | Friendly, observant | Show Lili's photo     | **Evidence 3 - Recorded witness statement**                                  | Flower talk, sympathetic |
+| **Klaus Richter**    | Type 2     | Butcher Shop      | Friendly            | None                  | Bolt cutters, sausage, gossip                                                | Dark humor               |
+| **Tony Greco**       | Type 1 → 2 | Construction      | Blocks gate         | Hard hat + vest       | Site access, drill parts                                                     | Permit rants             |
+| **Ravi Patel**       | Type 2     | Kiosk             | Friendly            | None                  | Coffee, CCTV code hint                                                       | Neighborhood gossip      |
+| **Eddie (Homeless)** | Type 1 → 2 | Alley             | Hungry              | Food (sausage)        | Van sighting info, dumpster hint                                             | Street stories           |
 
 ---
 
@@ -1060,6 +1112,7 @@ ELM STREET (START)
 ## 🚀 READY FOR IMPLEMENTATION
 
 **Next Steps**:
+
 1. Review this design - approve or request changes
 2. Implement in TypeScript (chapter-1.ts cartridge)
 3. Create minigame components (Lock Pick, Simon Says)
@@ -1076,6 +1129,7 @@ ELM STREET (START)
 ## 📝 CHANGELOG
 
 **2026-01-10 - Major Story Redesign**:
+
 - **REMOVED**: "Bloom's Florist" concept (user never confirmed this)
 - **REMOVED**: Birth certificate/Lili identity reveal from Chapter 1 (saved for Chapter 5 twist)
 - **REMOVED**: Helena Bloom NPC connection (was incorrect assumption)

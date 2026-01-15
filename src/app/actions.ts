@@ -9,7 +9,6 @@ import { getInitialState } from '@/lib/game-state';
 import { handleBreak } from '@/lib/game/actions/handle-break';
 import { handleCall } from '@/lib/game/actions/handle-call';
 import { handleClose } from '@/lib/game/actions/handle-close';
-import { handleCombine } from '@/lib/game/actions/handle-combine';
 import { handleConversation } from '@/lib/game/actions/handle-conversation';
 import { handleDeviceCommand } from '@/lib/game/actions/handle-device-command';
 import { handleDrop } from '@/lib/game/actions/handle-drop';
@@ -1315,7 +1314,6 @@ export async function processCommand(
                                  commandToCheck.startsWith('break ') ||
                                  commandToCheck.startsWith('move ') ||
                                  commandToCheck.startsWith('drop ') ||
-                                 commandToCheck.startsWith('combine ') ||
                                  commandToCheck.startsWith('talk ') ||
                                  commandToCheck.startsWith('look') ||
                                  commandToCheck.startsWith('inventory') ||
@@ -1577,22 +1575,6 @@ export async function processCommand(
                 case 'destroy':
                     // NEW: handleBreak returns Effect[]
                     effects = await handleBreak(currentState, restOfCommand.replace(/"/g, ''), game, safePlayerInput);
-                    break;
-                case 'combine':
-                case 'merge':
-                    // NEW: handleCombine returns Effect[]
-                    const combineMatch = restOfCommand.match(/^(.*?)\s+(with|and)\s+(.*)$/);
-                    if (combineMatch) {
-                        const item1 = combineMatch[1].trim().replace(/"/g, '');
-                        const item2 = combineMatch[3].trim().replace(/"/g, '');
-                        effects = await handleCombine(currentState, item1, item2, game);
-                    } else {
-                        effects = [{
-                            type: 'SHOW_MESSAGE',
-                            speaker: 'system',
-                            content: 'Use "combine item1 with item2" to combine two items.'
-                        }];
-                    }
                     break;
                 case 'close':
                 case 'goodbye':

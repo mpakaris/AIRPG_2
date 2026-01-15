@@ -128,8 +128,11 @@ export class VisibilityResolver {
     }
 
     // =========================================================================
-    // 4. Get items (in inventory OR revealed and accessible in world)
+    // 4. Get items (in inventory OR revealed in world)
     // =========================================================================
+    // IMPORTANT: Items should be VISIBLE if revealed, even if in locked containers.
+    // The ZoneManager will block TAKE actions for inaccessible items.
+    // This separates VISIBILITY (what player can see) from ACCESSIBILITY (what player can take).
     for (const itemId in game.items) {
       // In inventory - always visible
       if (state.inventory.includes(itemId as any)) {
@@ -137,17 +140,15 @@ export class VisibilityResolver {
           visibleItems.push(itemId);
         }
       }
-      // OR revealed and accessible in world
+      // OR revealed in world (even if in locked container)
       else if (!visibleItems.includes(itemId)) {
         const itemState = GameStateManager.getEntityState(state, itemId);
         const isRevealed = itemState.isVisible === true;
         const notTaken = !itemState.taken;
-        const isAccessible = GameStateManager.isAccessible(state, game, itemId);
 
-        if (itemId === 'item_sd_card') {
-        }
-
-        if (isRevealed && notTaken && isAccessible) {
+        // Show item if revealed and not taken, regardless of accessibility
+        // ZoneManager will block TAKE if item is in locked container
+        if (isRevealed && notTaken) {
           visibleItems.push(itemId);
         }
       }

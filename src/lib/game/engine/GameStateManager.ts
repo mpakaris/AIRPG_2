@@ -177,6 +177,22 @@ export class GameStateManager {
           }
           break;
 
+        case 'REMOVE_ITEM_FROM_CONTAINER':
+          // Remove item from container's containedEntities
+          if (!newState.world[effect.containerId]) {
+            newState.world[effect.containerId] = {};
+          }
+          if (newState.world[effect.containerId].containedEntities) {
+            newState.world[effect.containerId].containedEntities = newState.world[effect.containerId].containedEntities!.filter(
+              id => id !== effect.itemId
+            );
+          }
+          // Clear item's parentId since it's no longer in container (it's in inventory now)
+          if (newState.world[effect.itemId]) {
+            newState.world[effect.itemId].parentId = undefined;
+          }
+          break;
+
         // ============================================================================
         // World Graph (Visibility)
         // ============================================================================
