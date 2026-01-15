@@ -77,7 +77,19 @@ export const GameSidebar: FC<GameSidebarProps> = ({ game, playerState, onCommand
   // Safety checks for incomplete state
   const chapter = game.chapters[game.startChapterId];
   const location = playerState?.currentLocationId ? game.locations[playerState.currentLocationId] : null;
-  const inventoryItems = (playerState?.inventory || []).map(id => game.items[id]).filter(Boolean);
+
+  // Filter out worn/equipped items from inventory display
+  // Worn items are tracked via flags (e.g., 'wearing_hard_hat')
+  const inventoryItems = (playerState?.inventory || [])
+    .map(id => game.items[id])
+    .filter(Boolean)
+    .filter(item => {
+      // Check if this item has a corresponding "wearing_X" flag that's true
+      // For item_hard_hat, check wearing_hard_hat flag
+      const wearingFlag = `wearing_${item.id.replace('item_', '')}` as Flag;
+      const isWorn = !!playerState?.flags?.[wearingFlag];
+      return !isWorn; // Hide item if it's currently worn
+    });
 
   // NEW: flags is now Record<string, boolean> instead of array
   const isChapterComplete = !!playerState?.flags?.[chapterCompletionFlag(game.startChapterId)];

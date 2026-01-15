@@ -48,6 +48,59 @@ function checkChapterCompletion(state: PlayerState, game: Game): boolean {
   return allObjectivesMet;
 }
 
+/**
+ * Check for worn/equipped items that need to be returned to storage when leaving a location.
+ * Returns effects to auto-return location-specific equipment.
+ */
+function checkWornItemsOnLocationExit(
+  state: PlayerState,
+  fromLocationId: string,
+  toLocationId: string,
+  game: Game
+): Effect[] {
+  const effects: Effect[] = [];
+
+  // Define location-specific worn items (flag → item → storage mapping)
+  const locationEquipment: Record<string, { flag: Flag; itemId: ItemId; storageId: GameObjectId; itemName: string }> = {
+    'loc_construction_exterior': {
+      flag: 'wearing_hard_hat' as Flag,
+      itemId: 'item_hard_hat' as ItemId,
+      storageId: 'obj_construction_exterior_storage' as GameObjectId,
+      itemName: 'Hard Hat'
+    },
+    'loc_construction_interior': {
+      flag: 'wearing_hard_hat' as Flag,
+      itemId: 'item_hard_hat' as ItemId,
+      storageId: 'obj_construction_interior_storage' as GameObjectId,
+      itemName: 'Hard Hat'
+    }
+  };
+
+  const equipmentData = locationEquipment[fromLocationId];
+
+  // Check if player is leaving a location with location-specific equipment worn
+  if (equipmentData && state.flags[equipmentData.flag] && fromLocationId !== toLocationId) {
+    // Check if BOTH from and to locations are in the same equipment zone
+    // (e.g., both construction exterior and interior allow hard hat)
+    const toLocationEquipment = locationEquipment[toLocationId];
+    const isSameEquipmentZone = toLocationEquipment &&
+                                 toLocationEquipment.flag === equipmentData.flag;
+
+    // Only auto-return if leaving the equipment zone entirely
+    if (!isSameEquipmentZone) {
+      // Return equipment to storage
+      effects.push(
+        { type: 'REMOVE_ITEM', itemId: equipmentData.itemId },
+        { type: 'ADD_ITEM_TO_CONTAINER', itemId: equipmentData.itemId, containerId: equipmentData.storageId },
+        { type: 'SET_FLAG', flag: equipmentData.flag, value: false },
+        { type: 'SHOW_MESSAGE', speaker: 'system', content: `You leave the ${equipmentData.itemName} at the site.` }
+      );
+    }
+  }
+
+  return effects;
+}
+
 export async function handleGo(state: PlayerState, targetName: string, game: Game): Promise<Effect[]> {
   console.log('[DEBUG handle-go] Called with targetName:', targetName, 'from location:', state.currentLocationId);
   const chapter = game.chapters[game.startChapterId];
@@ -67,7 +120,11 @@ export async function handleGo(state: PlayerState, targetName: string, game: Gam
         const nextChapter = game.chapters[nextChapterId];
         const newLocation = game.locations[nextChapter.startLocationId];
 
+        // Check for worn items that need to be returned
+        const wornItemEffects = checkWornItemsOnLocationExit(state, state.currentLocationId, nextChapter.startLocationId, game);
+
         return [
+          ...wornItemEffects,
           { type: 'MOVE_TO_LOCATION', toLocationId: nextChapter.startLocationId },
           { type: 'END_CONVERSATION' },
           { type: 'END_INTERACTION' },
@@ -161,8 +218,13 @@ export async function handleGo(state: PlayerState, targetName: string, game: Gam
 
         if (currentToHub && hubToTarget) {
           console.log('[DEBUG handle-go] Auto-routing successful, moving to:', targetLocation.locationId);
+
+          // Check for worn items that need to be returned
+          const wornItemEffects = checkWornItemsOnLocationExit(state, state.currentLocationId, targetLocation.locationId, game);
+
           // Auto-route through hub transparently
           return [
+            ...wornItemEffects,
             { type: 'MOVE_TO_LOCATION', toLocationId: targetLocation.locationId },
             { type: 'END_CONVERSATION' },
             { type: 'END_INTERACTION' },
@@ -223,14 +285,36 @@ export async function handleGo(state: PlayerState, targetName: string, game: Gam
       }
     }
 
+    // Check for worn items that need to be returned
+    const wornItemEffects = checkWornItemsOnLocationExit(state, state.currentLocationId, targetLocation.locationId, game);
+
+    // Special case: Entering construction site interior with hard hat (Tony's reaction)
+    const isEnteringConstructionSite = state.currentLocationId === 'loc_construction_exterior' &&
+                                        targetLocation.locationId === 'loc_construction_interior' &&
+                                        state.flags['wearing_hard_hat'];
+
+    const tonyReactionMessage = isEnteringConstructionSite
+      ? 'Tony notices your hard hat and nods. "Alright, you\'re good. Don\'t touch anything." He steps aside and waves you through.'
+      : null;
+
     // Requirements met (or no requirements) - allow navigation
-    return [
+    const effects: Effect[] = [
+      ...wornItemEffects,
       { type: 'MOVE_TO_LOCATION', toLocationId: targetLocation.locationId },
       { type: 'END_CONVERSATION' },
       { type: 'END_INTERACTION' },
-      { type: 'SHOW_MESSAGE', speaker: 'system', content: game.systemMessages.locationTransition(targetLocation.name) },
-      createLocationMessage(targetLocation)
+      { type: 'SHOW_MESSAGE', speaker: 'system', content: game.systemMessages.locationTransition(targetLocation.name) }
     ];
+
+    // Add Tony's reaction if entering construction site
+    if (tonyReactionMessage) {
+      effects.push({ type: 'SHOW_MESSAGE', speaker: 'narrator', content: tonyReactionMessage });
+    }
+
+    // Add location description
+    effects.push(createLocationMessage(targetLocation));
+
+    return effects;
   }
 
   // ===========================================================================

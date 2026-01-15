@@ -19,6 +19,7 @@ const GuidePlayerWithNarratorInputSchema = z.object({
   availableCommands: z.string().describe('A list of available commands in the game. This might be a global list or a smaller, context-specific list for an interaction.'),
   visibleObjectNames: z.array(z.string()).describe('A list of the user-facing names of all objects currently visible to the player.'),
   visibleNpcNames: z.array(z.string()).describe('A list of the user-facing names of all NPCs currently visible to the player.'),
+  visibleEntityDetails: z.string().optional().describe('Author notes for visible entities - provides guidance on puzzle mechanics, target redirects, and item relationships. Format: "EntityName (author notes)". Use these hints to make smarter interpretations when player targets indirect objects (e.g., "use pliers on hard hat" → check if hard hat has notes about zip-ties, interpret as "use pliers on zip-ties").'),
 });
 export type GuidePlayerWithNarratorInput = z.infer<typeof GuidePlayerWithNarratorInputSchema>;
 
@@ -52,6 +53,18 @@ const prompt = ai.definePrompt({
 {{#each visibleNpcNames}}
 - "{{this}}"
 {{/each}}
+
+{{#if visibleEntityDetails}}
+**Entity Details & Author Guidance:**
+{{visibleEntityDetails}}
+
+**CRITICAL RULES FOR AUTHOR NOTES:**
+1. **USE ONLY for redirects** - When player says "use X on Y", check if Y's notes suggest a different target
+2. **NEVER block natural commands** - If player says "take hard hat", output "take hard hat" (let engine handle "secured" errors)
+3. **NEVER substitute examine** - If player says "take X", don't interpret as "examine X" even if X is locked/secured
+4. **Example redirect**: "use pliers on hard hat" + note says "secured with zip-ties" → "use pliers on zip-ties" ✅
+5. **Example NO redirect**: "take hard hat" → "take hard hat" (not "examine hard hat") ✅
+{{/if}}
 
 **Player's Input:**
 "{{playerCommand}}"

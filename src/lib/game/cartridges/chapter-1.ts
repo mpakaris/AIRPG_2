@@ -931,7 +931,7 @@ const items: Record<ItemId, Item> = {
             ]
         },
         design: {
-            authorNotes: "Found on scaffolding. BROKEN by default (pliers_repaired=false). USE SPRING ON PLIERS to repair (sets pliers_repaired=true). Then USE PLIERS ON ZIP-TIES to free hard hat.",
+            authorNotes: "Broken tool - repair with Spring first, then use on Zip-Ties to free Hard Hat",
             tags: ['tool', 'puzzle', 'construction', 'repairable']
         },
         version: { schema: '1.0.0', content: '1.0.0' }
@@ -982,7 +982,7 @@ const items: Record<ItemId, Item> = {
             }
         },
         design: {
-            authorNotes: "Consumable repair part for pliers. USE SPRING ON PLIERS to fix broken tool.",
+            authorNotes: "Repair part for Pliers - use Spring on Pliers to fix",
             tags: ['spare-part', 'construction', 'consumable']
         },
         version: { schema: '1.0.0', content: '1.0.0' }
@@ -1026,7 +1026,7 @@ const items: Record<ItemId, Item> = {
             }
         },
         design: {
-            authorNotes: "Secured to scaffolding with zip-ties. Player must cut zip-ties with repaired pliers first. Required for Construction site access. Must WEAR (use) to satisfy foreman Tony Greco.",
+            authorNotes: "Secured with Zip-Ties - to free it, use Pliers on Zip-Ties (obj_scaffolding_zip_ties)",
             tags: ['safety', 'construction', 'access', 'wearable']
         },
         version: { schema: '1.0.0', content: '1.0.0' }
@@ -2025,7 +2025,7 @@ const gameObjects: Record<GameObjectId, GameObject> = {
             ]
         },
         design: {
-            authorNotes: "Container securing hard hat with zip-ties. Player must USE PLIERS ON ZIP-TIES to cut them and free the hard hat. Puzzle layer before accessing construction site.",
+            authorNotes: "Container securing Hard Hat - use repaired Pliers on Zip-Ties to cut and unlock",
             tags: ['container', 'puzzle', 'locked', 'cutting']
         },
         version: { schema: '1.0.0', content: '1.0.0' }
@@ -2157,6 +2157,56 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         design: {
             authorNotes: "Contains drill bit (Part 3/3). Search to reveal item.",
             tags: ['container', 'drill-part', 'office']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'obj_construction_exterior_storage': {
+        id: 'obj_construction_exterior_storage' as GameObjectId,
+        name: 'Dropped Items',
+        alternateNames: ['dropped items', 'items', 'ground', 'floor'],
+        description: 'Items you\'ve left at the construction site exterior.',
+        locationId: 'loc_construction_exterior' as LocationId,
+        archetype: 'Container',
+        state: { currentStateId: 'default', isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false },
+        capabilities: { container: true, lockable: false, openable: false, movable: false, breakable: false, powerable: false, readable: false, inputtable: false },
+        revealMethod: 'AUTO',
+        handlers: {
+            onExamine: {
+                success: {
+                    message: "Items you've left at the construction site exterior. You can TAKE them back if needed.",
+                    media: undefined
+                }
+            }
+        },
+        design: {
+            authorNotes: "Zone storage container for construction exterior. Auto-return location for hard hat when leaving construction area.",
+            tags: ['storage', 'hidden', 'equipment']
+        },
+        version: { schema: '1.0.0', content: '1.0.0' }
+    },
+
+    'obj_construction_interior_storage': {
+        id: 'obj_construction_interior_storage' as GameObjectId,
+        name: 'Dropped Items',
+        alternateNames: ['dropped items', 'items', 'ground', 'floor'],
+        description: 'Items you\'ve left inside the construction site.',
+        locationId: 'loc_construction_interior' as LocationId,
+        archetype: 'Container',
+        state: { currentStateId: 'default', isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false },
+        capabilities: { container: true, lockable: false, openable: false, movable: false, breakable: false, powerable: false, readable: false, inputtable: false },
+        revealMethod: 'AUTO',
+        handlers: {
+            onExamine: {
+                success: {
+                    message: "Items you've left inside the construction site. You can TAKE them back.",
+                    media: undefined
+                }
+            }
+        },
+        design: {
+            authorNotes: "Zone storage container for construction interior. Auto-return location for hard hat when leaving construction area.",
+            tags: ['storage', 'hidden', 'equipment']
         },
         version: { schema: '1.0.0', content: '1.0.0' }
     },
@@ -3402,7 +3452,7 @@ const locations: Record<LocationId, Location> = {
     // ===== ZONE 4A: CONSTRUCTION SITE EXTERIOR (Outside Gate) =====
     'loc_construction_exterior': {
         locationId: 'loc_construction_exterior' as LocationId,
-        name: 'Construction Site',
+        name: 'Construction Gate',
         sceneDescription: 'A three-story building wrapped in scaffolding and caution tape rises before you. A chain-link fence surrounds the perimeter, orange safety barriers blocking the sidewalk. Through the fence, you can see idle equipment - generators, concrete mixers, tool carts.\n\nTony Greco, the foreman, stands at the locked gate. Arms crossed, clipboard in hand, hard hat with a union sticker. He eyes you skeptically.\n\nThe gate is locked. Tony controls access.\n\nOutside the fence, metal scaffolding rises against the building facade - platforms accessible from street level.',
         introMessage: 'You approach the construction site.\n\nTony Greco blocks the gate. Forties, weathered face, no-nonsense expression. He looks at you wearing no safety gear.\n\n"Can\'t let you in without proper gear. Hard hat. No exceptions. Insurance."\n\nHis tone is flat. He\'s said this a thousand times. Rules are rules.\n\nYou notice scaffolding along the building exterior - accessible even from outside the fence.',
         objects: ['obj_construction_scaffolding' as GameObjectId, 'obj_construction_gate' as GameObjectId],
@@ -3413,7 +3463,7 @@ const locations: Record<LocationId, Location> = {
     // ===== ZONE 4B: CONSTRUCTION SITE INTERIOR (Inside Site) =====
     'loc_construction_interior': {
         locationId: 'loc_construction_interior' as LocationId,
-        name: 'Construction Site (Inside)',
+        name: 'Construction Site',
         sceneDescription: 'Inside the construction site, equipment sits idle. The air smells of concrete dust and machine oil. Orange barriers and caution tape mark hazard zones. Scaffolding towers overhead, casting geometric shadows.\n\nA portable office trailer sits in the corner, door ajar. Nearby, a metal tool shed with a combination lock.\n\nThe building itself rises three stories, wrapped in safety netting and steel beams. Work stopped weeks ago.',
         introMessage: 'You step into the construction site.\n\nThe place is quiet. No workers, no machinery running. Just the occasional creak of scaffolding in the wind.\n\nYou look around:\n\n🏚️ Tool Shed (locked with combination)\n🏢 Office Trailer (door ajar)\n\nBoth look searchable.',
         objects: ['obj_construction_tool_shed' as GameObjectId, 'obj_construction_office_trailer' as GameObjectId],

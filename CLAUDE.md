@@ -89,6 +89,7 @@ Player connects: "I can use pliers on zip-ties!"
 | Focus/navigation | `focus-and-zones.md` |
 | **Containers/locking** | **Core Mechanics #1 (3-State System)** |
 | **Item interactions** | **Core Mechanics #7 (Use X on Y)** |
+| **AI command guidance** | **Core Mechanics #8 (Author Notes)** |
 | Any bug fix | `backlog.md` (check if already documented) |
 
 ---
@@ -461,6 +462,116 @@ npm run db:reset:player
 
 ---
 
+### 8. AUTHOR NOTES SYSTEM (AI Command Guidance)
+
+**Rule**: Use `design.authorNotes` to guide AI interpretation for USE command redirects. Author notes help the AI make smart target substitutions without blocking natural commands.
+
+**Purpose**:
+- Players naturally target the **goal** (e.g., "use pliers on hard hat") but handlers are on the **mechanism** (e.g., zip-ties securing the hard hat)
+- Author notes tell the AI: "When player targets X, redirect to Y"
+- **CRITICAL**: Notes guide USE redirects ONLY - they NEVER block TAKE, EXAMINE, or other natural commands
+
+**How It Works**:
+
+1. **Cartridge Definition** (chapter-1.ts):
+   ```typescript
+   item_hard_hat: {
+     name: 'Hard Hat',
+     parentId: 'obj_scaffolding_zip_ties',
+     design: {
+       authorNotes: "Secured with Zip-Ties - to free it, use Pliers on Zip-Ties (obj_scaffolding_zip_ties)"
+     }
+   }
+
+   obj_scaffolding_zip_ties: {
+     name: 'Zip-Ties',
+     design: {
+       authorNotes: "Container securing Hard Hat - use repaired Pliers on Zip-Ties to cut and unlock"
+     },
+     handlers: {
+       onUse: [{ itemId: 'item_pliers', success: { effects: [unlock] } }]
+     }
+   }
+   ```
+
+2. **AI Context Building** (`actions.ts:1154-1178`):
+   - Collects `design.authorNotes` from all visible entities
+   - Formats as: `"EntityName (author notes)"`
+   - Passes to AI as `visibleEntityDetails` parameter
+
+3. **AI Prompt Rules** (`guide-player-with-narrator.ts:61-67`):
+   ```
+   CRITICAL RULES FOR AUTHOR NOTES:
+   1. USE ONLY for redirects - When player says "use X on Y", check if Y's notes suggest a different target
+   2. NEVER block natural commands - If player says "take hard hat", output "take hard hat" (let engine handle "secured" errors)
+   3. NEVER substitute examine - If player says "take X", don't interpret as "examine X" even if X is locked/secured
+   4. Example redirect: "use pliers on hard hat" + note says "secured with zip-ties" → "use pliers on zip-ties" ✅
+   5. Example NO redirect: "take hard hat" → "take hard hat" (not "examine hard hat") ✅
+   ```
+
+**Player Experience**:
+```
+Player: "take hard hat"
+AI: "take hard hat" ✅
+Engine: "The Hard Hat is secured. You'll need to unlock it first." ✅
+
+Player: "use pliers on hard hat"
+AI reads: Hard Hat (Secured with Zip-Ties - to free it, use Pliers on Zip-Ties)
+AI: "use pliers on zip-ties" ✅ (redirect based on notes)
+Engine: *SNIP* "Both zip-ties cut. The hard hat is now free." ✅
+
+Player: "take hard hat"
+AI: "take hard hat" ✅
+Engine: "You take the Hard Hat." ✅
+```
+
+**Code Locations**:
+- Context building: `src/app/actions.ts:1154-1178`
+- AI input schema: `src/ai/flows/guide-player-with-narrator.ts:22`
+- AI prompt template: `src/ai/flows/guide-player-with-narrator.ts:57-67`
+- Example cartridge: `src/lib/game/cartridges/chapter-1.ts:934, 985, 1029, 2028`
+
+**Writing Good Author Notes**:
+```typescript
+// ✅ GOOD - Concise redirect hint
+authorNotes: "Secured with Zip-Ties - use Pliers on Zip-Ties to free it"
+
+// ✅ GOOD - Specifies exact target ID
+authorNotes: "Locked safe behind painting - use Key on Safe (obj_wall_safe)"
+
+// ❌ BAD - Too verbose (wastes AI context)
+authorNotes: "This hard hat is secured to the scaffolding with industrial-strength zip-ties. The player must first find pliers on the scaffolding..."
+
+// ❌ BAD - Describes game flow instead of redirect
+authorNotes: "Required for construction site access. Must wear to satisfy Tony Greco."
+
+// ❌ BAD - No redirect guidance
+authorNotes: "Safety equipment found at construction site"
+```
+
+**Format Pattern**:
+```
+"[Context] - [Action hint with target name/ID]"
+```
+
+**NEVER**:
+- ❌ Write notes that block natural commands ("Player must examine first before taking")
+- ❌ Use notes to explain story/lore (that's what `description` is for)
+- ❌ Write verbose notes (keep under 100 characters - AI context is expensive)
+- ❌ Skip target names/IDs in redirect hints (AI needs specific targets)
+- ❌ Use notes for non-USE actions (notes are for USE redirects only)
+
+**When to Use Author Notes**:
+1. ✅ Player naturally targets outcome (hard hat) but handler is on mechanism (zip-ties)
+2. ✅ Multiple ways to describe the same action ("use pliers on hard hat" / "cut hard hat free")
+3. ✅ Indirect targeting ("use key on door" should work even if lock is the actual handler)
+4. ❌ NOT for simple direct actions ("examine safe" → works without notes)
+5. ❌ NOT for explaining puzzle solutions (preserve player discovery)
+
+**Implementation Date**: 2025-01-15
+
+---
+
 ### Core Mechanics Violations - What Went Wrong
 
 **2025-01-14** - Container Locking Failures:
@@ -496,6 +607,20 @@ npm run db:reset:player
    - Lesson: Search entire codebase for command references, not just AI prompt
 
 **Total wasted time**: 2 days on a mechanic that should have taken 1 hour. Root cause: incomplete removal of deprecated "combine" system across multiple files (commands.ts, actions.ts, handle-use.ts).
+
+**2025-01-15** - Author Notes AI Over-Interpretation:
+1. **AI blocking natural TAKE commands with EXAMINE**:
+   - Cause: Author notes had no scope restrictions - AI used them for ALL command types
+   - Behavior: "take hard hat" → AI read "secured with zip-ties" → output "examine hard hat" instead
+   - Fix: Added explicit AI prompt rules: "USE ONLY for redirects, NEVER block natural commands"
+   - Lesson: AI guidance needs strict boundaries - without rules, AI will be "helpful" in destructive ways
+
+2. **Good intentions, bad execution**:
+   - Author notes were meant to help: "use pliers on hard hat" → "use pliers on zip-ties"
+   - But AI generalized: "Any command on locked item should be examination first"
+   - Fix: 5 explicit rules in AI prompt limiting notes to USE command redirects only
+
+**Implementation**: Core Mechanics #8 (Author Notes System) - USE redirects only, never command substitution
 
 ---
 

@@ -1138,8 +1138,10 @@ export async function processCommand(
             // Pass includeChildrenOfLocationObjects=true so AI sees ALL revealed entities (not just top-level)
             const { VisibilityResolver } = await import('@/lib/game/engine');
             const visibleEntities = VisibilityResolver.getVisibleEntities(currentState, game, true);
-            // Get names of all visible objects (including alternate names)
+            // Get names of all visible objects (including alternate names + author notes for AI guidance)
             let visibleEntityNames: string[] = [];
+            const visibleEntityDetails: string[] = []; // Detailed info for AI interpretation
+
             for (const objectId of visibleEntities.objects) {
                 const obj = game.gameObjects[objectId as GameObjectId];
                 if (obj) {
@@ -1148,10 +1150,16 @@ export async function processCommand(
                     if (obj.alternateNames) {
                         visibleEntityNames.push(...obj.alternateNames);
                     }
+
+                    // Add detailed info with author notes for AI guidance
+                    const authorNotes = obj.design?.authorNotes || '';
+                    if (authorNotes) {
+                        visibleEntityDetails.push(`${obj.name} (${authorNotes})`);
+                    }
                 }
             }
 
-            // Get names of all visible items (including inventory and alternate names)
+            // Get names of all visible items (including inventory and alternate names + author notes)
             for (const itemId of visibleEntities.items) {
                 const item = game.items[itemId as ItemId];
                 if (item) {
@@ -1159,6 +1167,12 @@ export async function processCommand(
                     // Include alternate names so AI recognizes them
                     if (item.alternateNames) {
                         visibleEntityNames.push(...item.alternateNames);
+                    }
+
+                    // Add detailed info with author notes for AI guidance
+                    const authorNotes = item.design?.authorNotes || '';
+                    if (authorNotes) {
+                        visibleEntityDetails.push(`${item.name} (${authorNotes})`);
                     }
                 }
             }
@@ -1270,6 +1284,7 @@ export async function processCommand(
                         availableCommands: AVAILABLE_COMMANDS.join(', '),
                         visibleObjectNames: visibleEntityNames,
                         visibleNpcNames: visibleNpcNames,
+                        visibleEntityDetails: visibleEntityDetails.length > 0 ? visibleEntityDetails.join('\n') : undefined,
                     },
                     gameId,
                     userId
