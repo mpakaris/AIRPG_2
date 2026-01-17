@@ -1138,52 +1138,58 @@ export async function processCommand(
             // Pass includeChildrenOfLocationObjects=true so AI sees ALL revealed entities (not just top-level)
             const { VisibilityResolver } = await import('@/lib/game/engine');
             const visibleEntities = VisibilityResolver.getVisibleEntities(currentState, game, true);
-            // Get names of all visible objects (including alternate names + author notes for AI guidance)
+            // Get names AND IDs of all visible objects (including alternate names + author notes for AI guidance)
             let visibleEntityNames: string[] = [];
             const visibleEntityDetails: string[] = []; // Detailed info for AI interpretation
 
             for (const objectId of visibleEntities.objects) {
                 const obj = game.gameObjects[objectId as GameObjectId];
                 if (obj) {
-                    visibleEntityNames.push(obj.name);
-                    // Include alternate names so AI recognizes them
+                    // Add ID alongside name for AI to use
+                    visibleEntityNames.push(`${obj.name} [${objectId}]`);
+                    // Include alternate names so AI recognizes them (but ID is primary)
                     if (obj.alternateNames) {
-                        visibleEntityNames.push(...obj.alternateNames);
+                        for (const altName of obj.alternateNames) {
+                            visibleEntityNames.push(`${altName} [${objectId}]`);
+                        }
                     }
 
                     // Add detailed info with author notes for AI guidance
                     const authorNotes = obj.design?.authorNotes || '';
                     if (authorNotes) {
-                        visibleEntityDetails.push(`${obj.name} (${authorNotes})`);
+                        visibleEntityDetails.push(`${obj.name} [${objectId}] (${authorNotes})`);
                     }
                 }
             }
 
-            // Get names of all visible items (including inventory and alternate names + author notes)
+            // Get names AND IDs of all visible items (including inventory and alternate names + author notes)
             for (const itemId of visibleEntities.items) {
                 const item = game.items[itemId as ItemId];
                 if (item) {
-                    visibleEntityNames.push(item.name);
-                    // Include alternate names so AI recognizes them
+                    // Add ID alongside name for AI to use
+                    visibleEntityNames.push(`${item.name} [${itemId}]`);
+                    // Include alternate names so AI recognizes them (but ID is primary)
                     if (item.alternateNames) {
-                        visibleEntityNames.push(...item.alternateNames);
+                        for (const altName of item.alternateNames) {
+                            visibleEntityNames.push(`${altName} [${itemId}]`);
+                        }
                     }
 
                     // Add detailed info with author notes for AI guidance
                     const authorNotes = item.design?.authorNotes || '';
                     if (authorNotes) {
-                        visibleEntityDetails.push(`${item.name} (${authorNotes})`);
+                        visibleEntityDetails.push(`${item.name} [${itemId}] (${authorNotes})`);
                     }
                 }
             }
 
-            // Get names of all visible NPCs
+            // Get names AND IDs of all visible NPCs
             const visibleNpcNames: string[] = [];
             for (const npcId of visibleEntities.npcs) {
                 const npc = game.npcs[npcId as NpcId];
                 if (npc) {
-                    visibleNpcNames.push(npc.name);
-                    visibleEntityNames.push(npc.name);
+                    visibleNpcNames.push(`${npc.name} [${npcId}]`);
+                    visibleEntityNames.push(`${npc.name} [${npcId}]`);
                 }
             }
 
@@ -1203,15 +1209,17 @@ export async function processCommand(
 
             const currentIsStreet = streetLevelLocations.has(currentState.currentLocationId as any);
 
-            // Add direct portal destinations
+            // Add direct portal destinations WITH IDs
             for (const portal of Object.values(game.portals)) {
                 if (portal.fromLocationId === currentState.currentLocationId) {
                     const targetLocation = game.locations[portal.toLocationId];
                     if (targetLocation) {
-                        visibleEntityNames.push(targetLocation.name);
+                        visibleEntityNames.push(`${targetLocation.name} [${portal.toLocationId}]`);
                         // Also add portal alternateNames for variations (e.g., "alley", "side alley")
                         if (portal.alternateNames) {
-                            visibleEntityNames.push(...portal.alternateNames);
+                            for (const altName of portal.alternateNames) {
+                                visibleEntityNames.push(`${altName} [${portal.toLocationId}]`);
+                            }
                         }
                     }
                 }
@@ -1223,7 +1231,7 @@ export async function processCommand(
                     if (locId !== currentState.currentLocationId) {
                         const loc = game.locations[locId as LocationId];
                         if (loc) {
-                            visibleEntityNames.push(loc.name);
+                            visibleEntityNames.push(`${loc.name} [${locId}]`);
                         }
                     }
                 }

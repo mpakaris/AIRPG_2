@@ -13,13 +13,29 @@ import { MessageExpander } from "@/lib/game/utils/message-expansion";
 export async function handleOpen(state: PlayerState, targetName: string, game: Game): Promise<Effect[]> {
     const normalizedTargetName = normalizeName(targetName);
 
-    // LOCATION-AWARE SEARCH: Find best match (prioritizes current location)
-    const bestMatch = findBestMatch(normalizedTargetName, state, game, {
-        searchInventory: false,
-        searchVisibleItems: true,  // Check items (for readable items)
-        searchObjects: true,
-        requireFocus: true
-    });
+    // PRIORITY 1: Direct ID lookup (from AI) - skip fuzzy matching
+    let bestMatch: { id: string; category: 'item' | 'object' | 'inventory' | 'visible-item' } | null = null;
+
+    if (normalizedTargetName.startsWith('item_') && game.items[normalizedTargetName as ItemId]) {
+        // Check if item is in inventory or visible
+        if (state.inventory.includes(normalizedTargetName as ItemId)) {
+            bestMatch = { id: normalizedTargetName, category: 'inventory' };
+        } else {
+            bestMatch = { id: normalizedTargetName, category: 'visible-item' };
+        }
+    } else if (normalizedTargetName.startsWith('obj_') && game.gameObjects[normalizedTargetName as GameObjectId]) {
+        bestMatch = { id: normalizedTargetName, category: 'object' };
+    }
+
+    // PRIORITY 2: Fuzzy name matching (fallback for natural language)
+    if (!bestMatch) {
+        bestMatch = findBestMatch(normalizedTargetName, state, game, {
+            searchInventory: false,
+            searchVisibleItems: true,  // Check items (for readable items)
+            searchObjects: true,
+            requireFocus: true
+        });
+    }
 
     // 1. Handle objects (doors, containers, etc.)
     if (bestMatch?.category === 'object') {

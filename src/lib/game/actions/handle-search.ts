@@ -25,13 +25,29 @@ export async function handleSearch(state: PlayerState, targetName: string, game:
     }];
   }
 
-  // LOCATION-AWARE SEARCH: Find best match (prioritizes current location)
-  const bestMatch = findBestMatch(normalizedTargetName, state, game, {
-    searchInventory: true,
-    searchVisibleItems: true,
-    searchObjects: true,
-    requireFocus: true
-  });
+  // PRIORITY 1: Direct ID lookup (from AI) - skip fuzzy matching
+  let bestMatch: { id: string; category: 'item' | 'object' | 'inventory' | 'visible-item' } | null = null;
+
+  if (normalizedTargetName.startsWith('item_') && game.items[normalizedTargetName as ItemId]) {
+    // Check if item is in inventory or visible
+    if (state.inventory.includes(normalizedTargetName as ItemId)) {
+      bestMatch = { id: normalizedTargetName, category: 'inventory' };
+    } else {
+      bestMatch = { id: normalizedTargetName, category: 'visible-item' };
+    }
+  } else if (normalizedTargetName.startsWith('obj_') && game.gameObjects[normalizedTargetName as GameObjectId]) {
+    bestMatch = { id: normalizedTargetName, category: 'object' };
+  }
+
+  // PRIORITY 2: Fuzzy name matching (fallback for natural language)
+  if (!bestMatch) {
+    bestMatch = findBestMatch(normalizedTargetName, state, game, {
+      searchInventory: true,
+      searchVisibleItems: true,
+      searchObjects: true,
+      requireFocus: true
+    });
+  }
 
   if (!bestMatch) {
     return [{

@@ -65,13 +65,13 @@ function checkWornItemsOnLocationExit(
     'loc_construction_exterior': {
       flag: 'wearing_hard_hat' as Flag,
       itemId: 'item_hard_hat' as ItemId,
-      storageId: 'obj_construction_exterior_storage' as GameObjectId,
+      storageId: 'obj_construction_storage' as GameObjectId, // Shared container
       itemName: 'Hard Hat'
     },
     'loc_construction_interior': {
       flag: 'wearing_hard_hat' as Flag,
       itemId: 'item_hard_hat' as ItemId,
-      storageId: 'obj_construction_interior_storage' as GameObjectId,
+      storageId: 'obj_construction_storage' as GameObjectId, // Same shared container
       itemName: 'Hard Hat'
     }
   };
@@ -91,7 +91,7 @@ function checkWornItemsOnLocationExit(
       // Return equipment to storage
       effects.push(
         { type: 'REMOVE_ITEM', itemId: equipmentData.itemId },
-        { type: 'ADD_ITEM_TO_CONTAINER', itemId: equipmentData.itemId, containerId: equipmentData.storageId },
+        { type: 'ADD_TO_CONTAINER', entityId: equipmentData.itemId as string, containerId: equipmentData.storageId as string },
         { type: 'SET_FLAG', flag: equipmentData.flag, value: false },
         { type: 'SHOW_MESSAGE', speaker: 'system', content: `You leave the ${equipmentData.itemName} at the site.` }
       );
@@ -151,8 +151,15 @@ export async function handleGo(state: PlayerState, targetName: string, game: Gam
   // Search by name - check exact match, partial match, or portal alternateNames
   let targetLocation: Location | undefined;
 
-  // Try exact name match first
-  targetLocation = Object.values(game.locations).find(loc => loc.name.toLowerCase() === cleanedTargetName);
+  // PRIORITY 1: Direct location ID lookup (from AI)
+  if (cleanedTargetName.startsWith('loc_') && game.locations[cleanedTargetName as LocationId]) {
+    targetLocation = game.locations[cleanedTargetName as LocationId];
+  }
+
+  // PRIORITY 2: Try exact name match
+  if (!targetLocation) {
+    targetLocation = Object.values(game.locations).find(loc => loc.name.toLowerCase() === cleanedTargetName);
+  }
 
   // If no exact match, check if any portal's alternateNames match this target
   if (!targetLocation) {

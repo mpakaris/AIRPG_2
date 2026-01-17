@@ -2161,12 +2161,12 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         version: { schema: '1.0.0', content: '1.0.0' }
     },
 
-    'obj_construction_exterior_storage': {
-        id: 'obj_construction_exterior_storage' as GameObjectId,
+    'obj_construction_storage': {
+        id: 'obj_construction_storage' as GameObjectId,
         name: 'Dropped Items',
-        alternateNames: ['dropped items', 'items', 'ground', 'floor'],
-        description: 'Items you\'ve left at the construction site exterior.',
-        locationId: 'loc_construction_exterior' as LocationId,
+        alternateNames: ['dropped items', 'items', 'ground', 'floor', 'tools'],
+        description: 'Items you\'ve left at the construction site.',
+        locationId: 'loc_construction_exterior' as LocationId, // Arbitrary - container is shared
         archetype: 'Container',
         state: { currentStateId: 'default', isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false },
         capabilities: { container: true, lockable: false, openable: false, movable: false, breakable: false, powerable: false, readable: false, inputtable: false },
@@ -2174,39 +2174,14 @@ const gameObjects: Record<GameObjectId, GameObject> = {
         handlers: {
             onExamine: {
                 success: {
-                    message: "Items you've left at the construction site exterior. You can TAKE them back if needed.",
+                    message: "Items you've left at the construction site. Accessible from anywhere on site - exterior or interior. You can TAKE them back if needed.",
                     media: undefined
                 }
             }
         },
         design: {
-            authorNotes: "Zone storage container for construction exterior. Auto-return location for hard hat when leaving construction area.",
-            tags: ['storage', 'hidden', 'equipment']
-        },
-        version: { schema: '1.0.0', content: '1.0.0' }
-    },
-
-    'obj_construction_interior_storage': {
-        id: 'obj_construction_interior_storage' as GameObjectId,
-        name: 'Dropped Items',
-        alternateNames: ['dropped items', 'items', 'ground', 'floor'],
-        description: 'Items you\'ve left inside the construction site.',
-        locationId: 'loc_construction_interior' as LocationId,
-        archetype: 'Container',
-        state: { currentStateId: 'default', isOpen: false, isLocked: false, isBroken: false, isPoweredOn: false },
-        capabilities: { container: true, lockable: false, openable: false, movable: false, breakable: false, powerable: false, readable: false, inputtable: false },
-        revealMethod: 'AUTO',
-        handlers: {
-            onExamine: {
-                success: {
-                    message: "Items you've left inside the construction site. You can TAKE them back.",
-                    media: undefined
-                }
-            }
-        },
-        design: {
-            authorNotes: "Zone storage container for construction interior. Auto-return location for hard hat when leaving construction area.",
-            tags: ['storage', 'hidden', 'equipment']
+            authorNotes: "Shared zone storage container for BOTH construction exterior AND interior. Auto-return location for hard hat when leaving construction area. Visible in both locations when revealed.",
+            tags: ['storage', 'hidden', 'equipment', 'shared']
         },
         version: { schema: '1.0.0', content: '1.0.0' }
     },

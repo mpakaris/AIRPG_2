@@ -41,16 +41,26 @@ export async function handleTalk(state: PlayerState, npcName: string, game: Game
         }];
     }
 
-    // MATCH NPC: Find best matching NPC using name-matching system
+    // PRIORITY 1: Direct NPC ID lookup (from AI)
     let bestMatch: { npcId: NpcId; score: number } | null = null;
 
-    for (const npcId of accessibleNpcIds) {
-        const npc = game.npcs[npcId];
-        if (!npc) continue;
+    if (normalizedNpcName.startsWith('npc_') && game.npcs[normalizedNpcName as NpcId]) {
+        // Verify NPC is in this location
+        if (accessibleNpcIds.includes(normalizedNpcName as NpcId)) {
+            bestMatch = { npcId: normalizedNpcName as NpcId, score: 1.0 };
+        }
+    }
 
-        const result = matchesName(npc, normalizedNpcName);
-        if (result.matches && (!bestMatch || result.score > bestMatch.score)) {
-            bestMatch = { npcId, score: result.score };
+    // PRIORITY 2: Fuzzy name matching (fallback for natural language)
+    if (!bestMatch) {
+        for (const npcId of accessibleNpcIds) {
+            const npc = game.npcs[npcId];
+            if (!npc) continue;
+
+            const result = matchesName(npc, normalizedNpcName);
+            if (result.matches && (!bestMatch || result.score > bestMatch.score)) {
+                bestMatch = { npcId, score: result.score };
+            }
         }
     }
 

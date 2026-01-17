@@ -27,16 +27,26 @@ export async function handleDrop(state: PlayerState, itemName: string, game: Gam
   }
 
   // 1. Find item in inventory
-  const itemId = state.inventory.find(id => {
-    const item = game.items[id];
-    if (!item) return false;
+  // PRIORITY 1: Direct ID lookup (from AI)
+  let itemId: ItemId | null = null;
 
-    const itemNameNorm = normalizeName(item.name);
-    const altNames = item.alternateNames?.map(normalizeName) || [];
+  if (normalizedItemName.startsWith('item_') && state.inventory.includes(normalizedItemName as ItemId)) {
+    itemId = normalizedItemName as ItemId;
+  }
 
-    return itemNameNorm.includes(normalizedItemName) ||
-           altNames.some(alt => alt.includes(normalizedItemName));
-  });
+  // PRIORITY 2: Fuzzy name matching (fallback for natural language)
+  if (!itemId) {
+    itemId = state.inventory.find(id => {
+      const item = game.items[id];
+      if (!item) return false;
+
+      const itemNameNorm = normalizeName(item.name);
+      const altNames = item.alternateNames?.map(normalizeName) || [];
+
+      return itemNameNorm.includes(normalizedItemName) ||
+             altNames.some(alt => alt.includes(normalizedItemName));
+    }) || null;
+  }
 
   if (!itemId) {
     return [{
@@ -85,9 +95,9 @@ export async function handleDrop(state: PlayerState, itemName: string, game: Gam
         itemId: itemId as ItemId
       },
       {
-        type: 'ADD_ITEM_TO_CONTAINER',
-        itemId: itemId as ItemId,
-        containerId: storageId
+        type: 'ADD_TO_CONTAINER',
+        entityId: itemId as string,
+        containerId: storageId as string
       },
       {
         type: 'REVEAL_OBJECT',
@@ -124,9 +134,9 @@ export async function handleDrop(state: PlayerState, itemName: string, game: Gam
       itemId: itemId as ItemId
     });
     effects.push({
-      type: 'ADD_ITEM_TO_CONTAINER',
-      itemId: itemId as ItemId,
-      containerId: storageId
+      type: 'ADD_TO_CONTAINER',
+      entityId: itemId as string,
+      containerId: storageId as string
     });
     effects.push({
       type: 'REVEAL_OBJECT',

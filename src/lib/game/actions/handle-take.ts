@@ -30,14 +30,29 @@ export async function handleTake(state: PlayerState, targetName: string, game: G
     }];
   }
 
-  // LOCATION-AWARE SEARCH: Find best match (prioritizes current location)
-  // NOTE: We search objects too, so we can give proper "can't take furniture" messages
-  const bestMatch = findBestMatch(normalizedTarget, state, game, {
-    searchInventory: true,
-    searchVisibleItems: true,
-    searchObjects: true,  // Search objects to detect furniture/objects player tries to take
-    requireFocus: false  // Search all visible entities (focus validation happens separately if needed)
-  });
+  // PRIORITY 1: Direct ID lookup (from AI) - skip fuzzy matching
+  let bestMatch: { id: string; category: 'item' | 'object' | 'inventory' | 'visible-item' } | null = null;
+
+  if (normalizedTarget.startsWith('item_') && game.items[normalizedTarget as ItemId]) {
+    // Check if already in inventory
+    if (state.inventory.includes(normalizedTarget as ItemId)) {
+      bestMatch = { id: normalizedTarget, category: 'inventory' };
+    } else {
+      bestMatch = { id: normalizedTarget, category: 'visible-item' };
+    }
+  } else if (normalizedTarget.startsWith('obj_') && game.gameObjects[normalizedTarget as GameObjectId]) {
+    bestMatch = { id: normalizedTarget, category: 'object' };
+  }
+
+  // PRIORITY 2: Fuzzy name matching (fallback for natural language)
+  if (!bestMatch) {
+    bestMatch = findBestMatch(normalizedTarget, state, game, {
+      searchInventory: true,
+      searchVisibleItems: true,
+      searchObjects: true,  // Search objects to detect furniture/objects player tries to take
+      requireFocus: false  // Search all visible entities (focus validation happens separately if needed)
+    });
+  }
 
   // 1. Check if already in inventory
   if (bestMatch?.category === 'inventory') {

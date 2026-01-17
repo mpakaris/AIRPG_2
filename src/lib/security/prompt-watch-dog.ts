@@ -70,8 +70,9 @@ const CODE_INJECTION_PATTERNS = [
     /\$\{.+\}/,                    // Template literals
     /\{\{.+\}\}/,                  // Template syntax (Handlebars, etc.)
     /\{%.+%\}/,                    // Template syntax (Jinja, Liquid)
-    /\b(DROP|DELETE|UPDATE|INSERT|ALTER|EXEC|UNION)\s+/i,  // SQL keywords
-    /['"];?\s*(DROP|DELETE)/i,     // SQL injection attempts
+    /\b(DROP|DELETE)\s+(TABLE|DATABASE|SCHEMA|INDEX|VIEW)/i,  // SQL injection (more specific)
+    /\b(UPDATE|INSERT|ALTER|EXEC|UNION)\s+/i,  // SQL keywords (excluding DROP/DELETE to avoid false positives)
+    /['"];?\s*(DROP|DELETE)\s+(TABLE|DATABASE)/i,  // SQL injection attempts
 ];
 
 // Phase 2: Emoji & Special Unicode

@@ -44,15 +44,24 @@ const prompt = ai.definePrompt({
 **Game & Player State:**
 {{gameState}}
 
-**Visible Object Names:**
+**Visible Objects & Items (with IDs):**
 {{#each visibleObjectNames}}
-- "{{this}}"
+- {{this}}
 {{/each}}
 
-**Visible NPC Names:**
+**Visible NPCs (with IDs):**
 {{#each visibleNpcNames}}
-- "{{this}}"
+- {{this}}
 {{/each}}
+
+**CRITICAL: When outputting commands, ALWAYS use the ID from brackets [id], not just the name.**
+Examples:
+- Player: "take pliers" → commandToExecute: "take item_pliers" ✅
+- Player: "drop pliers" → commandToExecute: "drop item_pliers" ✅
+- Player: "use pliers on zip ties" → commandToExecute: "use item_pliers on obj_scaffolding_zip_ties" ✅
+- Player: "go to construction site" → commandToExecute: "go loc_construction_interior" ✅
+- WRONG: "take pliers" (no ID) ❌
+- WRONG: "drop Pliers" (name only) ❌
 
 {{#if visibleEntityDetails}}
 **Entity Details & Author Guidance:**
@@ -60,10 +69,11 @@ const prompt = ai.definePrompt({
 
 **CRITICAL RULES FOR AUTHOR NOTES:**
 1. **USE ONLY for redirects** - When player says "use X on Y", check if Y's notes suggest a different target
-2. **NEVER block natural commands** - If player says "take hard hat", output "take hard hat" (let engine handle "secured" errors)
+2. **NEVER block natural commands** - If player says "take hard hat", output "take item_hard_hat" (let engine handle "secured" errors)
 3. **NEVER substitute examine** - If player says "take X", don't interpret as "examine X" even if X is locked/secured
-4. **Example redirect**: "use pliers on hard hat" + note says "secured with zip-ties" → "use pliers on zip-ties" ✅
-5. **Example NO redirect**: "take hard hat" → "take hard hat" (not "examine hard hat") ✅
+4. **Example redirect**: "use pliers on hard hat" + note says "secured with zip-ties" → "use item_pliers on obj_scaffolding_zip_ties" ✅
+5. **Example NO redirect**: "take hard hat" → "take item_hard_hat" (not "examine item_hard_hat") ✅
+6. **Always use IDs**: "use pliers" → "use item_pliers", not "use pliers" ✅
 {{/if}}
 
 **Player's Input:**
@@ -71,15 +81,6 @@ const prompt = ai.definePrompt({
 
 **Available Game Commands:**
 {{availableCommands}}
-
-**CRITICAL NAVIGATION RULES:**
-When outputting "go" commands, ALWAYS use the exact NAME of the location/object from the visible lists above.
-NEVER construct IDs like "loc_xxx" or "loc_side_alley".
-Examples:
-- Player: "go to side alley" → commandToExecute: "go side alley" ✅
-- Player: "go to bus stop" → commandToExecute: "go bus stop" ✅
-- WRONG: "go loc_side_alley" ❌
-- WRONG: "go loc_bus_stop" ❌
 
 Your entire output must be a single, valid JSON object matching the output schema.
 `,

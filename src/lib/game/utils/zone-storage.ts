@@ -19,6 +19,8 @@ export const ZONE_STORAGE_MAP: Record<string, GameObjectId> = {
   'loc_butcher_interior': 'obj_butcher_interior_storage' as GameObjectId,
   'loc_bus_stop': 'obj_bus_stop_storage' as GameObjectId,
   'loc_alley': 'obj_alley_storage' as GameObjectId,
+  'loc_construction_exterior': 'obj_construction_storage' as GameObjectId, // Shared container
+  'loc_construction_interior': 'obj_construction_storage' as GameObjectId, // Same as exterior
   // Add more locations as needed
 };
 

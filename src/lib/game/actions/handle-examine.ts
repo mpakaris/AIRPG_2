@@ -56,14 +56,29 @@ export async function handleExamine(state: PlayerState, targetName: string, game
     }
 
     // Otherwise, standard examination
-    // LOCATION-AWARE SEARCH: Find best match (prioritizes current location)
-    // Allow examining anything visible in the location, not just within current focus
-    const bestMatch = findBestMatch(normalizedTarget, state, game, {
-        searchInventory: true,
-        searchVisibleItems: true,
-        searchObjects: true,
-        requireFocus: false  // Allow examining objects outside current focus
-    });
+    // PRIORITY 1: Direct ID lookup (from AI) - skip fuzzy matching
+    let bestMatch: { id: string; category: 'item' | 'object' | 'inventory' | 'visible-item' } | null = null;
+
+    if (normalizedTarget.startsWith('item_') && game.items[normalizedTarget as ItemId]) {
+        // Check if item is in inventory or visible
+        if (state.inventory.includes(normalizedTarget as ItemId)) {
+            bestMatch = { id: normalizedTarget, category: 'inventory' };
+        } else {
+            bestMatch = { id: normalizedTarget, category: 'visible-item' };
+        }
+    } else if (normalizedTarget.startsWith('obj_') && game.gameObjects[normalizedTarget as GameObjectId]) {
+        bestMatch = { id: normalizedTarget, category: 'object' };
+    }
+
+    // PRIORITY 2: Fuzzy name matching (fallback for natural language)
+    if (!bestMatch) {
+        bestMatch = findBestMatch(normalizedTarget, state, game, {
+            searchInventory: true,
+            searchVisibleItems: true,
+            searchObjects: true,
+            requireFocus: false  // Allow examining objects outside current focus
+        });
+    }
 
     // NEW ZONE ARCHITECTURE: Check zone access for objects and items
     if (bestMatch && (bestMatch.category === 'object' || bestMatch.category === 'item')) {
